@@ -127,5 +127,14 @@ window.LESSONS_DATA = [
   "ru": "флаер флэр виндмил мельница",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-flare-1990",
+  "sec": "Powermove",
+  "name": "Flare → 1990 → Flare",
+  "dur": 421,
+  "ru": "флаер флэр 1990 девяностый",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
