@@ -174,11 +174,9 @@ body.fsmode .bigplay{z-index:3}
 .nickbtn .d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .screen{overscroll-behavior-y:contain}
-.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 6px);z-index:15;width:84px;height:62px;margin-left:-42px;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(-70px);pointer-events:none}
-.ptr img{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.7));will-change:transform}
-.ptr.ready img{filter:drop-shadow(0 0 12px rgba(226,97,26,.95)) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
-.ptr.spin img{filter:drop-shadow(0 0 14px rgba(226,97,26,.95))}
-@keyframes ptrspin{from{transform:rotate(calc(var(--from,0deg) + 720deg))}to{transform:rotate(calc(var(--from,0deg) + 1080deg))}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) - 73px);z-index:15;width:220px;height:220px;margin-left:-110px;opacity:0;transform:translateY(-70px);pointer-events:none}
+.ptr canvas{width:220px;height:220px;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.7));will-change:transform}
+.ptr.ready canvas,.ptr.spin canvas{filter:drop-shadow(0 0 10px rgba(226,97,26,.9)) drop-shadow(0 6px 14px rgba(0,0,0,.6))}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -615,7 +613,7 @@ body.fsmode .bigplay{z-index:3}
 </div>
 
 <nav class="tabs" aria-label="Основное меню"><div class="tabs-in" id="tabs"></div></nav>
-<div class="ptr" id="ptr" aria-hidden="true"><img src="logo.png" alt="" id="ptrIco"></div>
+<div class="ptr" id="ptr" aria-hidden="true"><canvas id="ptrCv" width="220" height="220"></canvas></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
@@ -1261,28 +1259,108 @@ body.fsmode .bigplay{z-index:3}
   go = function(id){ _goProfile(id); if (id === 'profile') renderStats(); };
 
   // ===== pull down to refresh =====
+  // The logo breaks into pieces, the pieces swirl into a round vortex, then fly back and rebuild the logo.
   (function pullToRefresh(){
-    const ptr = $('#ptr'), ico = $('#ptrIco');
+    const ptr = $('#ptr'), cv = $('#ptrCv'), ctx = cv.getContext('2d');
     let wasReady = false;
-    const READY_ANGLE = 315; // where the wind-up stops; the spin starts from here
     const LIMIT = 70;
     let sy = 0, sx = 0, dy = 0, active = false, decided = false, scr = null, busy = false;
     const blocked = () => busy || document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
+
+    // ---- particles ----
+    const SIZE = 220, CX = 110, CY = 110, LW = 84, TILE = 4;
+    const img = new Image(); img.src = 'logo.png';
+    let LH = 62, tiles = null, raf = 0, dpr = 1;
+    const ease = t => 1 - Math.pow(1 - t, 3), easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    function setup(){
+      dpr = Math.min(3, window.devicePixelRatio || 1);
+      cv.width = cv.height = Math.round(SIZE * dpr);
+      if (tiles || !img.naturalWidth) return;
+      LH = LW * img.naturalHeight / img.naturalWidth;
+      const kx = img.naturalWidth / LW, cols = Math.ceil(LW / TILE), rows = Math.ceil(LH / TILE);
+      let alpha = null;
+      try { // skip empty corners of the png (works only when served over http)
+        const c = document.createElement('canvas'); c.width = cols; c.height = rows;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0, cols, rows); alpha = g.getImageData(0, 0, cols, rows).data;
+      } catch (_) { alpha = null; }
+      tiles = [];
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        if (alpha && alpha[(y * cols + x) * 4 + 3] < 8) continue;
+        const hx = CX - LW / 2 + x * TILE + TILE / 2, hy = CY - LH / 2 + y * TILE + TILE / 2;
+        const ang = Math.atan2(hy - CY, hx - CX), rad = Math.hypot(hx - CX, hy - CY);
+        tiles.push({ x, y, hx, hy, ang, rad, sx: x * TILE * kx, sy: y * TILE * kx, sw: TILE * kx,
+          sA: ang + rnd(-.7, .7), sR: rad * 1.5 + rnd(18, 42), ringR: rnd(36, 52), spin: rnd(-9, 9), lag: rnd(0, .25) });
+      }
+    }
+    const onImg = () => { setup(); if (!busy) drawWhole(); };
+    img.decode ? img.decode().then(onImg, () => {}) : (img.onload = onImg);
+    function clear(){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); }
+    function drawWhole(jitter){
+      clear(); if (!img.naturalWidth) return;
+      if (!jitter || !tiles) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.drawImage(img, CX - LW / 2, CY - LH / 2, LW, LH); return; }
+      for (const t of tiles) {
+        ctx.setTransform(dpr, 0, 0, dpr, (t.hx + rnd(-jitter, jitter)) * dpr, (t.hy + rnd(-jitter, jitter)) * dpr);
+        ctx.drawImage(img, t.sx, t.sy, t.sw, t.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
+      }
+    }
+    // timeline (ms): burst -> into the ring -> swirl (until the new version is loaded) -> rebuild
+    const T_BURST = 300, T_RING = 420, T_SWIRL = 380, T_BACK = 620, OMEGA = Math.PI * 2 / 650;
+    function frame(t, t0, backAt){
+      clear();
+      const e = t - t0;
+      for (const k of tiles) {
+        let A, R, amp;
+        const ringA = k.ang + OMEGA * Math.max(0, e - T_BURST);
+        if (e < T_BURST) { const u = ease(e / T_BURST); A = k.ang + (k.sA - k.ang) * u; R = k.rad + (k.sR - k.rad) * u; amp = u; }
+        else if (backAt == null || e < backAt) { const u = easeIO(Math.min(1, (e - T_BURST) / T_RING)); A = k.sA + (ringA - k.sA) * u; R = k.sR + (k.ringR + Math.sin(e / 90 + k.ang * 3) * 3 - k.sR) * u; amp = 1; }
+        else {
+          const raw = Math.min(1, Math.max(0, (e - backAt) / T_BACK - k.lag * (1 - (e - backAt) / T_BACK)));
+          const u = ease(raw);
+          const ra = k.ang + OMEGA * (backAt - T_BURST);
+          // land on the home angle after one more turn, so it keeps swirling while it rebuilds
+          let target = k.ang + Math.ceil((ra - k.ang) / (Math.PI * 2)) * Math.PI * 2 + Math.PI * 2;
+          A = ra + (target - ra) * u; R = k.ringR + (k.rad - k.ringR) * u; amp = 1 - u;
+        }
+        const px = CX + Math.cos(A) * R, py = CY + Math.sin(A) * R, rot = amp * k.spin * e / 1000;
+        const c = Math.cos(rot) * dpr, s = Math.sin(rot) * dpr;
+        ctx.setTransform(c, s, -s, c, px * dpr, py * dpr);
+        ctx.drawImage(img, k.sx, k.sy, k.sw, k.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
+      }
+    }
+    function vortex(loaded){
+      return new Promise(done => {
+        if (!tiles || matchMedia('(prefers-reduced-motion: reduce)').matches) { loaded.then(done); return; }
+        let t0 = performance.now(), backAt = null, ok = false;
+        loaded.then(() => { ok = true; });
+        const step = t => {
+          const e = t - t0;
+          if (backAt == null && ok && e >= T_BURST + T_RING + T_SWIRL) backAt = e;
+          if (backAt != null && e >= backAt + T_BACK * 1.25) { drawWhole(); done(); return; }
+          frame(t, t0, backAt); raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      });
+    }
+    let jitterRaf = 0;
+    function jitterLoop(){ drawWhole(.7); jitterRaf = requestAnimationFrame(jitterLoop); }
+
     function paint(d){
       const k = Math.min(1, d / LIMIT);
+      if (!tiles) setup();
       ptr.style.opacity = String(k);
       ptr.style.transform = 'translateY(' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10) + 'px)';
       const ready = d >= LIMIT;
-      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off' and spins
+      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off'
       ptr.classList.toggle('ready', ready);
-      // the logo winds up like a headspin while you pull, and pops when it is ready
-      if (!ready) ico.style.transform = 'rotate(' + Math.round(d * 4.5) + 'deg) scale(' + (0.55 + 0.45 * k).toFixed(3) + ')';
-      else ico.style.transform = 'rotate(' + READY_ANGLE + 'deg) scale(1.08)';
-      if (ready && !wasReady && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+      cv.style.transform = ready ? 'scale(1.08)' : 'rotate(' + ((k - 1) * 25).toFixed(1) + 'deg) scale(' + (0.55 + 0.45 * k).toFixed(3) + ')';
+      if (ready && !wasReady) { if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} } cancelAnimationFrame(jitterRaf); jitterLoop(); }
+      if (!ready && (wasReady || !jitterRaf)) { cancelAnimationFrame(jitterRaf); jitterRaf = 0; drawWhole(); jitterRaf = -1; }
       wasReady = ready;
       if (scr) scr.style.transform = 'translateY(' + Math.min(d, LIMIT * 1.4) * 0.4 + 'px)';
     }
     function reset(){
+      cancelAnimationFrame(jitterRaf); jitterRaf = 0;
       ptr.style.transition = 'transform .2s ease, opacity .2s ease';
       ptr.style.opacity = '0'; ptr.style.transform = 'translateY(-70px)'; ptr.classList.remove('ready'); wasReady = false;
       $('#homeLogo').style.transition = 'opacity .2s ease'; $('#homeLogo').style.opacity = '';
@@ -1291,27 +1369,17 @@ body.fsmode .bigplay{z-index:3}
     }
     async function refresh(){
       busy = true;
+      cancelAnimationFrame(jitterRaf); jitterRaf = 0;
       ptr.classList.remove('ready'); ptr.classList.add('spin');
-      ico.style.transform = 'rotate(' + READY_ANGLE + 'deg)';
+      cv.style.transition = 'transform .25s ease'; cv.style.transform = 'scale(1)';
       $('#homeLogo').style.opacity = '0';
-      ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
+      ptr.style.transition = 'transform .25s ease'; ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
       if (scr) { scr.style.transition = 'transform .2s ease'; scr.style.transform = 'translateY(40px)'; }
       saveStats && saveStats();
       // refresh the cached copies first, so the reload really shows new lessons
-      const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
-      // exactly two full turns (720°) from the wound-up angle, then the logo stops
-      let spun;
-      if (ico.animate) {
-        const a = ico.animate([{ transform: 'rotate(' + READY_ANGLE + 'deg)' }, { transform: 'rotate(' + (READY_ANGLE + 720) + 'deg)' }],
-                              { duration: 850, easing: 'cubic-bezier(.3,.1,.25,1)', fill: 'forwards' });
-        spun = a.finished.catch(() => {});
-      } else {
-        ico.style.transition = 'transform .85s cubic-bezier(.3,.1,.25,1)';
-        requestAnimationFrame(() => { ico.style.transform = 'rotate(' + (READY_ANGLE + 720) + 'deg)'; });
-        spun = new Promise(r => setTimeout(r, 870));
-      }
-      await spun;
-      await Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]);
+      const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
+      await vortex(Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]));
+      await new Promise(r => setTimeout(r, 120));
       try { sessionStorage.setItem('fedoskin-refreshed', '1'); } catch (_) {}
       location.reload();
     }
@@ -1338,9 +1406,11 @@ body.fsmode .bigplay{z-index:3}
     document.addEventListener('touchcancel', () => { if (!active) return; active = false; reset(); scr = null; });
     function hardReset(){
       busy = false; active = false; wasReady = false;
-      ptr.classList.remove('spin', 'more', 'ready'); ptr.style.cssText = ''; ico.style.cssText = '';
+      cancelAnimationFrame(raf); cancelAnimationFrame(jitterRaf); jitterRaf = 0;
+      ptr.classList.remove('spin', 'more', 'ready'); ptr.style.cssText = ''; cv.style.cssText = '';
+      try { setup(); drawWhole(); } catch (_) {}
       $('#homeLogo').style.cssText = '';
-      [ico, $('#homeLogo')].forEach(el => { try { el.getAnimations && el.getAnimations().forEach(x => x.cancel()); } catch (_) {} });
+      [$('#homeLogo')].forEach(el => { try { el.getAnimations && el.getAnimations().forEach(x => x.cancel()); } catch (_) {} });
       document.querySelectorAll('.screen').forEach(x => { x.style.transform = ''; x.style.transition = ''; });
     }
     window.addEventListener('pageshow', hardReset);
