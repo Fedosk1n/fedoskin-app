@@ -621,6 +621,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let MB = null;
   async function mb(){ if (!MB) MB = await import('./vendor/mediabunny.min.mjs'); return MB; }
   let current = null; // running conversion
+  async function sourceFps(src){
+    try {
+      const M = await mb();
+      const input = new M.Input({source: new M.BlobSource(src), formats: M.ALL_FORMATS});
+      const t = await input.getPrimaryVideoTrack();
+      const st = await t.computePacketStats(120);
+      return st.averagePacketRate || 30;
+    } catch (e) { return 30; }
+  }
   async function convert(src, opts, onProgress){
     const M = await mb();
     const input = new M.Input({source: new M.BlobSource(src), formats: M.ALL_FORMATS});
@@ -690,9 +699,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         const size = short > 720 ? (vertical ? {width: 720} : {height: 720}) : {};
         // ~1 Mbit/s, but never more than ~90 MB for long videos
         const br = Math.max(400000, Math.min(1000000, Math.floor(90e6 * 8 / Math.max(1, dur)) - 160000));
-        mp4 = await convert(file, {bitrate: br, video: Object.assign({}, size)}, p => { bar(.15 + p * .85); stepState(2, 'run', 'Сжатие видео до 720p — ' + Math.round(p * 100) + '%'); });
+        // the encoder must be told the real frame rate, otherwise 60 fps video comes out about twice as big
+        const fps = await sourceFps(file);
+        const rate = fps >= 50 ? 60 : 30;
+        const prog = (from, k, label) => p => { bar(.15 + (from + p * k) * .85); stepState(2, 'run', label + Math.round((from + p * k) * 100) + '%'); };
+        mp4 = await convert(file, {bitrate: br, video: Object.assign({frameRate: rate}, size)}, prog(0, 1, 'Сжатие видео до 720p — '));
+        if (mp4.size > MAX_FILE && !cancelled) {
+          // still too big: second try at 30 fps with a lower bitrate, scaled to fit ~85 MB
+          const br2 = Math.max(250000, Math.floor(br * (85 * 1048576) / mp4.size));
+          stepState(2, 'run', 'Получилось ' + fmtMB(mp4.size) + ' — сжимаю сильнее…');
+          mp4 = await convert(file, {bitrate: br2, video: Object.assign({frameRate: 30}, size)}, prog(0, 1, 'Сжимаю сильнее — '));
+        }
         stepState(2, 'ok', 'Сжато: ' + fmtMB(file.size) + ' → ' + fmtMB(mp4.size) + (mp4.noAudio ? ' — ВНИМАНИЕ: звук не сохранился' : ''));
-        if (mp4.size > MAX_FILE) throw new Error('даже после сжатия файл ' + fmtMB(mp4.size) + ' — больше 95 МБ. Разрежьте видео на две части.');
+        if (mp4.size > MAX_FILE) throw new Error('даже после сжатия файл ' + fmtMB(mp4.size) + ' — больше 95 МБ. Разрежьте видео на две части в CapCut');
       } else {
         stepState(2, 'ok', 'Видео без сжатия: ' + fmtMB(file.size));
         mp4 = file.slice(0, file.size, 'video/mp4');
@@ -712,7 +731,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     } catch(e) {
       stepState(step, 'bad');
       $('#aErr').hidden = false;
-      $('#aErr').textContent = cancelled ? 'Отменено.' : 'Не получилось: ' + (e && e.message || e) + (step === 2 && compress ? '. Попробуйте в Chrome на компьютере или экспортируйте видео из CapCut в 720p и выключите «Сжать».' : '');
+      $('#aErr').textContent = cancelled ? 'Отменено.' : 'Не получилось: ' + (e && e.message || e) + (step === 2 && compress && !/95 МБ/.test(String(e && e.message)) ? '. Попробуйте в Chrome на компьютере или экспортируйте видео из CapCut в 720p и выключите «Сжать».' : '');
     } finally {
       busy = false; current = null; $('#aCancel').hidden = true; paintGo();
     }
