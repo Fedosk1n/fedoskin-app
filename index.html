@@ -177,9 +177,11 @@ body.fsmode .bigplay{z-index:3}
 .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 6px);z-index:15;width:84px;height:62px;margin-left:-42px;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(-70px);pointer-events:none}
 .ptr img{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.7));will-change:transform}
 .ptr.ready img{filter:drop-shadow(0 0 12px rgba(226,97,26,.95)) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
-.ptr.spin img{animation:ptrspin .9s cubic-bezier(.45,.05,.55,.95) infinite;filter:drop-shadow(0 0 14px rgba(226,97,26,.95))}
+.ptr.spin img{animation:ptr720 .8s cubic-bezier(.3,.1,.25,1) forwards;filter:drop-shadow(0 0 14px rgba(226,97,26,.95))}
+.ptr.spin.more img{animation:ptrspin .9s linear infinite}
+@keyframes ptr720{from{transform:rotate(var(--from,0deg))}to{transform:rotate(calc(var(--from,0deg) + 720deg))}}
 @keyframes ptrpop{0%{transform:scale(1)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
-@keyframes ptrspin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.88)}100%{transform:rotate(360deg) scale(1)}}
+@keyframes ptrspin{from{transform:rotate(calc(var(--from,0deg) + 720deg))}to{transform:rotate(calc(var(--from,0deg) + 1080deg))}}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -1254,7 +1256,7 @@ body.fsmode .bigplay{z-index:3}
       ptr.style.opacity = String(k);
       ptr.style.transform = 'translateY(' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10) + 'px)';
       const ready = d >= LIMIT;
-      $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off' and spins
+      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off' and spins
       ptr.classList.toggle('ready', ready);
       // the logo winds up like a headspin while you pull, and pops when it is ready
       ico.style.animation = (ready && !wasReady) ? 'ptrpop .25s ease' : (ready ? ico.style.animation : '');
@@ -1273,12 +1275,19 @@ body.fsmode .bigplay{z-index:3}
     }
     async function refresh(){
       busy = true;
+      const from = Math.round(LIMIT * 4.5) % 360;
+      ico.style.setProperty('--from', from + 'deg');
       ptr.classList.remove('ready'); ico.style.transform = ''; ico.style.animation = ''; ptr.classList.add('spin');
+      $('#homeLogo').style.opacity = '0';
       ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
       if (scr) { scr.style.transition = 'transform .2s ease'; scr.style.transform = 'translateY(40px)'; }
       saveStats && saveStats();
       // refresh the cached copies first, so the reload really shows new lessons
-      try { await Promise.all(['./', 'index.html', 'lessons.js'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))); } catch (_) {}
+      const spun = new Promise(r => setTimeout(r, 820)); // let the logo finish exactly two turns
+      const fresh = Promise.all(['./', 'index.html', 'lessons.js'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
+      await spun;
+      ptr.classList.add('more'); // still loading: keep spinning calmly
+      await Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]);
       location.reload();
     }
     document.addEventListener('touchstart', e => {
@@ -1301,6 +1310,15 @@ body.fsmode .bigplay{z-index:3}
       if (!active) return; active = false;
       if (dy >= LIMIT) refresh(); else { reset(); scr = null; }
     });
+    document.addEventListener('touchcancel', () => { if (!active) return; active = false; reset(); scr = null; });
+    function hardReset(){
+      busy = false; active = false; wasReady = false;
+      ptr.classList.remove('spin', 'more', 'ready'); ptr.style.cssText = ''; ico.style.cssText = '';
+      $('#homeLogo').style.cssText = '';
+      document.querySelectorAll('.screen').forEach(x => { x.style.transform = ''; x.style.transition = ''; });
+    }
+    window.addEventListener('pageshow', hardReset);
+    hardReset();
   })();
 
   // ===== back navigation: history + edge swipe =====
