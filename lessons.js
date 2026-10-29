@@ -17,5 +17,6 @@ window.LESSONS_DATA = [
     { id:'fr-easychair', sec:'Freezes',  name:'Easy chair freeze',     dur:21, ru:'изи чеир стул' },
     { id:'fr-elbow',     sec:'Freezes',  name:'Elbow freeze',          dur:39, ru:'элбоу локоть' , added:'2026-10-26' },
     { id:'tk-monkey',    sec:'Tricks',   name:'Monkey flip',           dur:34, ru:'манки флип обезьяна' , added:'2026-10-26' },
-    { id:'tk-turtlehs',  sec:'Tricks',   name:'Turtle → handstand freeze', dur:41, ru:'черепаха стойка на руках хендстенд' }
+    { id:'tk-turtlehs',  sec:'Tricks',   name:'Turtle → handstand freeze', dur:41, ru:'черепаха стойка на руках хендстенд' },
+    { id:'pw-flare-wm',  sec:'Powermove', name:'Flare → Windmill → Flare', dur:535, ru:'флаер флэр виндмил мельница', added:'2026-10-29' }
 ];
