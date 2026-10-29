@@ -7,6 +7,11 @@
   the owner's browser). Keep lessons.js/config.js machine-readable JSON so the admin can parse them. Lesson fields:
   id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge).
   `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression.
+- Languages: ru (source) + en, es, pt, fr, de, ja, ko, zh. UI texts in index.html stay Russian; `T('русский текст', {vars})`
+  translates in JS, `translateDom()` translates fixed HTML text/aria/placeholder by exact match. Dictionary is generated:
+  edit `tools/i18n_src.py`, then `python3 tools/i18n_src.py i18n.js`. Every new visible Russian string needs a key there.
+  Language is picked from the phone (CIS -> ru, unknown -> en), changed via the RU pill / Профиль → Язык (`fedoskin-lang`).
+  Lesson videos are Russian speech; move names are international. Admin stays Russian only.
 - Dark hip-hop design: Anton + Inter, accent #E2611A, NEW badge #3BD16F. Keep the look consistent.
 - Alpha mode: `alpha: true` in config.js — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
   link `t.me/Fe_DoSk1n?text=...` (`tg` in config.js).
