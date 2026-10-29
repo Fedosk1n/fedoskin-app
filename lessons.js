@@ -154,5 +154,14 @@ window.LESSONS_DATA = [
   "ru": "тертл тартл черепаха",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-windmill",
+  "sec": "Powermove",
+  "name": "Windmill",
+  "dur": 366,
+  "ru": "виндмил виндмилл мельница",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
