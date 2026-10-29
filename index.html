@@ -227,7 +227,7 @@ body.fsmode .bigplay{z-index:3}
     <img src="logo.png" alt="Fedoskin team" id="homeLogo">
     <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none;justify-self:end"><span class="av-slot" data-size="44"></span></button>
   </header>
-  <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left" data-cfg="alphaBanner">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
   <div class="search" style="margin-top:10px">
     <svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" autocomplete="off" placeholder="Найти элемент: windmill, 6-step…" aria-label="Поиск элемента">
@@ -266,7 +266,7 @@ body.fsmode .bigplay{z-index:3}
 <section class="screen" id="section" aria-label="Раздел" hidden>
   <button class="back" data-back="home" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
   <h1 id="sectionTitle" style="margin-top:16px">Toprock</h1>
-  <p class="lead">Все уроки бесплатно на время альфа-теста.</p>
+  <p class="lead" data-cfg="alphaBanner">Все уроки бесплатно на время альфа-теста.</p>
   <div class="stack" id="sectionList" style="margin-top:12px"></div>
 </section>
 
@@ -405,7 +405,7 @@ body.fsmode .bigplay{z-index:3}
   <ol class="stack" style="gap:10px;margin:22px 0 0;padding:0;list-style:none">
     <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">1</span><span class="stack" style="gap:3px"><b>Сними видео</b><span class="muted" style="font-size:13px">Элемент или раунд, до [N] минут</span></span></li>
     <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">2</span><span class="stack" style="gap:3px"><b>Напиши в Telegram</b><span class="muted" style="font-size:13px">Пришли видео и оплати разбор</span></span></li>
-    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px">Видео с разбором в течение 24 ч</span></span></li>
+    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px">Видео с разбором в течение <span data-cfg="hours">24 ч</span></span></span></li>
   </ol>
   <h2 class="sec" style="margin-bottom:10px">Что ты получишь</h2>
   <ul class="stack" style="gap:10px;margin:0;padding:0;list-style:none;font-size:14px">
@@ -415,7 +415,7 @@ body.fsmode .bigplay{z-index:3}
   </ul>
   <button class="btn btn-accent" data-go="reviewpay" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px">
     <svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Отправить на разбор</button>
-  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center">2 000 ₽ · $30 · видео с разбором в течение 24 ч</p>
+  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center"><span data-cfg="rub">2 000 ₽</span> · <span data-cfg="usd">$30</span> · видео с разбором в течение <span data-cfg="hours">24 ч</span></p>
   <div hidden data-later="my-reviews">
   <h2 class="sec" style="margin-bottom:4px">Мои разборы</h2>
   <button class="list-item" data-toast="Разбор ещё в работе"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Windmill]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag">В работе</span></button>
@@ -440,11 +440,11 @@ body.fsmode .bigplay{z-index:3}
   <ul class="card stack soft" style="margin:0;padding:16px;list-style:none;gap:12px;font-size:13px;line-height:1.4;border-radius:16px">
     <li>• Разбор делает лично создатель приложения</li>
     <li>• Видео и оплата — в Telegram</li>
-    <li>• Вы получите видео с разбором в течение 24 ч после оплаты</li>
+    <li>• Вы получите видео с разбором в течение <span data-cfg="hours">24 ч</span> после оплаты</li>
     <li>• Формат ответа — видео с разбором ошибок и упражнениями</li>
     <li>• Один уточняющий вопрос после разбора — бесплатно</li>
   </ul>
-  <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:22px"><span class="muted">Стоимость</span><span><span class="d" style="font-size:28px">2 000 ₽</span> <span class="muted" style="font-size:14px">или $30</span></span></div>
+  <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:22px"><span class="muted">Стоимость</span><span><span class="d" style="font-size:28px" data-cfg="rub">2 000 ₽</span> <span class="muted" style="font-size:14px">или <span data-cfg="usd">$30</span></span></span></div>
   <a class="btn btn-accent" id="tgLink" href="#" target="_blank" rel="noopener" style="margin-top:12px;min-height:56px;font-size:17px;border-radius:16px;background:#229ED9;color:#fff"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>Написать в Telegram</a>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
 </section>
@@ -618,6 +618,7 @@ body.fsmode .bigplay{z-index:3}
 <div class="ptr" id="ptr" aria-hidden="true"><img src="logo.png" alt="" id="ptrIco"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="config.js"></script>
 <script src="lessons.js"></script>
 <script>
 (function(){
@@ -634,11 +635,25 @@ body.fsmode .bigplay{z-index:3}
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== real lessons (alpha) =====
-  const LESSONS = window.LESSONS_DATA || [];
-  const ALPHA = true; // open alpha: all lessons free, review stays paid
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''}, window.APP_CONFIG || {});
+  const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
+  const ALPHA = CFG.alpha !== false; // open alpha: all lessons free, review stays paid
+  (function applyCfg(){
+    const rub = String(CFG.reviewRub).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+    const vals = {alphaBanner: CFG.alphaBanner, rub: rub, usd: '$' + CFG.reviewUsd, hours: CFG.reviewHours + ' ч'};
+    document.querySelectorAll('[data-cfg]').forEach(el => { const v = vals[el.dataset.cfg]; if (v != null && v !== '') el.textContent = v; });
+    if (!ALPHA) document.querySelectorAll('.alphabar').forEach(el => el.hidden = true);
+  })();
+  // Yandex Metrika: switched on from the admin (metrikaId in config.js)
+  const MID = String(CFG.metrikaId || '').replace(/\D/g, '');
+  function goal(name, params){ try { if (MID && window.ym) ym(+MID, 'reachGoal', name, params); } catch(e){} }
+  if (MID) {
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+    ym(+MID, 'init', {clickmap:true, trackLinks:true, accurateTrackBounce:true});
+  }
   const BY_ID = {}; LESSONS.forEach(l => { BY_ID[l.id] = l; });
   // "NEW": lesson added in the last 14 days and not opened by this user yet
-  const NEW_DAYS = 14, DEFAULT_ADDED = '2026-10-01';
+  const NEW_DAYS = +CFG.newDays || 14, DEFAULT_ADDED = '2026-10-01';
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem('fedoskin-seen') || '[]'); } catch (_) { seen = []; }
   if (!Array.isArray(seen)) seen = [];
@@ -707,8 +722,7 @@ body.fsmode .bigplay{z-index:3}
     const pv = b.querySelector('video');
     pv.muted = true; pv.defaultMuted = true;
     pv.poster = 'v/' + l.id + '.jpg';
-    pv.src = 'v/' + l.id + '-p3.mp4';
-    watchPreview(pv);
+    if (l.pv !== false) { pv.src = 'v/' + l.id + '-p3.mp4'; watchPreview(pv); }
     b.querySelector('.ldur').textContent = fmtD(l.dur);
     b.querySelector('.lname').textContent = l.name;
     if (isNew(l)) { b.querySelector('.lname').prepend(newPill(), ' '); b.classList.add('isnew'); }
@@ -805,6 +819,7 @@ body.fsmode .bigplay{z-index:3}
     const l = BY_ID[id]; if (!l) return;
     curSection = l.sec; curLesson = l;
     markSeen(l.id);
+    goal('lesson', {lesson: l.name, section: l.sec});
     const list = inSec(l.sec), n = list.indexOf(l) + 1;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
@@ -1153,14 +1168,15 @@ body.fsmode .bigplay{z-index:3}
   // chips + radios
   $('#plans').addEventListener('click', e => { const o = e.target.closest('.opt'); if (!o) return; $('#plans').querySelectorAll('.opt').forEach(x => x.setAttribute('aria-checked', x === o)); });
   // review: open the creator's Telegram chat with a ready message
-  const TG_USERNAME = 'Fe_DoSk1n'; // <- Telegram username of the app creator, without @
+  const TG_USERNAME = String(CFG.tg || 'Fe_DoSk1n').replace(/^@/, ''); // <- Telegram username of the app creator, without @
   function tgHref(){
     const opt = $('#plans .opt[aria-checked="true"]');
     const fmtName = opt ? opt.querySelector('b').textContent : '';
-    const text = 'Привет! Я на разбор из приложения Fedoskin team 🔥\nФормат: ' + fmtName + '\nСейчас пришлю видео.';
+    const text = CFG.tgMessage + '\nФормат: ' + fmtName + '\nСейчас пришлю видео.';
     return 'https://t.me/' + TG_USERNAME + '?text=' + encodeURIComponent(text);
   }
   function paintTg(){ $('#tgLink').href = tgHref(); }
+  $('#tgLink').addEventListener('click', () => goal('review_tg'));
   $('#plans').addEventListener('click', paintTg);
   paintTg();
   $('#copyBtn').addEventListener('click', () => {
