@@ -192,8 +192,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится формат разбора и «Сейчас пришлю видео».</span></label>
       <h3>Уроки</h3>
       <label class="f"><span>Сколько дней урок со значком NEW</span><input type="number" id="sNewDays" min="1" max="90" step="1" inputmode="numeric"></label>
-      <h3>Статистика</h3>
-      <label class="f"><span>Номер счётчика Яндекс Метрики</span><input type="text" id="sMetrika" placeholder="например 98765432" inputmode="numeric"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика».</span></label>
+      <!-- Яндекс Метрика отключена по решению владельца (29.10.2026). Код оставлен: вернуть = убрать hidden ниже и в renderStats. -->
+      <h3 hidden data-later="metrika">Статистика</h3>
+      <label class="f" hidden data-later="metrika"><span>Номер счётчика Яндекс Метрики</span><input type="text" id="sMetrika" placeholder="например 98765432" inputmode="numeric"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика».</span></label>
       <div class="row" style="margin-top:28px"><button class="btn btn-sm" id="logoutBtn">Выйти из админки на этом устройстве</button></div>
     </div>
 
@@ -218,7 +219,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <li>В Метрике → «Цели» добавьте четыре цели типа «JavaScript-событие» с идентификаторами: <code>lesson</code> (открыли урок), <code>review_tg</code> (нажали «Написать в Telegram»), <code>app_install</code> (установили на экран «Домой»), <code>app_open</code> (открыли приложение с иконки).</li>
         </ol>
       </div>
-      <h2>Библиотека</h2>
+      <h2 style="margin-top:12px">Библиотека</h2>
       <div class="kpis" id="kpis"></div>
       <h3>Уроков по разделам</h3>
       <div class="bars" id="bars"></div>
@@ -538,7 +539,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function renderStats(){
     const id = String(cfg.metrikaId || '');
     const live = String(remote.cfg.metrikaId || '');
-    $('#metrikaOn').hidden = !live; $('#metrikaOff').hidden = !!live;
+    $('#metrikaOn').hidden = true; $('#metrikaOff').hidden = true; // Метрика отключена
     if (live) $('#metrikaLink').href = 'https://metrika.yandex.ru/dashboard?id=' + encodeURIComponent(live);
     if (id && !live) $('#metrikaOff').querySelector('.card b').textContent = 'Номер счётчика введён — нажмите «Опубликовать» внизу';
     const vis = lessons.filter(l => !l.hidden);
