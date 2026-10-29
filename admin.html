@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon2-192.png">
+<link rel="apple-touch-icon" href="icons/icon2-180.png">
+<meta name="apple-mobile-web-app-title" content="Админка">
+<title>Fedoskin · Админка</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0B0B0C; --surface:#161618; --surface-2:#1F1F22; --line:#2A2A2D;
+  --fg:#F2EFE8; --muted:#9A968E; --soft:#C9C5BD; --accent:#E2611A; --new:#3BD16F; --bad:#FF5A4E;
+  --display:"Anton", Impact, "Arial Narrow", sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 110px)}
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+header img{width:40px;height:40px;border-radius:10px}
+h1{font-family:var(--display);font-weight:400;font-size:26px;letter-spacing:.5px;margin:0;text-transform:uppercase;flex:1}
+h2{font-family:var(--display);font-weight:400;font-size:22px;text-transform:uppercase;margin:26px 0 10px;letter-spacing:.4px}
+h3{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;margin:22px 0 8px}
+p{line-height:1.5}
+.muted{color:var(--muted)} .soft{color:var(--soft)} .small{font-size:13px}
+.card{background:var(--surface);border:1px solid #222225;border-radius:16px;padding:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;cursor:pointer;text-decoration:none;color:var(--fg)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#0B0B0C}
+.btn-bad{color:var(--bad);border-color:#4a2522;background:#1d1312}
+.btn-sm{min-height:36px;padding:0 10px;font-size:14px;border-radius:10px}
+.ibtn{width:40px;height:40px;min-height:40px;padding:0;border-radius:10px}
+label.f{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+label.f>span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px}
+input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{width:100%;min-height:46px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#131315;outline:none}
+textarea{min-height:80px;resize:vertical;line-height:1.4}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);line-height:1.4}
+.sw{display:flex;align-items:center;gap:12px;margin-top:14px;cursor:pointer;user-select:none}
+.sw input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:#2E2E32;position:relative;flex:0 0 46px;margin:0;cursor:pointer;transition:background .15s}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;transition:transform .15s}
+.sw input:checked{background:var(--accent)}
+.sw input:checked::after{transform:translateX(18px)}
+.sw.green input:checked{background:var(--new)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:6px -16px 4px;padding:0 16px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;min-height:40px;padding:0 16px;border-radius:20px;border:1px solid var(--line);background:transparent;font-weight:600;cursor:pointer;color:var(--soft)}
+.tab[aria-selected=true]{background:var(--fg);color:#0B0B0C;border-color:var(--fg)}
+.row{display:flex;align-items:center;gap:10px}
+.lrow{display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;background:var(--surface);border:1px solid #222225;margin-top:8px}
+.lrow.off{opacity:.5}
+.lrow img,.lrow .ph{width:48px;height:64px;object-fit:cover;border-radius:8px;background:var(--surface-2);flex:0 0 48px}
+.lrow .tx{flex:1;min-width:0;cursor:pointer}
+.lrow .nm{font-weight:600;line-height:1.25;word-break:break-word}
+.lrow .mt{font-size:12px;color:var(--muted);margin-top:3px}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.8px;padding:2px 6px;border-radius:6px;vertical-align:2px;margin-left:6px}
+.pill.new{background:var(--new);color:#0B0B0C}
+.pill.hid{background:#2E2E32;color:var(--soft)}
+.pill.up{background:var(--accent);color:#0B0B0C}
+.arrows{display:flex;flex-direction:column;gap:4px}
+.arrows .btn{width:36px;height:30px;min-height:30px;padding:0;border-radius:8px}
+.savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
+.savebar .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.savebar .msg{flex:1;font-size:14px;line-height:1.35}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--bg);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 18px)}
+@media (min-width:700px){.sheet{align-items:center}.sheet .box{border-radius:22px;border-bottom:1px solid var(--line)}}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 40px;line-height:1.45}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:28px;height:28px;border-radius:14px;background:var(--surface-2);color:var(--accent);font-family:var(--display);display:flex;align-items:center;justify-content:center}
+code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13px}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:130px;border:1.5px dashed #3A3A3E;border-radius:18px;background:#131315;cursor:pointer;text-align:center;padding:16px}
+.drop.on{border-color:var(--accent)}
+.prog{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.plist{list-style:none;margin:10px 0 0;padding:0}
+.plist li{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:14px}
+.plist li b{width:22px;text-align:center}
+.prevs{display:flex;gap:12px;margin-top:14px;align-items:flex-start}
+.prevs figure{margin:0;flex:0 0 120px}
+.prevs img,.prevs video{width:120px;height:160px;object-fit:cover;border-radius:12px;background:var(--surface-2);display:block}
+.prevs figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid #222225;border-radius:14px;padding:14px}
+.kpi b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.kpi span{font-size:12px;color:var(--muted)}
+.bars .b{display:grid;grid-template-columns:110px 1fr 40px;gap:10px;align-items:center;margin-top:8px;font-size:14px}
+.bars .t{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.bars .t i{display:block;height:100%;background:var(--accent)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);background:var(--fg);color:#0B0B0C;font-weight:600;padding:12px 18px;border-radius:14px;z-index:50;max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast.bad{background:var(--bad);color:#fff}
+.err{color:var(--bad);font-size:14px;margin-top:10px;line-height:1.4}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icons/icon2-180.png" alt="">
+    <h1>Админка</h1>
+    <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
+  </header>
+
+  <!-- ===== вход ===== -->
+  <section id="login" hidden>
+    <div class="card">
+      <h2 style="margin-top:0">Вход</h2>
+      <p class="soft">Админка сохраняет изменения прямо в GitHub. Для этого нужен ключ доступа (токен). Его делают один раз на каждом устройстве — дальше админка его помнит.</p>
+      <label class="f"><span>Ключ GitHub</span><input type="password" id="tokenIn" placeholder="github_pat_..." autocomplete="off" spellcheck="false"></label>
+      <div class="row" style="margin-top:14px"><button class="btn btn-accent" id="loginBtn">Войти</button></div>
+      <div class="err" id="loginErr" hidden></div>
+    </div>
+    <h2>Как получить ключ</h2>
+    <ol class="steps">
+      <li>Откройте <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> (нужно быть в аккаунте Fedosk1n).</li>
+      <li><b>Token name</b> — любое, например <code>Админка Fedoskin</code>. <b>Expiration</b> — выберите самый долгий срок (через год ключ надо будет сделать заново).</li>
+      <li><b>Repository access</b> → <b>Only select repositories</b> → выберите <code>fedoskin-app</code>.</li>
+      <li><b>Permissions</b> → <b>Repository permissions</b> → <b>Contents</b> → <b>Read and write</b>. Больше ничего не трогайте.</li>
+      <li>Внизу нажмите <b>Generate token</b>, скопируйте ключ (начинается с <code>github_pat_</code>) и вставьте сюда.</li>
+    </ol>
+    <p class="hint">Ключ хранится только в этом браузере и никуда, кроме GitHub, не отправляется. Никому его не пересылайте. Если телефон потеряется — удалите ключ на той же странице GitHub.</p>
+  </section>
+
+  <!-- ===== основное ===== -->
+  <section id="main" hidden>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="lessons" aria-selected="true">Уроки</button>
+      <button class="tab" role="tab" data-tab="add">Добавить видео</button>
+      <button class="tab" role="tab" data-tab="settings">Тексты и настройки</button>
+      <button class="tab" role="tab" data-tab="stats">Статистика</button>
+    </nav>
+
+    <div data-pane="lessons">
+      <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Стрелки — порядок внутри раздела. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
+      <div style="margin-top:12px"><input type="text" id="lFilter" placeholder="Найти урок…"></div>
+      <div id="lessonList"></div>
+    </div>
+
+    <div data-pane="add" hidden>
+      <div class="card" style="margin-top:12px">
+        <label class="drop" id="drop" for="fileIn">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2611A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
+          <b id="dropTitle">Выбрать видео</b>
+          <span class="muted small" id="dropSub">MP4 или MOV, вертикальное или горизонтальное</span>
+        </label>
+        <input type="file" id="fileIn" accept="video/*,.mov,.mp4" hidden>
+        <div class="grid2">
+          <label class="f"><span>Раздел</span><select id="aSec"></select></label>
+          <label class="f"><span>Дата (для NEW)</span><input type="date" id="aDate"></label>
+        </div>
+        <label class="f"><span>Название</span><input type="text" id="aName" placeholder="Например: Windmill"></label>
+        <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="aRu" placeholder="виндмил мельница"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как люди будут искать урок русскими буквами — через пробел.</span></label>
+        <label class="f"><span>Имя файла (латиницей)</span><input type="text" id="aId" placeholder="pw-windmill" spellcheck="false"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Заполняется само. Менять не обязательно.</span></label>
+        <label class="sw"><input type="checkbox" id="aCompress"><span><b>Сжать до 720p</b><br><span class="hint" id="aCompressHint">Делает файл в 5–10 раз меньше. Лучше на компьютере в Chrome.</span></span></label>
+        <div class="row" style="margin-top:18px;flex-wrap:wrap"><button class="btn btn-accent" id="aGo" disabled>Подготовить урок</button><button class="btn" id="aCancel" hidden>Отменить</button></div>
+        <div id="aWork" hidden>
+          <ul class="plist" id="aSteps"></ul>
+          <div class="prog"><i id="aBar"></i></div>
+          <div class="prevs" id="aPrevs" hidden>
+            <figure><img id="aCover" alt="Обложка"><figcaption>Обложка</figcaption></figure>
+            <figure><video id="aPv" muted loop playsinline autoplay></video><figcaption>Анимация обложки</figcaption></figure>
+          </div>
+        </div>
+        <div class="err" id="aErr" hidden></div>
+      </div>
+      <h3>Если сжимаете на телефоне</h3>
+      <p class="soft small">Проще всего: в CapCut экспортируйте видео в <b>720p, 30 или 60 кадров</b>, выберите его здесь и выключите «Сжать до 720p». Файл должен быть меньше 95 МБ — это ограничение GitHub. Обложку и анимацию админка сделает сама.</p>
+    </div>
+
+    <div data-pane="settings" hidden>
+      <h3>Альфа-тест</h3>
+      <label class="sw"><input type="checkbox" id="sAlpha"><span><b>Режим альфа-теста</b><br><span class="hint">Все уроки бесплатно, плашка «α ALPHA» на главной</span></span></label>
+      <label class="f"><span>Текст плашки на главной</span><input type="text" id="sBanner"></label>
+      <h3>Разбор видео</h3>
+      <div class="grid2">
+        <label class="f"><span>Цена, ₽</span><input type="number" id="sRub" min="0" step="50" inputmode="numeric"></label>
+        <label class="f"><span>Цена, $</span><input type="number" id="sUsd" min="0" step="1" inputmode="numeric"></label>
+      </div>
+      <label class="f"><span>Срок разбора, часов</span><input type="number" id="sHours" min="1" step="1" inputmode="numeric"></label>
+      <label class="f"><span>Telegram (без @)</span><input type="text" id="sTg" spellcheck="false"></label>
+      <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится формат разбора и «Сейчас пришлю видео».</span></label>
+      <h3>Уроки</h3>
+      <label class="f"><span>Сколько дней урок со значком NEW</span><input type="number" id="sNewDays" min="1" max="90" step="1" inputmode="numeric"></label>
+      <h3>Статистика</h3>
+      <label class="f"><span>Номер счётчика Яндекс Метрики</span><input type="text" id="sMetrika" placeholder="например 98765432" inputmode="numeric"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика».</span></label>
+      <div class="row" style="margin-top:28px"><button class="btn btn-sm" id="logoutBtn">Выйти из админки на этом устройстве</button></div>
+    </div>
+
+    <div data-pane="stats" hidden>
+      <div id="metrikaOn" hidden>
+        <div class="card" style="margin-top:12px">
+          <b>Яндекс Метрика подключена</b>
+          <p class="soft small" style="margin:6px 0 12px">Посетители, страны, города, телефоны — в отчётах Метрики. Какие уроки смотрят: Отчёты → «Параметры визитов» (цель <code>lesson</code>). Нажатия «Написать в Telegram»: цель <code>review_tg</code>.</p>
+          <a class="btn btn-accent" id="metrikaLink" target="_blank" rel="noopener">Открыть Метрику</a>
+        </div>
+      </div>
+      <div id="metrikaOff" hidden>
+        <div class="card" style="margin-top:12px">
+          <b>Подключите Яндекс Метрику — это бесплатно</b>
+          <p class="soft small" style="margin:6px 0 0">Тогда вы будете видеть, сколько людей заходит, откуда они и какие уроки смотрят.</p>
+        </div>
+        <ol class="steps" style="margin-top:16px">
+          <li>Откройте <a href="https://metrika.yandex.ru/add" target="_blank" rel="noopener">metrika.yandex.ru/add</a> и войдите в Яндекс.</li>
+          <li>Имя счётчика — <code>Fedoskin</code>. Адрес сайта — <code>fedosk1n.github.io/fedoskin-app</code>. Галочку «Вебвизор» можно включить.</li>
+          <li>Нажмите «Создать счётчик». Код вставлять никуда не надо — скопируйте только <b>номер счётчика</b> (8–9 цифр).</li>
+          <li>Вставьте номер во вкладке «Тексты и настройки» → «Номер счётчика» и нажмите «Опубликовать».</li>
+          <li>В Метрике → «Цели» добавьте две цели типа «JavaScript-событие» с идентификаторами <code>lesson</code> (открыли урок) и <code>review_tg</code> (нажали «Написать в Telegram»).</li>
+        </ol>
+      </div>
+      <h2>Библиотека</h2>
+      <div class="kpis" id="kpis"></div>
+      <h3>Уроков по разделам</h3>
+      <div class="bars" id="bars"></div>
+      <p class="hint" style="margin-top:16px">Место в GitHub: видео занимают <span id="repoSize">…</span> из ~1 ГБ, которые GitHub Pages советует не превышать.</p>
+    </div>
+  </section>
+
+  <section id="loading"><p class="muted row"><span class="spin"></span> Загружаю…</p></section>
+</div>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="in"><div class="msg" id="saveMsg"></div><button class="btn btn-sm" id="undoBtn">Отменить</button><button class="btn btn-accent" id="pubBtn">Опубликовать</button></div>
+</div>
+
+<div class="sheet" id="editSheet" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="eTitle">
+    <div class="row"><h2 id="eTitle" style="margin:0;flex:1">Урок</h2><button class="btn ibtn" id="eClose" aria-label="Закрыть">✕</button></div>
+    <div class="prevs" style="margin-top:12px"><figure><img id="eCover" alt=""><figcaption id="eFile"></figcaption></figure>
+      <div style="flex:1;min-width:0"><a class="btn btn-sm" id="eWatch" target="_blank" rel="noopener">Посмотреть видео</a><p class="hint" id="eInfo" style="margin-top:10px"></p></div></div>
+    <label class="f"><span>Название</span><input type="text" id="eName"></label>
+    <label class="f"><span>Раздел</span><select id="eSec"></select></label>
+    <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="eRu"></label>
+    <label class="f"><span>Дата добавления</span><input type="date" id="eDate"></label>
+    <label class="sw green"><input type="checkbox" id="eNew"><span><b>Значок NEW</b><br><span class="hint" id="eNewHint"></span></span></label>
+    <label class="sw"><input type="checkbox" id="eShow"><span><b>Показывать в приложении</b><br><span class="hint">Выключите, чтобы спрятать урок, не удаляя</span></span></label>
+    <div class="row" style="margin-top:22px;flex-wrap:wrap"><button class="btn btn-accent" id="eOk">Готово</button><span style="flex:1"></span><button class="btn btn-bad" id="eDel">Удалить урок</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const OWNER = 'Fedosk1n', REPO = 'fedoskin-app', BRANCH = 'main';
+  const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
+  const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
+  const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
+  const CFG_DEFAULT = {alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''};
+  const MAX_FILE = 95 * 1024 * 1024;
+  const TOKEN_KEY = 'fedoskin-admin-token';
+  const $ = s => document.querySelector(s);
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k, v){ try { localStorage.setItem(k, v); } catch(e){} },
+    del(k){ try { localStorage.removeItem(k); } catch(e){} }
+  };
+
+  let token = store.get(TOKEN_KEY) || '';
+  // what is on GitHub now, and our edited copy
+  let remote = null;            // {lessonsText, lessonsSha, cfgText, cfgSha, header, cfgHeader, lessons, cfg}
+  let lessons = [], cfg = {};
+  let uploads = {};             // id -> {mp4: Blob, jpg: Blob, p3: Blob|null, coverUrl}
+  let deleted = [];             // ids whose files must be removed
+  let vFiles = {};              // name -> size, files in v/ on GitHub
+
+  // ---------- helpers ----------
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  const fmtD = s => { s = Math.round(s || 0); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+  const fmtMB = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',') + ' МБ';
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const newDays = () => +cfg.newDays || 14;
+  const inNewWindow = l => (Date.now() - Date.parse(l.added || '2026-10-01')) <= newDays() * 864e5;
+  const showsNew = l => l.new !== false && inNewWindow(l);
+  function toast(text, bad){
+    const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = text;
+    document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : 3200);
+  }
+  function b64ToUtf8(b64){
+    const bin = atob(b64.replace(/\s/g, '')); const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function blobToB64(blob){
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+  }
+  const TR = {а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+  function slug(s){
+    return String(s || '').toLowerCase().split('').map(c => TR[c] ?? c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+  }
+  function uniqueId(base){
+    base = base || 'lesson'; let id = base, n = 2;
+    const taken = new Set(lessons.map(l => l.id).concat(Object.keys(vFiles).map(f => f.replace(/(-p3)?\.(mp4|jpg)$/, ''))));
+    while (taken.has(id)) id = base + '-' + (n++);
+    return id;
+  }
+
+  // ---------- GitHub API ----------
+  async function gh(path, opts){
+    opts = opts || {};
+    const r = await fetch(path.startsWith('http') ? path : API + path, {
+      method: opts.method || 'GET',
+      cache: 'no-store',
+      headers: Object.assign({'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}, opts.body ? {'Content-Type': 'application/json'} : {}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    if (!r.ok) {
+      let msg = ''; try { msg = (await r.json()).message || ''; } catch(e){}
+      const err = new Error(msg || ('HTTP ' + r.status)); err.status = r.status; throw err;
+    }
+    return r.status === 204 ? null : r.json();
+  }
+  // big blobs: XHR so we can show upload progress
+  function ghBlob(b64, onProgress){
+    return new Promise((res, rej) => {
+      const x = new XMLHttpRequest();
+      x.open('POST', API + '/git/blobs');
+      x.setRequestHeader('Authorization', 'Bearer ' + token);
+      x.setRequestHeader('Accept', 'application/vnd.github+json');
+      x.setRequestHeader('Content-Type', 'application/json');
+      x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      x.onload = () => { if (x.status >= 200 && x.status < 300) res(JSON.parse(x.responseText).sha); else { let m = ''; try { m = JSON.parse(x.responseText).message; } catch(e){} rej(new Error(m || ('HTTP ' + x.status))); } };
+      x.onerror = () => rej(new Error('нет связи с GitHub'));
+      x.send(JSON.stringify({content: b64, encoding: 'base64'}));
+    });
+  }
+  function parseData(text, name){
+    const at = text.indexOf(name);
+    if (at < 0) throw new Error('не нашёл ' + name);
+    const eq = text.indexOf('=', at);
+    const json = text.slice(eq + 1).trim().replace(/;\s*$/, '');
+    return {header: text.slice(0, at), data: JSON.parse(json)};
+  }
+  async function loadRemote(){
+    const [lf, cf, vdir] = await Promise.all([
+      gh('/contents/lessons.js?ref=' + BRANCH),
+      gh('/contents/config.js?ref=' + BRANCH).catch(e => { if (e.status === 404) return null; throw e; }),
+      gh('/contents/v?ref=' + BRANCH).catch(() => [])
+    ]);
+    const lessonsText = b64ToUtf8(lf.content);
+    const L = parseData(lessonsText, 'window.LESSONS_DATA');
+    let cfgText = '', C = {header: '// Настройки приложения. Их меняет админка (admin.html). Формат — JSON.\n', data: {}};
+    if (cf) { cfgText = b64ToUtf8(cf.content); C = parseData(cfgText, 'window.APP_CONFIG'); }
+    remote = {lessonsText, lessonsSha: lf.sha, cfgText, cfgSha: cf ? cf.sha : null, header: L.header, cfgHeader: C.header, lessons: L.data, cfg: Object.assign({}, CFG_DEFAULT, C.data)};
+    vFiles = {}; (Array.isArray(vdir) ? vdir : []).forEach(f => { vFiles[f.name] = f.size; });
+    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = [];
+  }
+  const lessonsOut = () => remote.header + 'window.LESSONS_DATA = ' + JSON.stringify(lessons, null, 1) + ';\n';
+  const cfgOut = () => remote.cfgHeader + 'window.APP_CONFIG = ' + JSON.stringify(cfg, null, 1) + ';\n';
+
+  // ---------- login ----------
+  async function start(){
+    $('#loading').hidden = false; $('#login').hidden = true; $('#main').hidden = true;
+    if (!token) { $('#loading').hidden = true; $('#login').hidden = false; return; }
+    try {
+      const repo = await gh('');
+      if (!repo.permissions || !repo.permissions.push) throw Object.assign(new Error('У ключа нет права записи. Проверьте шаг 4: Contents → Read and write.'), {status: 403});
+      await loadRemote();
+      $('#loading').hidden = true; $('#main').hidden = false;
+      renderAll();
+    } catch(e) {
+      $('#loading').hidden = true; $('#login').hidden = false;
+      const err = $('#loginErr'); err.hidden = false;
+      err.textContent = (e.status === 401 ? 'Ключ не подошёл (возможно, истёк срок или опечатка). ' : e.status === 404 ? 'Ключ не видит репозиторий fedoskin-app — проверьте шаг 3. ' : 'Не получилось войти: ') + (e.status === 401 || e.status === 404 ? '' : e.message);
+    }
+  }
+  $('#loginBtn').addEventListener('click', () => {
+    const v = $('#tokenIn').value.trim(); if (!v) return;
+    token = v; store.set(TOKEN_KEY, v); start();
+  });
+  $('#tokenIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#loginBtn').click(); });
+  $('#logoutBtn').addEventListener('click', () => {
+    if (isDirty() && !confirm('Есть неопубликованные изменения — они пропадут. Выйти?')) return;
+    store.del(TOKEN_KEY); token = ''; $('#tokenIn').value = ''; start();
+  });
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  function showTab(name){
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
+    if (name === 'stats') renderStats();
+    store.set('fedoskin-admin-tab', name);
+  }
+
+  // ---------- dirty state / save bar ----------
+  const isDirty = () => remote && (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || JSON.stringify(cfg) !== JSON.stringify(remote.cfg) || Object.keys(uploads).length > 0 || deleted.length > 0);
+  function paintSaveBar(){
+    const d = isDirty(); $('#savebar').hidden = !d; if (!d) return;
+    const parts = [];
+    const nUp = Object.keys(uploads).length; if (nUp) parts.push('новых видео: ' + nUp);
+    if (deleted.length) parts.push('удалено: ' + deleted.length);
+    if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) parts.push('настройки');
+    const changedLessons = JSON.stringify(lessons.filter(l => !uploads[l.id])) !== JSON.stringify(remote.lessons.filter(l => !deleted.includes(l.id)));
+    if (changedLessons) parts.push('уроки');
+    $('#saveMsg').innerHTML = '<b>Не опубликовано</b><br><span class="muted">' + (parts.join(', ') || 'изменения') + '</span>';
+  }
+  window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+  $('#undoBtn').addEventListener('click', () => {
+    if (!confirm('Отменить все неопубликованные изменения?')) return;
+    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; renderAll();
+  });
+
+  // ---------- lessons list ----------
+  function coverSrc(l){ return uploads[l.id] ? uploads[l.id].coverUrl : 'v/' + l.id + '.jpg?' + (l.added || ''); }
+  function renderLessons(){
+    const box = $('#lessonList'); box.innerHTML = '';
+    const q = $('#lFilter').value.trim().toLowerCase();
+    SECTIONS.concat([...new Set(lessons.map(l => l.sec))].filter(s => !SECTIONS.includes(s))).forEach(sec => {
+      const list = lessons.filter(l => l.sec === sec);
+      const shown = list.filter(l => !q || (l.name + ' ' + (l.ru || '') + ' ' + l.id).toLowerCase().includes(q));
+      if (q && !shown.length) return;
+      const h = document.createElement('h3'); h.textContent = sec + ' · ' + list.length; box.appendChild(h);
+      if (!list.length) { const p = document.createElement('p'); p.className = 'muted small'; p.style.margin = '0'; p.textContent = 'Пока пусто'; box.appendChild(p); }
+      shown.forEach(l => {
+        const r = document.createElement('div'); r.className = 'lrow' + (l.hidden ? ' off' : '');
+        const img = document.createElement('img'); img.loading = 'lazy'; img.alt = ''; img.src = coverSrc(l); img.onerror = () => { img.replaceWith(Object.assign(document.createElement('span'), {className: 'ph'})); };
+        const tx = document.createElement('div'); tx.className = 'tx'; tx.setAttribute('role', 'button'); tx.tabIndex = 0;
+        const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = l.name;
+        if (showsNew(l)) nm.insertAdjacentHTML('beforeend', '<span class="pill new">NEW</span>');
+        if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
+        if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">НЕ ОПУБЛИКОВАН</span>');
+        const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
+        tx.append(nm, mt);
+        tx.addEventListener('click', () => openEdit(l.id));
+        tx.addEventListener('keydown', e => { if (e.key === 'Enter') openEdit(l.id); });
+        const ar = document.createElement('div'); ar.className = 'arrows';
+        const idx = list.indexOf(l);
+        [['↑', -1, 'Выше'], ['↓', 1, 'Ниже']].forEach(([t, d, lbl]) => {
+          const b = document.createElement('button'); b.className = 'btn'; b.textContent = t; b.setAttribute('aria-label', lbl + ': ' + l.name);
+          b.disabled = q !== '' || (d < 0 ? idx === 0 : idx === list.length - 1);
+          b.addEventListener('click', () => move(l, d));
+          ar.appendChild(b);
+        });
+        r.append(img, tx, ar); box.appendChild(r);
+      });
+    });
+  }
+  $('#lFilter').addEventListener('input', renderLessons);
+  function move(l, d){
+    const list = lessons.filter(x => x.sec === l.sec);
+    const other = list[list.indexOf(l) + d]; if (!other) return;
+    const i = lessons.indexOf(l), j = lessons.indexOf(other);
+    lessons[i] = other; lessons[j] = l;
+    renderLessons(); paintSaveBar();
+  }
+
+  // ---------- edit sheet ----------
+  let editing = null;
+  function fillSecSelect(sel){ sel.innerHTML = ''; SECTIONS.forEach(s => sel.add(new Option(s, s))); }
+  function openEdit(id){
+    const l = lessons.find(x => x.id === id); if (!l) return;
+    editing = l;
+    $('#eTitle').textContent = l.name;
+    $('#eCover').src = coverSrc(l);
+    $('#eFile').textContent = l.id;
+    const up = uploads[l.id];
+    $('#eWatch').href = up ? URL.createObjectURL(up.mp4) : 'v/' + l.id + '.mp4';
+    const size = up ? up.mp4.size : vFiles[l.id + '.mp4'];
+    $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (size ? ' · файл ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
+    $('#eName').value = l.name;
+    fillSecSelect($('#eSec')); $('#eSec').value = l.sec;
+    $('#eRu').value = l.ru || '';
+    $('#eDate').value = l.added || '';
+    $('#eNew').checked = showsNew(l);
+    paintNewHint();
+    $('#eShow').checked = !l.hidden;
+    $('#editSheet').hidden = false;
+    setTimeout(() => $('#eName').focus({preventScroll: true}), 50);
+  }
+  function paintNewHint(){
+    const d = $('#eDate').value || today();
+    const until = new Date(Date.parse(d) + newDays() * 864e5);
+    $('#eNewHint').textContent = $('#eNew').checked ? 'Виден до ' + until.toLocaleDateString('ru-RU') + ' (или пока человек не откроет урок)' : 'Выключен';
+  }
+  $('#eNew').addEventListener('change', () => {
+    if ($('#eNew').checked && (Date.now() - Date.parse($('#eDate').value || '2000-01-01')) > newDays() * 864e5) $('#eDate').value = today();
+    paintNewHint();
+  });
+  $('#eDate').addEventListener('change', paintNewHint);
+  function closeEdit(){ $('#editSheet').hidden = true; editing = null; }
+  $('#eClose').addEventListener('click', closeEdit);
+  $('#editSheet').addEventListener('click', e => { if (e.target.id === 'editSheet') closeEdit(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#editSheet').hidden) closeEdit(); });
+  $('#eOk').addEventListener('click', () => {
+    const l = editing; if (!l) return;
+    const name = $('#eName').value.trim(); if (!name) { $('#eName').focus(); return; }
+    l.name = name;
+    if (l.sec !== $('#eSec').value) {
+      // move to the end of the new section
+      l.sec = $('#eSec').value;
+      lessons.splice(lessons.indexOf(l), 1);
+      let at = -1; lessons.forEach((x, i) => { if (x.sec === l.sec) at = i; });
+      lessons.splice(at < 0 ? lessons.length : at + 1, 0, l);
+    }
+    l.ru = $('#eRu').value.trim();
+    if ($('#eDate').value) l.added = $('#eDate').value;
+    delete l.new;
+    if (!$('#eNew').checked && inNewWindow(l)) l.new = false;
+    if ($('#eShow').checked) delete l.hidden; else l.hidden = true;
+    closeEdit(); renderLessons(); paintSaveBar();
+  });
+  $('#eDel').addEventListener('click', () => {
+    const l = editing; if (!l) return;
+    if (!confirm('Удалить урок «' + l.name + '» вместе с видео? Если хотите просто убрать его на время — лучше выключите «Показывать в приложении».')) return;
+    lessons.splice(lessons.indexOf(l), 1);
+    if (uploads[l.id]) delete uploads[l.id]; else deleted.push(l.id);
+    closeEdit(); renderLessons(); paintSaveBar();
+  });
+
+  // ---------- settings ----------
+  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId'};
+  function renderSettings(){
+    Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
+  }
+  Object.entries(S).forEach(([id, k]) => {
+    const el = $('#' + id);
+    el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', () => {
+      let v = el.type === 'checkbox' ? el.checked : el.value;
+      if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, Math.round(+v));
+      if (k === 'tg') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
+      if (k === 'metrikaId') v = String(v).replace(/\D/g, '');
+      if (k === 'alphaBanner' || k === 'tgMessage') v = String(v);
+      cfg[k] = v; paintSaveBar();
+    });
+  });
+
+  // ---------- stats ----------
+  function renderStats(){
+    const id = String(cfg.metrikaId || '');
+    const live = String(remote.cfg.metrikaId || '');
+    $('#metrikaOn').hidden = !live; $('#metrikaOff').hidden = !!live;
+    if (live) $('#metrikaLink').href = 'https://metrika.yandex.ru/dashboard?id=' + encodeURIComponent(live);
+    if (id && !live) $('#metrikaOff').querySelector('.card b').textContent = 'Номер счётчика введён — нажмите «Опубликовать» внизу';
+    const vis = lessons.filter(l => !l.hidden);
+    const mins = Math.round(vis.reduce((a, l) => a + (l.dur || 0), 0) / 60);
+    const kp = [[vis.length, 'уроков в приложении'], [mins, 'минут видео'], [vis.filter(showsNew).length, 'со значком NEW'], [lessons.filter(l => l.hidden).length, 'скрыто']];
+    $('#kpis').innerHTML = kp.map(([n, t]) => '<div class="kpi"><b>' + n + '</b><span>' + t + '</span></div>').join('');
+    const max = Math.max(1, ...SECTIONS.map(s => vis.filter(l => l.sec === s).length));
+    $('#bars').innerHTML = SECTIONS.map(s => { const n = vis.filter(l => l.sec === s).length; return '<div class="b"><span>' + s + '</span><span class="t"><i style="width:' + (n / max * 100) + '%"></i></span><span class="muted">' + n + '</span></div>'; }).join('');
+    const total = Object.values(vFiles).reduce((a, b) => a + b, 0) + Object.values(uploads).reduce((a, u) => a + u.mp4.size + u.jpg.size + (u.p3 ? u.p3.size : 0), 0);
+    $('#repoSize').textContent = fmtMB(total);
+  }
+
+  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
+
+  // ---------- add video ----------
+  const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  const canEncode = typeof VideoEncoder !== 'undefined';
+  $('#aCompress').checked = canEncode && !isPhone;
+  if (!canEncode) { $('#aCompress').disabled = true; $('#aCompressHint').textContent = 'Этот браузер не умеет сжимать видео. Откройте админку на компьютере в Chrome или загрузите уже сжатое видео.'; }
+  let file = null, meta = null, idTouched = false, busy = false, cancelled = false;
+  function autoId(){ if (!idTouched) $('#aId').value = uniqueId(PREFIX[$('#aSec').value] + '-' + (slug($('#aName').value) || 'lesson')); }
+  $('#aName').addEventListener('input', () => { autoId(); paintGo(); });
+  $('#aSec').addEventListener('change', autoId);
+  $('#aId').addEventListener('input', () => { idTouched = true; $('#aId').value = $('#aId').value.toLowerCase().replace(/[^a-z0-9-]/g, ''); paintGo(); });
+  const paintGo = () => { $('#aGo').disabled = busy || !file || !$('#aName').value.trim() || !$('#aId').value; };
+  $('#fileIn').addEventListener('change', () => pickFile($('#fileIn').files[0]));
+  const drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('on'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('on'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) pickFile(f); });
+  async function pickFile(f){
+    if (!f || busy) return;
+    $('#aErr').hidden = true; $('#aWork').hidden = true;
+    file = f; meta = null;
+    $('#dropTitle').textContent = f.name;
+    $('#dropSub').textContent = fmtMB(f.size) + ' · читаю…';
+    if (!$('#aName').value) { $('#aName').value = f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').slice(0, 60); autoId(); }
+    try {
+      meta = await readMeta(f);
+      $('#dropSub').textContent = fmtMB(f.size) + ' · ' + fmtD(meta.dur) + ' · ' + meta.w + '×' + meta.h + (meta.h >= meta.w ? ' (вертикальное)' : ' (горизонтальное)');
+    } catch(e) {
+      $('#dropSub').textContent = fmtMB(f.size) + ' · браузер не смог открыть это видео';
+    }
+    paintGo();
+  }
+  function readMeta(f){
+    return new Promise((res, rej) => {
+      const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'metadata';
+      const url = URL.createObjectURL(f);
+      const t = setTimeout(() => rej(new Error('timeout')), 20000);
+      v.onloadedmetadata = () => { clearTimeout(t); res({dur: v.duration, w: v.videoWidth, h: v.videoHeight, url}); };
+      v.onerror = () => { clearTimeout(t); rej(new Error('decode')); };
+      v.src = url;
+    });
+  }
+  // centre crop to 3:4 in display pixels
+  function crop34(w, h){
+    let cw, ch;
+    if (w / h > 3 / 4) { ch = h; cw = Math.round(h * 3 / 4); } else { cw = w; ch = Math.round(w * 4 / 3); }
+    cw -= cw % 2; ch -= ch % 2;
+    return {left: Math.floor((w - cw) / 4) * 2, top: Math.floor((h - ch) / 4) * 2, width: cw, height: ch};
+  }
+  function makeCover(blobOrFile, dur){
+    return new Promise((res, rej) => {
+      const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto';
+      const url = URL.createObjectURL(blobOrFile);
+      const t = setTimeout(() => rej(new Error('обложка: видео не открылось')), 30000);
+      v.onloadeddata = () => { v.currentTime = Math.min(2, Math.max(0, (dur || v.duration) / 3)); };
+      v.onseeked = () => {
+        clearTimeout(t);
+        const c = crop34(v.videoWidth, v.videoHeight);
+        const cv = document.createElement('canvas'); cv.width = 480; cv.height = 640;
+        cv.getContext('2d').drawImage(v, c.left, c.top, c.width, c.height, 0, 0, 480, 640);
+        cv.toBlob(b => { URL.revokeObjectURL(url); b ? res(b) : rej(new Error('обложка не сохранилась')); }, 'image/jpeg', 0.82);
+      };
+      v.onerror = () => { clearTimeout(t); rej(new Error('обложка: видео не открылось')); };
+      v.src = url;
+    });
+  }
+  let MB = null;
+  async function mb(){ if (!MB) MB = await import('./vendor/mediabunny.min.mjs'); return MB; }
+  let current = null; // running conversion
+  async function convert(src, opts, onProgress){
+    const M = await mb();
+    const input = new M.Input({source: new M.BlobSource(src), formats: M.ALL_FORMATS});
+    const output = new M.Output({format: new M.Mp4OutputFormat({fastStart: 'in-memory'}), target: new M.BufferTarget()});
+    const vq = opts.bitrate ? new M.Quality({bitrate: opts.bitrate}) : undefined;
+    const conv = await M.Conversion.init({
+      input, output, showWarnings: false,
+      trim: opts.trim,
+      video: Object.assign({codec: 'avc', quality: vq}, opts.video),
+      audio: opts.audio
+    });
+    if (!conv.isValid) throw new Error('браузер не смог перекодировать это видео (' + conv.discardedTracks.map(t => t.reason).join(', ') + ')');
+    current = conv;
+    conv.onProgress = p => onProgress && onProgress(p);
+    await conv.execute();
+    current = null;
+    const blob = new Blob([output.target.buffer], {type: 'video/mp4'});
+    blob.noAudio = !opts.audio && conv.discardedTracks.some(t => t.track.type === 'audio');
+    return blob;
+  }
+  function setSteps(list){ $('#aSteps').innerHTML = list.map((s, i) => '<li data-i="' + i + '"><b>·</b><span class="st">' + s + '</span></li>').join(''); }
+  function stepState(i, st, extra){
+    const li = $('#aSteps').querySelector('[data-i="' + i + '"]'); if (!li) return;
+    li.querySelector('b').innerHTML = st === 'run' ? '<span class="spin" style="width:14px;height:14px"></span>' : st === 'ok' ? '<span style="color:var(--new)">✓</span>' : st === 'skip' ? '–' : st === 'bad' ? '<span style="color:var(--bad)">✕</span>' : '·';
+    if (extra != null) li.querySelector('.st').textContent = extra;
+  }
+  const bar = p => { $('#aBar').style.width = Math.round(p * 100) + '%'; };
+  $('#aCancel').addEventListener('click', () => { cancelled = true; if (current) current.cancel().catch(() => {}); });
+  $('#aGo').addEventListener('click', async () => {
+    const id = $('#aId').value, name = $('#aName').value.trim(), sec = $('#aSec').value;
+    if (lessons.some(l => l.id === id) || vFiles[id + '.mp4']) { $('#aErr').hidden = false; $('#aErr').textContent = 'Урок с именем файла «' + id + '» уже есть — поменяйте имя файла.'; return; }
+    const compress = $('#aCompress').checked;
+    if (!compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 95 МБ). Включите «Сжать до 720p» или экспортируйте из CapCut в 720p.'; return; }
+    busy = true; cancelled = false; paintGo(); $('#aCancel').hidden = false;
+    $('#aErr').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
+    setSteps(['Обложка', 'Анимация обложки (3 сек)', compress ? 'Сжатие видео до 720p' : 'Видео без сжатия']);
+    let step = 0;
+    try {
+      if (!meta) meta = await readMeta(file);
+      const dur = meta.dur;
+      // 1. cover
+      stepState(0, 'run');
+      const jpg = await makeCover(file, dur);
+      $('#aCover').src = URL.createObjectURL(jpg); $('#aPrevs').hidden = false;
+      stepState(0, 'ok'); step = 1; bar(.05);
+      // 2. 3-second preview (optional)
+      let p3 = null;
+      if (canEncode) {
+        stepState(1, 'run');
+        try {
+          p3 = await convert(file, {trim: {start: 0, end: Math.min(3, dur)}, audio: {discard: true}, bitrate: 600000,
+            video: {crop: crop34(meta.w, meta.h), width: 360, height: 480, fit: 'fill', frameRate: 30}}, p => bar(.05 + p * .1));
+          $('#aPv').src = URL.createObjectURL(p3);
+          stepState(1, 'ok');
+        } catch(e) {
+          if (cancelled) throw e;
+          p3 = null; stepState(1, 'skip', 'Анимация обложки — не получилась, будет просто картинка');
+        }
+      } else stepState(1, 'skip', 'Анимация обложки — этот браузер не умеет, будет просто картинка');
+      step = 2; bar(.15);
+      // 3. main video
+      let mp4 = file;
+      if (compress) {
+        stepState(2, 'run');
+        const vertical = meta.h >= meta.w;
+        const short = Math.min(meta.w, meta.h);
+        const size = short > 720 ? (vertical ? {width: 720} : {height: 720}) : {};
+        // ~1 Mbit/s, but never more than ~90 MB for long videos
+        const br = Math.max(400000, Math.min(1000000, Math.floor(90e6 * 8 / Math.max(1, dur)) - 160000));
+        mp4 = await convert(file, {bitrate: br, video: Object.assign({}, size)}, p => { bar(.15 + p * .85); stepState(2, 'run', 'Сжатие видео до 720p — ' + Math.round(p * 100) + '%'); });
+        stepState(2, 'ok', 'Сжато: ' + fmtMB(file.size) + ' → ' + fmtMB(mp4.size) + (mp4.noAudio ? ' — ВНИМАНИЕ: звук не сохранился' : ''));
+        if (mp4.size > MAX_FILE) throw new Error('даже после сжатия файл ' + fmtMB(mp4.size) + ' — больше 95 МБ. Разрежьте видео на две части.');
+      } else {
+        stepState(2, 'ok', 'Видео без сжатия: ' + fmtMB(file.size));
+        mp4 = file.slice(0, file.size, 'video/mp4');
+      }
+      bar(1);
+      // add to the list as unpublished
+      const lesson = {id, sec, name, dur: Math.round(dur), ru: $('#aRu').value.trim(), added: $('#aDate').value || today(), pv: !!p3};
+      let at = -1; lessons.forEach((x, i) => { if (x.sec === sec) at = i; });
+      lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
+      uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
+      renderLessons(); paintSaveBar();
+      toast('Урок готов. Нажмите «Опубликовать» внизу');
+      // reset the form for the next video
+      file = null; meta = null; idTouched = false;
+      $('#fileIn').value = ''; $('#aName').value = ''; $('#aRu').value = ''; $('#aId').value = '';
+      $('#dropTitle').textContent = 'Выбрать ещё видео'; $('#dropSub').textContent = 'MP4 или MOV, вертикальное или горизонтальное';
+    } catch(e) {
+      stepState(step, 'bad');
+      $('#aErr').hidden = false;
+      $('#aErr').textContent = cancelled ? 'Отменено.' : 'Не получилось: ' + (e && e.message || e) + (step === 2 && compress ? '. Попробуйте в Chrome на компьютере или экспортируйте видео из CapCut в 720p и выключите «Сжать».' : '');
+    } finally {
+      busy = false; current = null; $('#aCancel').hidden = true; paintGo();
+    }
+  });
+
+  // ---------- publish ----------
+  $('#pubBtn').addEventListener('click', publish);
+  async function publish(){
+    const btn = $('#pubBtn'); if (btn.disabled) return;
+    btn.disabled = true; $('#undoBtn').disabled = true;
+    const say = t => { $('#saveMsg').innerHTML = '<span class="row"><span class="spin"></span><span>' + t + '</span></span>'; };
+    try {
+      say('Проверяю GitHub…');
+      const ref = await gh('/git/ref/heads/' + BRANCH);
+      const head = await gh('/git/commits/' + ref.object.sha);
+      // someone (e.g. Claude) changed lessons.js or config.js since we loaded?
+      const [lf, cf] = await Promise.all([gh('/contents/lessons.js?ref=' + ref.object.sha), gh('/contents/config.js?ref=' + ref.object.sha).catch(() => null)]);
+      if (lf.sha !== remote.lessonsSha || (cf ? cf.sha : null) !== remote.cfgSha) {
+        throw new Error('Пока вы редактировали, список уроков изменился в другом месте. Обновите страницу и повторите изменения.');
+      }
+      const tree = [];
+      const ids = Object.keys(uploads);
+      let n = 0, totalUp = ids.reduce((a, id) => a + uploads[id].mp4.size, 0) || 1, doneUp = 0;
+      for (const id of ids) {
+        const u = uploads[id]; n++;
+        const pre = ids.length > 1 ? 'Видео ' + n + ' из ' + ids.length + ': ' : '';
+        say(pre + 'загружаю обложку…');
+        tree.push({path: 'v/' + id + '.jpg', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(u.jpg))});
+        if (u.p3) tree.push({path: 'v/' + id + '-p3.mp4', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(u.p3))});
+        say(pre + 'готовлю видео…');
+        const b64 = await blobToB64(u.mp4);
+        const sha = await ghBlob(b64, p => say(pre + 'загружаю видео ' + Math.round(((doneUp + p * u.mp4.size) / totalUp) * 100) + '%'));
+        doneUp += u.mp4.size;
+        tree.push({path: 'v/' + id + '.mp4', mode: '100644', type: 'blob', sha});
+      }
+      deleted.forEach(id => {
+        [id + '.mp4', id + '.jpg', id + '-p3.mp4'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
+      });
+      say('Сохраняю…');
+      if (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || ids.length || deleted.length) tree.push({path: 'lessons.js', mode: '100644', type: 'blob', content: lessonsOut()});
+      if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) tree.push({path: 'config.js', mode: '100644', type: 'blob', content: cfgOut()});
+      const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
+      const parts = [];
+      if (ids.length) parts.push('новые уроки: ' + ids.map(id => lessons.find(l => l.id === id).name).join(', '));
+      if (deleted.length) parts.push('удалены: ' + deleted.join(', '));
+      if (tree.some(t => t.path === 'config.js')) parts.push('настройки');
+      if (!parts.length) parts.push('уроки');
+      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ' + parts.join('; '), tree: newTree.sha, parents: [ref.object.sha]}});
+      await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}});
+      toast('Опубликовано! В приложении появится через 1–5 минут');
+      await loadRemote(); renderAll();
+    } catch(e) {
+      toast('Не опубликовано: ' + (e.message || e), true);
+      paintSaveBar();
+    } finally {
+      btn.disabled = false; $('#undoBtn').disabled = false;
+    }
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
