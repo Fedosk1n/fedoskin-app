@@ -161,6 +161,11 @@ body.fsmode .bigplay{z-index:3}
 .alphamini{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;vertical-align:middle}
 .alphacard{margin-top:16px;padding:16px;border-radius:18px;background:var(--accent);color:var(--on-accent)}
 .avex{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 5px;border-radius:4px;background:var(--fg);color:var(--bg)}
+.isteps{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:st}
+.isteps li{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface);border:1px solid #222225;font-size:14px;line-height:1.4;counter-increment:st}
+.isteps li::before{content:counter(st);flex:0 0 28px;height:28px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-weight:800;display:flex;align-items:center;justify-content:center}
+.isteps .k{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;background:var(--surface-2);font-weight:700;white-space:nowrap}
+.isteps .k svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -495,6 +500,7 @@ body.fsmode .bigplay{z-index:3}
     <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-go="review"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
+    <button class="list-item" id="installItem"><span style="flex:1;font-weight:600">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
     <button class="list-item" data-toast="Здесь выбор языка"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px">Русский</span></button>
   </div>
 </section>
@@ -527,6 +533,19 @@ body.fsmode .bigplay{z-index:3}
   </div>
 </section>
 
+</div>
+
+<div class="sheet-bg" id="installSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <div class="row" style="gap:14px">
+      <img src="icons/icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;flex:0 0 56px">
+      <span class="stack" style="gap:4px"><h2 id="installTitle" style="font-size:22px">Добавь Fedoskin на экран</h2><span class="muted" style="font-size:13px">Будет открываться как приложение — на весь экран, одним нажатием</span></span>
+    </div>
+    <ol class="isteps" id="installSteps"></ol>
+    <button class="btn btn-accent" id="installNative" hidden style="margin-top:16px;min-height:52px">Установить</button>
+    <button class="btn btn-ghost" id="installLater" style="margin-top:10px;min-height:48px">Позже</button>
+  </div>
 </div>
 
 <div class="sheet-bg" id="sheet" hidden>
@@ -1092,6 +1111,70 @@ body.fsmode .bigplay{z-index:3}
 
   let tt;
   function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 2200); }
+
+  // ===== "add to home screen" guide =====
+  const UA = navigator.userAgent || '';
+  const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(UA);
+  const inAppBrowser = /Instagram|FBAN|FBAV|Line\/|VK|OKApp|YaBrowser\/.*Mobile.*YaApp/.test(UA);
+  const SHARE_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  const PLUS_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>';
+  const DOTS_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#installNative').hidden = false; });
+  window.addEventListener('appinstalled', () => { $('#installSheet').hidden = true; toast('Fedoskin добавлен на экран'); });
+  function installSteps(){
+    if (inAppBrowser) return [
+      'Ты открыл ссылку внутри Instagram или другого приложения — оттуда иконку не добавить',
+      'Нажми <span class="k">' + DOTS_ICO + '</span> или <span class="k">···</span> в углу экрана',
+      'Выбери <span class="k">Открыть в браузере</span> — и повтори добавление уже там'
+    ];
+    if (isIOS) return [
+      'Открой эту ссылку в <span class="k">Safari</span>',
+      'Нажми <span class="k">' + SHARE_ICO + ' Поделиться</span> внизу экрана',
+      'Пролистай вниз и выбери <span class="k">' + PLUS_ICO + ' На экран «Домой»</span>',
+      'Нажми <span class="k">Добавить</span> в правом верхнем углу'
+    ];
+    if (isAndroid) return [
+      'Открой эту ссылку в <span class="k">Chrome</span>',
+      'Нажми <span class="k">' + DOTS_ICO + '</span> в правом верхнем углу',
+      'Выбери <span class="k">Добавить на главный экран</span> или <span class="k">Установить приложение</span>',
+      'Подтверди — нажми <span class="k">Установить</span>'
+    ];
+    return [
+      'Открой эту ссылку на телефоне',
+      'iPhone: Safari → <span class="k">' + SHARE_ICO + ' Поделиться</span> → <span class="k">На экран «Домой»</span>',
+      'Android: Chrome → <span class="k">' + DOTS_ICO + '</span> → <span class="k">Добавить на главный экран</span>'
+    ];
+  }
+  function openInstall(){
+    if (isStandalone()) { toast('Приложение уже на экране телефона'); return; }
+    $('#installSteps').innerHTML = installSteps().map(t => '<li><span>' + t + '</span></li>').join('');
+    $('#installNative').hidden = !deferredPrompt;
+    $('#installSheet').hidden = false;
+  }
+  function laterInstall(){
+    $('#installSheet').hidden = true;
+    try { localStorage.setItem('fedoskin-install-later', String(Date.now())); } catch (_) {}
+  }
+  $('#installLater').addEventListener('click', laterInstall);
+  $('#installSheet').addEventListener('click', e => { if (e.target.id === 'installSheet') laterInstall(); });
+  $('#installItem').addEventListener('click', openInstall);
+  $('#installNative').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try { await deferredPrompt.userChoice; } catch (_) {}
+    deferredPrompt = null; $('#installSheet').hidden = true;
+  });
+  // show the guide once on a phone, then again only after 3 days if postponed
+  (function autoShow(){
+    if (isStandalone() || !(isIOS || isAndroid)) return;
+    let later = 0; try { later = +localStorage.getItem('fedoskin-install-later') || 0; } catch (_) {}
+    if (later && Date.now() - later < 3 * 864e5) return;
+    setTimeout(openInstall, 1500);
+  })();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
   go('home');
 })();
