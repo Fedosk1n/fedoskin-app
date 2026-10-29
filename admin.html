@@ -190,6 +190,14 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>Срок разбора, часов</span><input type="number" id="sHours" min="1" step="1" inputmode="numeric"></label>
       <label class="f"><span>Telegram (без @)</span><input type="text" id="sTg" spellcheck="false"></label>
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится формат разбора и «Сейчас пришлю видео».</span></label>
+      <h3>Подписка (заработает после альфа-теста)</h3>
+      <p class="hint" style="margin:6px 0 0">Русскоязычным показываются цены в рублях, всем остальным языкам — в долларах.</p>
+      <div class="grid2">
+        <label class="f"><span>Месяц, ₽</span><input type="number" id="sSubRub" min="0" step="1" inputmode="numeric"></label>
+        <label class="f"><span>Год, ₽</span><input type="number" id="sSubYearRub" min="0" step="1" inputmode="numeric"></label>
+        <label class="f"><span>Месяц, $</span><input type="number" id="sSubUsd" min="0" step="0.01" inputmode="decimal"></label>
+        <label class="f"><span>Год, $</span><input type="number" id="sSubYearUsd" min="0" step="0.01" inputmode="decimal"></label>
+      </div>
       <h3>Уроки</h3>
       <label class="f"><span>Сколько дней урок со значком NEW</span><input type="number" id="sNewDays" min="1" max="90" step="1" inputmode="numeric"></label>
       <!-- Яндекс Метрика отключена по решению владельца (29.10.2026). Код оставлен: вернуть = убрать hidden ниже и в renderStats. -->
@@ -256,7 +264,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''};
+  const CFG_DEFAULT = {subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -520,7 +528,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- settings ----------
-  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId'};
+  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd'};
   function renderSettings(){
     Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
   }
@@ -528,7 +536,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const el = $('#' + id);
     el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', () => {
       let v = el.type === 'checkbox' ? el.checked : el.value;
-      if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, Math.round(+v));
+      if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, /Usd$/.test(k) && k !== 'reviewUsd' ? Math.round(+v * 100) / 100 : Math.round(+v));
       if (k === 'tg') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
       if (k === 'metrikaId') v = String(v).replace(/\D/g, '');
       if (k === 'alphaBanner' || k === 'tgMessage') v = String(v);

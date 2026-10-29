@@ -2,7 +2,8 @@
 
 - Owner writes in Russian; answer in Russian, plain language (he is not a developer).
 - Static web alpha, no build step: `index.html` (all UI + JS), `lessons.js` (lesson data, strict JSON after `window.LESSONS_DATA =`),
-  `config.js` (settings: alpha, banner, Telegram, review prices/hours, newDays, metrikaId), `v/` (videos).
+  `config.js` (settings: alpha, banner, Telegram, review prices/hours, newDays, metrikaId,
+  subscription prices subRub/subYearRub/subUsd/subYearUsd — ru UI pays in ₽, all other languages in $; `SUB` in index.html), `v/` (videos).
 - `admin.html` — owner's admin panel: edits lessons.js/config.js and uploads videos via the GitHub API (fine-grained token in
   the owner's browser). Keep lessons.js/config.js machine-readable JSON so the admin can parse them. Lesson fields:
   id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge).

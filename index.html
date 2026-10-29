@@ -686,6 +686,10 @@ body.fsmode .bigplay{z-index:3}
   // ===== real lessons (alpha) =====
   const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
+  // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
+  const SUB = LANG === 'ru'
+    ? {month: (CFG.subRub || 199) + ' ₽', year: String(CFG.subYearRub || 1990).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽', currency: 'RUB'}
+    : {month: '$' + (CFG.subUsd || 3.99), year: '$' + (CFG.subYearUsd || 39.99), currency: 'USD'};
   const ALPHA = CFG.alpha !== false; // open alpha: all lessons free, review stays paid
   (function applyCfg(){
     const rub = String(CFG.reviewRub).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';

@@ -8,5 +8,9 @@ window.APP_CONFIG = {
  "reviewUsd": 30,
  "reviewHours": 24,
  "newDays": 14,
- "metrikaId": ""
+ "metrikaId": "",
+ "subRub": 199,
+ "subYearRub": 1990,
+ "subUsd": 3.99,
+ "subYearUsd": 39.99
 };
