@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Fedoskin">
+<title>Fedoskin Team App</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone column, scrolling screen + fixed 5-tab bar. Single dark look by choice. */
+:root{
+  --bg:#0B0B0C; --surface:#161618; --surface-2:#1F1F22; --line:#2A2A2D; --hair:#1F1F22;
+  --fg:#F2EFE8; --muted:#9A968E; --soft:#C9C5BD; --accent:#E2611A; --on-accent:#0B0B0C; --new:#3BD16F;
+  --display:"Anton", Impact, "Arial Narrow", sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html,body{height:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+body{margin:0;font-family:var(--body)}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button,input{font-family:inherit;font-size:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;height:100%;position:relative}
+.screen{height:100%;overflow-y:auto;
+  padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
+  padding-block:24px calc(110px + env(safe-area-inset-bottom, 0px))}
+h1,h2,.d{font-family:var(--display);font-weight:400;text-transform:uppercase;letter-spacing:.3px;margin:0;text-wrap:balance}
+h1{font-size:40px;line-height:1}
+h2{font-size:22px;line-height:1.05}
+p{margin:0}
+.muted{color:var(--muted)} .soft{color:var(--soft)}
+.lead{margin-top:8px;font-size:14px;line-height:1.45;color:var(--muted)}
+.label{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.stack{display:flex;flex-direction:column}
+.row{display:flex;align-items:center}
+.card{background:var(--surface);border:1px solid #222225;border-radius:18px}
+.sec{margin-top:28px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:14px;border:none;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;width:100%}
+.btn-accent{background:var(--accent);color:var(--on-accent)}
+.btn-line{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.back{width:44px;height:44px;border-radius:22px;background:#1C1C1F;border:none;color:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ph{background:repeating-linear-gradient(135deg,#1A1A1D 0 14px,#141416 14px 28px)}
+.list-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--hair);text-decoration:none;color:var(--fg);background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;cursor:pointer}
+.thumb{width:52px;height:52px;flex:0 0 52px;border-radius:12px;background:#1C1C1F;display:flex;align-items:center;justify-content:center}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-inline:-20px;padding-inline:20px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);font-weight:600;font-size:13px;white-space:nowrap;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tag{font-size:12px;font-weight:600;padding:6px 10px;border-radius:14px;background:var(--surface-2)}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;margin-top:-8px}
+.top img{height:64px;width:auto;display:block}
+.pill{height:44px;min-width:44px;padding:0 12px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);font-weight:600;font-size:13px;letter-spacing:1px}
+.avatar{width:44px;height:44px;border-radius:22px;border:none;background:#1C1C1F;color:var(--fg);font-weight:700}
+
+/* sections grid */
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{height:104px;border-radius:16px;padding:14px;background:var(--surface);border:1px solid #222225;display:flex;flex-direction:column;justify-content:space-between;text-align:left;color:var(--fg);cursor:pointer;transition:transform .12s ease}
+.tile:active{transform:scale(.97)}
+.tile .n{font-family:var(--display);font-size:14px;color:var(--accent)}
+.tile .t{font-family:var(--display);font-size:22px;line-height:1;text-transform:uppercase}
+
+/* map */
+.map{position:relative;height:260px;border-radius:20px;overflow:hidden;background:#131315;border:1px solid #222225}
+.map svg{display:block;width:100%;height:100%}
+
+/* segmented */
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--surface);border:1px solid #222225;margin-bottom:20px}
+.seg button{flex:1;height:44px;border-radius:12px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:700}
+
+/* radio cards */
+.opt{width:100%;min-height:68px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;gap:14px;color:var(--fg);text-align:left;cursor:pointer}
+.opt .dot{width:20px;height:20px;flex:0 0 20px;border-radius:10px;border:2px solid #4A4A4E}
+.opt[aria-checked="true"]{border:2px solid var(--accent);padding:13px}
+.opt[aria-checked="true"] .dot{border:6px solid var(--accent)}
+
+/* form */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px}
+.field input{height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font-size:16px}
+.field input::placeholder{color:var(--muted)}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--hair);
+  padding:8px max(8px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px))}
+.tabs-in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:52px;justify-content:center;background:none;border:none;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
+.tab[aria-current="page"]{color:var(--accent)}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);font-weight:600;font-size:14px;padding:12px 16px;border-radius:12px;z-index:9;max-width:90%;text-align:center}
+/* share story */
+.story-bg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
+.story-wrap{width:min(320px, 100%, calc((100dvh - 120px) * 9 / 16))}
+.story{aspect-ratio:9/16;max-width:100%;border-radius:22px;overflow:hidden;position:relative;display:flex;flex-direction:column;padding:22px 18px 18px;
+  background:radial-gradient(120% 70% at 50% 62%, rgba(226,97,26,.28), transparent 60%), #0B0B0C;border:1px solid #2A2A2D}
+.st-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:18px;text-align:center}
+.st-stats span{display:flex;flex-direction:column;gap:2px;padding:10px 4px;border-radius:12px;background:rgba(242,239,232,.06)}
+.st-stats b{font-size:24px;font-weight:400;line-height:1}
+.st-stats i{font-style:normal;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.st-cta{margin-top:14px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--soft)}
+/* search + save */
+.search{display:flex;align-items:center;gap:10px;height:50px;padding:0 6px 0 14px;border-radius:14px;background:var(--surface);border:1px solid #222225}
+.search:focus-within{border-color:var(--accent)}
+.search input{flex:1;min-width:0;height:46px;border:none;background:transparent;color:var(--fg);font-size:16px;outline:none}
+.search input::placeholder{color:var(--muted)}
+.search input::-webkit-search-cancel-button{display:none}
+.search button{width:38px;height:38px;border-radius:19px;border:none;background:var(--surface-2);color:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.res mark{background:none;color:var(--accent);font-weight:700}
+.savebtn{flex:0 0 auto;height:44px;padding:0 14px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:-4px}
+.savebtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.savebtn[aria-pressed="true"] path{fill:currentColor}
+/* lesson player */
+.stage{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
+.stage video,.stage #figure{width:100%;height:100%;object-fit:contain;transition:transform .25s ease}
+.stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
+.fsbtn{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(11,11,12,.7);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.fsbar{display:none}
+body.fsmode{overflow:hidden}
+body.fsmode .tabs,body.fsmode .toast{display:none!important}
+body.fsmode .screen{overflow:visible;-webkit-overflow-scrolling:auto}
+body.fsmode .stage{position:fixed;inset:0;z-index:50;width:100%!important;height:100%!important;aspect-ratio:auto!important;max-width:none;margin:0;border:none;border-radius:0;background:#000}
+body.fsmode .fsbtn,body.fsmode .badge{display:none}
+body.fsmode.fs-rot .stage{inset:auto;top:50%;left:50%;width:100vh!important;height:100vw!important;width:100dvh!important;height:100dvw!important;transform:translate(-50%,-50%) rotate(90deg);transform-origin:center}
+body.fsmode.fs-rot .fstop{padding-top:12px}
+body.fsmode.fs-rot .fsbottom{padding-bottom:16px}
+body.fsmode .fsbar{display:flex;position:absolute;inset:0;flex-direction:column;justify-content:space-between;pointer-events:none;transition:opacity .2s ease}
+body.fsmode.fs-hide .fsbar{opacity:0}
+body.fsmode.fs-hide .fsbar *{pointer-events:none!important}
+.fstop,.fsbottom{pointer-events:auto;padding:calc(10px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 18px max(14px, env(safe-area-inset-left, 0px));background:linear-gradient(rgba(0,0,0,.7),transparent)}
+.fstop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fsbottom{padding-top:28px;padding-bottom:calc(36px + env(safe-area-inset-bottom, 0px));background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.fsname{font-family:var(--display);text-transform:uppercase;font-size:18px;color:#F2EFE8;text-align:center;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsctl{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.fsic{width:48px;height:48px;border-radius:24px;border:none;background:rgba(242,239,232,.12);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fsic[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.fsplay{width:60px;height:60px;border-radius:30px;background:#F2EFE8;color:#0B0B0C}
+.fstxt{font-weight:700;font-size:14px}
+body.fsmode .bigplay{z-index:3}
+.stage.portrait{aspect-ratio:9/16;height:min(56vh, 560px);width:auto;margin:0 auto}
+.alphabar{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin-top:6px;padding:8px 12px;border-radius:12px;border:1px solid rgba(226,97,26,.45);background:rgba(226,97,26,.1);color:var(--fg);font-size:13px;font-weight:600;cursor:pointer}
+.alphatag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 7px;border-radius:5px;background:var(--accent);color:var(--on-accent)}
+.alphabadge{display:inline-flex;align-items:center;font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.6px;padding:4px 8px;border-radius:6px;background:var(--accent);color:var(--on-accent)}
+.alphamini{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;vertical-align:middle}
+.alphacard{margin-top:16px;padding:16px;border-radius:18px;background:var(--accent);color:var(--on-accent)}
+.avex{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 5px;border-radius:4px;background:var(--fg);color:var(--bg)}
+.newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
+.tile{position:relative}
+.tilenew{position:absolute;top:12px;right:12px}
+.lcard.isnew .lcover{border-color:var(--new)}
+.lgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
+.lcard{display:flex;flex-direction:column;gap:8px;padding:0;border:none;background:none;color:var(--fg);text-align:left;cursor:pointer;min-width:0}
+.lcover{position:relative;display:block;aspect-ratio:3/4;max-width:100%;border-radius:16px;overflow:hidden;background:#1C1C1F;border:1px solid #222225;transition:transform .12s ease}
+.lcard:active .lcover{transform:scale(.97)}
+.lcover img,.lcover video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.ldur{position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:700;padding:4px 7px;border-radius:6px;background:rgba(11,11,12,.75);color:#F2EFE8;font-variant-numeric:tabular-nums}
+.lfree{position:absolute;left:8px;bottom:8px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:4px 7px;border-radius:6px;background:var(--accent);color:var(--on-accent)}
+.lname{font-family:var(--display);font-size:17px;line-height:1.1;text-transform:uppercase;letter-spacing:.3px;overflow-wrap:anywhere}
+.lthumb{width:54px;height:72px;flex:0 0 54px;border-radius:10px;object-fit:cover;background:#1C1C1F}
+.badge{position:absolute;top:12px;left:12px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--accent);color:var(--on-accent);padding:5px 9px;border-radius:6px}
+.bigplay{position:absolute;width:60px;height:60px;border-radius:30px;border:none;background:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.timeline{position:relative;height:28px;margin-top:8px}
+.track{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0}
+.track .loopzone{position:absolute;top:0;bottom:0;background:rgba(242,239,232,.35)}
+.timeline input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:pointer}
+.ctl{width:52px;height:52px;flex:0 0 52px;border-radius:26px;border:1px solid var(--line);background:transparent;color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer}
+.ctl .ico{width:18px;height:18px}
+.ctl-main{background:var(--fg);color:var(--bg);border:none}
+#speedSeg button{font-size:13px}
+.tool{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer}
+.tool[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:rgba(226,97,26,.1)}
+.av{display:flex;align-items:center;justify-content:center;border-radius:50%;flex:0 0 auto}
+.av svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:480px;background:#141416;border-radius:24px 24px 0 0;border-top:1px solid var(--line);
+  padding:12px max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));animation:up .22s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.av-pick{aspect-ratio:1;max-width:100%;border-radius:50%;padding:0;border:3px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.av-pick[aria-checked="true"]{border-color:var(--fg)}
+@media (prefers-reduced-motion: reduce){.tile{transition:none}.sheet{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ГЛАВНАЯ -->
+<section class="screen" id="home" aria-label="Главная">
+  <header class="top">
+    <img src="logo.png" alt="Fedoskin team">
+    <div class="row" style="gap:10px">
+      <button class="pill" aria-label="Язык приложения">RU</button>
+      <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none"><span class="av-slot" data-size="44"></span></button>
+    </div>
+  </header>
+  <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <div class="search" style="margin-top:10px">
+    <svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" autocomplete="off" placeholder="Найти элемент: windmill, 6-step…" aria-label="Поиск элемента">
+    <button id="qClear" aria-label="Очистить поиск" hidden><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div id="results" hidden style="margin-top:6px"></div>
+  <div id="homeBody">
+  <div id="savedHome" hidden style="margin-top:20px">
+    <div class="sec-head" style="margin-bottom:10px"><h2>Сохранённое</h2><button class="muted" data-go="profile" style="background:none;border:none;font-size:13px;padding:10px 0;cursor:pointer">Все</button></div>
+    <div class="chips" id="savedChips"></div>
+  </div>
+  <h1 style="font-size:30px;margin-top:20px">Разделы</h1>
+  <div class="grid2" id="sections" style="margin-top:12px"></div>
+
+  <div class="sec" hidden data-later="courses">
+    <h2 style="margin-bottom:12px">Новый курс</h2>
+    <button class="card row" data-go="courses" style="width:100%;padding:16px;gap:12px;justify-content:space-between;color:var(--fg);text-align:left;cursor:pointer">
+      <span class="stack" style="gap:6px"><span class="label" style="font-size:11px">Новичок</span><span class="d" style="font-size:20px;line-height:1.05">Связка для новичка за 1 урок</span></span>
+      <span class="btn btn-accent" style="width:auto;padding:0 14px;min-height:44px">$5</span>
+    </button>
+  </div>
+
+  <div class="sec" hidden data-later="articles">
+    <h2 style="margin-bottom:4px">Статьи</h2>
+    <button class="list-item" data-toast="Здесь откроется статья">
+      <span class="thumb d" style="color:var(--accent);font-size:18px">01</span>
+      <span class="stack" style="gap:4px;flex:1"><span style="font-weight:600;line-height:1.3">Как подготовиться к своему первому батлу</span><span class="muted" style="font-size:12px">Статья · [N] мин</span></span>
+    </button>
+  </div>
+
+
+  </div>
+</section>
+
+<!-- РАЗДЕЛ -->
+<section class="screen" id="section" aria-label="Раздел" hidden>
+  <button class="back" data-go="home" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <h1 id="sectionTitle" style="margin-top:16px">Toprock</h1>
+  <p class="lead">Все уроки бесплатно на время альфа-теста.</p>
+  <div class="stack" id="sectionList" style="margin-top:12px"></div>
+</section>
+
+<!-- УРОК -->
+<section class="screen" id="lesson" aria-label="Урок" hidden style="padding-top:12px">
+  <div class="row" style="justify-content:space-between;gap:12px">
+    <button class="back" id="lessonBack" aria-label="Назад к разделу"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+    <span class="label" id="lessonCrumb" style="flex:1;text-align:center">Toprock</span>
+    <label class="back" for="ownVideo" title="Проверить на своём видео" aria-label="Проверить на своём видео" style="cursor:pointer"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg></label>
+    <input type="file" id="ownVideo" accept="video/*" hidden>
+  </div>
+
+  <div class="player" id="player" style="margin-top:12px">
+    <div class="stage" id="stage">
+      <video id="vid" playsinline preload="auto" hidden></video>
+      <svg id="figure" viewBox="0 0 200 200" aria-hidden="true">
+        <g id="dancer" stroke="#F2EFE8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <circle cx="100" cy="42" r="15" fill="#F2EFE8" stroke="none"/>
+          <path d="M100 58 L100 112"/>
+          <path id="armL" d="M100 72 L70 50 L60 26"/>
+          <path id="armR" d="M100 72 L128 92"/>
+          <path id="legL" d="M100 112 L80 146 L62 176"/>
+          <path id="legR" d="M100 112 L122 148 L128 180"/>
+          <path d="M150 30 l12 0 M156 24 l0 12" stroke="#E2611A" stroke-width="5"/>
+        </g>
+        <path d="M30 186 H170" stroke="#2A2A2D" stroke-width="3"/>
+      </svg>
+      <span class="badge" id="badgeSpeed" hidden>0.5x</span>
+      <span class="badge" id="badgeMirror" style="left:auto;right:12px" hidden>Зеркало</span>
+      <span class="badge" id="badgeLoop" style="top:auto;bottom:12px" hidden>Повтор</span>
+      <span class="badge" id="badgeOwn" style="top:auto;bottom:12px;left:auto;right:12px;background:var(--fg);color:var(--bg)" hidden>Твоё видео</span>
+      <button class="fsbtn" id="btnMute" aria-label="Звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="icoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
+      <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <div class="fsbar" id="fsbar">
+        <div class="fstop">
+          <button class="fsic" id="fsExit" aria-label="Выйти из полноэкранного режима"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+          <span class="fsname" id="fsName"></span>
+          <button class="fsic" id="fsRotate" aria-pressed="false" aria-label="Повернуть видео" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" transform="rotate(-90 12 12)"/><path d="M4 8a8 8 0 0 1 6-4.5"/><path d="M8 2l2 1.5L8.5 6"/></svg></button>
+          <span id="fsRotSpacer" style="width:48px"></span>
+        </div>
+        <div class="fsbottom">
+          <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
+          <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
+          <div class="fsctl">
+            <button class="fsic" id="fsBack5" aria-label="Назад на 5 секунд"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+            <button class="fsic fsplay" id="fsPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" id="fsIcoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
+            <button class="fsic fstxt" id="fsSpeed" aria-label="Скорость">1x</button>
+            <button class="fsic" id="fsMirror" aria-pressed="false" aria-label="Зеркало"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></button>
+            <button class="fsic" id="fsLoop" aria-pressed="false" aria-label="Повтор 3 секунд"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <button class="bigplay" id="bigPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="#0B0B0C"/></svg></button>
+    </div>
+    <div class="timeline">
+      <div class="track" id="track">
+        <div class="loopzone" id="loopZone" hidden></div>
+        <div class="fill" id="fill"></div>
+      </div>
+      <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Перемотка">
+    </div>
+    <div class="row" style="justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums">
+      <span class="muted" id="tCur">0:00</span><span class="muted" id="tDur">1:35</span>
+    </div>
+  </div>
+
+  <div class="row" style="gap:10px;margin-top:10px">
+    <button class="ctl" id="btnBack5" aria-label="Назад на 5 секунд"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span style="font-size:11px">5 сек</span></button>
+    <button class="ctl ctl-main" id="btnPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" id="icoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
+    <div class="seg" role="group" aria-label="Скорость" id="speedSeg" style="flex:1;margin:0">
+      <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
+    <button class="tool" id="btnMirror" aria-pressed="false">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg>
+      <span>Зеркало</span>
+    </button>
+    <button class="tool" id="btnLoop" aria-pressed="false">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
+      <span id="loopText">Повтор 3 сек</span>
+    </button>
+    <button class="tool" id="btnDownload" aria-pressed="false">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" id="icoDl"><path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/></svg>
+      <span id="dlText">Скачать</span>
+    </button>
+  </div>
+  <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и повтор 3 сек помогут разобрать движение. Повтор зацикливает момент, на котором стоит видео.</p>
+
+  <div class="row" style="gap:12px;margin-top:8px;align-items:flex-start">
+    <h1 id="lessonTitle" style="font-size:30px;flex:1;min-width:0">[Урок 1]</h1>
+    <button class="savebtn" id="btnSave" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span id="saveText">Сохранить</span></button>
+  </div>
+  <p class="muted" id="lessonMeta" style="margin-top:6px;font-size:13px">Урок 1 из 6 · 1:35</p>
+  <p class="soft" style="margin-top:12px;font-size:14px;line-height:1.5">[Описание урока: что разбираем, на что обратить внимание, частые ошибки]</p>
+
+  <h2 class="sec" style="margin-bottom:14px">Ещё в разделе</h2>
+  <div id="nextList"></div>
+</section>
+
+<!-- КУРСЫ -->
+<section class="screen" id="courses" aria-label="Курсы" hidden>
+  <h1>Курсы</h1>
+  <p class="lead">Платные программы. Покупаешь один раз — смотришь сколько угодно.</p>
+  <div class="stack" style="gap:16px;margin-top:22px">
+    <article class="card" style="overflow:hidden">
+      <div class="ph" style="height:150px;position:relative;display:flex;align-items:center;justify-content:center">
+        <span class="label" style="position:absolute;top:14px;left:14px;font-size:11px;color:var(--fg);background:var(--bg);padding:6px 10px;border-radius:6px;letter-spacing:1.5px">Новичок</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div class="stack" style="padding:16px;gap:12px">
+        <h2 style="font-size:24px">Связка для новичка за 1 урок</h2>
+        <p class="muted" style="font-size:13px;line-height:1.45">[Короткое описание: что ученик получит после курса]</p>
+        <div class="row" style="justify-content:space-between;gap:12px"><span class="muted" style="font-size:12px">[N] видео · [N] мин</span><button class="btn btn-accent" style="width:auto;padding:0 20px" data-toast="Здесь откроется оплата курса">Купить за $5</button></div>
+      </div>
+    </article>
+    <article class="card" style="overflow:hidden">
+      <div class="ph" style="height:150px;position:relative;display:flex;align-items:center;justify-content:center">
+        <span class="label" style="position:absolute;top:14px;left:14px;font-size:11px;color:var(--fg);background:var(--bg);padding:6px 10px;border-radius:6px;letter-spacing:1.5px">Восстановление</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div class="stack" style="padding:16px;gap:12px">
+        <h2 style="font-size:24px">Методы восстановления сил</h2>
+        <p class="muted" style="font-size:13px;line-height:1.45">[Короткое описание: что ученик получит после курса]</p>
+        <div class="row" style="justify-content:space-between;gap:12px"><span class="muted" style="font-size:12px">[N] видео · [N] мин</span><button class="btn btn-accent" style="width:auto;padding:0 20px" data-toast="Здесь откроется оплата курса">Купить за $5</button></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- РАЗБОР -->
+<section class="screen" id="review" aria-label="Разбор" hidden>
+  <h1>Разбор</h1>
+  <p class="soft" style="margin-top:10px;line-height:1.45">Пришли видео своего элемента или раунда — создатель приложения лично разберёт ошибки и подскажет, что тренировать дальше.</p>
+  <ol class="stack" style="gap:10px;margin:22px 0 0;padding:0;list-style:none">
+    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">1</span><span class="stack" style="gap:3px"><b>Сними видео</b><span class="muted" style="font-size:13px">Элемент или раунд, до [N] минут</span></span></li>
+    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">2</span><span class="stack" style="gap:3px"><b>Напиши в Telegram</b><span class="muted" style="font-size:13px">Пришли видео и оплати разбор</span></span></li>
+    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px">Видео с разбором в течение 24 ч</span></span></li>
+  </ol>
+  <h2 class="sec" style="margin-bottom:10px">Что ты получишь</h2>
+  <ul class="stack" style="gap:10px;margin:0;padding:0;list-style:none;font-size:14px">
+    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Видео-ответ с разбором ошибок</li>
+    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Упражнения под твой уровень</li>
+    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Один уточняющий вопрос после разбора</li>
+  </ul>
+  <button class="btn btn-accent" data-go="reviewpay" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px">
+    <svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Отправить на разбор</button>
+  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center">2 000 ₽ · $30 · видео с разбором в течение 24 ч</p>
+  <div hidden data-later="my-reviews">
+  <h2 class="sec" style="margin-bottom:4px">Мои разборы</h2>
+  <button class="list-item" data-toast="Разбор ещё в работе"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Windmill]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag">В работе</span></button>
+  <button class="list-item" data-toast="Здесь откроется видео-разбор"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Раунд на батле]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag" style="background:var(--accent);color:var(--on-accent)">Готов</span></button>
+  </div>
+</section>
+
+<!-- РАЗБОР: ОПЛАТА -->
+<section class="screen" id="reviewpay" aria-label="Отправить на разбор" hidden>
+  <button class="back" data-go="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <h1 style="margin-top:16px;font-size:34px">Отправить<br>на разбор</h1>
+  <div class="card row" style="margin-top:18px;padding:16px;gap:14px;border-radius:16px">
+    <span style="width:44px;height:44px;flex:0 0 44px;border-radius:22px;background:#229ED9;color:#fff;display:flex;align-items:center;justify-content:center"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></span>
+    <span class="stack" style="gap:4px;flex:1"><b>Всё через Telegram</b><span class="muted" style="font-size:13px;line-height:1.4">Выбери формат и нажми кнопку внизу — откроется чат с создателем приложения, где ты пришлёшь видео и оплатишь разбор.</span></span>
+  </div>
+  <p class="label" style="margin:24px 0 10px">Формат разбора</p>
+  <div class="stack" role="radiogroup" aria-label="Формат разбора" style="gap:10px" id="plans">
+    <button class="opt" role="radio" aria-checked="true"><span class="dot"></span><span class="stack" style="gap:3px;flex:1"><b>Один элемент</b><span class="muted" style="font-size:12px">Например, windmill или freeze</span></span></button>
+    <button class="opt" role="radio" aria-checked="false"><span class="dot"></span><span class="stack" style="gap:3px;flex:1"><b>Полный раунд</b><span class="muted" style="font-size:12px">Связки, музыкальность, переходы</span></span></button>
+  </div>
+  <p class="label" style="margin:24px 0 10px">Условия</p>
+  <ul class="card stack soft" style="margin:0;padding:16px;list-style:none;gap:12px;font-size:13px;line-height:1.4;border-radius:16px">
+    <li>• Разбор делает лично создатель приложения</li>
+    <li>• Видео и оплата — в Telegram</li>
+    <li>• Вы получите видео с разбором в течение 24 ч после оплаты</li>
+    <li>• Формат ответа — видео с разбором ошибок и упражнениями</li>
+    <li>• Один уточняющий вопрос после разбора — бесплатно</li>
+  </ul>
+  <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:22px"><span class="muted">Стоимость</span><span><span class="d" style="font-size:28px">2 000 ₽</span> <span class="muted" style="font-size:14px">или $30</span></span></div>
+  <a class="btn btn-accent" id="tgLink" href="#" target="_blank" rel="noopener" style="margin-top:12px;min-height:56px;font-size:17px;border-radius:16px;background:#229ED9;color:#fff"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>Написать в Telegram</a>
+  <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
+</section>
+
+<!-- ПРОФИЛЬ -->
+<section class="screen" id="profile" aria-label="Профиль" hidden>
+  <div class="row" style="gap:14px">
+    <button id="profileAvatar" aria-label="Сменить аватар" style="position:relative;width:72px;height:72px;flex:0 0 72px;padding:0;border:none;background:none;cursor:pointer">
+      <span class="av-slot" data-size="72"></span>
+      <span style="position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:center;border:3px solid var(--bg)"><svg class="ico" viewBox="0 0 24 24" style="width:13px;height:13px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span>
+    </button>
+    <span class="stack" style="gap:4px;flex:1;min-width:0">
+      <span class="d" style="font-size:26px;line-height:1">[Ник]</span>
+      <span class="row" style="gap:8px;flex-wrap:wrap"><span class="alphabadge">α АЛЬФА-ТЕСТЕР</span><span class="muted" style="font-size:13px">[Город]</span></span>
+      <span class="muted" style="font-size:12px;font-variant-numeric:tabular-nums">ID аккаунта: 104582</span>
+    </span>
+  </div>
+
+  <div class="alphacard">
+    <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA</span>
+    <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600">Ты альфа-тестер №[N]. Когда приложение станет платным, получишь месяц подписки бесплатно, а значок и аватар «Альфа» останутся у тебя навсегда.</p>
+  </div>
+  <div class="card" style="margin-top:12px;padding:16px;border-radius:18px">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <span class="label">Твой уровень</span>
+      <span class="d" style="font-size:26px;color:var(--accent)">Уровень 3</span>
+    </div>
+    <div aria-hidden="true" style="margin-top:12px;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden"><div style="width:72%;height:8px;background:var(--accent)"></div></div>
+    <p class="muted" style="margin-top:8px;font-size:12px">Ещё 88 минут тренировок до уровня 4</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">47</span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">312</span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">5</span><span class="muted" style="font-size:12px;line-height:1.3">дней подряд</span></div>
+  </div>
+  <p class="muted" style="margin-top:8px;font-size:11px">Цифры для примера</p>
+
+  <div class="sec">
+    <div class="sec-head"><h2>Рейтинг</h2></div>
+    <div class="seg" role="group" aria-label="Рейтинг: город или мир" id="rankSeg" style="margin-bottom:12px"><button aria-pressed="true" data-scope="city">Мой город</button><button aria-pressed="false" data-scope="world">Весь мир</button></div>
+    <div class="card row" style="padding:14px 16px;gap:14px;border-radius:16px;border-color:var(--accent)">
+      <span class="d" id="myPlace" style="font-size:22px;color:var(--accent);min-width:56px;font-variant-numeric:tabular-nums">#12</span>
+      <span class="av-slot" data-size="40"></span>
+      <span class="stack" style="gap:2px;flex:1"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" style="font-size:12px">312 минут</span></span>
+    </div>
+    <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
+    <button class="btn btn-accent" id="shareRank" style="margin-top:14px;min-height:52px">
+      <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+      Поделиться рейтингом</button>
+  </div>
+
+  <div class="sec">
+    <h2 style="margin-bottom:4px">Сохранённое</h2>
+    <div id="savedList"></div>
+  </div>
+
+  <div class="sec">
+    <h2 style="margin-bottom:12px">Прогресс по разделам</h2>
+    <div class="stack" id="progress" style="gap:12px"></div>
+  </div>
+
+  <div class="sec stack">
+    <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-go="review"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
+    <button class="list-item" data-toast="Здесь выбор языка"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px">Русский</span></button>
+  </div>
+</section>
+
+<!-- АКЦИИ -->
+<section class="screen" id="promo" aria-label="Акции" hidden>
+  <h1>Акции</h1>
+  <div class="alphacard" style="margin-top:20px;padding:20px">
+    <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA-ТЕСТ</span>
+    <h2 style="margin-top:10px;font-size:30px;line-height:1">Всё бесплатно<br>на время теста</h2>
+    <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:500">Ты среди первых. Когда приложение станет платным, альфа-тестеры получат:</p>
+    <ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600">
+      <li>✓ месяц подписки бесплатно</li>
+      <li>✓ значок «Альфа-тестер» в профиле и рейтинге — навсегда</li>
+      <li>✓ эксклюзивный аватар «α», который больше никто не получит</li>
+    </ul>
+    <p style="margin-top:12px;font-size:12px;font-weight:600;opacity:.8">Разбор видео платный уже сейчас — это личная работа создателя приложения.</p>
+  </div>
+
+  <div class="card" style="margin-top:14px;padding:20px;border-radius:20px">
+    <span class="label">Приведи друга</span>
+    <h2 style="margin-top:8px;font-size:26px;line-height:1">+1 месяц бесплатно<br>за каждого друга</h2>
+    <p class="muted" style="margin-top:10px;font-size:14px;line-height:1.45">Позови друга в альфу по своей ссылке. За каждого — ещё месяц бесплатной подписки после запуска платной версии. Друзей можно звать сколько угодно.</p>
+    <div class="row" style="margin-top:16px;min-height:52px;padding:0 6px 0 16px;border-radius:14px;background:var(--bg);color:var(--fg);justify-content:space-between;gap:10px;border:1px solid var(--line)">
+      <span class="stack"><span class="muted" style="font-size:11px">Твой код</span><b id="code" style="letter-spacing:1px;white-space:nowrap">FEDOSKIN-2026</b></span>
+      <button id="copyBtn" class="pill" style="height:40px;border-radius:10px;letter-spacing:0">Скопировать</button>
+    </div>
+    <button class="btn btn-accent" data-toast="Здесь откроется окно «Поделиться»" style="margin-top:10px">Поделиться ссылкой</button>
+    <p class="muted" style="margin-top:12px;font-size:13px;font-weight:600">Приглашено: [N] · Бонусных месяцев: [N]</p>
+  </div>
+</section>
+
+</div>
+
+<div class="sheet-bg" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="sheetTitle" style="font-size:24px">Выбери аватар</h2>
+    <p class="lead" style="margin-top:6px">Аватар видят другие в рейтинге. «α» — только для альфа-тестеров.</p>
+    <div id="avGrid" role="radiogroup" aria-label="Аватары" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px"></div>
+    <button class="btn btn-accent" id="sheetDone" style="margin-top:20px;min-height:52px">Готово</button>
+  </div>
+</div>
+
+<div class="story-bg" id="story" hidden role="dialog" aria-modal="true" aria-label="Карточка для сторис">
+  <div class="story-wrap">
+    <div class="story" id="storyCard">
+      <img src="logo.png" alt="Fedoskin team" style="width:46%;height:auto;display:block;margin:0 auto">
+      <div class="stack" style="align-items:center;gap:10px;margin-top:auto">
+        <span id="stAvatar"></span>
+        <span class="d" style="font-size:20px">[Ник]</span>
+        <span class="alphabadge">α АЛЬФА-ТЕСТЕР</span>
+      </div>
+      <div class="stack" style="align-items:center;margin-top:14px">
+        <span class="d" id="stPlace" style="font-size:96px;line-height:.9;color:var(--accent)">#12</span>
+        <span id="stWhere" style="font-size:13px;font-weight:600;text-align:center;margin-top:6px">место в [городе] по тренировкам</span>
+      </div>
+      <div class="st-stats">
+        <span><b class="d">312</b><i>минут</i></span>
+        <span><b class="d">47</b><i>роликов</i></span>
+        <span><b class="d">5</b><i>дней подряд</i></span>
+      </div>
+      <div class="st-cta">Сможешь выше? · Fedoskin team app</div>
+    </div>
+    <div class="row" style="gap:10px;margin-top:14px">
+      <button class="btn btn-ghost" id="storyClose" style="flex:1">Закрыть</button>
+      <button class="btn btn-accent" id="storyShare" style="flex:2">Поделиться в сторис</button>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Основное меню"><div class="tabs-in" id="tabs"></div></nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="lessons.js"></script>
+<script>
+(function(){
+  const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
+  const TABS = [
+    ['home','Главная','<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>'],
+    // ['courses','Курсы', ...] — hidden for now, comes back later
+    ['review','Разбор','<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>'],
+    // promo tab hidden for now, comes back later
+    // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
+    ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
+  ];
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',reviewpay:'review',promo:'promo',profile:'profile'};
+  const $ = (s, r=document) => r.querySelector(s);
+
+  // ===== real lessons (alpha) =====
+  const LESSONS = window.LESSONS_DATA || [];
+  const ALPHA = true; // open alpha: all lessons free, review stays paid
+  const BY_ID = {}; LESSONS.forEach(l => { BY_ID[l.id] = l; });
+  // "NEW": lesson added in the last 14 days and not opened by this user yet
+  const NEW_DAYS = 14, DEFAULT_ADDED = '2026-10-01';
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem('fedoskin-seen') || '[]'); } catch (_) { seen = []; }
+  if (!Array.isArray(seen)) seen = [];
+  const isNew = l => !seen.includes(l.id) && (Date.now() - Date.parse(l.added || DEFAULT_ADDED)) <= NEW_DAYS * 864e5;
+  const secHasNew = sec => LESSONS.some(l => l.sec === sec && isNew(l));
+  const newPill = () => { const t = document.createElement('span'); t.className = 'newpill'; t.textContent = 'NEW'; return t; };
+  function markSeen(id){
+    if (seen.includes(id)) return;
+    seen.push(id);
+    try { localStorage.setItem('fedoskin-seen', JSON.stringify(seen)); } catch (_) {}
+    paintTiles();
+  }
+  const inSec = sec => LESSONS.filter(l => l.sec === sec);
+  const isFree = l => inSec(l.sec).indexOf(l) < 2;
+  const fmtD = s => Math.floor(s/60) + ':' + String(Math.round(s)%60).padStart(2,'0');
+
+  // sections grid
+  const grid = $('#sections');
+  SECTIONS.forEach((name, i) => {
+    const n = inSec(name).length;
+    const b = document.createElement('button');
+    b.className = 'tile';
+    b.innerHTML = '<span class="n">0'+(i+1)+'</span><span class="stack" style="gap:3px"><span class="t"></span><span class="muted" style="font-size:12px"></span></span>';
+    b.querySelector('.t').textContent = name;
+    b.dataset.sec = name;
+    b.querySelector('.muted').textContent = n ? n + ' видео' : 'Скоро';
+    if (!n) b.style.opacity = '.55';
+    b.addEventListener('click', () => openSection(name));
+    grid.appendChild(b);
+  });
+
+  function paintTiles(){
+    grid.querySelectorAll('.tile').forEach(t => {
+      const old = t.querySelector('.newpill'); if (old) old.remove();
+      if (secHasNew(t.dataset.sec)) { const p = newPill(); p.classList.add('tilenew'); t.appendChild(p); t.setAttribute('aria-label', t.dataset.sec + ', есть новые видео'); }
+      else t.removeAttribute('aria-label');
+    });
+  }
+  paintTiles();
+  function lessonRow(l, opts){
+    opts = opts || {};
+    const b = document.createElement('button');
+    b.className = 'list-item res';
+    b.innerHTML = '<img class="lthumb" alt="" loading="lazy"><span class="stack" style="gap:4px;flex:1;min-width:0"><span class="nm" style="font-weight:600"></span><span class="muted" style="font-size:12px"></span></span>' +
+      (opts.tag === false ? '' : (!ALPHA && isFree(l) ? '<span class="tag" style="background:var(--accent);color:var(--on-accent)">Бесплатно</span>' : ''));
+    b.querySelector('img').src = 'v/' + l.id + '.jpg';
+    const nm = b.querySelector('.nm');
+    const i = opts.q ? l.name.toLowerCase().indexOf(opts.q.toLowerCase()) : -1;
+    if (i >= 0){ nm.append(l.name.slice(0, i)); const m = document.createElement('mark'); m.textContent = l.name.slice(i, i + opts.q.length); nm.append(m, l.name.slice(i + opts.q.length)); }
+    else nm.textContent = l.name;
+    b.querySelector('.muted').textContent = (opts.showSec ? l.sec + ' · ' : '') + fmtD(l.dur);
+    if (isNew(l)) { const p = newPill(); p.style.marginLeft = '8px'; nm.appendChild(p); }
+    b.addEventListener('click', () => openLesson(l.id));
+    return b;
+  }
+
+  // animated covers: play the 2-second preview only while the card is on screen
+  const previewObs = ('IntersectionObserver' in window) ? new IntersectionObserver(entries => {
+    entries.forEach(en => { const v = en.target; if (en.isIntersecting) { const r = v.play(); if (r && r.catch) r.catch(() => {}); } else v.pause(); });
+  }, { threshold: 0.25 }) : null;
+  function watchPreview(v){ if (previewObs) previewObs.observe(v); else { v.autoplay = true; } }
+  function lessonCard(l){
+    const b = document.createElement('button');
+    b.className = 'lcard';
+    b.innerHTML = '<span class="lcover"><video muted loop playsinline preload="metadata" aria-hidden="true"></video><span class="ldur"></span></span><span class="lname"></span>';
+    const pv = b.querySelector('video');
+    pv.muted = true; pv.defaultMuted = true;
+    pv.poster = 'v/' + l.id + '.jpg';
+    pv.src = 'v/' + l.id + '-p3.mp4';
+    watchPreview(pv);
+    b.querySelector('.ldur').textContent = fmtD(l.dur);
+    b.querySelector('.lname').textContent = l.name;
+    if (isNew(l)) { b.querySelector('.lname').prepend(newPill(), ' '); b.classList.add('isnew'); }
+    if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = 'Бесплатно'; b.querySelector('.lcover').appendChild(t); }
+    b.setAttribute('aria-label', l.name + (isFree(l) ? ', бесплатно' : ''));
+    b.addEventListener('click', () => openLesson(l.id));
+    return b;
+  }
+  function openSection(name){
+    $('#sectionTitle').textContent = name;
+    const list = $('#sectionList'); list.innerHTML = '';
+    const ls = inSec(name);
+    if (!ls.length) list.innerHTML = '<p class="muted" style="padding:24px 0;font-size:14px;line-height:1.5">Уроки этого раздела скоро появятся.</p>';
+    list.className = ls.length ? 'lgrid' : 'stack';
+    ls.forEach(l => list.appendChild(lessonCard(l)));
+    go('section');
+  }
+
+  // search
+  const norm = x => x.toLowerCase().replace(/[\s\-–—→]/g, '').replace(/ё/g, 'е');
+  const INDEX = LESSONS.map(l => ({ l, key: norm(l.name + ' ' + l.ru) }));
+  function runSearch(){
+    const q = $('#q').value.trim();
+    $('#qClear').hidden = !q;
+    const res = $('#results');
+    if (!q){ res.hidden = true; $('#homeBody').hidden = false; return; }
+    const nq = norm(q);
+    const hits = INDEX.filter(x => x.key.includes(nq) || norm(x.l.sec).includes(nq)).slice(0, 14);
+    res.innerHTML = '';
+    if (!hits.length){
+      res.innerHTML = '<p class="muted" style="padding:24px 4px;font-size:14px;line-height:1.5"></p>';
+      res.firstChild.textContent = 'Ничего не нашли по запросу «' + q + '». Попробуй по-английски, например 6-step или monkey flip.';
+    } else hits.forEach(h => res.appendChild(lessonRow(h.l, { showSec: true, q, tag: false })));
+    res.hidden = false; $('#homeBody').hidden = true;
+  }
+  $('#q').addEventListener('input', runSearch);
+  $('#qClear').addEventListener('click', () => { $('#q').value = ''; runSearch(); $('#q').focus(); });
+
+  // saved (lesson ids)
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('fedoskin-saved-v2')); } catch (_) { saved = null; }
+  if (!Array.isArray(saved)) saved = ['fw-6step', 'tk-monkey'];
+  saved = saved.filter(id => BY_ID[id]);
+  function persistSaved(){ try { localStorage.setItem('fedoskin-saved-v2', JSON.stringify(saved)); } catch (_) {} }
+  function renderSaved(){
+    const chips = $('#savedChips'); chips.innerHTML = '';
+    const list = $('#savedList'); list.innerHTML = '';
+    saved.forEach(id => {
+      const l = BY_ID[id];
+      const c = document.createElement('button'); c.className = 'chip';
+      c.textContent = l.name;
+      c.addEventListener('click', () => openLesson(id));
+      chips.appendChild(c);
+      list.appendChild(lessonRow(l, { showSec: true, tag: false }));
+    });
+    $('#savedHome').hidden = !saved.length;
+    if (!saved.length) list.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">Сохраняй уроки кнопкой «Сохранить», чтобы быстро к ним возвращаться.</p>';
+  }
+  renderSaved();
+  let curLesson = null;
+  function paintSave(){
+    const on = curLesson && saved.includes(curLesson.id);
+    $('#btnSave').setAttribute('aria-pressed', !!on);
+    $('#saveText').textContent = on ? 'Сохранено' : 'Сохранить';
+  }
+  $('#btnSave').addEventListener('click', () => {
+    if (!curLesson) return;
+    const i = saved.indexOf(curLesson.id);
+    if (i >= 0){ saved.splice(i, 1); toast('Убрано из сохранённого'); } else { saved.unshift(curLesson.id); toast('Сохранено — урок на главной и в профиле'); }
+    persistSaved(); renderSaved(); paintSave();
+  });
+
+  // ===== lesson player =====
+  const P = { t: 0, dur: 30, playing: false, rate: 1, mirror: false, loop: null, own: false, last: 0 };
+  const vid = $('#vid'), stage = $('#stage');
+  const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+  let curSection = 'Footwork';
+  function loadVideo(src, poster){
+    setPlaying(false);
+    P.own = true; P.t = 0;
+    vid.hidden = false; $('#figure').style.display = 'none';
+    vid.poster = poster || '';
+    vid.src = src; vid.playbackRate = P.rate;
+    stage.classList.add('portrait');
+  }
+  vid.addEventListener('loadedmetadata', () => {
+    P.dur = vid.duration || P.dur; vid.playbackRate = P.rate;
+    stage.classList.toggle('portrait', vid.videoHeight > vid.videoWidth);
+    paint();
+  });
+  vid.addEventListener('ended', () => { if (P.loop) { seekTo(P.loop.a); vid.play().catch(() => {}); } else setPlaying(false); });
+  function openLesson(id){
+    const l = BY_ID[id]; if (!l) return;
+    curSection = l.sec; curLesson = l;
+    markSeen(l.id);
+    const list = inSec(l.sec), n = list.indexOf(l) + 1;
+    $('#lessonCrumb').textContent = l.sec;
+    $('#lessonTitle').textContent = l.name;
+    $('#lessonMeta').textContent = l.sec + ' · урок ' + n + ' из ' + list.length + ' · ' + fmtD(l.dur);
+    $('#badgeOwn').hidden = true;
+    setLoop(null);
+    P.dur = l.dur;
+    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg');
+    paint();
+    paintSave();
+    const nl = $('#nextList'); nl.innerHTML = '';
+    nl.className = list.length > 1 ? 'lgrid' : '';
+    list.forEach(x => { if (x !== l) nl.appendChild(lessonCard(x)); });
+    if (list.length < 2) nl.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">Другие уроки раздела скоро появятся.</p>';
+    go('lesson');
+    setPlaying(true);
+    $('#lesson').scrollTop = 0;
+  }
+  $('#lessonBack').addEventListener('click', () => { if (!$('#q').value.trim()) openSection(curSection); else go('home'); });
+
+  function setPlaying(on){
+    P.playing = on;
+    $('#bigPlay').hidden = on;
+    $('#icoPlay').innerHTML = on ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
+    $('#btnPlay').setAttribute('aria-label', on ? 'Пауза' : 'Смотреть');
+    if (document.body.classList.contains('fsmode')) { syncFs(); if (!on) { document.body.classList.remove('fs-hide'); clearTimeout(fsTimer); } else pokeFs(); }
+    if (P.own){
+      if (on) {
+        const pr = vid.play();
+        if (pr && pr.catch) pr.catch(() => {
+          // browser blocked autoplay with sound: start muted, user can turn sound on
+          vid.muted = true; paintMute();
+          vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; });
+        });
+      } else vid.pause();
+    }
+    P.last = performance.now();
+  }
+  function seekTo(t){
+    P.t = Math.min(Math.max(0, t), P.dur);
+    if (P.own) vid.currentTime = P.t;
+    paint();
+  }
+  function setLoop(l){
+    P.loop = l;
+    $('#btnLoop').setAttribute('aria-pressed', !!l);
+    $('#badgeLoop').hidden = !l;
+    $('#loopZone').hidden = !l;
+    $('#loopText').textContent = l ? fmt(l.a) + '–' + fmt(l.b) : 'Повтор 3 сек';
+    if (l){ $('#loopZone').style.left = (l.a / P.dur * 100) + '%'; $('#loopZone').style.width = ((l.b - l.a) / P.dur * 100) + '%'; }
+  }
+  function paint(){
+    const p = P.dur ? P.t / P.dur : 0;
+    $('#fill').style.width = (p * 100) + '%';
+    $('#seek').value = Math.round(p * 1000);
+    $('#tCur').textContent = fmt(P.t); $('#tDur').textContent = fmt(P.dur);
+    $('#fsFill').style.width = (p * 100) + '%'; $('#fsSeek').value = Math.round(p * 1000);
+    $('#fsCur').textContent = fmt(P.t); $('#fsDur').textContent = fmt(P.dur);
+    if (!P.own){
+      // simple toprock bounce: arms and legs swap with the beat
+      const beat = P.t * 2 * Math.PI * 1.1;
+      const s = Math.sin(beat), up = Math.abs(Math.sin(beat)) * 6;
+      $('#dancer').setAttribute('transform', 'translate(0 ' + (-up).toFixed(1) + ')');
+      $('#armR').setAttribute('d', 'M100 72 L' + (128 + s*6).toFixed(1) + ' ' + (92 - s*18).toFixed(1));
+      $('#legL').setAttribute('d', 'M100 112 L' + (80 - s*6).toFixed(1) + ' 146 L' + (62 - s*10).toFixed(1) + ' 176');
+      $('#legR').setAttribute('d', 'M100 112 L' + (122 + s*4).toFixed(1) + ' 148 L' + (128 + s*8).toFixed(1) + ' 180');
+    }
+  }
+  function frame(now){
+    if (P.playing){
+      if (P.own){ P.t = vid.currentTime; }
+      else { P.t += (now - P.last) / 1000 * P.rate; }
+      P.last = now;
+      if (P.loop && P.t >= P.loop.b){ seekTo(P.loop.a); }
+      else if (P.t >= P.dur){ P.t = P.dur; setPlaying(false); }
+      paint();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  $('#bigPlay').addEventListener('click', () => setPlaying(true));
+  $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
+  $('#stage').addEventListener('click', e => {
+    if (e.target.closest('#bigPlay') || e.target.closest('#btnFs')) return;
+    if (document.body.classList.contains('fsmode')){
+      if (e.target.closest('.fstop') || e.target.closest('.fsbottom')) { pokeFs(); return; }
+      document.body.classList.toggle('fs-hide'); if (!document.body.classList.contains('fs-hide')) pokeFs(); return;
+    }
+    if (P.playing) setPlaying(false);
+  });
+  // ===== fullscreen =====
+  let fsTimer;
+  function pokeFs(){ clearTimeout(fsTimer); fsTimer = setTimeout(() => { if (P.playing) document.body.classList.add('fs-hide'); }, 3000); }
+  function enterFs(){
+    document.body.classList.add('fsmode'); document.body.classList.remove('fs-hide');
+    $('#fsName').textContent = curLesson ? curLesson.name : '';
+    syncFs(); pokeFs();
+    const land = isLandscapeVideo();
+    $('#fsRotate').hidden = !land; $('#fsRotSpacer').hidden = land;
+    // landscape video on a phone held upright: turn the picture sideways to fill the screen
+    setRot(land && window.innerHeight > window.innerWidth);
+    try {
+      const el = document.documentElement; const r = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
+      if (r && r.then) r.then(() => {
+        // where the browser allows it (Android), really switch the screen to landscape instead
+        if (land && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').then(() => setRot(false)).catch(() => {});
+      }).catch(() => {});
+    } catch (_) {}
+  }
+  function isLandscapeVideo(){ return vid.videoWidth > 0 && vid.videoWidth > vid.videoHeight; }
+  function setRot(on){ document.body.classList.toggle('fs-rot', !!on); $('#fsRotate').setAttribute('aria-pressed', !!on); }
+  $('#fsRotate').addEventListener('click', () => { setRot(!document.body.classList.contains('fs-rot')); pokeFs(); });
+  window.addEventListener('resize', () => {
+    if (!document.body.classList.contains('fsmode')) return;
+    // phone physically turned to landscape: no need to rotate the picture
+    if (window.innerWidth > window.innerHeight) setRot(false);
+    else if (isLandscapeVideo()) setRot(true);
+  });
+  function exitFs(){
+    document.body.classList.remove('fsmode', 'fs-hide', 'fs-rot'); clearTimeout(fsTimer);
+    try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (_) {}
+  }
+  function syncFs(){
+    $('#fsSpeed').textContent = P.rate + 'x';
+    $('#fsMirror').setAttribute('aria-pressed', P.mirror);
+    $('#fsLoop').setAttribute('aria-pressed', !!P.loop);
+    $('#fsLoopZone').hidden = !P.loop;
+    if (P.loop){ $('#fsLoopZone').style.left = (P.loop.a / P.dur * 100) + '%'; $('#fsLoopZone').style.width = ((P.loop.b - P.loop.a) / P.dur * 100) + '%'; }
+    $('#fsIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
+  }
+  $('#btnFs').addEventListener('click', enterFs);
+  function paintMute(){
+    $('#icoMute').innerHTML = vid.muted ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
+    $('#btnMute').setAttribute('aria-label', vid.muted ? 'Включить звук' : 'Выключить звук');
+  }
+  $('#btnMute').addEventListener('click', () => { vid.muted = !vid.muted; paintMute(); });
+  paintMute();
+  $('#fsExit').addEventListener('click', exitFs);
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fsmode')) exitFs(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fsmode')) exitFs(); });
+  $('#fsPlay').addEventListener('click', () => { $('#btnPlay').click(); syncFs(); pokeFs(); });
+  $('#fsBack5').addEventListener('click', () => { $('#btnBack5').click(); pokeFs(); });
+  $('#fsSpeed').addEventListener('click', () => {
+    const next = { '1': '0.5', '0.5': '0.25', '0.25': '1' }[String(P.rate)];
+    $('#speedSeg').querySelector('[data-rate="' + next + '"]').click(); syncFs(); pokeFs();
+  });
+  $('#fsMirror').addEventListener('click', () => { $('#btnMirror').click(); syncFs(); pokeFs(); });
+  $('#fsLoop').addEventListener('click', () => { $('#btnLoop').click(); syncFs(); pokeFs(); });
+  $('#fsSeek').addEventListener('input', e => { seekTo(e.target.value / 1000 * P.dur); pokeFs(); });
+  $('#btnBack5').addEventListener('click', () => seekTo(P.t - 5));
+  $('#seek').addEventListener('input', e => seekTo(e.target.value / 1000 * P.dur));
+
+  $('#speedSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    P.rate = +b.dataset.rate;
+    $('#speedSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    vid.playbackRate = P.rate;
+    $('#badgeSpeed').hidden = P.rate === 1; $('#badgeSpeed').textContent = P.rate + 'x';
+    $('#toolHint').textContent = P.rate === 1 ? 'Обычная скорость.' : 'Замедление ' + P.rate + 'x — смотри, как ставятся ноги и куда переносится вес.';
+  });
+  $('#btnMirror').addEventListener('click', () => {
+    P.mirror = !P.mirror;
+    stage.classList.toggle('mirror', P.mirror);
+    $('#btnMirror').setAttribute('aria-pressed', P.mirror);
+    $('#badgeMirror').hidden = !P.mirror;
+    $('#toolHint').textContent = P.mirror ? 'Зеркало включено: повторяй движения, как перед зеркалом в зале.' : 'Зеркало выключено.';
+  });
+  $('#btnLoop').addEventListener('click', () => {
+    if (P.loop){ setLoop(null); $('#toolHint').textContent = 'Повтор выключен.'; return; }
+    const a = Math.min(P.t, P.dur - 3), b = a + 3;
+    setLoop({ a, b });
+    $('#toolHint').textContent = 'Фрагмент ' + fmt(a) + '–' + fmt(b) + ' повторяется по кругу. Включи замедление, чтобы разобрать его.';
+    if (!P.playing){ seekTo(a); setPlaying(true); }
+  });
+
+  let dl = 'none', dlTimer;
+  $('#btnDownload').addEventListener('click', () => {
+    const btn = $('#btnDownload');
+    if (dl === 'loading') return;
+    if (dl === 'done'){
+      dl = 'none'; btn.setAttribute('aria-pressed', 'false'); $('#dlText').textContent = 'Скачать';
+      $('#icoDl').innerHTML = '<path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/>';
+      toast('Удалено из загрузок'); return;
+    }
+    dl = 'loading'; let pct = 0;
+    clearInterval(dlTimer);
+    dlTimer = setInterval(() => {
+      pct += 10; $('#dlText').textContent = pct + '%';
+      if (pct >= 100){
+        clearInterval(dlTimer); dl = 'done'; btn.setAttribute('aria-pressed', 'true');
+        $('#dlText').textContent = 'Скачано';
+        $('#icoDl').innerHTML = '<path d="m5 12 5 5 9-10"/>';
+        toast('Урок доступен без интернета');
+      }
+    }, 150);
+  });
+
+  $('#ownVideo').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    setLoop(null);
+    loadVideo(URL.createObjectURL(f), '');
+    $('#badgeOwn').hidden = false;
+    toast('Твоё видео загружено — проверь замедление и зеркало');
+  });
+
+  // profile: progress by section (example: half watched)
+  SECTIONS.forEach(name => {
+    const total = inSec(name).length; if (!total) return;
+    const watched = Math.max(1, Math.floor(total / 2));
+    const pct = Math.round(watched / total * 100);
+    const row = document.createElement('div');
+    row.className = 'stack'; row.style.gap = '6px';
+    row.innerHTML = '<div class="row" style="justify-content:space-between;font-size:13px"><span style="font-weight:600"></span><span class="muted" style="font-variant-numeric:tabular-nums">'+watched+' из '+total+'</span></div><div aria-hidden="true" style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><div style="height:6px;width:'+pct+'%;background:var(--accent)"></div></div>';
+    row.querySelector('span').textContent = name;
+    $('#progress').appendChild(row);
+  });
+  // avatars: preset only (no uploads)
+  const AVATARS = [
+    {id:'alpha', bg:'linear-gradient(135deg,#E2611A,#7A2E0B)', fg:'#F2EFE8', exclusive:true, d:'<text x="12" y="17.5" text-anchor="middle" font-size="17" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="currentColor" stroke="none">α</text>'},
+    {id:'vinyl', bg:'#E2611A', fg:'#0B0B0C', d:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 12h.01"/>'},
+    {id:'cap', bg:'#F2EFE8', fg:'#0B0B0C', d:'<path d="M4 15c0-5 3.5-8 8-8s8 3 8 8z"/><path d="M12 15h9"/><path d="M12 7V5"/>'},
+    {id:'sneaker', bg:'#3A7BD5', fg:'#FFFFFF', d:'<path d="M3 17V8l5 2 3 3 7 1a3 3 0 0 1 3 3z"/><path d="M3 20h18"/><path d="M8 13l1-1M11 15l1-1"/>'},
+    {id:'boombox', bg:'#2FA37A', fg:'#0B0B0C', d:'<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="8" cy="14" r="3"/><circle cx="16" cy="14" r="3"/><path d="M7 8V5h10v3"/>'},
+    {id:'crown', bg:'#E8B83A', fg:'#0B0B0C', d:'<path d="M4 8l4 4 4-7 4 7 4-4-2 10H6z"/><path d="M6 21h12"/>'},
+    {id:'mic', bg:'#8E5BD9', fg:'#FFFFFF', d:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'},
+    {id:'spray', bg:'#D94A64', fg:'#FFFFFF', d:'<rect x="7" y="9" width="10" height="12" rx="2"/><path d="M9 9V6h6v3M12 6V4M18 3h.01M20 6h.01M18 6h.01"/>'},
+    {id:'headphones', bg:'#1F1F22', fg:'#E2611A', d:'<path d="M4 16v-4a8 8 0 0 1 16 0v4"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>'},
+    {id:'bolt', bg:'#F2EFE8', fg:'#E2611A', d:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'},
+    {id:'fire', bg:'#E2611A', fg:'#F2EFE8', d:'<path d="M12 3c3 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-7z"/>'},
+    {id:'spin', bg:'#3A7BD5', fg:'#0B0B0C', d:'<path d="M12 12a1 1 0 1 1 1-1 3 3 0 1 1-4 3 5 5 0 1 1 8-5 7 7 0 1 1-12 3"/>'},
+    {id:'star', bg:'#1F1F22', fg:'#F2EFE8', d:'<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'}
+  ];
+  const byId = id => AVATARS.find(a => a.id === id) || AVATARS[0];
+  function avatarHTML(id, size){
+    const a = byId(id), s = Math.round(size * 0.55);
+    return '<span class="av" style="width:'+size+'px;height:'+size+'px;background:'+a.bg+';color:'+a.fg+(a.bg==='#1F1F22'?';box-shadow:inset 0 0 0 1px #2A2A2D':'')+'"><svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true">'+a.d+'</svg></span>';
+  }
+  let myAvatar = 'alpha';
+  try { myAvatar = localStorage.getItem('fedoskin-avatar-a') || 'alpha'; } catch (_) {}
+  function paintMine(){ document.querySelectorAll('.av-slot').forEach(el => { el.innerHTML = avatarHTML(myAvatar, +el.dataset.size); }); }
+  paintMine();
+
+  let pending = myAvatar;
+  const avGrid = $('#avGrid');
+  AVATARS.forEach(a => {
+    const b = document.createElement('button');
+    b.className = 'av-pick'; b.setAttribute('role','radio'); b.dataset.id = a.id;
+    b.setAttribute('aria-label', a.exclusive ? 'Аватар Альфа, только для альфа-тестеров' : 'Аватар ' + a.id);
+    b.innerHTML = avatarHTML(a.id, 64);
+    if (a.exclusive) { b.style.position = 'relative'; const t = document.createElement('span'); t.className = 'avex'; t.textContent = 'ALPHA'; b.appendChild(t); }
+    b.addEventListener('click', () => { pending = a.id; syncPicks(); });
+    avGrid.appendChild(b);
+  });
+  function syncPicks(){ avGrid.querySelectorAll('.av-pick').forEach(b => b.setAttribute('aria-checked', b.dataset.id === pending)); }
+  function openSheet(){ pending = myAvatar; syncPicks(); $('#sheet').hidden = false; }
+  function closeSheet(){ $('#sheet').hidden = true; }
+  $('#profileAvatar').addEventListener('click', openSheet);
+  $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+  $('#sheetDone').addEventListener('click', () => {
+    myAvatar = pending; try { localStorage.setItem('fedoskin-avatar-a', myAvatar); } catch (_) {}
+    paintMine(); closeSheet(); toast('Аватар обновлён');
+  });
+
+  const LEADERS = {
+    city: [['[Ник 1]', 1240, 'crown'], ['[Ник 2]', 980, 'boombox'], ['[Ник 3]', 870, 'spray']],
+    world: [['[Ник 1]', 5420, 'fire'], ['[Ник 2]', 4980, 'mic'], ['[Ник 3]', 4310, 'sneaker']]
+  };
+  function renderLeaders(scope){
+    $('#myPlace').textContent = scope === 'city' ? '#12' : '#1284';
+    $('#leaders').innerHTML = LEADERS[scope].map((l, i) =>
+      '<li class="row" style="gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)"><span class="d" style="font-size:20px;min-width:56px;color:'+(i===0?'var(--accent)':'var(--muted)')+'">#'+(i+1)+'</span>'+avatarHTML(l[2], 40)+'<span style="flex:1;font-weight:600">'+l[0]+' <span class="alphamini" title="Альфа-тестер">α</span></span><span class="muted" style="font-size:13px;font-variant-numeric:tabular-nums">'+l[1].toLocaleString('ru-RU')+' мин</span></li>').join('');
+  }
+  renderLeaders('city');
+  let rankScope = 'city';
+  function openStory(){
+    $('#stAvatar').innerHTML = avatarHTML(myAvatar, 72);
+    $('#stPlace').textContent = rankScope === 'city' ? '#12' : '#1284';
+    $('#stWhere').textContent = rankScope === 'city' ? 'место в [городе] по тренировкам' : 'место в мире по тренировкам';
+    $('#story').hidden = false;
+  }
+  $('#shareRank').addEventListener('click', openStory);
+  $('#storyClose').addEventListener('click', () => { $('#story').hidden = true; });
+  $('#story').addEventListener('click', e => { if (e.target.id === 'story') $('#story').hidden = true; });
+  $('#storyShare').addEventListener('click', () => { toast('В приложении откроется Instagram со сторис'); });
+  $('#rankSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('#rankSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderLeaders(b.dataset.scope); rankScope = b.dataset.scope;
+  });
+
+  // tabs
+  const tabsEl = $('#tabs');
+  TABS.forEach(([id, label, icon]) => {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.dataset.tab = id;
+    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg>'+label;
+    b.addEventListener('click', () => go(id));
+    tabsEl.appendChild(b);
+  });
+
+  function go(id){
+    if (id !== 'lesson' && typeof P !== 'undefined' && P.playing) setPlaying(false);
+    if (id !== 'lesson' && document.body.classList.contains('fsmode')) exitFs();
+    document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; });
+    const el = document.getElementById(id); if (el) el.scrollTop = 0;
+    const tab = TAB_OF[id];
+    tabsEl.querySelectorAll('.tab').forEach(t => { if (t.dataset.tab === tab) t.setAttribute('aria-current','page'); else t.removeAttribute('aria-current'); });
+  }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-go]'); if (g){ go(g.dataset.go); return; }
+    const t = e.target.closest('[data-toast]'); if (t){ toast(t.dataset.toast); }
+  });
+
+  // chips + radios
+  $('#plans').addEventListener('click', e => { const o = e.target.closest('.opt'); if (!o) return; $('#plans').querySelectorAll('.opt').forEach(x => x.setAttribute('aria-checked', x === o)); });
+  // review: open the creator's Telegram chat with a ready message
+  const TG_USERNAME = 'Fe_DoSk1n'; // <- Telegram username of the app creator, without @
+  function tgHref(){
+    const opt = $('#plans .opt[aria-checked="true"]');
+    const fmtName = opt ? opt.querySelector('b').textContent : '';
+    const text = 'Привет! Я на разбор из приложения Fedoskin team 🔥\nФормат: ' + fmtName + '\nСейчас пришлю видео.';
+    return 'https://t.me/' + TG_USERNAME + '?text=' + encodeURIComponent(text);
+  }
+  function paintTg(){ $('#tgLink').href = tgHref(); }
+  $('#plans').addEventListener('click', paintTg);
+  paintTg();
+  $('#copyBtn').addEventListener('click', () => {
+    const text = $('#code').textContent;
+    try { navigator.clipboard.writeText(text).then(() => toast('Код скопирован'), () => toast('Выдели код и скопируй вручную')); }
+    catch (_) { toast('Выдели код и скопируй вручную'); }
+  });
+
+  let tt;
+  function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 2200); }
+
+  go('home');
+})();
+</script>
+</body>
+</html>
