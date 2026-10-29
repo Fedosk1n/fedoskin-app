@@ -163,5 +163,14 @@ window.LESSONS_DATA = [
   "ru": "виндмил виндмилл мельница",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-swipes",
+  "sec": "Powermove",
+  "name": "Swipes",
+  "dur": 333,
+  "ru": "свайпы свайп свипы",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
