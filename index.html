@@ -223,7 +223,7 @@ body.fsmode .bigplay{z-index:3}
 <!-- ГЛАВНАЯ -->
 <section class="screen" id="home" aria-label="Главная">
   <header class="top">
-    <button class="pill" aria-label="Язык приложения" style="justify-self:start">RU</button>
+    <button class="pill" id="langPill" aria-label="Язык приложения" style="justify-self:start">RU</button>
     <img src="logo.png" alt="Fedoskin team" id="homeLogo">
     <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none;justify-self:end"><span class="av-slot" data-size="44"></span></button>
   </header>
@@ -405,7 +405,7 @@ body.fsmode .bigplay{z-index:3}
   <ol class="stack" style="gap:10px;margin:22px 0 0;padding:0;list-style:none">
     <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">1</span><span class="stack" style="gap:3px"><b>Сними видео</b><span class="muted" style="font-size:13px">Элемент или раунд, до [N] минут</span></span></li>
     <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">2</span><span class="stack" style="gap:3px"><b>Напиши в Telegram</b><span class="muted" style="font-size:13px">Пришли видео и оплати разбор</span></span></li>
-    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px">Видео с разбором в течение <span data-cfg="hours">24 ч</span></span></span></li>
+    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px" data-t="Видео с разбором в течение {h}">Видео с разбором в течение 24 ч</span></span></li>
   </ol>
   <h2 class="sec" style="margin-bottom:10px">Что ты получишь</h2>
   <ul class="stack" style="gap:10px;margin:0;padding:0;list-style:none;font-size:14px">
@@ -415,7 +415,7 @@ body.fsmode .bigplay{z-index:3}
   </ul>
   <button class="btn btn-accent" data-go="reviewpay" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px">
     <svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Отправить на разбор</button>
-  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center"><span data-cfg="rub">2 000 ₽</span> · <span data-cfg="usd">$30</span> · видео с разбором в течение <span data-cfg="hours">24 ч</span></p>
+  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center" data-t="{rub} · {usd} · видео с разбором в течение {h}">2 000 ₽ · $30 · видео с разбором в течение 24 ч</p>
   <div hidden data-later="my-reviews">
   <h2 class="sec" style="margin-bottom:4px">Мои разборы</h2>
   <button class="list-item" data-toast="Разбор ещё в работе"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Windmill]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag">В работе</span></button>
@@ -440,7 +440,7 @@ body.fsmode .bigplay{z-index:3}
   <ul class="card stack soft" style="margin:0;padding:16px;list-style:none;gap:12px;font-size:13px;line-height:1.4;border-radius:16px">
     <li>• Разбор делает лично создатель приложения</li>
     <li>• Видео и оплата — в Telegram</li>
-    <li>• Вы получите видео с разбором в течение <span data-cfg="hours">24 ч</span> после оплаты</li>
+    <li data-t="• Вы получите видео с разбором в течение {h} после оплаты">• Вы получите видео с разбором в течение 24 ч после оплаты</li>
     <li>• Формат ответа — видео с разбором ошибок и упражнениями</li>
     <li>• Один уточняющий вопрос после разбора — бесплатно</li>
   </ul>
@@ -515,7 +515,7 @@ body.fsmode .bigplay{z-index:3}
     <button class="list-item" data-go="review"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
     <button class="list-item" id="installItem"><span style="flex:1;font-weight:600">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
-    <button class="list-item" data-toast="Здесь выбор языка"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px">Русский</span></button>
+    <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
   </div>
 </section>
 
@@ -587,6 +587,15 @@ body.fsmode .bigplay{z-index:3}
   </div>
 </div>
 
+<div class="sheet-bg" id="langSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="langTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="langTitle" style="font-size:24px">Выбери язык</h2>
+    <div class="stack" id="langList" role="radiogroup" aria-labelledby="langTitle" style="gap:8px;margin-top:16px"></div>
+    <p class="muted" id="langNote" style="margin-top:12px;font-size:12px;line-height:1.4">Видео уроков — на русском языке. Названия элементов — международные.</p>
+  </div>
+</div>
+
 <div class="story-bg" id="story" hidden role="dialog" aria-modal="true" aria-label="Карточка для сторис">
   <div class="story-wrap">
     <div class="story" id="storyCard">
@@ -619,6 +628,7 @@ body.fsmode .bigplay{z-index:3}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
+<script src="i18n.js"></script>
 <script src="lessons.js"></script>
 <script>
 (function(){
@@ -634,14 +644,54 @@ body.fsmode .bigplay{z-index:3}
   const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',reviewpay:'review',promo:'promo',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
+  // ===== languages =====
+  const I18N = window.I18N || {langs: [['ru', 'Русский']]};
+  const LANG_CODES = I18N.langs.map(x => x[0]);
+  const LANG = (function(){
+    let v = ''; try { v = localStorage.getItem('fedoskin-lang') || ''; } catch (_) {}
+    if (LANG_CODES.includes(v)) return v;
+    // first visit: take the phone's language; Russian-speaking countries get Russian, unknown languages get English
+    for (const l of (navigator.languages || [navigator.language || 'ru'])) {
+      const c = String(l).toLowerCase().slice(0, 2);
+      if (LANG_CODES.includes(c)) return c;
+      if (['uk','be','kk','uz','ky','tg','hy','az','ka','mo','ro'].includes(c)) return 'ru';
+    }
+    return 'en';
+  })();
+  document.documentElement.lang = LANG;
+  // T('русский текст', {vars}) -> the same text in the chosen language (falls back to Russian)
+  const T = (ru, vars) => {
+    let out = (LANG !== 'ru' && I18N[LANG] && I18N[LANG][ru]) || ru;
+    if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+    return out;
+  };
+  // translate the fixed texts of the page (buttons, titles, hints)
+  function translateDom(root){
+    if (LANG === 'ru') return;
+    const dict = I18N[LANG] || {};
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(n => {
+      const raw = n.nodeValue, key = raw.trim();
+      if (!key || !dict[key] || (n.parentNode && /^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))) return;
+      n.nodeValue = raw.replace(key, dict[key]);
+    });
+    root.querySelectorAll('[aria-label],[placeholder],[title],[alt],[data-toast]').forEach(el => {
+      ['aria-label', 'placeholder', 'title', 'alt', 'data-toast'].forEach(a => { const v = el.getAttribute(a); if (v && dict[v]) el.setAttribute(a, dict[v]); });
+    });
+    if (LANG !== 'ru') { const dl = document.getElementById('countryList'); if (dl) dl.innerHTML = ''; }
+  }
+  translateDom(document.body);
+
   // ===== real lessons (alpha) =====
   const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   const ALPHA = CFG.alpha !== false; // open alpha: all lessons free, review stays paid
   (function applyCfg(){
     const rub = String(CFG.reviewRub).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
-    const vals = {alphaBanner: CFG.alphaBanner, rub: rub, usd: '$' + CFG.reviewUsd, hours: CFG.reviewHours + ' ч'};
+    const vals = {alphaBanner: T(CFG.alphaBanner), rub: rub, usd: '$' + CFG.reviewUsd, hours: T('{n} ч', {n: CFG.reviewHours})};
     document.querySelectorAll('[data-cfg]').forEach(el => { const v = vals[el.dataset.cfg]; if (v != null && v !== '') el.textContent = v; });
+    document.querySelectorAll('[data-t]').forEach(el => { el.textContent = T(el.dataset.t, {rub: vals.rub, usd: vals.usd, h: vals.hours}); });
     if (!ALPHA) document.querySelectorAll('.alphabar').forEach(el => el.hidden = true);
   })();
   // Yandex Metrika: switched on from the admin (metrikaId in config.js)
@@ -689,7 +739,7 @@ body.fsmode .bigplay{z-index:3}
     b.innerHTML = '<span class="n">0'+(i+1)+'</span><span class="stack" style="gap:3px"><span class="t"></span><span class="muted" style="font-size:12px"></span></span>';
     b.querySelector('.t').textContent = name;
     b.dataset.sec = name;
-    b.querySelector('.muted').textContent = n ? n + ' видео' : 'Скоро';
+    b.querySelector('.muted').textContent = n ? (n === 1 ? T('1 видео') : T('{n} видео', {n})) : T('Скоро');
     if (!n) b.style.opacity = '.55';
     b.addEventListener('click', () => openSection(name));
     grid.appendChild(b);
@@ -698,7 +748,7 @@ body.fsmode .bigplay{z-index:3}
   function paintTiles(){
     grid.querySelectorAll('.tile').forEach(t => {
       const old = t.querySelector('.newpill'); if (old) old.remove();
-      if (secHasNew(t.dataset.sec)) { const p = newPill(); p.classList.add('tilenew'); t.appendChild(p); t.setAttribute('aria-label', t.dataset.sec + ', есть новые видео'); }
+      if (secHasNew(t.dataset.sec)) { const p = newPill(); p.classList.add('tilenew'); t.appendChild(p); t.setAttribute('aria-label', T('{sec}, есть новые видео', {sec: t.dataset.sec})); }
       else t.removeAttribute('aria-label');
     });
   }
@@ -708,7 +758,7 @@ body.fsmode .bigplay{z-index:3}
     const b = document.createElement('button');
     b.className = 'list-item res';
     b.innerHTML = '<img class="lthumb" alt="" loading="lazy"><span class="stack" style="gap:4px;flex:1;min-width:0"><span class="nm" style="font-weight:600"></span><span class="muted" style="font-size:12px"></span></span>' +
-      (opts.tag === false ? '' : (!ALPHA && isFree(l) ? '<span class="tag" style="background:var(--accent);color:var(--on-accent)">Бесплатно</span>' : ''));
+      (opts.tag === false ? '' : (!ALPHA && isFree(l) ? '<span class="tag" style="background:var(--accent);color:var(--on-accent)">' + T('Бесплатно') + '</span>' : ''));
     b.querySelector('img').src = 'v/' + l.id + '.jpg';
     const nm = b.querySelector('.nm');
     const i = opts.q ? l.name.toLowerCase().indexOf(opts.q.toLowerCase()) : -1;
@@ -751,8 +801,8 @@ body.fsmode .bigplay{z-index:3}
     b.querySelector('.ldur').textContent = fmtD(l.dur);
     b.querySelector('.lname').textContent = l.name;
     if (isNew(l)) { b.querySelector('.lname').prepend(newPill(), ' '); b.classList.add('isnew'); }
-    if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = 'Бесплатно'; b.querySelector('.lcover').appendChild(t); }
-    b.setAttribute('aria-label', l.name + (isFree(l) ? ', бесплатно' : ''));
+    if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
+    b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
     b.addEventListener('click', () => openLesson(l.id));
     return b;
   }
@@ -761,7 +811,7 @@ body.fsmode .bigplay{z-index:3}
     $('#sectionTitle').textContent = name;
     const list = $('#sectionList'); list.innerHTML = '';
     const ls = inSec(name);
-    if (!ls.length) list.innerHTML = '<p class="muted" style="padding:24px 0;font-size:14px;line-height:1.5">Уроки этого раздела скоро появятся.</p>';
+    if (!ls.length) list.innerHTML = '<p class="muted" style="padding:24px 0;font-size:14px;line-height:1.5">' + T('Уроки этого раздела скоро появятся.') + '</p>';
     list.className = ls.length ? 'lgrid' : 'stack';
     ls.forEach(l => list.appendChild(lessonCard(l)));
     go('section');
@@ -780,7 +830,7 @@ body.fsmode .bigplay{z-index:3}
     res.innerHTML = '';
     if (!hits.length){
       res.innerHTML = '<p class="muted" style="padding:24px 4px;font-size:14px;line-height:1.5"></p>';
-      res.firstChild.textContent = 'Ничего не нашли по запросу «' + q + '». Попробуй по-английски, например 6-step или monkey flip.';
+      res.firstChild.textContent = T('Ничего не нашли по запросу «{q}». Попробуй по-английски, например 6-step или monkey flip.', {q});
     } else hits.forEach(h => res.appendChild(lessonRow(h.l, { showSec: true, q, tag: false })));
     res.hidden = false; $('#homeBody').hidden = true;
   }
@@ -805,19 +855,19 @@ body.fsmode .bigplay{z-index:3}
       list.appendChild(lessonRow(l, { showSec: true, tag: false }));
     });
     $('#savedHome').hidden = !saved.length;
-    if (!saved.length) list.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">Сохраняй уроки кнопкой «Сохранить», чтобы быстро к ним возвращаться.</p>';
+    if (!saved.length) list.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">' + T('Сохраняй уроки кнопкой «Сохранить», чтобы быстро к ним возвращаться.') + '</p>';
   }
   renderSaved();
   let curLesson = null;
   function paintSave(){
     const on = curLesson && saved.includes(curLesson.id);
     $('#btnSave').setAttribute('aria-pressed', !!on);
-    $('#saveText').textContent = on ? 'Сохранено' : 'Сохранить';
+    $('#saveText').textContent = on ? T('Сохранено') : T('Сохранить');
   }
   $('#btnSave').addEventListener('click', () => {
     if (!curLesson) return;
     const i = saved.indexOf(curLesson.id);
-    if (i >= 0){ saved.splice(i, 1); toast('Убрано из сохранённого'); } else { saved.unshift(curLesson.id); toast('Сохранено — урок на главной и в профиле'); }
+    if (i >= 0){ saved.splice(i, 1); toast(T('Убрано из сохранённого')); } else { saved.unshift(curLesson.id); toast(T('Сохранено — урок на главной и в профиле')); }
     persistSaved(); renderSaved(); paintSave();
   });
 
@@ -848,7 +898,7 @@ body.fsmode .bigplay{z-index:3}
     const list = inSec(l.sec), n = list.indexOf(l) + 1;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
-    $('#lessonMeta').textContent = l.sec + ' · урок ' + n + ' из ' + list.length + ' · ' + fmtD(l.dur);
+    $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: l.sec, n, m: list.length, dur: fmtD(l.dur)});
     $('#badgeOwn').hidden = true;
     setLoop(null);
     P.dur = l.dur;
@@ -858,7 +908,7 @@ body.fsmode .bigplay{z-index:3}
     const nl = $('#nextList'); nl.innerHTML = '';
     nl.className = list.length > 1 ? 'lgrid' : '';
     list.forEach(x => { if (x !== l) nl.appendChild(lessonCard(x)); });
-    if (list.length < 2) nl.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">Другие уроки раздела скоро появятся.</p>';
+    if (list.length < 2) nl.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">' + T('Другие уроки раздела скоро появятся.') + '</p>';
     go('lesson');
     setPlaying(true);
     $('#lesson').scrollTop = 0;
@@ -869,7 +919,7 @@ body.fsmode .bigplay{z-index:3}
     P.playing = on;
     $('#bigPlay').hidden = on;
     $('#icoPlay').innerHTML = on ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
-    $('#btnPlay').setAttribute('aria-label', on ? 'Пауза' : 'Смотреть');
+    $('#btnPlay').setAttribute('aria-label', on ? T('Пауза') : T('Смотреть'));
     if (document.body.classList.contains('fsmode')) { syncFs(); if (!on) { document.body.classList.remove('fs-hide'); clearTimeout(fsTimer); } else pokeFs(); }
     if (P.own){
       if (on) {
@@ -893,7 +943,7 @@ body.fsmode .bigplay{z-index:3}
     $('#btnLoop').setAttribute('aria-pressed', !!l);
     $('#badgeLoop').hidden = !l;
     $('#loopZone').hidden = !l;
-    $('#loopText').textContent = l ? fmt(l.a) + '–' + fmt(l.b) : 'Повтор 3 сек';
+    $('#loopText').textContent = l ? fmt(l.a) + '–' + fmt(l.b) : T('Повтор 3 сек');
     if (l){ $('#loopZone').style.left = (l.a / P.dur * 100) + '%'; $('#loopZone').style.width = ((l.b - l.a) / P.dur * 100) + '%'; }
   }
   function paint(){
@@ -1002,7 +1052,7 @@ body.fsmode .bigplay{z-index:3}
   $('#btnFs').addEventListener('click', () => enterFs());
   function paintMute(){
     $('#icoMute').innerHTML = vid.muted ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
-    $('#btnMute').setAttribute('aria-label', vid.muted ? 'Включить звук' : 'Выключить звук');
+    $('#btnMute').setAttribute('aria-label', vid.muted ? T('Включить звук') : T('Выключить звук'));
   }
   $('#btnMute').addEventListener('click', () => { vid.muted = !vid.muted; paintMute(); });
   paintMute();
@@ -1027,20 +1077,20 @@ body.fsmode .bigplay{z-index:3}
     $('#speedSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
     vid.playbackRate = P.rate;
     $('#badgeSpeed').hidden = P.rate === 1; $('#badgeSpeed').textContent = P.rate + 'x';
-    $('#toolHint').textContent = P.rate === 1 ? 'Обычная скорость.' : 'Замедление ' + P.rate + 'x — смотри, как ставятся ноги и куда переносится вес.';
+    $('#toolHint').textContent = P.rate === 1 ? T('Обычная скорость.') : T('Замедление {r}x — смотри, как ставятся ноги и куда переносится вес.', {r: P.rate});
   });
   $('#btnMirror').addEventListener('click', () => {
     P.mirror = !P.mirror;
     stage.classList.toggle('mirror', P.mirror);
     $('#btnMirror').setAttribute('aria-pressed', P.mirror);
     $('#badgeMirror').hidden = !P.mirror;
-    $('#toolHint').textContent = P.mirror ? 'Зеркало включено: повторяй движения, как перед зеркалом в зале.' : 'Зеркало выключено.';
+    $('#toolHint').textContent = P.mirror ? T('Зеркало включено: повторяй движения, как перед зеркалом в зале.') : T('Зеркало выключено.');
   });
   $('#btnLoop').addEventListener('click', () => {
-    if (P.loop){ setLoop(null); $('#toolHint').textContent = 'Повтор выключен.'; return; }
+    if (P.loop){ setLoop(null); $('#toolHint').textContent = T('Повтор выключен.'); return; }
     const a = Math.min(P.t, P.dur - 3), b = a + 3;
     setLoop({ a, b });
-    $('#toolHint').textContent = 'Фрагмент ' + fmt(a) + '–' + fmt(b) + ' повторяется по кругу. Включи замедление, чтобы разобрать его.';
+    $('#toolHint').textContent = T('Фрагмент {a}–{b} повторяется по кругу. Включи замедление, чтобы разобрать его.', {a: fmt(a), b: fmt(b)});
     if (!P.playing){ seekTo(a); setPlaying(true); }
   });
 
@@ -1049,9 +1099,9 @@ body.fsmode .bigplay{z-index:3}
     const btn = $('#btnDownload');
     if (dl === 'loading') return;
     if (dl === 'done'){
-      dl = 'none'; btn.setAttribute('aria-pressed', 'false'); $('#dlText').textContent = 'Скачать';
+      dl = 'none'; btn.setAttribute('aria-pressed', 'false'); $('#dlText').textContent = T('Скачать');
       $('#icoDl').innerHTML = '<path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/>';
-      toast('Удалено из загрузок'); return;
+      toast(T('Удалено из загрузок')); return;
     }
     dl = 'loading'; let pct = 0;
     clearInterval(dlTimer);
@@ -1059,9 +1109,9 @@ body.fsmode .bigplay{z-index:3}
       pct += 10; $('#dlText').textContent = pct + '%';
       if (pct >= 100){
         clearInterval(dlTimer); dl = 'done'; btn.setAttribute('aria-pressed', 'true');
-        $('#dlText').textContent = 'Скачано';
+        $('#dlText').textContent = T('Скачано');
         $('#icoDl').innerHTML = '<path d="m5 12 5 5 9-10"/>';
-        toast('Урок доступен без интернета');
+        toast(T('Урок доступен без интернета'));
       }
     }, 150);
   });
@@ -1071,7 +1121,7 @@ body.fsmode .bigplay{z-index:3}
     setLoop(null);
     loadVideo(URL.createObjectURL(f), '');
     $('#badgeOwn').hidden = false;
-    toast('Твоё видео загружено — проверь замедление и зеркало');
+    toast(T('Твоё видео загружено — проверь замедление и зеркало'));
   });
 
   // profile: progress by section (real: lessons watched at least halfway)
@@ -1083,7 +1133,7 @@ body.fsmode .bigplay{z-index:3}
       const pct = Math.round(done / total * 100);
       const row = document.createElement('div');
       row.className = 'stack'; row.style.gap = '6px';
-      row.innerHTML = '<div class="row" style="justify-content:space-between;font-size:13px"><span style="font-weight:600"></span><span class="muted" style="font-variant-numeric:tabular-nums">'+done+' из '+total+'</span></div><div aria-hidden="true" style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><div style="height:6px;width:'+pct+'%;background:var(--accent)"></div></div>';
+      row.innerHTML = '<div class="row" style="justify-content:space-between;font-size:13px"><span style="font-weight:600"></span><span class="muted" style="font-variant-numeric:tabular-nums">'+T('{done} из {total}', {done, total})+'</span></div><div aria-hidden="true" style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><div style="height:6px;width:'+pct+'%;background:var(--accent)"></div></div>';
       row.querySelector('span').textContent = name;
       box.appendChild(row);
     });
@@ -1119,7 +1169,7 @@ body.fsmode .bigplay{z-index:3}
   AVATARS.forEach(a => {
     const b = document.createElement('button');
     b.className = 'av-pick'; b.setAttribute('role','radio'); b.dataset.id = a.id;
-    b.setAttribute('aria-label', a.exclusive ? 'Аватар Альфа, только для альфа-тестеров' : 'Аватар ' + a.id);
+    b.setAttribute('aria-label', a.exclusive ? T('Аватар Альфа, только для альфа-тестеров') : T('Аватар {id}', {id: a.id}));
     b.innerHTML = avatarHTML(a.id, 64);
     if (a.exclusive) { b.style.position = 'relative'; const t = document.createElement('span'); t.className = 'avex'; t.textContent = 'ALPHA'; b.appendChild(t); }
     b.addEventListener('click', () => { pending = a.id; syncPicks(); });
@@ -1133,7 +1183,7 @@ body.fsmode .bigplay{z-index:3}
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
   $('#sheetDone').addEventListener('click', () => {
     myAvatar = pending; try { localStorage.setItem('fedoskin-avatar-a', myAvatar); } catch (_) {}
-    paintMine(); closeSheet(); toast('Аватар обновлён');
+    paintMine(); closeSheet(); toast(T('Аватар обновлён'));
   });
 
   const LEADERS = {
@@ -1151,15 +1201,15 @@ body.fsmode .bigplay{z-index:3}
     $('#stAvatar').innerHTML = avatarHTML(myAvatar, 72);
     const st = statsView();
     $('#stPlace').textContent = st.mins;
-    $('#stWhere').textContent = (st.mins === 1 ? 'минута' : 'минут') + ' тренировок в Fedoskin';
-    $('#stNick').textContent = prof.nick || 'Брейкер';
+    $('#stWhere').textContent = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
+    $('#stNick').textContent = prof.nick || T('Брейкер');
     $('#sLvl').textContent = st.level; $('#sViews').textContent = st.views; $('#sStreak').textContent = st.streak;
     $('#story').hidden = false;
   }
   $('#shareRank').addEventListener('click', openStory);
   $('#storyClose').addEventListener('click', () => { $('#story').hidden = true; });
   $('#story').addEventListener('click', e => { if (e.target.id === 'story') $('#story').hidden = true; });
-  $('#storyShare').addEventListener('click', () => { toast('В приложении откроется Instagram со сторис'); });
+  $('#storyShare').addEventListener('click', () => { toast(T('В приложении откроется Instagram со сторис')); });
   $('#rankSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     $('#rankSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -1171,7 +1221,7 @@ body.fsmode .bigplay{z-index:3}
   TABS.forEach(([id, label, icon]) => {
     const b = document.createElement('button');
     b.className = 'tab'; b.dataset.tab = id;
-    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg>'+label;
+    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg>'+T(label);
     b.addEventListener('click', () => go(id));
     tabsEl.appendChild(b);
   });
@@ -1197,7 +1247,7 @@ body.fsmode .bigplay{z-index:3}
   function tgHref(){
     const opt = $('#plans .opt[aria-checked="true"]');
     const fmtName = opt ? opt.querySelector('b').textContent : '';
-    const text = CFG.tgMessage + '\nФормат: ' + fmtName + '\nСейчас пришлю видео.';
+    const text = T(CFG.tgMessage) + '\n' + T('Формат:') + ' ' + fmtName + '\n' + T('Сейчас пришлю видео.');
     return 'https://t.me/' + TG_USERNAME + '?text=' + encodeURIComponent(text);
   }
   function paintTg(){ $('#tgLink').href = tgHref(); }
@@ -1206,8 +1256,8 @@ body.fsmode .bigplay{z-index:3}
   paintTg();
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;
-    try { navigator.clipboard.writeText(text).then(() => toast('Код скопирован'), () => toast('Выдели код и скопируй вручную')); }
-    catch (_) { toast('Выдели код и скопируй вручную'); }
+    try { navigator.clipboard.writeText(text).then(() => toast(T('Код скопирован')), () => toast(T('Выдели код и скопируй вручную'))); }
+    catch (_) { toast(T('Выдели код и скопируй вручную')); }
   });
 
   let tt;
@@ -1234,9 +1284,9 @@ body.fsmode .bigplay{z-index:3}
   function renderStats(){
     const v = statsView();
     $('#stViews').textContent = v.views; $('#stMins').textContent = v.mins; $('#stStreak').textContent = v.streak;
-    $('#lvlName').textContent = 'Уровень ' + v.level;
+    $('#lvlName').textContent = T('Уровень {n}', {n: v.level});
     $('#lvlBar').style.width = v.pct + '%';
-    $('#lvlHint').textContent = v.next ? ('Ещё ' + v.left + ' мин. тренировок до уровня ' + (v.level + 1)) : 'Максимальный уровень — ты легенда';
+    $('#lvlHint').textContent = v.next ? T('Ещё {n} мин. тренировок до уровня {next}', {n: v.left, next: v.level + 1}) : T('Максимальный уровень — ты легенда');
     renderProgress();
   }
   let sessionSec = 0, sessionCounted = false, lastLessonId = null;
@@ -1264,9 +1314,9 @@ body.fsmode .bigplay{z-index:3}
   try { const raw = JSON.parse(localStorage.getItem('fedoskin-profile') || 'null'); if (raw) prof = Object.assign(prof, raw); } catch (_) {}
   if (!prof.id) { prof.id = String(100000 + Math.floor(Math.random() * 900000)); try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {} }
   function paintProfile(){
-    $('#pNick').textContent = prof.nick || 'Добавь ник';
+    $('#pNick').textContent = prof.nick || T('Добавь ник');
     $('#pNick').style.color = prof.nick ? '' : 'var(--muted)';
-    $('#pCity').textContent = [prof.city, prof.country].filter(Boolean).join(', ') || 'Город и страна не указаны';
+    $('#pCity').textContent = [prof.city, prof.country].filter(Boolean).join(', ') || T('Город и страна не указаны');
     $('#pId').textContent = prof.id;
   }
   paintProfile();
@@ -1280,7 +1330,7 @@ body.fsmode .bigplay{z-index:3}
     prof.country = $('#fCountry').value.trim().slice(0, 30);
     prof.city = $('#fCity').value.trim().slice(0, 30);
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
-    paintProfile(); $('#profSheet').hidden = true; toast('Профиль сохранён');
+    paintProfile(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
   });
   const _goProfile = go;
   go = function(id){ _goProfile(id); if (id === 'profile') renderStats(); };
@@ -1415,7 +1465,7 @@ body.fsmode .bigplay{z-index:3}
       saveStats && saveStats();
       document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} }); // free the phone for the animation
       // refresh the cached copies first, so the reload really shows new lessons
-      const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
+      const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'i18n.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
       await vortex(Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]));
       await new Promise(r => setTimeout(r, 120));
       try { sessionStorage.setItem('fedoskin-refreshed', '1'); } catch (_) {}
@@ -1560,33 +1610,34 @@ body.fsmode .bigplay{z-index:3}
   const DOTS_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#installNative').hidden = false; });
-  window.addEventListener('appinstalled', () => { $('#installSheet').hidden = true; toast('Fedoskin добавлен на экран'); });
+  window.addEventListener('appinstalled', () => { $('#installSheet').hidden = true; toast(T('Fedoskin добавлен на экран')); });
   function installSteps(){
     if (inAppBrowser) return [
-      'Ты открыл ссылку внутри Instagram или другого приложения — оттуда иконку не добавить',
-      'Нажми <span class="k">' + DOTS_ICO + '</span> или <span class="k">···</span> в углу экрана',
-      'Выбери <span class="k">Открыть в браузере</span> — и повтори добавление уже там'
+      T('Ты открыл ссылку внутри Instagram или другого приложения — оттуда иконку не добавить'),
+      T('Нажми {k1} или {k2} в углу экрана', {k1: K(DOTS_ICO), k2: K('···')}),
+      T('Выбери {k} — и повтори добавление уже там', {k: K(T('Открыть в браузере'))})
     ];
     if (isIOS) return [
-      'Открой эту ссылку в <span class="k">Safari</span>',
-      'Нажми <span class="k">' + SHARE_ICO + ' Поделиться</span> внизу экрана',
-      'Пролистай вниз и выбери <span class="k">' + PLUS_ICO + ' На экран «Домой»</span>',
-      'Нажми <span class="k">Добавить</span> в правом верхнем углу'
+      T('Открой эту ссылку в {k}', {k: K('Safari')}),
+      T('Нажми {k} внизу экрана', {k: K(SHARE_ICO + ' ' + T('Поделиться'))}),
+      T('Пролистай вниз и выбери {k}', {k: K(PLUS_ICO + ' ' + T('На экран «Домой»'))}),
+      T('Нажми {k} в правом верхнем углу', {k: K(T('Добавить'))})
     ];
     if (isAndroid) return [
-      'Открой эту ссылку в <span class="k">Chrome</span>',
-      'Нажми <span class="k">' + DOTS_ICO + '</span> в правом верхнем углу',
-      'Выбери <span class="k">Добавить на главный экран</span> или <span class="k">Установить приложение</span>',
-      'Подтверди — нажми <span class="k">Установить</span>'
+      T('Открой эту ссылку в {k}', {k: K('Chrome')}),
+      T('Нажми {k} в правом верхнем углу', {k: K(DOTS_ICO)}),
+      T('Выбери {k1} или {k2}', {k1: K(T('Добавить на главный экран')), k2: K(T('Установить приложение'))}),
+      T('Подтверди — нажми {k}', {k: K(T('Установить'))})
     ];
     return [
-      'Открой эту ссылку на телефоне',
-      'iPhone: Safari → <span class="k">' + SHARE_ICO + ' Поделиться</span> → <span class="k">На экран «Домой»</span>',
-      'Android: Chrome → <span class="k">' + DOTS_ICO + '</span> → <span class="k">Добавить на главный экран</span>'
+      T('Открой эту ссылку на телефоне'),
+      'iPhone: Safari → ' + K(SHARE_ICO + ' ' + T('Поделиться')) + ' → ' + K(T('На экран «Домой»')),
+      'Android: Chrome → ' + K(DOTS_ICO) + ' → ' + K(T('Добавить на главный экран'))
     ];
   }
+  const K = x => '<span class="k">' + x + '</span>';
   function openInstall(){
-    if (isStandalone()) { toast('Приложение уже на экране телефона'); return; }
+    if (isStandalone()) { toast(T('Приложение уже на экране телефона')); return; }
     $('#installSteps').innerHTML = installSteps().map(t => '<li><span>' + t + '</span></li>').join('');
     $('#installNative').hidden = !deferredPrompt;
     $('#installSheet').hidden = false;
@@ -1612,6 +1663,31 @@ body.fsmode .bigplay{z-index:3}
     setTimeout(openInstall, 1500);
   })();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // ===== language picker =====
+  (function langPicker(){
+    const cur = I18N.langs.find(x => x[0] === LANG) || ['ru', 'Русский'];
+    $('#langPill').textContent = LANG.toUpperCase();
+    $('#langName').textContent = cur[1];
+    const list = $('#langList');
+    I18N.langs.forEach(([code, name]) => {
+      const b = document.createElement('button');
+      b.className = 'opt'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(code === LANG)); b.lang = code;
+      b.innerHTML = '<span class="dot"></span><span style="flex:1;font-weight:600;text-align:left"></span><span class="muted" style="font-size:12px"></span>';
+      b.children[1].textContent = name; b.children[2].textContent = code.toUpperCase();
+      b.addEventListener('click', () => {
+        if (code === LANG) { $('#langSheet').hidden = true; return; }
+        try { localStorage.setItem('fedoskin-lang', code); } catch (_) {}
+        saveStats && saveStats();
+        location.reload();
+      });
+      list.appendChild(b);
+    });
+    const open = () => { $('#langSheet').hidden = false; };
+    $('#langPill').addEventListener('click', open);
+    $('#langItem').addEventListener('click', open);
+    $('#langSheet').addEventListener('click', e => { if (e.target.id === 'langSheet') $('#langSheet').hidden = true; });
+  })();
 
   const startState = history.state;
   restoring = true; go('home'); restoring = false;
