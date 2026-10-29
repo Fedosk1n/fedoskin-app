@@ -22,7 +22,7 @@
   --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
-html,body{height:100%}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
 body{margin:0;font-family:var(--body)}
 img{max-width:100%}
@@ -709,10 +709,25 @@ body.fsmode .bigplay{z-index:3}
   }
 
   // animated covers: play the 2-second preview only while the card is on screen
+  let scrollPaused = null; // Android: set of covers waiting for the scroll to stop
   const previewObs = ('IntersectionObserver' in window) ? new IntersectionObserver(entries => {
-    entries.forEach(en => { const v = en.target; if (en.isIntersecting) { const r = v.play(); if (r && r.catch) r.catch(() => {}); } else v.pause(); });
+    entries.forEach(en => { const v = en.target; if (en.isIntersecting) { if (scrollPaused) { scrollPaused.add(v); return; } const r = v.play(); if (r && r.catch) r.catch(() => {}); } else v.pause(); });
   }, { threshold: 0.25 }) : null;
   function watchPreview(v){ if (previewObs) previewObs.observe(v); else { v.autoplay = true; } }
+  // Android: playing videos inside a scrolling list can lag behind and 'slide' while you scroll,
+  // so the cover animations pause during the scroll (the cover picture stays) and continue after it
+  if (/Android/i.test(navigator.userAgent)) {
+    let scrollT = 0;
+    document.addEventListener('scroll', e => {
+      if (!e.target.classList || !e.target.classList.contains('screen')) return;
+      if (!scrollPaused) { scrollPaused = new Set([...e.target.querySelectorAll('.lcover video')].filter(v => !v.paused)); scrollPaused.forEach(v => v.pause()); }
+      clearTimeout(scrollT);
+      scrollT = setTimeout(() => {
+        const list = scrollPaused; scrollPaused = null;
+        list.forEach(v => { const r = v.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } });
+      }, 180);
+    }, { capture: true, passive: true });
+  }
   function lessonCard(l){
     const b = document.createElement('button');
     b.className = 'lcard';
@@ -1496,7 +1511,9 @@ body.fsmode .bigplay{z-index:3}
   function fixViewportGap(){
     const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     const root = document.documentElement;
-    if (!standalone) { root.classList.remove('gapfix'); return; }
+    // only the iPhone home-screen app has this bug; on Android screen.height includes the system bars, so never "fix" there
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (!standalone || !ios) { root.classList.remove('gapfix'); return; }
     const land = window.innerWidth > window.innerHeight;
     const full = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
     const gap = Math.round(full - window.innerHeight);
