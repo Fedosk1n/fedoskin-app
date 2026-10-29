@@ -33,6 +33,11 @@ button,input{font-family:inherit;font-size:inherit}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .app{max-width:480px;margin:0 auto;height:100%;position:relative}
+/* iOS home-screen apps sometimes report a viewport shorter than the screen: --gap pushes the menu down to the real bottom */
+html.gapfix .app{height:calc(100% + var(--gap))}
+html.gapfix .tabs{bottom:calc(-1 * var(--gap))}
+html.gapfix body.fsmode .stage{bottom:calc(-1 * var(--gap));height:auto!important}
+html.gapfix body.fsmode.fs-rot .stage{bottom:auto;height:100vw!important}
 .screen{height:100%;overflow-y:auto;
   padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
   padding-block:24px calc(110px + env(safe-area-inset-bottom, 0px))}
@@ -1111,6 +1116,21 @@ body.fsmode .bigplay{z-index:3}
 
   let tt;
   function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 2200); }
+
+  // ===== iOS home-screen viewport fix =====
+  function fixViewportGap(){
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    const root = document.documentElement;
+    if (!standalone) { root.classList.remove('gapfix'); return; }
+    const land = window.innerWidth > window.innerHeight;
+    const full = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    const gap = Math.round(full - window.innerHeight);
+    if (gap > 0 && gap < 160) { root.style.setProperty('--gap', gap + 'px'); root.classList.add('gapfix'); }
+    else root.classList.remove('gapfix');
+  }
+  fixViewportGap();
+  window.addEventListener('resize', fixViewportGap);
+  window.addEventListener('orientationchange', () => setTimeout(fixViewportGap, 300));
 
   // ===== "add to home screen" guide =====
   const UA = navigator.userAgent || '';
