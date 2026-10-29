@@ -657,7 +657,7 @@ body.fsmode .bigplay{z-index:3}
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem('fedoskin-seen') || '[]'); } catch (_) { seen = []; }
   if (!Array.isArray(seen)) seen = [];
-  const isNew = l => !seen.includes(l.id) && (Date.now() - Date.parse(l.added || DEFAULT_ADDED)) <= NEW_DAYS * 864e5;
+  const isNew = l => l.new !== false && !seen.includes(l.id) && (Date.now() - Date.parse(l.added || DEFAULT_ADDED)) <= NEW_DAYS * 864e5;
   const secHasNew = sec => LESSONS.some(l => l.sec === sec && isNew(l));
   const newPill = () => { const t = document.createElement('span'); t.className = 'newpill'; t.textContent = 'NEW'; return t; };
   function markSeen(id){

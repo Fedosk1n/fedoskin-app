@@ -1,10 +1,15 @@
 # Fedoskin team app — notes for Claude
 
 - Owner writes in Russian; answer in Russian, plain language (he is not a developer).
-- Static web alpha, no build step: `index.html` (all UI + JS), `lessons.js` (lesson data), `v/` (videos).
+- Static web alpha, no build step: `index.html` (all UI + JS), `lessons.js` (lesson data, strict JSON after `window.LESSONS_DATA =`),
+  `config.js` (settings: alpha, banner, Telegram, review prices/hours, newDays, metrikaId), `v/` (videos).
+- `admin.html` — owner's admin panel: edits lessons.js/config.js and uploads videos via the GitHub API (fine-grained token in
+  the owner's browser). Keep lessons.js/config.js machine-readable JSON so the admin can parse them. Lesson fields:
+  id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge).
+  `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression.
 - Dark hip-hop design: Anton + Inter, accent #E2611A, NEW badge #3BD16F. Keep the look consistent.
-- Alpha mode: `ALPHA = true` in index.html — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
-  link `t.me/Fe_DoSk1n?text=...` (TG_USERNAME constant).
+- Alpha mode: `alpha: true` in config.js — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
+  link `t.me/Fe_DoSk1n?text=...` (`tg` in config.js).
 - Hidden for later (do not delete): courses, articles, promo tab, "my reviews". Elements carry `hidden data-later="..."`
   or are commented out in TABS.
 - Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
