@@ -651,6 +651,16 @@ body.fsmode .bigplay{z-index:3}
     (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
     ym(+MID, 'init', {clickmap:true, trackLinks:true, accurateTrackBounce:true});
   }
+  // installs on the home screen: an app opened from the home-screen icon has its own storage on iPhone,
+  // so its very first launch = a new install (works on iPhone and Android the same way)
+  (function trackInstall(){
+    const app = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (MID) { try { ym(+MID, 'params', {mode: app ? 'приложение' : 'браузер'}); } catch(e){} }
+    if (!app) return;
+    goal('app_open');
+    let first = false; try { first = !localStorage.getItem('fedoskin-installed'); if (first) localStorage.setItem('fedoskin-installed', new Date().toISOString().slice(0, 10)); } catch(e){}
+    if (first) goal('app_install');
+  })();
   const BY_ID = {}; LESSONS.forEach(l => { BY_ID[l.id] = l; });
   // "NEW": lesson added in the last 14 days and not opened by this user yet
   const NEW_DAYS = +CFG.newDays || 14, DEFAULT_ADDED = '2026-10-01';
