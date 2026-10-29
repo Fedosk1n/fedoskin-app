@@ -457,7 +457,7 @@ body.fsmode .bigplay{z-index:3}
       <span style="position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:center;border:3px solid var(--bg)"><svg class="ico" viewBox="0 0 24 24" style="width:13px;height:13px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span>
     </button>
     <span class="stack" style="gap:4px;flex:1;min-width:0">
-      <button id="editProfile" class="nickbtn" aria-label="Изменить ник и город"><span class="d" id="pNick" style="font-size:26px;line-height:1"></span><svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+      <button id="editProfile" class="nickbtn" aria-label="Изменить имя, страну и город"><span class="d" id="pNick" style="font-size:26px;line-height:1"></span><svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
       <span class="row" style="gap:8px;flex-wrap:wrap"><span class="alphabadge">α АЛЬФА-ТЕСТЕР</span><span class="muted" id="pCity" style="font-size:13px"></span></span>
       <span class="muted" style="font-size:12px;font-variant-numeric:tabular-nums">ID аккаунта: <span id="pId"></span></span>
     </span>
@@ -567,8 +567,10 @@ body.fsmode .bigplay{z-index:3}
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
     <h2 id="profTitle" style="font-size:24px">Твой профиль</h2>
     <div class="stack" style="gap:14px;margin-top:16px">
-      <div class="field"><label for="fNick">Ник</label><input id="fNick" maxlength="20" autocomplete="nickname" placeholder="Например, B-boy Storm"></div>
+      <div class="field"><label for="fNick">Имя (никнейм)</label><input id="fNick" maxlength="20" autocomplete="nickname" placeholder="Например, B-boy Storm"></div>
+      <div class="field"><label for="fCountry">Страна</label><input id="fCountry" maxlength="30" list="countryList" autocomplete="country-name" placeholder="Например, Россия"></div>
       <div class="field"><label for="fCity">Город</label><input id="fCity" maxlength="30" autocomplete="address-level2" placeholder="Где ты тренируешься"></div>
+      <datalist id="countryList"><option value="Россия"><option value="Казахстан"><option value="Беларусь"><option value="Украина"><option value="Узбекистан"><option value="Кыргызстан"><option value="Армения"><option value="Грузия"><option value="Азербайджан"><option value="Таджикистан"><option value="Молдова"><option value="Германия"><option value="США"></datalist>
     </div>
     <button class="btn btn-ghost" type="button" id="profAvatarBtn" style="margin-top:14px;min-height:48px">Сменить аватар</button>
     <button class="btn btn-accent" type="submit" style="margin-top:10px;min-height:52px">Сохранить</button>
@@ -1217,23 +1219,24 @@ body.fsmode .bigplay{z-index:3}
   window.addEventListener('pagehide', saveStats);
 
   // ===== profile: nickname, city, local id =====
-  let prof = { nick: '', city: '', id: '' };
+  let prof = { nick: '', country: '', city: '', id: '' };
   try { const raw = JSON.parse(localStorage.getItem('fedoskin-profile') || 'null'); if (raw) prof = Object.assign(prof, raw); } catch (_) {}
   if (!prof.id) { prof.id = String(100000 + Math.floor(Math.random() * 900000)); try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {} }
   function paintProfile(){
     $('#pNick').textContent = prof.nick || 'Добавь ник';
     $('#pNick').style.color = prof.nick ? '' : 'var(--muted)';
-    $('#pCity').textContent = prof.city || 'Город не указан';
+    $('#pCity').textContent = [prof.city, prof.country].filter(Boolean).join(', ') || 'Город и страна не указаны';
     $('#pId').textContent = prof.id;
   }
   paintProfile();
-  function openProf(){ $('#fNick').value = prof.nick; $('#fCity').value = prof.city; $('#profSheet').hidden = false; }
+  function openProf(){ $('#fNick').value = prof.nick; $('#fCountry').value = prof.country || ''; $('#fCity').value = prof.city; $('#profSheet').hidden = false; }
   $('#editProfile').addEventListener('click', openProf);
   $('#profSheet').addEventListener('click', e => { if (e.target.id === 'profSheet') $('#profSheet').hidden = true; });
   $('#profAvatarBtn').addEventListener('click', () => { $('#profSheet').hidden = true; openSheet(); });
   $('#profForm').addEventListener('submit', e => {
     e.preventDefault();
     prof.nick = $('#fNick').value.trim().slice(0, 20);
+    prof.country = $('#fCountry').value.trim().slice(0, 30);
     prof.city = $('#fCity').value.trim().slice(0, 30);
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
     paintProfile(); $('#profSheet').hidden = true; toast('Профиль сохранён');
