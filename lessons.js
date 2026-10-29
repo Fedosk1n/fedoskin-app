@@ -145,5 +145,14 @@ window.LESSONS_DATA = [
   "ru": "эйрфлаер эирфлаер аирфлаер флаер",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-turtle",
+  "sec": "Powermove",
+  "name": "Turtle",
+  "dur": 445,
+  "ru": "тертл тартл черепаха",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
