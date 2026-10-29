@@ -261,7 +261,7 @@ body.fsmode .bigplay{z-index:3}
 
 <!-- РАЗДЕЛ -->
 <section class="screen" id="section" aria-label="Раздел" hidden>
-  <button class="back" data-go="home" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <button class="back" data-back="home" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
   <h1 id="sectionTitle" style="margin-top:16px">Toprock</h1>
   <p class="lead">Все уроки бесплатно на время альфа-теста.</p>
   <div class="stack" id="sectionList" style="margin-top:12px"></div>
@@ -422,7 +422,7 @@ body.fsmode .bigplay{z-index:3}
 
 <!-- РАЗБОР: ОПЛАТА -->
 <section class="screen" id="reviewpay" aria-label="Отправить на разбор" hidden>
-  <button class="back" data-go="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <button class="back" data-back="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
   <h1 style="margin-top:16px;font-size:34px">Отправить<br>на разбор</h1>
   <div class="card row" style="margin-top:18px;padding:16px;gap:14px;border-radius:16px">
     <span style="width:44px;height:44px;flex:0 0 44px;border-radius:22px;background:#229ED9;color:#fff;display:flex;align-items:center;justify-content:center"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></span>
@@ -712,6 +712,7 @@ body.fsmode .bigplay{z-index:3}
     return b;
   }
   function openSection(name){
+    curSection = name;
     $('#sectionTitle').textContent = name;
     const list = $('#sectionList'); list.innerHTML = '';
     const ls = inSec(name);
@@ -816,7 +817,7 @@ body.fsmode .bigplay{z-index:3}
     setPlaying(true);
     $('#lesson').scrollTop = 0;
   }
-  $('#lessonBack').addEventListener('click', () => { if (!$('#q').value.trim()) openSection(curSection); else go('home'); });
+  $('#lessonBack').addEventListener('click', () => goBack(() => openSection(curSection)));
 
   function setPlaying(on){
     P.playing = on;
@@ -894,6 +895,7 @@ body.fsmode .bigplay{z-index:3}
   function pokeFs(){ clearTimeout(fsTimer); fsTimer = setTimeout(() => { if (P.playing) document.body.classList.add('fs-hide'); }, 3000); }
   function enterFs(){
     document.body.classList.add('fsmode'); document.body.classList.remove('fs-hide');
+    try { if (!(history.state && history.state.fs)) { history.pushState(Object.assign({}, history.state, { fs: true }), ''); navDepth++; } } catch (_) {}
     $('#fsName').textContent = curLesson ? curLesson.name : '';
     syncFs(); pokeFs();
     const land = isLandscapeVideo();
@@ -937,7 +939,7 @@ body.fsmode .bigplay{z-index:3}
   }
   $('#btnMute').addEventListener('click', () => { vid.muted = !vid.muted; paintMute(); });
   paintMute();
-  $('#fsExit').addEventListener('click', exitFs);
+  $('#fsExit').addEventListener('click', () => { if (history.state && history.state.fs) history.back(); else exitFs(); });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fsmode')) exitFs(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fsmode')) exitFs(); });
   $('#fsPlay').addEventListener('click', () => { $('#btnPlay').click(); syncFs(); pokeFs(); });
@@ -1116,6 +1118,7 @@ body.fsmode .bigplay{z-index:3}
     tabsEl.querySelectorAll('.tab').forEach(t => { if (t.dataset.tab === tab) t.setAttribute('aria-current','page'); else t.removeAttribute('aria-current'); });
   }
   document.addEventListener('click', e => {
+    const bk = e.target.closest('[data-back]'); if (bk){ goBack(() => go(bk.dataset.back)); return; }
     const g = e.target.closest('[data-go]'); if (g){ go(g.dataset.go); return; }
     const t = e.target.closest('[data-toast]'); if (t){ toast(t.dataset.toast); }
   });
@@ -1212,6 +1215,74 @@ body.fsmode .bigplay{z-index:3}
   });
   const _goProfile = go;
   go = function(id){ _goProfile(id); if (id === 'profile') renderStats(); };
+
+  // ===== back navigation: history + edge swipe =====
+  let restoring = false;
+  var navDepth = 0;
+  const _goNav = go;
+  go = function(id){
+    _goNav(id);
+    if (restoring) return;
+    const st = { s: id, sec: curSection, lid: curLesson ? curLesson.id : null };
+    const cur = history.state || {};
+    const same = cur.s === st.s && (st.s !== 'lesson' || cur.lid === st.lid) && (st.s !== 'section' || cur.sec === st.sec);
+    if (!same) { try { history.pushState(st, ''); navDepth++; } catch (_) {} }
+  };
+  function goBack(fallback){
+    if (navDepth > 0) history.back();
+    else if (fallback) fallback();
+  }
+  window.addEventListener('popstate', e => {
+    const st = e.state || { s: 'home' };
+    navDepth = Math.max(0, navDepth - 1);
+    // back while watching fullscreen: just leave fullscreen
+    if (document.body.classList.contains('fsmode') && !st.fs) { exitFs(); return; }
+    restoring = true;
+    try {
+      if (st.s === 'lesson' && st.lid && BY_ID[st.lid]) { if (!(curLesson && curLesson.id === st.lid && !$('#lesson').hidden)) openLesson(st.lid); }
+      else if (st.s === 'section' && st.sec) openSection(st.sec);
+      else go(st.s || 'home');
+    } finally { restoring = false; }
+  });
+
+  // iPhone home-screen app has no system back swipe: add our own from the left edge
+  (function edgeSwipe(){
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (!ios || !standalone) return; // browsers and Android already have their own back gesture
+    let sx = 0, sy = 0, dx = 0, active = false, decided = false, scr = null, t0 = 0;
+    const blocked = () => document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
+    document.addEventListener('touchstart', e => {
+      if (navDepth <= 0 || blocked() || e.touches.length !== 1) return;
+      const t = e.touches[0]; if (t.clientX > 28) return;
+      sx = t.clientX; sy = t.clientY; dx = 0; active = true; decided = false; t0 = Date.now();
+      scr = [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+      if (!active || !scr) return;
+      const t = e.touches[0]; const mx = t.clientX - sx, my = t.clientY - sy;
+      if (!decided) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; decided = true; if (Math.abs(my) > Math.abs(mx) || mx < 0) { active = false; return; } }
+      dx = Math.max(0, mx);
+      scr.style.transition = 'none';
+      scr.style.transform = 'translateX(' + dx + 'px)';
+      scr.style.boxShadow = '-12px 0 24px rgba(0,0,0,.5)';
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchend', () => {
+      if (!active || !scr) { active = false; return; }
+      active = false;
+      const el = scr; scr = null;
+      const fast = dx > 40 && (Date.now() - t0) < 250;
+      el.style.transition = 'transform .2s ease';
+      if (dx > window.innerWidth * 0.33 || fast) {
+        el.style.transform = 'translateX(' + window.innerWidth + 'px)';
+        setTimeout(() => { el.style.transition = 'none'; el.style.transform = ''; el.style.boxShadow = ''; history.back(); }, 180);
+      } else {
+        el.style.transform = 'translateX(0)';
+        setTimeout(() => { el.style.transition = ''; el.style.transform = ''; el.style.boxShadow = ''; }, 200);
+      }
+    });
+  })();
   renderStats();
 
   // ===== iOS home-screen viewport fix =====
@@ -1293,7 +1364,8 @@ body.fsmode .bigplay{z-index:3}
   })();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
-  go('home');
+  restoring = true; go('home'); restoring = false;
+  try { history.replaceState({ s: 'home' }, ''); } catch (_) {}
 })();
 </script>
 </body>
