@@ -171,6 +171,9 @@ body.fsmode .bigplay{z-index:3}
 .isteps li::before{content:counter(st);flex:0 0 28px;height:28px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-weight:800;display:flex;align-items:center;justify-content:center}
 .isteps .k{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;background:var(--surface-2);font-weight:700;white-space:nowrap}
 .isteps .k svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nickbtn{display:inline-flex;align-items:center;gap:8px;padding:0;border:none;background:none;color:var(--fg);cursor:pointer;text-align:left;max-width:100%}
+.nickbtn .d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -451,34 +454,36 @@ body.fsmode .bigplay{z-index:3}
       <span style="position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:center;border:3px solid var(--bg)"><svg class="ico" viewBox="0 0 24 24" style="width:13px;height:13px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span>
     </button>
     <span class="stack" style="gap:4px;flex:1;min-width:0">
-      <span class="d" style="font-size:26px;line-height:1">[Ник]</span>
-      <span class="row" style="gap:8px;flex-wrap:wrap"><span class="alphabadge">α АЛЬФА-ТЕСТЕР</span><span class="muted" style="font-size:13px">[Город]</span></span>
-      <span class="muted" style="font-size:12px;font-variant-numeric:tabular-nums">ID аккаунта: 104582</span>
+      <button id="editProfile" class="nickbtn" aria-label="Изменить ник и город"><span class="d" id="pNick" style="font-size:26px;line-height:1"></span><svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px;stroke-width:2.5" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+      <span class="row" style="gap:8px;flex-wrap:wrap"><span class="alphabadge">α АЛЬФА-ТЕСТЕР</span><span class="muted" id="pCity" style="font-size:13px"></span></span>
+      <span class="muted" style="font-size:12px;font-variant-numeric:tabular-nums">ID аккаунта: <span id="pId"></span></span>
     </span>
   </div>
 
   <div class="alphacard">
     <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA</span>
-    <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600">Ты альфа-тестер №[N]. Когда приложение станет платным, получишь месяц подписки бесплатно, а значок и аватар «Альфа» останутся у тебя навсегда.</p>
+    <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600">Ты альфа-тестер. Когда приложение станет платным, получишь месяц подписки бесплатно, а значок и аватар «Альфа» останутся у тебя навсегда.</p>
   </div>
   <div class="card" style="margin-top:12px;padding:16px;border-radius:18px">
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <span class="label">Твой уровень</span>
-      <span class="d" style="font-size:26px;color:var(--accent)">Уровень 3</span>
+      <span class="d" id="lvlName" style="font-size:26px;color:var(--accent)">Уровень 1</span>
     </div>
-    <div aria-hidden="true" style="margin-top:12px;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden"><div style="width:72%;height:8px;background:var(--accent)"></div></div>
-    <p class="muted" style="margin-top:8px;font-size:12px">Ещё 88 минут тренировок до уровня 4</p>
+    <div aria-hidden="true" style="margin-top:12px;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden"><div id="lvlBar" style="width:0%;height:8px;background:var(--accent);transition:width .4s ease"></div></div>
+    <p class="muted" id="lvlHint" style="margin-top:8px;font-size:12px"></p>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
-    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">47</span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
-    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">312</span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
-    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums">5</span><span class="muted" style="font-size:12px;line-height:1.3">дней подряд</span></div>
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stViews">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stMins">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
+    <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stStreak">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">дней подряд</span></div>
   </div>
-  <p class="muted" style="margin-top:8px;font-size:11px">Цифры для примера</p>
+  <p class="muted" style="margin-top:8px;font-size:11px">Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом телефоне.</p>
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
+    <p class="muted" style="font-size:14px;line-height:1.45">Общий рейтинг с другими брейкерами появится вместе с аккаунтами. А пока набирай минуты и делись своей статистикой в сторис.</p>
+    <div hidden data-later="rating">
     <div class="seg" role="group" aria-label="Рейтинг: город или мир" id="rankSeg" style="margin-bottom:12px"><button aria-pressed="true" data-scope="city">Мой город</button><button aria-pressed="false" data-scope="world">Весь мир</button></div>
     <div class="card row" style="padding:14px 16px;gap:14px;border-radius:16px;border-color:var(--accent)">
       <span class="d" id="myPlace" style="font-size:22px;color:var(--accent);min-width:56px;font-variant-numeric:tabular-nums">#12</span>
@@ -486,9 +491,10 @@ body.fsmode .bigplay{z-index:3}
       <span class="stack" style="gap:2px;flex:1"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" style="font-size:12px">312 минут</span></span>
     </div>
     <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
+    </div>
     <button class="btn btn-accent" id="shareRank" style="margin-top:14px;min-height:52px">
       <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
-      Поделиться рейтингом</button>
+      Поделиться статистикой</button>
   </div>
 
   <div class="sec">
@@ -553,6 +559,19 @@ body.fsmode .bigplay{z-index:3}
   </div>
 </div>
 
+<div class="sheet-bg" id="profSheet" hidden>
+  <form class="sheet" id="profForm" role="dialog" aria-modal="true" aria-labelledby="profTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="profTitle" style="font-size:24px">Твой профиль</h2>
+    <div class="stack" style="gap:14px;margin-top:16px">
+      <div class="field"><label for="fNick">Ник</label><input id="fNick" maxlength="20" autocomplete="nickname" placeholder="Например, B-boy Storm"></div>
+      <div class="field"><label for="fCity">Город</label><input id="fCity" maxlength="30" autocomplete="address-level2" placeholder="Где ты тренируешься"></div>
+    </div>
+    <button class="btn btn-ghost" type="button" id="profAvatarBtn" style="margin-top:14px;min-height:48px">Сменить аватар</button>
+    <button class="btn btn-accent" type="submit" style="margin-top:10px;min-height:52px">Сохранить</button>
+  </form>
+</div>
+
 <div class="sheet-bg" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -569,17 +588,17 @@ body.fsmode .bigplay{z-index:3}
       <img src="logo.png" alt="Fedoskin team" style="width:46%;height:auto;display:block;margin:0 auto">
       <div class="stack" style="align-items:center;gap:10px;margin-top:auto">
         <span id="stAvatar"></span>
-        <span class="d" style="font-size:20px">[Ник]</span>
+        <span class="d" id="stNick" style="font-size:20px"></span>
         <span class="alphabadge">α АЛЬФА-ТЕСТЕР</span>
       </div>
       <div class="stack" style="align-items:center;margin-top:14px">
-        <span class="d" id="stPlace" style="font-size:96px;line-height:.9;color:var(--accent)">#12</span>
-        <span id="stWhere" style="font-size:13px;font-weight:600;text-align:center;margin-top:6px">место в [городе] по тренировкам</span>
+        <span class="d" id="stPlace" style="font-size:96px;line-height:.9;color:var(--accent)">0</span>
+        <span id="stWhere" style="font-size:13px;font-weight:600;text-align:center;margin-top:6px">минут тренировок в Fedoskin</span>
       </div>
       <div class="st-stats">
-        <span><b class="d">312</b><i>минут</i></span>
-        <span><b class="d">47</b><i>роликов</i></span>
-        <span><b class="d">5</b><i>дней подряд</i></span>
+        <span><b class="d" id="sLvl">1</b><i>уровень</i></span>
+        <span><b class="d" id="sViews">0</b><i>роликов</i></span>
+        <span><b class="d" id="sStreak">0</b><i>дней подряд</i></span>
       </div>
       <div class="st-cta">Сможешь выше? · Fedoskin team app</div>
     </div>
@@ -725,7 +744,7 @@ body.fsmode .bigplay{z-index:3}
   // saved (lesson ids)
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem('fedoskin-saved-v2')); } catch (_) { saved = null; }
-  if (!Array.isArray(saved)) saved = ['fw-6step', 'tk-monkey'];
+  if (!Array.isArray(saved)) saved = [];
   saved = saved.filter(id => BY_ID[id]);
   function persistSaved(){ try { localStorage.setItem('fedoskin-saved-v2', JSON.stringify(saved)); } catch (_) {} }
   function renderSaved(){
@@ -986,17 +1005,20 @@ body.fsmode .bigplay{z-index:3}
     toast('Твоё видео загружено — проверь замедление и зеркало');
   });
 
-  // profile: progress by section (example: half watched)
-  SECTIONS.forEach(name => {
-    const total = inSec(name).length; if (!total) return;
-    const watched = Math.max(1, Math.floor(total / 2));
-    const pct = Math.round(watched / total * 100);
-    const row = document.createElement('div');
-    row.className = 'stack'; row.style.gap = '6px';
-    row.innerHTML = '<div class="row" style="justify-content:space-between;font-size:13px"><span style="font-weight:600"></span><span class="muted" style="font-variant-numeric:tabular-nums">'+watched+' из '+total+'</span></div><div aria-hidden="true" style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><div style="height:6px;width:'+pct+'%;background:var(--accent)"></div></div>';
-    row.querySelector('span').textContent = name;
-    $('#progress').appendChild(row);
-  });
+  // profile: progress by section (real: lessons watched at least halfway)
+  function renderProgress(){
+    const box = $('#progress'); box.innerHTML = '';
+    SECTIONS.forEach(name => {
+      const ls = inSec(name), total = ls.length; if (!total) return;
+      const done = ls.filter(l => isWatched(l)).length;
+      const pct = Math.round(done / total * 100);
+      const row = document.createElement('div');
+      row.className = 'stack'; row.style.gap = '6px';
+      row.innerHTML = '<div class="row" style="justify-content:space-between;font-size:13px"><span style="font-weight:600"></span><span class="muted" style="font-variant-numeric:tabular-nums">'+done+' из '+total+'</span></div><div aria-hidden="true" style="height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden"><div style="height:6px;width:'+pct+'%;background:var(--accent)"></div></div>';
+      row.querySelector('span').textContent = name;
+      box.appendChild(row);
+    });
+  }
   // avatars: preset only (no uploads)
   const AVATARS = [
     {id:'alpha', bg:'linear-gradient(135deg,#E2611A,#7A2E0B)', fg:'#F2EFE8', exclusive:true, d:'<text x="12" y="17.5" text-anchor="middle" font-size="17" font-weight="800" font-family="Inter, system-ui, sans-serif" fill="currentColor" stroke="none">α</text>'},
@@ -1058,8 +1080,11 @@ body.fsmode .bigplay{z-index:3}
   let rankScope = 'city';
   function openStory(){
     $('#stAvatar').innerHTML = avatarHTML(myAvatar, 72);
-    $('#stPlace').textContent = rankScope === 'city' ? '#12' : '#1284';
-    $('#stWhere').textContent = rankScope === 'city' ? 'место в [городе] по тренировкам' : 'место в мире по тренировкам';
+    const st = statsView();
+    $('#stPlace').textContent = st.mins;
+    $('#stWhere').textContent = (st.mins === 1 ? 'минута' : 'минут') + ' тренировок в Fedoskin';
+    $('#stNick').textContent = prof.nick || 'Брейкер';
+    $('#sLvl').textContent = st.level; $('#sViews').textContent = st.views; $('#sStreak').textContent = st.streak;
     $('#story').hidden = false;
   }
   $('#shareRank').addEventListener('click', openStory);
@@ -1116,6 +1141,78 @@ body.fsmode .bigplay{z-index:3}
 
   let tt;
   function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 2200); }
+
+  // ===== real stats (stored on this device) =====
+  const LEVELS = [0, 5, 15, 30, 60, 120, 240, 480, 960, 1920, 3840]; // minutes needed for each level
+  const todayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  let stats = { sec: 0, views: 0, watched: {}, last: '', streak: 0 };
+  try { const raw = JSON.parse(localStorage.getItem('fedoskin-stats') || 'null'); if (raw && typeof raw === 'object') stats = Object.assign(stats, raw); } catch (_) {}
+  function saveStats(){ try { localStorage.setItem('fedoskin-stats', JSON.stringify(stats)); } catch (_) {} }
+  function isWatched(l){ return (stats.watched[l.id] || 0) >= Math.min(l.dur * 0.5, 20); }
+  function currentStreak(){
+    if (!stats.last) return 0;
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    return (stats.last === todayKey() || stats.last === todayKey(y)) ? stats.streak : 0;
+  }
+  function statsView(){
+    const mins = Math.floor(stats.sec / 60);
+    let lvl = 1; for (let i = 0; i < LEVELS.length; i++) if (mins >= LEVELS[i]) lvl = i + 1;
+    const cur = LEVELS[lvl - 1], next = LEVELS[lvl];
+    return { mins, views: stats.views, streak: currentStreak(), level: lvl, next, pct: next ? Math.min(100, Math.round((stats.sec / 60 - cur) / (next - cur) * 100)) : 100, left: next ? Math.max(1, Math.ceil(next - stats.sec / 60)) : 0 };
+  }
+  function renderStats(){
+    const v = statsView();
+    $('#stViews').textContent = v.views; $('#stMins').textContent = v.mins; $('#stStreak').textContent = v.streak;
+    $('#lvlName').textContent = 'Уровень ' + v.level;
+    $('#lvlBar').style.width = v.pct + '%';
+    $('#lvlHint').textContent = v.next ? ('Ещё ' + v.left + ' мин. тренировок до уровня ' + (v.level + 1)) : 'Максимальный уровень — ты легенда';
+    renderProgress();
+  }
+  let sessionSec = 0, sessionCounted = false, lastLessonId = null;
+  setInterval(() => {
+    // count only real playback of a lesson video, with the app on screen
+    if (!P.playing || document.hidden || !curLesson || !$('#badgeOwn').hidden || vid.paused) return;
+    if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
+    stats.sec += 1; sessionSec += 1;
+    stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
+    if (!sessionCounted && sessionSec >= 5) { stats.views += 1; sessionCounted = true; }
+    const t = todayKey();
+    if (stats.last !== t) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      stats.streak = stats.last === todayKey(y) ? stats.streak + 1 : 1;
+      stats.last = t;
+    }
+    if (stats.sec % 5 === 0) saveStats();
+    if (!$('#profile').hidden) renderStats();
+  }, 1000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveStats(); });
+  window.addEventListener('pagehide', saveStats);
+
+  // ===== profile: nickname, city, local id =====
+  let prof = { nick: '', city: '', id: '' };
+  try { const raw = JSON.parse(localStorage.getItem('fedoskin-profile') || 'null'); if (raw) prof = Object.assign(prof, raw); } catch (_) {}
+  if (!prof.id) { prof.id = String(100000 + Math.floor(Math.random() * 900000)); try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {} }
+  function paintProfile(){
+    $('#pNick').textContent = prof.nick || 'Добавь ник';
+    $('#pNick').style.color = prof.nick ? '' : 'var(--muted)';
+    $('#pCity').textContent = prof.city || 'Город не указан';
+    $('#pId').textContent = prof.id;
+  }
+  paintProfile();
+  function openProf(){ $('#fNick').value = prof.nick; $('#fCity').value = prof.city; $('#profSheet').hidden = false; }
+  $('#editProfile').addEventListener('click', openProf);
+  $('#profSheet').addEventListener('click', e => { if (e.target.id === 'profSheet') $('#profSheet').hidden = true; });
+  $('#profAvatarBtn').addEventListener('click', () => { $('#profSheet').hidden = true; openSheet(); });
+  $('#profForm').addEventListener('submit', e => {
+    e.preventDefault();
+    prof.nick = $('#fNick').value.trim().slice(0, 20);
+    prof.city = $('#fCity').value.trim().slice(0, 30);
+    try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
+    paintProfile(); $('#profSheet').hidden = true; toast('Профиль сохранён');
+  });
+  const _goProfile = go;
+  go = function(id){ _goProfile(id); if (id === 'profile') renderStats(); };
+  renderStats();
 
   // ===== iOS home-screen viewport fix =====
   function fixViewportGap(){
