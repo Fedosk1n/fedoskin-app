@@ -175,8 +175,10 @@ body.fsmode .bigplay{z-index:3}
 .nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .screen{overscroll-behavior-y:contain}
 .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) - 73px);z-index:15;width:220px;height:220px;margin-left:-110px;opacity:0;transform:translateY(-70px);pointer-events:none}
-.ptr canvas{width:220px;height:220px;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.7));will-change:transform}
-.ptr.ready canvas,.ptr.spin canvas{filter:drop-shadow(0 0 10px rgba(226,97,26,.9)) drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+.ptr canvas{position:relative;width:220px;height:220px;display:block;will-change:transform}
+/* glow is a fixed picture behind the canvas (a CSS filter on a canvas that changes every frame is slow on phones) */
+.ptr::before{content:"";position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;background:radial-gradient(closest-side,rgba(226,97,26,.55),rgba(226,97,26,.18) 60%,rgba(226,97,26,0));opacity:0;transition:opacity .25s ease}
+.ptr.ready::before,.ptr.spin::before{opacity:1}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -1285,7 +1287,7 @@ body.fsmode .bigplay{z-index:3}
     // ---- particles ----
     const SIZE = 220, CX = 110, CY = 110, LW = 84, TILE = 4;
     const img = new Image(); img.src = 'logo.png';
-    let LH = 62, tiles = null, raf = 0, dpr = 1;
+    let LH = 62, tiles = null, raf = 0, dpr = 1, spr = null;
     const ease = t => 1 - Math.pow(1 - t, 3), easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const rnd = (a, b) => a + Math.random() * (b - a);
     function setup(){
@@ -1293,7 +1295,11 @@ body.fsmode .bigplay{z-index:3}
       cv.width = cv.height = Math.round(SIZE * dpr);
       if (tiles || !img.naturalWidth) return;
       LH = LW * img.naturalHeight / img.naturalWidth;
-      const kx = img.naturalWidth / LW, cols = Math.ceil(LW / TILE), rows = Math.ceil(LH / TILE);
+      // draw the big png once at screen size; every frame then copies small pieces 1:1 (cheap)
+      // padded to whole tiles: Safari skips pieces whose source rectangle sticks out of the picture
+      spr = document.createElement('canvas'); spr.width = Math.ceil(LW / TILE) * TILE * dpr; spr.height = Math.ceil(LH / TILE) * TILE * dpr;
+      spr.getContext('2d').drawImage(img, 0, 0, LW * dpr, LH * dpr);
+      const kx = dpr, cols = Math.ceil(LW / TILE), rows = Math.ceil(LH / TILE);
       let alpha = null;
       try { // skip empty corners of the png (works only when served over http)
         const c = document.createElement('canvas'); c.width = cols; c.height = rows;
@@ -1313,10 +1319,10 @@ body.fsmode .bigplay{z-index:3}
     function clear(){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); }
     function drawWhole(jitter){
       clear(); if (!img.naturalWidth) return;
-      if (!jitter || !tiles) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.drawImage(img, CX - LW / 2, CY - LH / 2, LW, LH); return; }
+      if (!jitter || !tiles) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); if (spr) ctx.drawImage(spr, 0, 0, LW * dpr, LH * dpr, CX - LW / 2, CY - LH / 2, LW, LH); else ctx.drawImage(img, CX - LW / 2, CY - LH / 2, LW, LH); return; }
       for (const t of tiles) {
         ctx.setTransform(dpr, 0, 0, dpr, (t.hx + rnd(-jitter, jitter)) * dpr, (t.hy + rnd(-jitter, jitter)) * dpr);
-        ctx.drawImage(img, t.sx, t.sy, t.sw, t.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
+        ctx.drawImage(spr, t.sx, t.sy, t.sw, t.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
       }
     }
     // timeline (ms): burst -> into the ring -> swirl (until the new version is loaded) -> rebuild
@@ -1340,7 +1346,7 @@ body.fsmode .bigplay{z-index:3}
         const px = CX + Math.cos(A) * R, py = CY + Math.sin(A) * R, rot = amp * k.spin * e / 1000;
         const c = Math.cos(rot) * dpr, s = Math.sin(rot) * dpr;
         ctx.setTransform(c, s, -s, c, px * dpr, py * dpr);
-        ctx.drawImage(img, k.sx, k.sy, k.sw, k.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
+        ctx.drawImage(spr, k.sx, k.sy, k.sw, k.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
       }
     }
     function vortex(loaded){
@@ -1391,6 +1397,7 @@ body.fsmode .bigplay{z-index:3}
       ptr.style.transition = 'transform .25s ease'; ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
       if (scr) { scr.style.transition = 'transform .2s ease'; scr.style.transform = 'translateY(40px)'; }
       saveStats && saveStats();
+      document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} }); // free the phone for the animation
       // refresh the cached copies first, so the reload really shows new lessons
       const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
       await vortex(Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]));
