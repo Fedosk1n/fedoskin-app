@@ -1286,7 +1286,8 @@ body.fsmode .bigplay{z-index:3}
 
     // ---- particles ----
     const SIZE = 220, CX = 110, CY = 110, LW = 84, TILE = 4;
-    const img = new Image(); img.src = 'logo.png';
+    // the header logo is already loaded and shown, so use that very picture (no waiting for a second copy)
+    const img = $('#homeLogo') || new Image(); if (!img.src) img.src = 'logo.png';
     let LH = 62, tiles = null, raf = 0, dpr = 1, spr = null;
     const ease = t => 1 - Math.pow(1 - t, 3), easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const rnd = (a, b) => a + Math.random() * (b - a);
@@ -1349,16 +1350,21 @@ body.fsmode .bigplay{z-index:3}
         ctx.drawImage(spr, k.sx, k.sy, k.sw, k.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
       }
     }
-    function vortex(loaded){
+    async function vortex(loaded){
+      // right after a reload the logo picture may still be loading: wait for it instead of skipping the animation
+      if (!tiles) { try { await Promise.race([img.decode ? img.decode() : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]); } catch (_) {} setup(); }
       return new Promise(done => {
-        if (!tiles || matchMedia('(prefers-reduced-motion: reduce)').matches) { loaded.then(done); return; }
-        let t0 = performance.now(), backAt = null, ok = false;
+        if (!tiles) { loaded.then(done); return; }
+        // own clock: if the phone hiccups, the animation waits a frame instead of jumping ahead
+        let clock = 0, last = 0, backAt = null, ok = false;
         loaded.then(() => { ok = true; });
         const step = t => {
-          const e = t - t0;
+          if (last) clock += Math.min(Math.max(0, t - last), 34);
+          last = t;
+          const e = clock;
           if (backAt == null && ok && e >= T_BURST + T_RING + T_SWIRL) backAt = e;
           if (backAt != null && e >= backAt + T_BACK * 1.25) { drawWhole(); done(); return; }
-          frame(t, t0, backAt); raf = requestAnimationFrame(step);
+          frame(e, 0, backAt); raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
       });
@@ -1435,7 +1441,9 @@ body.fsmode .bigplay{z-index:3}
       [$('#homeLogo')].forEach(el => { try { el.getAnimations && el.getAnimations().forEach(x => x.cancel()); } catch (_) {} });
       document.querySelectorAll('.screen').forEach(x => { x.style.transform = ''; x.style.transition = ''; });
     }
-    window.addEventListener('pageshow', hardReset);
+    // only when the page comes back from the browser's back/forward memory; the normal 'pageshow' after loading
+    // used to arrive late on slow internet and stopped an animation that had already started
+    window.addEventListener('pageshow', e => { if (e.persisted) hardReset(); });
     hardReset();
     try {
       if (sessionStorage.getItem('fedoskin-refreshed')) {
