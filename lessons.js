@@ -181,5 +181,14 @@ window.LESSONS_DATA = [
   "ru": "хедспин хэдспин вращение на голове",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-swipes-flare",
+  "sec": "Powermove",
+  "name": "Swipes → Flare → Swipes",
+  "dur": 438,
+  "ru": "свайпы свайп флаер флэр",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
