@@ -172,5 +172,14 @@ window.LESSONS_DATA = [
   "ru": "свайпы свайп свипы",
   "added": "2026-10-29",
   "pv": true
+ },
+ {
+  "id": "pw-headspin",
+  "sec": "Powermove",
+  "name": "Headspin",
+  "dur": 321,
+  "ru": "хедспин хэдспин вращение на голове",
+  "added": "2026-10-29",
+  "pv": true
  }
 ];
