@@ -37,7 +37,6 @@ a{color:inherit}
 html.gapfix .app{height:calc(100% + var(--gap))}
 html.gapfix .tabs{bottom:calc(-1 * var(--gap))}
 html.gapfix body.fsmode .stage{bottom:calc(-1 * var(--gap));height:auto!important}
-html.gapfix body.fsmode.fs-rot .stage{bottom:auto;height:100vw!important}
 .screen{height:100%;overflow-y:auto;
   padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
   padding-block:24px calc(110px + env(safe-area-inset-bottom, 0px))}
@@ -143,7 +142,7 @@ body.fsmode .tabs,body.fsmode .toast{display:none!important}
 body.fsmode .screen{overflow:visible;-webkit-overflow-scrolling:auto}
 body.fsmode .stage{position:fixed;inset:0;z-index:50;width:100%!important;height:100%!important;aspect-ratio:auto!important;max-width:none;margin:0;border:none;border-radius:0;background:#000}
 body.fsmode .fsbtn,body.fsmode .badge{display:none}
-body.fsmode.fs-rot .stage{inset:auto;top:50%;left:50%;width:100vh!important;height:100vw!important;width:100dvh!important;height:100dvw!important;transform:translate(-50%,-50%) rotate(90deg);transform-origin:center}
+body.fsmode.fs-rot .stage{inset:auto!important;top:var(--rotTop,50%);left:50%;width:var(--rotW,100vh)!important;height:var(--rotH,100vw)!important;transform:translate(-50%,-50%) rotate(90deg);transform-origin:center}
 body.fsmode.fs-rot .fstop{padding-top:12px}
 body.fsmode.fs-rot .fsbottom{padding-bottom:16px}
 body.fsmode .fsbar{display:flex;position:absolute;inset:0;flex-direction:column;justify-content:space-between;pointer-events:none;transition:opacity .2s ease}
@@ -901,34 +900,55 @@ body.fsmode .bigplay{z-index:3}
   // ===== fullscreen =====
   let fsTimer;
   function pokeFs(){ clearTimeout(fsTimer); fsTimer = setTimeout(() => { if (P.playing) document.body.classList.add('fs-hide'); }, 3000); }
-  function enterFs(){
+  let autoFs = false; // fullscreen that was opened by turning the phone sideways
+  function enterFs(opts){
+    autoFs = !!(opts && opts.auto);
     document.body.classList.add('fsmode'); document.body.classList.remove('fs-hide');
     try { if (!(history.state && history.state.fs)) { history.pushState(Object.assign({}, history.state, { fs: true }), ''); navDepth++; } } catch (_) {}
     $('#fsName').textContent = curLesson ? curLesson.name : '';
     syncFs(); pokeFs();
     const land = isLandscapeVideo();
-    $('#fsRotate').hidden = !land; $('#fsRotSpacer').hidden = land;
-    // landscape video on a phone held upright: turn the picture sideways to fill the screen
-    setRot(land && window.innerHeight > window.innerWidth);
+    paintRotBtn();
+    // landscape video opened by the button while the phone is upright: turn the picture sideways
+    setRot(!autoFs && land && window.innerHeight > window.innerWidth);
     try {
       const el = document.documentElement; const r = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
       if (r && r.then) r.then(() => {
         // where the browser allows it (Android), really switch the screen to landscape instead
-        if (land && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').then(() => setRot(false)).catch(() => {});
+        if (!autoFs && land && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').then(() => setRot(false)).catch(() => {});
       }).catch(() => {});
     } catch (_) {}
   }
+  function paintRotBtn(){ const show = isLandscapeVideo() && window.innerHeight > window.innerWidth; $('#fsRotate').hidden = !show; $('#fsRotSpacer').hidden = show; }
   function isLandscapeVideo(){ return vid.videoWidth > 0 && vid.videoWidth > vid.videoHeight; }
-  function setRot(on){ document.body.classList.toggle('fs-rot', !!on); $('#fsRotate').setAttribute('aria-pressed', !!on); }
+  function setRot(on){
+    const root = document.documentElement;
+    const gap = root.classList.contains('gapfix') ? (parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 0) : 0;
+    const h = window.innerHeight + gap, w = window.innerWidth;
+    root.style.setProperty('--rotW', h + 'px'); root.style.setProperty('--rotH', w + 'px'); root.style.setProperty('--rotTop', (h / 2) + 'px');
+    document.body.classList.toggle('fs-rot', !!on); $('#fsRotate').setAttribute('aria-pressed', !!on);
+  }
   $('#fsRotate').addEventListener('click', () => { setRot(!document.body.classList.contains('fs-rot')); pokeFs(); });
-  window.addEventListener('resize', () => {
-    if (!document.body.classList.contains('fsmode')) return;
-    // phone physically turned to landscape: no need to rotate the picture
-    if (window.innerWidth > window.innerHeight) setRot(false);
-    else if (isLandscapeVideo()) setRot(true);
-  });
+  // turning the phone: sideways on a lesson = fullscreen, back upright = leave fullscreen (like YouTube)
+  let orientTimer, lastLand = window.innerWidth > window.innerHeight;
+  function onOrientation(){
+    const land = window.innerWidth > window.innerHeight;
+    const turned = land !== lastLand; lastLand = land;
+    const fs = document.body.classList.contains('fsmode');
+    const onLesson = !$('#lesson').hidden && curLesson;
+    if (fs) paintRotBtn();
+    if (land) {
+      if (fs) { setRot(false); if (turned) autoFs = true; } // phone held sideways now: turning back upright will close fullscreen
+      else if (turned && onLesson) enterFs({ auto: true });
+    } else if (fs) {
+      if (autoFs && turned) { if (history.state && history.state.fs) history.back(); else exitFs(); }
+      else if (isLandscapeVideo()) setRot(true);
+    }
+  }
+  window.addEventListener('resize', () => { clearTimeout(orientTimer); orientTimer = setTimeout(onOrientation, 120); });
+  window.addEventListener('orientationchange', () => { clearTimeout(orientTimer); orientTimer = setTimeout(onOrientation, 250); });
   function exitFs(){
-    document.body.classList.remove('fsmode', 'fs-hide', 'fs-rot'); clearTimeout(fsTimer);
+    document.body.classList.remove('fsmode', 'fs-hide', 'fs-rot'); clearTimeout(fsTimer); autoFs = false;
     try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
     try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (_) {}
   }
@@ -940,7 +960,7 @@ body.fsmode .bigplay{z-index:3}
     if (P.loop){ $('#fsLoopZone').style.left = (P.loop.a / P.dur * 100) + '%'; $('#fsLoopZone').style.width = ((P.loop.b - P.loop.a) / P.dur * 100) + '%'; }
     $('#fsIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
   }
-  $('#btnFs').addEventListener('click', enterFs);
+  $('#btnFs').addEventListener('click', () => enterFs());
   function paintMute(){
     $('#icoMute').innerHTML = vid.muted ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
     $('#btnMute').setAttribute('aria-label', vid.muted ? 'Включить звук' : 'Выключить звук');
