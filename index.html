@@ -68,8 +68,8 @@ p{margin:0}
 .tag{font-size:12px;font-weight:600;padding:6px 10px;border-radius:14px;background:var(--surface-2)}
 
 /* header */
-.top{display:flex;align-items:center;justify-content:space-between;margin-top:-8px}
-.top img{height:64px;width:auto;display:block}
+.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:-8px}
+.top img{height:70px;width:auto;display:block}
 .pill{height:44px;min-width:44px;padding:0 12px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);font-weight:600;font-size:13px;letter-spacing:1px}
 .avatar{width:44px;height:44px;border-radius:22px;border:none;background:#1C1C1F;color:var(--fg);font-weight:700}
 
@@ -174,12 +174,12 @@ body.fsmode .bigplay{z-index:3}
 .nickbtn .d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .screen{overscroll-behavior-y:contain}
-.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 8px);z-index:15;width:40px;height:40px;margin-left:-20px;border-radius:20px;background:var(--surface-2);border:1px solid var(--line);color:var(--fg);display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(-60px);pointer-events:none}
-.ptr svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s ease}
-.ptr.ready{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.ptr.ready svg{transform:rotate(180deg)}
-.ptr.spin svg{animation:ptrspin .8s linear infinite}
-@keyframes ptrspin{to{transform:rotate(360deg)}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 6px);z-index:15;width:84px;height:62px;margin-left:-42px;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(-70px);pointer-events:none}
+.ptr img{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.7));will-change:transform}
+.ptr.ready img{filter:drop-shadow(0 0 12px rgba(226,97,26,.95)) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
+.ptr.spin img{animation:ptrspin .9s cubic-bezier(.45,.05,.55,.95) infinite;filter:drop-shadow(0 0 14px rgba(226,97,26,.95))}
+@keyframes ptrpop{0%{transform:scale(1)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes ptrspin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.88)}100%{transform:rotate(360deg) scale(1)}}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -224,11 +224,9 @@ body.fsmode .bigplay{z-index:3}
 <!-- ГЛАВНАЯ -->
 <section class="screen" id="home" aria-label="Главная">
   <header class="top">
-    <img src="logo.png" alt="Fedoskin team">
-    <div class="row" style="gap:10px">
-      <button class="pill" aria-label="Язык приложения">RU</button>
-      <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none"><span class="av-slot" data-size="44"></span></button>
-    </div>
+    <button class="pill" aria-label="Язык приложения" style="justify-self:start">RU</button>
+    <img src="logo.png" alt="Fedoskin team" id="homeLogo">
+    <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none;justify-self:end"><span class="av-slot" data-size="44"></span></button>
   </header>
   <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
   <div class="search" style="margin-top:10px">
@@ -616,7 +614,7 @@ body.fsmode .bigplay{z-index:3}
 </div>
 
 <nav class="tabs" aria-label="Основное меню"><div class="tabs-in" id="tabs"></div></nav>
-<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" id="ptrIco"><path d="M12 5v12M6 11l6 6 6-6"/></svg></div>
+<div class="ptr" id="ptr" aria-hidden="true"><img src="logo.png" alt="" id="ptrIco"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="lessons.js"></script>
@@ -1247,7 +1245,7 @@ body.fsmode .bigplay{z-index:3}
   // ===== pull down to refresh =====
   (function pullToRefresh(){
     const ptr = $('#ptr'), ico = $('#ptrIco');
-    const ARROW = '<path d="M12 5v12M6 11l6 6 6-6"/>', SPIN = '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>';
+    let wasReady = false;
     const LIMIT = 70;
     let sy = 0, sx = 0, dy = 0, active = false, decided = false, scr = null, busy = false;
     const blocked = () => busy || document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
@@ -1255,18 +1253,27 @@ body.fsmode .bigplay{z-index:3}
       const k = Math.min(1, d / LIMIT);
       ptr.style.opacity = String(k);
       ptr.style.transform = 'translateY(' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10) + 'px)';
-      ptr.classList.toggle('ready', d >= LIMIT);
+      const ready = d >= LIMIT;
+      $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off' and spins
+      ptr.classList.toggle('ready', ready);
+      // the logo winds up like a headspin while you pull, and pops when it is ready
+      ico.style.animation = (ready && !wasReady) ? 'ptrpop .25s ease' : (ready ? ico.style.animation : '');
+      if (!ready) ico.style.transform = 'rotate(' + Math.round(d * 4.5) + 'deg) scale(' + (0.55 + 0.45 * k).toFixed(3) + ')';
+      else ico.style.transform = 'rotate(' + Math.round(LIMIT * 4.5) + 'deg)';
+      if (ready && !wasReady && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+      wasReady = ready;
       if (scr) scr.style.transform = 'translateY(' + Math.min(d, LIMIT * 1.4) * 0.4 + 'px)';
     }
     function reset(){
       ptr.style.transition = 'transform .2s ease, opacity .2s ease';
-      ptr.style.opacity = '0'; ptr.style.transform = 'translateY(-60px)'; ptr.classList.remove('ready');
+      ptr.style.opacity = '0'; ptr.style.transform = 'translateY(-70px)'; ptr.classList.remove('ready'); wasReady = false;
+      $('#homeLogo').style.transition = 'opacity .2s ease'; $('#homeLogo').style.opacity = '';
       if (scr) { const el = scr; el.style.transition = 'transform .2s ease'; el.style.transform = ''; setTimeout(() => { el.style.transition = ''; }, 220); }
       setTimeout(() => { ptr.style.transition = ''; }, 220);
     }
     async function refresh(){
       busy = true;
-      ptr.classList.remove('ready'); ptr.classList.add('spin'); ico.innerHTML = SPIN;
+      ptr.classList.remove('ready'); ico.style.transform = ''; ico.style.animation = ''; ptr.classList.add('spin');
       ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
       if (scr) { scr.style.transition = 'transform .2s ease'; scr.style.transform = 'translateY(40px)'; }
       saveStats && saveStats();
