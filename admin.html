@@ -201,7 +201,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <h3>Kinescope (видео уроков)</h3>
       <p class="hint" style="margin:6px 0 0">Ключ и проект хранятся только в этом браузере и в приложение не публикуются. Кнопка «Опубликовать» для них не нужна.</p>
       <label class="f"><span>API-токен Kinescope</span><input type="password" id="ksToken" placeholder="вставьте токен «Админка Fedoskin»" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Kinescope → Настройки → API-токены. Нужны права «Загружать файлы».</span></label>
-      <label class="f"><span>ID проекта или ссылка на проект</span><input type="text" id="ksProject" placeholder="ссылка из адресной строки Kinescope" spellcheck="false" autocomplete="off"><span class="hint" id="ksProjectHint" style="text-transform:none;letter-spacing:0;font-weight:400">Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.</span></label>
+      <label class="f"><span>ID проекта или ссылка на проект</span><input type="text" id="ksProject" placeholder="Fedoskin lessons — по умолчанию" spellcheck="false" autocomplete="off"><span class="hint" id="ksProjectHint" style="text-transform:none;letter-spacing:0;font-weight:400">Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.</span></label>
       <h3>Уведомления о новых уроках</h3>
       <label class="f"><span>Адрес сервера уведомлений</span><input type="text" id="sPush" placeholder="https://fedoskin-push.….workers.dev" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика» → «Уведомления». Пусто = уведомлений нет.</span></label>
       <h3>Подписка (заработает после альфа-теста)</h3>
@@ -362,7 +362,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const KS_TOKEN = 'fedoskin-ks-token', KS_PROJECT = 'fedoskin-ks-project';
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
   const ksToken = () => (store.get(KS_TOKEN) || '').trim();
-  const ksProject = () => (store.get(KS_PROJECT) || '').trim();
+  // project «Fedoskin lessons» in the owner's Kinescope (not a secret); can be overridden in «Тексты и настройки»
+  const KS_PROJECT_DEFAULT = 'fcaf2ef0-7110-4690-a892-72163db7283c';
+  const ksProject = () => (store.get(KS_PROJECT) || KS_PROJECT_DEFAULT).trim();
   const ksReady = () => !!(ksToken() && ksProject());
   const ksPlay = id => 'https://kinescope.io/' + encodeURIComponent(id);
   const ksHls = id => ksPlay(id) + '/master.m3u8';
@@ -724,10 +726,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // Kinescope token/project: this browser only, never published
   function paintKsProject(){
     const raw = $('#ksProject').value.trim(), id = ksProject();
-    $('#ksProjectHint').textContent = !raw ? 'Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.' : id ? 'ID проекта: ' + id : 'В этом тексте нет ID проекта (вида 1a2b3c4d-…). Скопируйте адрес страницы проекта в Kinescope.';
+    $('#ksProjectHint').textContent = !raw ? 'Пусто = проект «Fedoskin lessons» (' + KS_PROJECT_DEFAULT + '). Менять не нужно.' : id ? 'ID проекта: ' + id : 'В этом тексте нет ID проекта (вида 1a2b3c4d-…). Скопируйте адрес страницы проекта в Kinescope.';
   }
   $('#ksToken').value = ksToken();
-  $('#ksProject').value = ksProject();
+  $('#ksProject').value = store.get(KS_PROJECT) || '';
   paintKsProject();
   $('#ksToken').addEventListener('input', () => { const v = $('#ksToken').value.trim(); if (v) store.set(KS_TOKEN, v); else store.del(KS_TOKEN); paintDest(); });
   $('#ksProject').addEventListener('input', () => {
