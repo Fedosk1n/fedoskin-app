@@ -17,7 +17,8 @@ window.LESSONS_DATA = [
   "name": "6-step",
   "dur": 28,
   "ru": "сикс степ шесть шагов",
-  "pv": true
+  "pv": true,
+  "ks": "a4e77791-70b3-458b-b62d-fb48d60dbc50"
  },
  {
   "id": "fw-3step",
@@ -90,8 +91,9 @@ window.LESSONS_DATA = [
   "sec": "Freezes",
   "name": "Easy chair freeze",
   "dur": 21,
-  "ru": "изи чеир стул",
-  "pv": true
+  "ru": "изи чеир стул chair чер",
+  "pv": true,
+  "ks": "5d85dd25-d0a6-4429-b038-a828c8eb2f07"
  },
  {
   "id": "fr-elbow",
@@ -100,7 +102,8 @@ window.LESSONS_DATA = [
   "dur": 39,
   "ru": "элбоу локоть",
   "added": "2026-10-26",
-  "pv": true
+  "pv": true,
+  "ks": "612865e9-a251-428a-a7b7-221ed67d3f9f"
  },
  {
   "id": "tk-monkey",
@@ -109,7 +112,8 @@ window.LESSONS_DATA = [
   "dur": 34,
   "ru": "манки флип обезьяна",
   "added": "2026-10-26",
-  "pv": true
+  "pv": true,
+  "ks": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad"
  },
  {
   "id": "tk-turtlehs",
@@ -117,7 +121,8 @@ window.LESSONS_DATA = [
   "name": "Turtle → handstand freeze",
   "dur": 41,
   "ru": "черепаха стойка на руках хендстенд",
-  "pv": true
+  "pv": true,
+  "ks": "5a15190c-6108-414f-bbe0-73987bd64906"
  },
  {
   "id": "pw-flare-wm",
