@@ -29,8 +29,8 @@
 - Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
   preview `<id>-p3.mp4` = first 3s, crop 720:960 → 360x480, 30fps, no audio; add a row to `lessons.js` with `added` date.
 - Kinescope (since 30.10.2026): lessons with `ks` play `https://kinescope.io/<ks>/master.m3u8` in OUR <video> (so slow-mo,
-  mirror, loop, own full screen keep working): native HLS on Apple, hls.js 1.5.20 from cdnjs/jsdelivr/unpkg elsewhere
-  (lazy-loaded; no npm access from the sandbox to vendor it). Cover jpg + -p3 preview still live in `v/` on GitHub.
+  mirror, loop, own full screen keep working): native HLS on Apple, hls.js 1.5.20 from `vendor/hls.min.js` (Apache-2.0,
+  vendored 30.10 via the owner's browser; CDNs only as fallback — Cloudflare CDNs are throttled in Russia). Cover jpg + -p3 preview still live in `v/` on GitHub.
   Admin uploads straight from the browser to `uploader.kinescope.io/v2/init` → POST file to returned endpoint (CORS ok).
   `api.kinescope.io` has NO CORS, and the sandbox can't reach kinescope at all (proxy 403) — don't design around the
   REST API. Kinescope token + project id live only in the owner's localStorage (`fedoskin-ks-token`/`-project`), never in

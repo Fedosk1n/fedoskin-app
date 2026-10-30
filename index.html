@@ -893,7 +893,7 @@ body.fsmode .bigplay{z-index:3}
   let hls = null, hlsLib = null, ksPending = false;
   function loadHlsLib(){
     if (hlsLib) return hlsLib;
-    const cdns = ['https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.20/hls.min.js', 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js', 'https://unpkg.com/hls.js@1.5.20/dist/hls.min.js'];
+    const cdns = ['vendor/hls.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.20/hls.min.js', 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js', 'https://unpkg.com/hls.js@1.5.20/dist/hls.min.js'];
     hlsLib = new Promise((res, rej) => {
       const tryAt = i => {
         if (i >= cdns.length) { hlsLib = null; rej(new Error('hls.js')); return; }
