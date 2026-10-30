@@ -203,5 +203,15 @@ window.LESSONS_DATA = [
   "added": "2026-10-29",
   "pv": true,
   "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a"
+ },
+ {
+  "id": "pw-munchmill",
+  "sec": "Powermove",
+  "name": "munchmill",
+  "dur": 780,
+  "ru": "munchmill nuchmill мачмил бочка барел",
+  "added": "2026-10-30",
+  "pv": true,
+  "ks": "dfb81103-2a48-4752-938a-b851625ae79f"
  }
 ];
