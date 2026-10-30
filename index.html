@@ -35,7 +35,9 @@ a{color:inherit}
 .app{max-width:480px;margin:0 auto;height:100%;position:relative}
 /* iOS home-screen apps sometimes report a viewport shorter than the screen: --gap pushes the menu down to the real bottom */
 html.gapfix .app{height:calc(100% + var(--gap))}
-html.gapfix .tabs{bottom:calc(-1 * var(--gap))}
+/* the menu's background reaches down to the real screen edge, but its buttons stay where the viewport says the bottom is,
+   so labels are never cut off when the phone's estimate of the gap is wrong (seen 30.10 on an iPhone: labels hidden) */
+html.gapfix .tabs{bottom:calc(-1 * var(--gap));padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px) + var(--gap))}
 html.gapfix body.fsmode .stage{bottom:calc(-1 * var(--gap));height:auto!important}
 .screen{height:100%;overflow-y:auto;
   padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
