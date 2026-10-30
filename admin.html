@@ -542,7 +542,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (changedLessons) parts.push('уроки');
     $('#saveMsg').innerHTML = '<b>Не опубликовано</b><br><span class="muted">' + (parts.join(', ') || 'изменения') + '</span>';
   }
-  window.addEventListener('beforeunload', e => { if (isDirty() || pushList) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if (isDirty() || pushList || ksXhr) { e.preventDefault(); e.returnValue = ''; } });
   $('#undoBtn').addEventListener('click', () => {
     if (!confirm('Отменить все неопубликованные изменения?')) return;
     lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; dropGh = []; renderAll();
@@ -566,7 +566,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = l.name;
         if (showsNew(l)) nm.insertAdjacentHTML('beforeend', '<span class="pill new">NEW</span>');
         if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
-        if (l.ks) nm.insertAdjacentHTML('beforeend', ksPill(l));
+        if (ksJobs[l.id] != null) nm.insertAdjacentHTML('beforeend', '<span class="pill up" data-ksjob="' + l.id + '">ЗАГРУЗКА ' + Math.round(ksJobs[l.id] * 100) + '%</span>');
+        else if (l.ks) nm.insertAdjacentHTML('beforeend', ksPill(l));
         if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">' + (uploads[l.id].replace ? 'НОВОЕ ВИДЕО — НЕ ОПУБЛИКОВАНО' : 'НЕ ОПУБЛИКОВАН') + '</span>');
         const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
         tx.append(nm, mt);
@@ -629,47 +630,59 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const ghCopy = has && vFiles[l.id + '.mp4'] != null && !(uploads[l.id] && uploads[l.id].mp4);
     $('#eKsDropRow').hidden = !ghCopy;
     $('#eKsDrop').checked = ghCopy && dropGh.includes(l.id);
-    $('#eKsProg').hidden = true;
+    $('#eKsProg').hidden = ksJobs[l.id] == null;
+    if (ksJobs[l.id] != null) { $('#eKsBar').style.width = Math.round(ksJobs[l.id] * 100) + '%'; $('#eKsState').textContent = 'Идёт загрузка в Kinescope: ' + Math.round(ksJobs[l.id] * 100) + '%…'; }
   }
   let ksBusy = false;
+  // give up on a slow step instead of hanging forever (big 4K/HEVC files can stall the browser decoder)
+  const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  const ksJobs = {};            // lesson id -> upload percent (shown in the list while the card is closed)
   $('#eKsFile').addEventListener('change', async () => {
     const f = $('#eKsFile').files[0]; $('#eKsFile').value = '';
-    const l = editing; if (!f || !l || ksBusy) return;
-    if (!ksReady()) { toast('Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки»', true); return; }
-    ksBusy = true; $('#eKsProg').hidden = false; $('#eKsBar').style.width = '0%';
-    const say = t => { if (editing === l) $('#eKsState').textContent = t; };
-    say('Загружаю ' + f.name + ' (' + fmtMB(f.size) + ') в Kinescope… Не закрывайте эту страницу.');
+    const l = editing; if (!f || !l) return;
+    if (ksBusy) { toast('Дождитесь, пока загрузится предыдущее видео', true); return; }
+    if (!ksReady()) { toast('Сначала впишите токен Kinescope во вкладке «Тексты и настройки»', true); return; }
+    ksBusy = true; ksJobs[l.id] = 0;
+    const open = () => editing === l;
+    const showBar = p => { if (open()) { $('#eKsProg').hidden = false; $('#eKsBar').style.width = Math.round(p * 100) + '%'; } };
+    const say = t => { if (open()) $('#eKsState').textContent = t; };
+    showBar(0);
+    say('Начинаю загрузку ' + f.name + ' (' + fmtMB(f.size) + ') в Kinescope…');
+    renderLessons();
+    // cover + 3-second preview from the new file, in parallel with the upload, at most ~1.5 min
+    const art = (async () => {
+      let m = null, jpg = null, p3 = null;
+      try { m = await readMeta(f); } catch(e) { return {}; }
+      try { jpg = await withTimeout(makeCover(f, m.dur), 45000); } catch(e) {}
+      if (jpg && canEncode) {
+        try { p3 = await withTimeout(convert(f, {trim: {start: 0, end: Math.min(3, m.dur)}, audio: {discard: true}, bitrate: 600000,
+          video: {crop: crop34(m.w, m.h), width: 360, height: 480, fit: 'fill', frameRate: 30}}), 60000); } catch(e) { if (current) current.cancel().catch(() => {}); p3 = null; }
+      }
+      return {m, jpg, p3};
+    })();
     try {
-      let m = null; try { m = await readMeta(f); } catch(e) {}
-      // new cover + 3-second preview from the new file (the lesson keeps its id, so saves and progress stay)
-      let jpg = null, p3 = null;
-      if (m) {
-        say('Делаю новую обложку…');
-        try { jpg = await makeCover(f, m.dur); } catch(e) {}
-        if (jpg && canEncode) {
-          say('Делаю анимацию обложки…');
-          try { p3 = await convert(f, {trim: {start: 0, end: Math.min(3, m.dur)}, audio: {discard: true}, bitrate: 600000,
-            video: {crop: crop34(m.w, m.h), width: 360, height: 480, fit: 'fill', frameRate: 30}}); } catch(e) { p3 = null; }
-        }
-      }
       const oldKs = l.ks;
-      const id = await ksUpload(f, l.name, p => { $('#eKsBar').style.width = Math.round(p * 100) + '%'; say('Загружаю в Kinescope: ' + Math.round(p * 100) + '%… Не закрывайте эту страницу.'); });
+      const id = await ksUpload(f, l.name, p => {
+        ksJobs[l.id] = p; showBar(p);
+        say('Загружаю в Kinescope: ' + Math.round(p * 100) + '% из ' + fmtMB(f.size) + '. Не закрывайте вкладку (карточку урока закрыть можно).');
+        const pill = document.querySelector('[data-ksjob="' + l.id + '"]'); if (pill) pill.textContent = 'ЗАГРУЗКА ' + Math.round(p * 100) + '%';
+      });
+      say('Загружено. Доделываю обложку…');
+      const {m, jpg, p3} = await art;
       l.ks = id; if (m && m.dur) l.dur = Math.round(m.dur);
-      if (jpg) {
-        uploads[l.id] = {mp4: null, jpg, p3, coverUrl: URL.createObjectURL(jpg), replace: true};
-        l.pv = !!p3; // no new animation → show the new cover only, never the old animation
-      }
+      if (jpg) { uploads[l.id] = {mp4: null, jpg, p3, coverUrl: URL.createObjectURL(jpg), replace: true}; l.pv = !!p3; }
       // the old 720p copy in GitHub is no longer needed
       if (vFiles[l.id + '.mp4'] != null && !dropGh.includes(l.id)) dropGh.push(l.id);
       ksState[id] = 'wait'; ksWatch(id, l.name);
-      if (editing === l) { $('#eKs').value = ksPlay(id); $('#eCover').src = coverSrc(l); paintKs(l); }
-      if (oldKs && oldKs !== id) toast('Загружено. Старое видео этого урока осталось в Kinescope — удалите его там, чтобы освободить минуты');
-      else toast('Загружено в Kinescope. Нажмите «Готово», затем «Опубликовать» внизу');
-      renderLessons(); paintSaveBar();
+      delete ksJobs[l.id];
+      if (open()) { $('#eKs').value = ksPlay(id); $('#eCover').src = coverSrc(l); paintKs(l); say('Загружено в Kinescope' + (jpg ? ', обложка новая' : ', обложка осталась старой') + '. Kinescope обработает видео за несколько минут.'); }
+      toast(oldKs && oldKs !== id ? '«' + l.name + '» загружен. Старое видео урока осталось в Kinescope — удалите его там' : '«' + l.name + '» загружен в Kinescope. Можно грузить следующий; в конце — «Опубликовать»');
     } catch(e) {
-      say('Не получилось: ' + (e && e.message || e));
-      $('#eKsProg').hidden = true;
-    } finally { ksBusy = false; }
+      delete ksJobs[l.id];
+      const msg = 'Не получилось загрузить «' + l.name + '»: ' + (e && e.message || e);
+      say(msg); if (open()) $('#eKsProg').hidden = true;
+      toast(msg, true);
+    } finally { ksBusy = false; renderLessons(); paintSaveBar(); }
   });
   $('#eKsCheck').addEventListener('click', async () => {
     const l = editing; if (!l) return;
