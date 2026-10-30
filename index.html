@@ -676,7 +676,7 @@ body.fsmode .bigplay{z-index:3}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:50, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:600, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -1339,7 +1339,7 @@ body.fsmode .bigplay{z-index:3}
         ['note', 'Отличный выбор, если финансовый вопрос решён и ты давно хотел всерьёз заняться брейкингом. С хорошим тренером брейкинг в радость, а результат не заставит себя ждать.']
       ] }
   ];
-  const money = (rub, usd) => LANG === 'ru' ? String(Math.round(+rub || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽' : '$' + (+usd || 0);
+  const money = (rub, usd) => LANG === 'ru' ? String(Math.round(+rub || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽' : '$' + (+usd || 0).toLocaleString('en-US');
   const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const TG_USERNAME = String(CFG.tg || 'Fe_DoSk1n').replace(/^@/, ''); // Telegram username of the app creator, without @
   let curSvc = SERVICES[0];
