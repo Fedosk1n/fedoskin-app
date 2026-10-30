@@ -15,6 +15,11 @@
   Lesson videos are Russian speech; move names are international. Admin stays Russian only.
 - Analytics: owner decided NO Yandex Metrika (29.10.2026, legal/consent hassle). `metrikaId` stays empty; the dormant
   code in index.html loads nothing. Admin hides the Metrika field/instructions (`data-later="metrika"`).
+- Push notifications: `server/push-worker.js` = Cloudflare Worker + KV binding `PUSH` (owner deploys it by hand, steps in
+  server/README.md); its URL goes to `pushUrl` in config.js. Admin auth on the worker = the owner's GitHub token (checked via
+  GitHub API, push permission). Payload is RFC 8291 aes128gcm (verified against the RFC test vector). App: home card +
+  Профиль → «Уведомления о новых уроках»; sw.js shows the push and opens `./?lesson=<id>`. Admin auto-sends 3 min after
+  publishing new lessons (timer bar) or manually in «Статистика». Free plan: fan-out in pages of 40.
 - Dark hip-hop design: Anton + Inter, accent #E2611A, NEW badge #3BD16F. Keep the look consistent.
 - Alpha mode: `alpha: true` in config.js — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
   link `t.me/Fe_DoSk1n?text=...` (`tg` in config.js).

@@ -108,7 +108,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 4</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 5</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -190,6 +190,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>Срок разбора, часов</span><input type="number" id="sHours" min="1" step="1" inputmode="numeric"></label>
       <label class="f"><span>Telegram (без @)</span><input type="text" id="sTg" spellcheck="false"></label>
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится формат разбора и «Сейчас пришлю видео».</span></label>
+      <h3>Уведомления о новых уроках</h3>
+      <label class="f"><span>Адрес сервера уведомлений</span><input type="text" id="sPush" placeholder="https://fedoskin-push.….workers.dev" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика» → «Уведомления». Пусто = уведомлений нет.</span></label>
       <h3>Подписка (заработает после альфа-теста)</h3>
       <p class="hint" style="margin:6px 0 0">Русскоязычным показываются цены в рублях, всем остальным языкам — в долларах.</p>
       <div class="grid2">
@@ -227,7 +229,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <li>В Метрике → «Цели» добавьте четыре цели типа «JavaScript-событие» с идентификаторами: <code>lesson</code> (открыли урок), <code>review_tg</code> (нажали «Написать в Telegram»), <code>app_install</code> (установили на экран «Домой»), <code>app_open</code> (открыли приложение с иконки).</li>
         </ol>
       </div>
-      <h2 style="margin-top:12px">Библиотека</h2>
+      <h2 style="margin-top:12px">Уведомления</h2>
+      <div id="pushOff" class="card" hidden>
+        <b>Сервер уведомлений ещё не подключён</b>
+        <p class="soft small" style="margin:6px 0 0">Один раз, минут 10, бесплатно. Пошаговая инструкция — в чате с Claude или в файле <code>server/README.md</code> в репозитории. В конце вставьте адрес сервера во вкладке «Тексты и настройки» и нажмите «Опубликовать».</p>
+      </div>
+      <div id="pushOn" class="card" hidden>
+        <div class="row" style="justify-content:space-between"><b>Подписаны на уведомления</b><span class="d" id="pushCount" style="font-family:var(--display);font-size:28px">…</span></div>
+        <p class="hint" style="margin:6px 0 0">После публикации нового урока уведомление уходит само через 3 минуты (пока урок появляется в приложении). Можно отправить и вручную:</p>
+        <label class="f"><span>Урок</span><select id="pushLesson"></select></label>
+        <div class="row" style="margin-top:12px"><button class="btn btn-accent" id="pushSend">Отправить уведомление</button></div>
+        <p class="hint" id="pushResult" style="margin-top:8px"></p>
+      </div>
+      <h2>Библиотека</h2>
       <div class="kpis" id="kpis"></div>
       <h3>Уроков по разделам</h3>
       <div class="bars" id="bars"></div>
@@ -238,6 +252,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   <section id="loading"><p class="muted row"><span class="spin"></span> Загружаю…</p></section>
 </div>
 
+<div class="savebar" id="pushTimer" hidden style="bottom:auto;top:0;border-top:0;border-bottom:1px solid var(--line)">
+  <div class="in"><div class="msg" id="pushTimerMsg"></div><button class="btn btn-sm" id="pushTimerCancel">Не отправлять</button><button class="btn btn-sm btn-accent" id="pushTimerNow">Сейчас</button></div>
+</div>
 <div class="savebar" id="savebar" hidden>
   <div class="in"><div class="msg" id="saveMsg"></div><button class="btn btn-sm" id="undoBtn">Отменить</button><button class="btn btn-accent" id="pubBtn">Опубликовать</button></div>
 </div>
@@ -264,7 +281,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''};
+  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -292,6 +309,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const inNewWindow = l => (Date.now() - Date.parse(l.added || '2026-10-01')) <= newDays() * 864e5;
   const showsNew = l => l.new !== false && inNewWindow(l);
   function toast(text, bad){
+    document.querySelectorAll('.toast').forEach(x => x.remove());
     const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = text;
     document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : 3200);
   }
@@ -414,7 +432,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (changedLessons) parts.push('уроки');
     $('#saveMsg').innerHTML = '<b>Не опубликовано</b><br><span class="muted">' + (parts.join(', ') || 'изменения') + '</span>';
   }
-  window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if (isDirty() || pushList) { e.preventDefault(); e.returnValue = ''; } });
   $('#undoBtn').addEventListener('click', () => {
     if (!confirm('Отменить все неопубликованные изменения?')) return;
     lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; renderAll();
@@ -528,7 +546,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- settings ----------
-  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd'};
+  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd', sPush:'pushUrl'};
   function renderSettings(){
     Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
   }
@@ -539,6 +557,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, /Usd$/.test(k) && k !== 'reviewUsd' ? Math.round(+v * 100) / 100 : Math.round(+v));
       if (k === 'tg') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
       if (k === 'metrikaId') v = String(v).replace(/\D/g, '');
+      if (k === 'pushUrl') v = String(v).trim().replace(/\/+$/, '');
       if (k === 'alphaBanner' || k === 'tgMessage') v = String(v);
       cfg[k] = v; paintSaveBar();
     });
@@ -546,6 +565,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 
   // ---------- stats ----------
   function renderStats(){
+    renderPush();
     const id = String(cfg.metrikaId || '');
     const live = String(remote.cfg.metrikaId || '');
     $('#metrikaOn').hidden = true; $('#metrikaOff').hidden = true; // Метрика отключена
@@ -747,6 +767,60 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     }
   });
 
+  // ---------- notifications ----------
+  async function pushApi(path, body){
+    const r = await fetch(String(cfg.pushUrl).replace(/\/+$/, '') + path, {method: body ? 'POST' : 'GET', headers: Object.assign({'Authorization': 'Bearer ' + token}, body ? {'Content-Type': 'application/json'} : {}), body: body ? JSON.stringify(body) : undefined});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error === 'forbidden' ? 'сервер не принял ключ GitHub' : (j.error || 'ошибка ' + r.status));
+    return j;
+  }
+  function renderPush(){
+    const on = !!remote.cfg.pushUrl;
+    $('#pushOff').hidden = on; $('#pushOn').hidden = !on;
+    if (!on) return;
+    const sel = $('#pushLesson'); const cur = sel.value; sel.innerHTML = '';
+    lessons.filter(l => !l.hidden).slice().sort((a, b) => String(b.added || '').localeCompare(String(a.added || ''))).forEach(l => sel.add(new Option(l.sec + ' — ' + l.name, l.id)));
+    if (cur) sel.value = cur;
+    $('#pushCount').textContent = '…';
+    pushApi('/stats').then(j => { $('#pushCount').textContent = j.subscribers; }).catch(e => { $('#pushCount').textContent = '—'; $('#pushResult').textContent = 'Сервер не отвечает: ' + e.message; });
+  }
+  async function sendPush(list){
+    const first = list[0];
+    let cursor = null, sent = 0, removed = 0, failed = 0, guard = 0;
+    do {
+      const j = await pushApi('/notify', cursor ? {cursor} : {sec: first.sec, name: first.name, id: first.id, more: list.length - 1});
+      sent += j.sent || 0; removed += j.removed || 0; failed += j.failed || 0; cursor = j.cursor;
+    } while (cursor && ++guard < 500);
+    return {sent, removed, failed};
+  }
+  $('#pushSend').addEventListener('click', async () => {
+    const l = lessons.find(x => x.id === $('#pushLesson').value); if (!l) return;
+    if (!confirm('Отправить всем подписчикам уведомление «Новое в ' + l.sec + ': ' + l.name + '»?')) return;
+    $('#pushSend').disabled = true; $('#pushResult').textContent = 'Отправляю…';
+    try { const r = await sendPush([l]); $('#pushResult').textContent = 'Отправлено: ' + r.sent + (r.removed ? ' · удалено отписавшихся: ' + r.removed : '') + (r.failed ? ' · не дошло: ' + r.failed : ''); renderPush(); }
+    catch (e) { $('#pushResult').textContent = 'Не отправилось: ' + e.message; }
+    $('#pushSend').disabled = false;
+  });
+  let pushT = null, pushLeft = 0, pushList = null;
+  function schedulePush(list){
+    clearInterval(pushT); pushList = list; pushLeft = 180;
+    const paint = () => {
+      const m = Math.floor(pushLeft / 60), s = String(pushLeft % 60).padStart(2, '0');
+      $('#pushTimerMsg').innerHTML = '<b>Уведомление о «' + list[0].name.replace(/</g, '&lt;') + '»' + (list.length > 1 ? ' и ещё ' + (list.length - 1) : '') + '</b><br><span class="muted">уйдёт подписчикам через ' + m + ':' + s + ' — не закрывайте вкладку</span>';
+    };
+    $('#pushTimer').hidden = false; paint();
+    pushT = setInterval(() => { pushLeft--; if (pushLeft <= 0) firePush(); else paint(); }, 1000);
+  }
+  async function firePush(){
+    clearInterval(pushT); const list = pushList; pushList = null;
+    $('#pushTimerMsg').innerHTML = '<span class="row"><span class="spin"></span><span>Отправляю уведомление…</span></span>';
+    try { const r = await sendPush(list); toast('Уведомление отправлено: ' + r.sent); }
+    catch (e) { toast('Уведомление не отправилось: ' + e.message + '. Можно отправить вручную во вкладке «Статистика».', true); }
+    $('#pushTimer').hidden = true;
+  }
+  $('#pushTimerNow').addEventListener('click', () => { if (pushList) firePush(); });
+  $('#pushTimerCancel').addEventListener('click', () => { clearInterval(pushT); pushList = null; $('#pushTimer').hidden = true; toast('Уведомление не отправлено'); });
+
   // ---------- publish ----------
   $('#pubBtn').addEventListener('click', publish);
   async function publish(){
@@ -794,7 +868,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ' + parts.join('; '), tree: newTree.sha, parents: [ref.object.sha]}});
       await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}});
       toast('Опубликовано! В приложении появится через 1–5 минут');
+      const fresh = ids.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
       await loadRemote(); renderAll();
+      if (fresh.length && cfg.pushUrl) schedulePush(fresh);
     } catch(e) {
       const m = String(e.message || e);
       toast('Не опубликовано: ' + (/too large/i.test(m) ? 'видео слишком большое для GitHub. Удалите этот урок из списка и подготовьте видео заново — теперь оно сожмётся до 70 МБ.' : m), true);
