@@ -725,7 +725,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 
   // Kinescope token/project: this browser only, never published
   function paintKsProject(){
-    const raw = $('#ksProject').value.trim(), id = ksProject();
+    const raw = $('#ksProject').value.trim(), id = (raw.match(UUID_RE) || [''])[0].toLowerCase();
     $('#ksProjectHint').textContent = !raw ? 'Пусто = проект «Fedoskin lessons» (' + KS_PROJECT_DEFAULT + '). Менять не нужно.' : id ? 'ID проекта: ' + id : 'В этом тексте нет ID проекта (вида 1a2b3c4d-…). Скопируйте адрес страницы проекта в Kinescope.';
   }
   $('#ksToken').value = ksToken();
