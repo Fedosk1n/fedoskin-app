@@ -12,16 +12,6 @@ window.LESSONS_DATA = [
   "pv": true
  },
  {
-  "id": "tr-windmill-head",
-  "sec": "Toprock",
-  "name": "Windmill(head)",
-  "dur": 570,
-  "ru": "гелик windmill гелик через голову гелик с головой",
-  "added": "2026-10-30",
-  "pv": true,
-  "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df"
- },
- {
   "id": "fw-6step",
   "sec": "Footwork",
   "name": "6-step",
@@ -135,26 +125,6 @@ window.LESSONS_DATA = [
   "ks": "5a15190c-6108-414f-bbe0-73987bd64906"
  },
  {
-  "id": "pw-flare-wm",
-  "sec": "Powermove",
-  "name": "Flare → Windmill → Flare",
-  "dur": 533,
-  "ru": "флаер флэр виндмил мельница",
-  "added": "2026-10-29",
-  "pv": true,
-  "ks": "fcbcbb79-43ca-482d-b0f2-01472155230a"
- },
- {
-  "id": "pw-flare-1990",
-  "sec": "Powermove",
-  "name": "Flare → 1990 → Flare",
-  "dur": 419,
-  "ru": "флаер флэр 1990 девяностый",
-  "added": "2026-10-29",
-  "pv": true,
-  "ks": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f"
- },
- {
   "id": "pw-airflare",
   "sec": "Powermove",
   "name": "Airflare(airtwist)",
@@ -205,16 +175,6 @@ window.LESSONS_DATA = [
   "ks": "8a2e472e-d16f-4c45-9032-b4781ba7d840"
  },
  {
-  "id": "pw-swipes-flare",
-  "sec": "Powermove",
-  "name": "Swipes → Flare → Swipes",
-  "dur": 436,
-  "ru": "свайпы свайп флаер флэр",
-  "added": "2026-10-29",
-  "pv": true,
-  "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a"
- },
- {
   "id": "pw-munchmill",
   "sec": "Powermove",
   "name": "munchmill",
@@ -225,6 +185,16 @@ window.LESSONS_DATA = [
   "ks": "dfb81103-2a48-4752-938a-b851625ae79f"
  },
  {
+  "id": "tr-windmill-head",
+  "sec": "Powermove",
+  "name": "Windmill(head)",
+  "dur": 570,
+  "ru": "гелик windmill гелик через голову гелик с головой",
+  "added": "2026-10-30",
+  "pv": true,
+  "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df"
+ },
+ {
   "id": "tn-flare-to-airflare-to-flare",
   "sec": "Transitions",
   "name": "Flare to airflare to flare",
@@ -233,5 +203,35 @@ window.LESSONS_DATA = [
   "added": "2026-10-30",
   "pv": true,
   "ks": "262fa2a3-9675-40ac-8b20-5092475a3192"
+ },
+ {
+  "id": "pw-flare-wm",
+  "sec": "Transitions",
+  "name": "Flare → Windmill → Flare",
+  "dur": 533,
+  "ru": "флаер флэр виндмил мельница",
+  "added": "2026-10-29",
+  "pv": true,
+  "ks": "fcbcbb79-43ca-482d-b0f2-01472155230a"
+ },
+ {
+  "id": "pw-flare-1990",
+  "sec": "Transitions",
+  "name": "Flare → 1990 → Flare",
+  "dur": 419,
+  "ru": "флаер флэр 1990 девяностый",
+  "added": "2026-10-29",
+  "pv": true,
+  "ks": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f"
+ },
+ {
+  "id": "pw-swipes-flare",
+  "sec": "Transitions",
+  "name": "Swipes → Flare → Swipes",
+  "dur": 436,
+  "ru": "свайпы свайп флаер флэр",
+  "added": "2026-10-29",
+  "pv": true,
+  "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a"
  }
 ];
