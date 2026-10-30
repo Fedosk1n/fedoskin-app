@@ -223,5 +223,15 @@ window.LESSONS_DATA = [
   "added": "2026-10-30",
   "pv": true,
   "ks": "dfb81103-2a48-4752-938a-b851625ae79f"
+ },
+ {
+  "id": "tn-flare-to-airflare-to-flare",
+  "sec": "Transitions",
+  "name": "Flare to airflare to flare",
+  "dur": 539,
+  "ru": "flare to airflare флай в твист",
+  "added": "2026-10-30",
+  "pv": true,
+  "ks": "262fa2a3-9675-40ac-8b20-5092475a3192"
  }
 ];
