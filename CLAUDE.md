@@ -41,6 +41,18 @@
   warms Kinescope (master + ≤720p media playlist, preconnect to hosts found), stopped by `warmGen` when a lesson opens.
   iPhone plays native HLS (AVFoundation has its own network stack) — there only the overlay helps. Local test with a
   fake HLS + throttling in Playwright: first frame 2.7 s → 1.0 s on Android.
+- Instant start (30.10.2026): Kinescope lessons also have `v/<id>-intro.mp4` = first 5 s copied (no re-encode) from the
+  ≤720p rendition of the Kinescope HLS — frames identical to the stream. `intros.js` (`window.LESSON_INTROS`, JSON) maps
+  lesson id → ks id it was cut from; the app uses an intro only if it matches `l.ks` (replaced video ⇒ ignored).
+  Player: `#vin` plays the intro on top with sound, `#vid` loads the stream muted underneath (deferred until the intro
+  plays, max 1.5 s), `tickIntro()` seeks/nudges playbackRate until |Δt| ≤ 20 ms, then `toStream()`: intro pauses (read its
+  currentTime AFTER pause — it lags while loading) and hides on the stream's first frame ≥ that time (rVFC). `av` = element
+  seen/heard; timeline, speed, loop, stats, mute (`soundOff`) follow it. Stuck intro + ready stream ⇒ switch at once.
+  Two intros at the top of an opened section are prefetched into memory (blob: URLs, serial, aborted when a lesson opens).
+  Admin «Уроки» → card «Мгновенный старт»: cuts missing intros with mediabunny (`tracks:'all'`, pick ≤720 track +
+  pairable audio, trim 0–5) and commits them + intros.js in its own commit (never touches lessons.js); runs after login,
+  after publish, after a Kinescope upload is processed. Tested in Playwright with a fake HLS: first frame 0.24 s when
+  prefetched / ~0.8 s cold at 10 Mbit, swap step ≤ 2 frames forward, never back. iPhone native-HLS path not testable here.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
