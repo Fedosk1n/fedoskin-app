@@ -19,5 +19,6 @@ window.APP_CONFIG = {
  "coachRub": 10000,
  "coachUsd": 120,
  "fullRub": 50000,
- "fullUsd": 1000
+ "fullUsd": 1000,
+ "consultUsd": 20
 };
