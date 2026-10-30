@@ -200,16 +200,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="sw"><input type="checkbox" id="sAlpha"><span><b>Режим альфа-теста</b><br><span class="hint">Все уроки бесплатно, плашка «α ALPHA» на главной</span></span></label>
       <label class="f"><span>Текст плашки на главной</span><input type="text" id="sBanner"></label>
       <h3>Онлайн услуги</h3>
-      <p class="hint" style="margin:6px 0 0">Русскоязычным показываются цены в рублях, всем остальным языкам — в долларах. Тексты услуг меняет Claude.</p>
+      <p class="hint" style="margin:6px 0 0">На русском показываются 4 услуги в рублях: разбор, онлайн-ведение, тренер для тренера, полное ведение. На всех остальных языках — 3 услуги в долларах: онлайн-ведение, полное ведение, консультация. Тексты услуг меняет Claude.</p>
       <div class="grid2">
         <label class="f"><span>Разбор, ₽</span><input type="number" id="sRub" min="0" step="50" inputmode="numeric"></label>
-        <label class="f"><span>Разбор, $</span><input type="number" id="sUsd" min="0" step="1" inputmode="numeric"></label>
+        <label class="f"><span>Тренер для тренера, ₽/мес</span><input type="number" id="sCoachRub" min="0" step="100" inputmode="numeric"></label>
         <label class="f"><span>Онлайн-ведение, ₽/мес</span><input type="number" id="sOnlineRub" min="0" step="100" inputmode="numeric"></label>
         <label class="f"><span>Онлайн-ведение, $/мес</span><input type="number" id="sOnlineUsd" min="0" step="1" inputmode="numeric"></label>
-        <label class="f"><span>Тренер для тренера, ₽/мес</span><input type="number" id="sCoachRub" min="0" step="100" inputmode="numeric"></label>
-        <label class="f"><span>Тренер для тренера, $/мес</span><input type="number" id="sCoachUsd" min="0" step="1" inputmode="numeric"></label>
         <label class="f"><span>Полное ведение, ₽/мес</span><input type="number" id="sFullRub" min="0" step="1000" inputmode="numeric"></label>
         <label class="f"><span>Полное ведение, $/мес</span><input type="number" id="sFullUsd" min="0" step="10" inputmode="numeric"></label>
+        <label class="f"><span>Консультация, $</span><input type="number" id="sConsultUsd" min="0" step="1" inputmode="numeric"></label>
       </div>
       <label class="f" hidden data-later="review-hours"><span>Срок разбора, часов</span><input type="number" id="sHours" min="1" step="1" inputmode="numeric"></label>
       <label class="f"><span>Telegram (без @)</span><input type="text" id="sTg" spellcheck="false"></label>
@@ -318,7 +317,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, reviewHours:24, newDays:14, metrikaId:''};
+  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -813,7 +812,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- settings ----------
-  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sUsd:'reviewUsd', sOnlineRub:'onlineRub', sOnlineUsd:'onlineUsd', sCoachRub:'coachRub', sCoachUsd:'coachUsd', sFullRub:'fullRub', sFullUsd:'fullUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd', sPush:'pushUrl'};
+  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sOnlineRub:'onlineRub', sOnlineUsd:'onlineUsd', sCoachRub:'coachRub', sConsultUsd:'consultUsd', sFullRub:'fullRub', sFullUsd:'fullUsd', sHours:'reviewHours', sTg:'tg', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd', sPush:'pushUrl'};
   function renderSettings(){
     Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
   }

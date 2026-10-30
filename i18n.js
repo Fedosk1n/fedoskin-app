@@ -272,7 +272,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "You're hidden from the ranking — others can't see you.",
  "Твоё место появится через пару минут.": "Your place will show up in a couple of minutes.",
  "Пока в рейтинге никого нет — стань первым!": "No one in the ranking yet — be the first!",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Watch any lesson for at least a minute to appear in the ranking."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Watch any lesson for at least a minute to appear in the ranking.",
+ "Консультация": "Consultation",
+ "за 1 вопрос": "per question",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "I'll answer your question about breaking in a text message in Telegram.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "Ask any question about breaking — I'll personally answer in a text message in Telegram.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "Want me to coach you on an ongoing basis? Check out online coaching."
  },
  "es": {
  "Главная": "Inicio",
@@ -544,7 +549,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "Estás oculto del ranking: los demás no te ven.",
  "Твоё место появится через пару минут.": "Tu puesto aparecerá en un par de minutos.",
  "Пока в рейтинге никого нет — стань первым!": "Aún no hay nadie en el ranking: ¡sé el primero!",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Mira cualquier lección al menos un minuto y aparecerás en el ranking."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Mira cualquier lección al menos un minuto y aparecerás en el ranking.",
+ "Консультация": "Consulta",
+ "за 1 вопрос": "por pregunta",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "Respondo tu pregunta sobre breaking por mensaje en Telegram.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "Haz cualquier pregunta sobre breaking: te respondo personalmente por mensaje en Telegram.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "¿Quieres que te entrene de forma continua? Mira el entrenamiento online."
  },
  "pt": {
  "Главная": "Início",
@@ -816,7 +826,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "Você está oculto no ranking — os outros não te veem.",
  "Твоё место появится через пару минут.": "Sua posição aparece em alguns minutos.",
  "Пока в рейтинге никого нет — стань первым!": "Ainda não tem ninguém no ranking — seja o primeiro!",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Assista a qualquer aula por pelo menos um minuto para aparecer no ranking."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Assista a qualquer aula por pelo menos um minuto para aparecer no ranking.",
+ "Консультация": "Consulta",
+ "за 1 вопрос": "por pergunta",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "Respondo sua pergunta sobre breaking por mensagem no Telegram.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "Faça qualquer pergunta sobre breaking — eu respondo pessoalmente por mensagem no Telegram.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "Quer que eu te acompanhe sempre? Veja o acompanhamento online."
  },
  "fr": {
  "Главная": "Accueil",
@@ -1088,7 +1103,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "Tu es masqué du classement : les autres ne te voient pas.",
  "Твоё место появится через пару минут.": "Ta place apparaîtra dans quelques minutes.",
  "Пока в рейтинге никого нет — стань первым!": "Personne dans le classement pour l'instant : sois le premier !",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Regarde n'importe quelle leçon au moins une minute pour apparaître dans le classement."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Regarde n'importe quelle leçon au moins une minute pour apparaître dans le classement.",
+ "Консультация": "Consultation",
+ "за 1 вопрос": "par question",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "Je réponds à ta question sur le breaking par message sur Telegram.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "Pose n'importe quelle question sur le breaking : je te réponds moi-même par message sur Telegram.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "Tu veux que je te coache en continu ? Regarde le coaching en ligne."
  },
  "de": {
  "Главная": "Start",
@@ -1360,7 +1380,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "Du bist in der Rangliste ausgeblendet — andere sehen dich nicht.",
  "Твоё место появится через пару минут.": "Dein Platz erscheint in ein paar Minuten.",
  "Пока в рейтинге никого нет — стань первым!": "Noch niemand in der Rangliste — sei der Erste!",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Schau irgendeine Lektion mindestens eine Minute, dann erscheinst du in der Rangliste."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Schau irgendeine Lektion mindestens eine Minute, dann erscheinst du in der Rangliste.",
+ "Консультация": "Beratung",
+ "за 1 вопрос": "pro Frage",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "Ich beantworte deine Frage zum Breaking per Textnachricht in Telegram.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "Stell eine beliebige Frage zum Breaking — ich antworte dir persönlich per Textnachricht in Telegram.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "Willst du, dass ich dich dauerhaft coache? Schau dir das Online-Coaching an."
  },
  "ja": {
  "Главная": "ホーム",
@@ -1632,7 +1657,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "ランキングで非表示になっています。他の人からは見えません。",
  "Твоё место появится через пару минут.": "数分であなたの順位が表示されます。",
  "Пока в рейтинге никого нет — стань первым!": "まだランキングに誰もいません。一番乗りを目指そう！",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "どれかのレッスンを1分以上見ると、ランキングに表示されます。"
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "どれかのレッスンを1分以上見ると、ランキングに表示されます。",
+ "Консультация": "相談",
+ "за 1 вопрос": "1問",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "ブレイキンについての質問に、Telegramのテキストでお答えします。",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "ブレイキンについて何でも質問してください。私が直接Telegramのテキストで答えます。",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "継続して指導を受けたい？オンライン指導をチェックしてください。"
  },
  "ko": {
  "Главная": "홈",
@@ -1904,7 +1934,12 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "랭킹에서 숨김 상태예요. 다른 사람에게 보이지 않아요.",
  "Твоё место появится через пару минут.": "몇 분 뒤에 내 순위가 표시돼요.",
  "Пока в рейтинге никого нет — стань первым!": "아직 랭킹에 아무도 없어요. 첫 번째가 되어 보세요!",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "아무 레슨이나 1분 이상 보면 랭킹에 표시돼요."
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "아무 레슨이나 1분 이상 보면 랭킹에 표시돼요.",
+ "Консультация": "상담",
+ "за 1 вопрос": "질문 1개",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "브레이킹에 관한 질문에 Telegram 메시지로 답해 드려요.",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "브레이킹에 관해 무엇이든 물어보세요. 제가 직접 Telegram 메시지로 답해 드려요.",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "꾸준히 코칭받고 싶다면 온라인 코칭을 확인해 보세요."
  },
  "zh": {
  "Главная": "首页",
@@ -2176,6 +2211,11 @@ window.I18N = {
  "Ты скрыт из рейтинга — другие тебя не видят.": "你已在排行榜中隐藏，其他人看不到你。",
  "Твоё место появится через пару минут.": "几分钟后会显示你的名次。",
  "Пока в рейтинге никого нет — стань первым!": "排行榜上还没有人——来当第一名吧！",
- "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "观看任意课程至少一分钟，就会出现在排行榜上。"
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "观看任意课程至少一分钟，就会出现在排行榜上。",
+ "Консультация": "咨询",
+ "за 1 вопрос": "每个问题",
+ "Отвечу на твой вопрос о брейкинге текстом в Telegram.": "我会在 Telegram 上用文字回答你关于霹雳舞的问题。",
+ "Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.": "关于霹雳舞，问什么都可以——我会亲自在 Telegram 上用文字回答。",
+ "Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.": "想让我长期指导你？看看线上指导。"
  }
 };

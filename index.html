@@ -676,7 +676,7 @@ body.fsmode .bigplay{z-index:3}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -1299,7 +1299,7 @@ body.fsmode .bigplay{z-index:3}
   // Texts are Russian; T() translates them. Prices come from config.js (admin «Тексты и настройки»):
   // Russian UI shows rubles, every other language shows dollars.
   const SERVICES = [
-    { id: 'review', name: 'Разбор элемента или перехода', rub: CFG.reviewRub, usd: CFG.reviewUsd, per: 'за 1 видео',
+    { id: 'review', only: 'ru', name: 'Разбор элемента или перехода', rub: CFG.reviewRub, usd: CFG.reviewUsd, per: 'за 1 видео',
       short: 'Пойму, что тебе мешает, и распишу по пунктам, как это исправить.',
       body: [
         ['p', 'Сделаю твой путь к результату понятным: распишу, над чем работать и что исправить.'],
@@ -1319,7 +1319,13 @@ body.fsmode .bigplay{z-index:3}
         ['h', 'Правила'],
         ['ul', ['Всё обучение проходит в Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с 11:00 до 14:00 по Москве. Иногда отвечаю и в другое время.']]
       ] },
-    { id: 'coach', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
+    { id: 'consult', only: 'intl', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 вопрос',
+      short: 'Отвечу на твой вопрос о брейкинге текстом в Telegram.',
+      body: [
+        ['p', 'Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.'],
+        ['note', 'Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.']
+      ] },
+    { id: 'coach', only: 'ru', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
       short: 'Для тренеров, которые уже ведут учеников: методики, работа с группой, свежий взгляд.',
       body: [
         ['p', 'Ты уже тренируешь учеников, но сталкиваешься с трудностями:'],
@@ -1349,7 +1355,8 @@ body.fsmode .bigplay{z-index:3}
   }
   (function renderServices(){
     const box = $('#svcList');
-    SERVICES.forEach(s => {
+    // Russian UI (rubles) and every other language (dollars) get different sets of services
+    SERVICES.filter(s => !s.only || (s.only === 'ru') === (LANG === 'ru')).forEach(s => {
       const b = document.createElement('button'); b.className = 'card svccard';
       b.innerHTML = '<span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
         '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span>' +
