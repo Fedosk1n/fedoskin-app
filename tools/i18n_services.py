@@ -109,3 +109,6 @@ ROWS += [
 ("Твоё место появится через пару минут.", "Your place will show up in a couple of minutes.", "Tu puesto aparecerá en un par de minutos.", "Sua posição aparece em alguns minutos.", "Ta place apparaîtra dans quelques minutes.", "Dein Platz erscheint in ein paar Minuten.", "数分であなたの順位が表示されます。", "몇 분 뒤에 내 순위가 표시돼요.", "几分钟后会显示你的名次。"),
 ("Пока в рейтинге никого нет — стань первым!", "No one in the ranking yet — be the first!", "Aún no hay nadie en el ranking: ¡sé el primero!", "Ainda não tem ninguém no ranking — seja o primeiro!", "Personne dans le classement pour l'instant : sois le premier !", "Noch niemand in der Rangliste — sei der Erste!", "まだランキングに誰もいません。一番乗りを目指そう！", "아직 랭킹에 아무도 없어요. 첫 번째가 되어 보세요!", "排行榜上还没有人——来当第一名吧！"),
 ]
+ROWS += [
+("Посмотри любой урок хотя бы минуту — и появишься в рейтинге.", "Watch any lesson for at least a minute to appear in the ranking.", "Mira cualquier lección al menos un minuto y aparecerás en el ranking.", "Assista a qualquer aula por pelo menos um minuto para aparecer no ranking.", "Regarde n'importe quelle leçon au moins une minute pour apparaître dans le classement.", "Schau irgendeine Lektion mindestens eine Minute, dann erscheinst du in der Rangliste.", "どれかのレッスンを1分以上見ると、ランキングに表示されます。", "아무 레슨이나 1분 이상 보면 랭킹에 표시돼요.", "观看任意课程至少一分钟，就会出现在排行榜上。"),
+]

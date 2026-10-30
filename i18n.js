@@ -271,7 +271,8 @@ window.I18N = {
  "Загружаю рейтинг…": "Loading the ranking…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "You're hidden from the ranking — others can't see you.",
  "Твоё место появится через пару минут.": "Your place will show up in a couple of minutes.",
- "Пока в рейтинге никого нет — стань первым!": "No one in the ranking yet — be the first!"
+ "Пока в рейтинге никого нет — стань первым!": "No one in the ranking yet — be the first!",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Watch any lesson for at least a minute to appear in the ranking."
  },
  "es": {
  "Главная": "Inicio",
@@ -542,7 +543,8 @@ window.I18N = {
  "Загружаю рейтинг…": "Cargando el ranking…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "Estás oculto del ranking: los demás no te ven.",
  "Твоё место появится через пару минут.": "Tu puesto aparecerá en un par de minutos.",
- "Пока в рейтинге никого нет — стань первым!": "Aún no hay nadie en el ranking: ¡sé el primero!"
+ "Пока в рейтинге никого нет — стань первым!": "Aún no hay nadie en el ranking: ¡sé el primero!",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Mira cualquier lección al menos un minuto y aparecerás en el ranking."
  },
  "pt": {
  "Главная": "Início",
@@ -813,7 +815,8 @@ window.I18N = {
  "Загружаю рейтинг…": "Carregando o ranking…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "Você está oculto no ranking — os outros não te veem.",
  "Твоё место появится через пару минут.": "Sua posição aparece em alguns minutos.",
- "Пока в рейтинге никого нет — стань первым!": "Ainda não tem ninguém no ranking — seja o primeiro!"
+ "Пока в рейтинге никого нет — стань первым!": "Ainda não tem ninguém no ranking — seja o primeiro!",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Assista a qualquer aula por pelo menos um minuto para aparecer no ranking."
  },
  "fr": {
  "Главная": "Accueil",
@@ -1084,7 +1087,8 @@ window.I18N = {
  "Загружаю рейтинг…": "Chargement du classement…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "Tu es masqué du classement : les autres ne te voient pas.",
  "Твоё место появится через пару минут.": "Ta place apparaîtra dans quelques minutes.",
- "Пока в рейтинге никого нет — стань первым!": "Personne dans le classement pour l'instant : sois le premier !"
+ "Пока в рейтинге никого нет — стань первым!": "Personne dans le classement pour l'instant : sois le premier !",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Regarde n'importe quelle leçon au moins une minute pour apparaître dans le classement."
  },
  "de": {
  "Главная": "Start",
@@ -1355,7 +1359,8 @@ window.I18N = {
  "Загружаю рейтинг…": "Rangliste wird geladen…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "Du bist in der Rangliste ausgeblendet — andere sehen dich nicht.",
  "Твоё место появится через пару минут.": "Dein Platz erscheint in ein paar Minuten.",
- "Пока в рейтинге никого нет — стань первым!": "Noch niemand in der Rangliste — sei der Erste!"
+ "Пока в рейтинге никого нет — стань первым!": "Noch niemand in der Rangliste — sei der Erste!",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "Schau irgendeine Lektion mindestens eine Minute, dann erscheinst du in der Rangliste."
  },
  "ja": {
  "Главная": "ホーム",
@@ -1626,7 +1631,8 @@ window.I18N = {
  "Загружаю рейтинг…": "ランキングを読み込み中…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "ランキングで非表示になっています。他の人からは見えません。",
  "Твоё место появится через пару минут.": "数分であなたの順位が表示されます。",
- "Пока в рейтинге никого нет — стань первым!": "まだランキングに誰もいません。一番乗りを目指そう！"
+ "Пока в рейтинге никого нет — стань первым!": "まだランキングに誰もいません。一番乗りを目指そう！",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "どれかのレッスンを1分以上見ると、ランキングに表示されます。"
  },
  "ko": {
  "Главная": "홈",
@@ -1897,7 +1903,8 @@ window.I18N = {
  "Загружаю рейтинг…": "랭킹 불러오는 중…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "랭킹에서 숨김 상태예요. 다른 사람에게 보이지 않아요.",
  "Твоё место появится через пару минут.": "몇 분 뒤에 내 순위가 표시돼요.",
- "Пока в рейтинге никого нет — стань первым!": "아직 랭킹에 아무도 없어요. 첫 번째가 되어 보세요!"
+ "Пока в рейтинге никого нет — стань первым!": "아직 랭킹에 아무도 없어요. 첫 번째가 되어 보세요!",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "아무 레슨이나 1분 이상 보면 랭킹에 표시돼요."
  },
  "zh": {
  "Главная": "首页",
@@ -2168,6 +2175,7 @@ window.I18N = {
  "Загружаю рейтинг…": "正在加载排行榜…",
  "Ты скрыт из рейтинга — другие тебя не видят.": "你已在排行榜中隐藏，其他人看不到你。",
  "Твоё место появится через пару минут.": "几分钟后会显示你的名次。",
- "Пока в рейтинге никого нет — стань первым!": "排行榜上还没有人——来当第一名吧！"
+ "Пока в рейтинге никого нет — стань первым!": "排行榜上还没有人——来当第一名吧！",
+ "Посмотри любой урок хотя бы минуту — и появишься в рейтинге.": "观看任意课程至少一分钟，就会出现在排行榜上。"
  }
 };
