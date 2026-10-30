@@ -169,7 +169,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <label class="f"><span>Дата (для NEW)</span><input type="date" id="aDate"></label>
         </div>
         <label class="f"><span>Название</span><input type="text" id="aName" placeholder="Например: Windmill"></label>
-        <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="aRu" placeholder="виндмил мельница"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как люди будут искать урок русскими буквами — через пробел.</span></label>
+        <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="aRu" placeholder="виндмил мельница"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как люди будут искать урок — слова через пробел, можно и по-английски. Окончания и предлоги («с», «в», «на») не важны: «флай твист» найдётся и по запросу «с флая в твист».</span></label>
         <label class="f"><span>Имя файла (латиницей)</span><input type="text" id="aId" placeholder="pw-windmill" spellcheck="false"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Заполняется само. Менять не обязательно.</span></label>
         <div class="f"><span>Куда загрузить видео</span>
           <div class="seg" role="group" aria-label="Куда загрузить видео"><button class="btn btn-sm" type="button" id="aDestKs" aria-pressed="true">Kinescope</button><button class="btn btn-sm" type="button" id="aDestGh" aria-pressed="false">GitHub</button></div>
@@ -295,7 +295,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </div>
     <label class="f"><span>Название</span><input type="text" id="eName"></label>
     <label class="f"><span>Раздел</span><select id="eSec"></select></label>
-    <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="eRu"></label>
+    <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="eRu"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Слова через пробел. Окончания и предлоги не важны: «флай твист» найдётся и по запросу «с флая в твист».</span></label>
     <label class="f"><span>Дата добавления</span><input type="date" id="eDate"></label>
     <label class="sw green"><input type="checkbox" id="eNew"><span><b>Значок NEW</b><br><span class="hint" id="eNewHint"></span></span></label>
     <label class="sw"><input type="checkbox" id="eShow"><span><b>Показывать в приложении</b><br><span class="hint">Выключите, чтобы спрятать урок, не удаляя</span></span></label>
