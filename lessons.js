@@ -123,46 +123,51 @@ window.LESSONS_DATA = [
   "id": "pw-flare-wm",
   "sec": "Powermove",
   "name": "Flare → Windmill → Flare",
-  "dur": 535,
+  "dur": 533,
   "ru": "флаер флэр виндмил мельница",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "fcbcbb79-43ca-482d-b0f2-01472155230a"
  },
  {
   "id": "pw-flare-1990",
   "sec": "Powermove",
   "name": "Flare → 1990 → Flare",
-  "dur": 421,
+  "dur": 419,
   "ru": "флаер флэр 1990 девяностый",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f"
  },
  {
   "id": "pw-airflare",
   "sec": "Powermove",
-  "name": "Airflare",
-  "dur": 454,
-  "ru": "эйрфлаер эирфлаер аирфлаер флаер",
+  "name": "Airflare(airtwist)",
+  "dur": 450,
+  "ru": "эйрфлаер эирфлаер аирфлаер флаер твист",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "de8dad97-f470-4552-93c4-45575e6d3f29"
  },
  {
   "id": "pw-turtle",
   "sec": "Powermove",
   "name": "Turtle",
-  "dur": 445,
+  "dur": 443,
   "ru": "тертл тартл черепаха",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "634db7c3-35bc-4a80-b160-c44a09cdbab8"
  },
  {
   "id": "pw-windmill",
   "sec": "Powermove",
   "name": "Windmill",
-  "dur": 366,
+  "dur": 365,
   "ru": "виндмил виндмилл мельница",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "8b3ef664-01b9-42db-a1e1-b88ad726c46c"
  },
  {
   "id": "pw-swipes",
@@ -171,24 +176,27 @@ window.LESSONS_DATA = [
   "dur": 333,
   "ru": "свайпы свайп свипы",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba"
  },
  {
   "id": "pw-headspin",
   "sec": "Powermove",
   "name": "Headspin",
-  "dur": 321,
+  "dur": 318,
   "ru": "хедспин хэдспин вращение на голове",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "8a2e472e-d16f-4c45-9032-b4781ba7d840"
  },
  {
   "id": "pw-swipes-flare",
   "sec": "Powermove",
   "name": "Swipes → Flare → Swipes",
-  "dur": 438,
+  "dur": 436,
   "ru": "свайпы свайп флаер флэр",
   "added": "2026-10-29",
-  "pv": true
+  "pv": true,
+  "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a"
  }
 ];
