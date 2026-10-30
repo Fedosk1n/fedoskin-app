@@ -90,6 +90,19 @@ p{margin:0}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:700}
 
 /* radio cards */
+.svccard{width:100%;padding:16px;display:flex;flex-direction:column;gap:8px;color:var(--fg);text-align:left;cursor:pointer;font:inherit}
+.svccard .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.svccard .nm{font-size:22px;line-height:1.05}
+.svccard .pr{font-weight:700;white-space:nowrap;color:var(--accent)}
+.svccard .pr small{font-weight:600;color:var(--muted);font-size:12px}
+.svccard .more{font-size:13px;font-weight:600;color:var(--soft);display:flex;align-items:center;gap:4px}
+.svcb p{margin:16px 0 0;line-height:1.5}
+.svcb .label{display:block;margin:24px 0 10px}
+.svcb ul,.svcb ol{margin:0;padding:16px 16px 16px 34px;line-height:1.45;font-size:14px;border-radius:16px;background:var(--surface);border:1px solid #222225}
+.svcb li+li{margin-top:10px}
+.svcb .note{padding:14px 16px;border-radius:16px;background:var(--surface-2);font-size:14px}
+.svcb a{color:var(--accent);font-weight:600}
+.tab .tl{display:block;text-align:center;line-height:1.1}
 .opt{width:100%;min-height:68px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;gap:14px;color:var(--fg);text-align:left;cursor:pointer}
 .opt .dot{width:20px;height:20px;flex:0 0 20px;border-radius:10px;border:2px solid #4A4A4E}
 .opt[aria-checked="true"]{border:2px solid var(--accent);padding:13px}
@@ -405,54 +418,20 @@ body.fsmode .bigplay{z-index:3}
   </div>
 </section>
 
-<!-- РАЗБОР -->
-<section class="screen" id="review" aria-label="Разбор" hidden>
-  <h1>Разбор</h1>
-  <p class="soft" style="margin-top:10px;line-height:1.45">Пришли видео своего элемента или раунда — создатель приложения лично разберёт ошибки и подскажет, что тренировать дальше.</p>
-  <ol class="stack" style="gap:10px;margin:22px 0 0;padding:0;list-style:none">
-    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">1</span><span class="stack" style="gap:3px"><b>Сними видео</b><span class="muted" style="font-size:13px">Элемент или раунд, до [N] минут</span></span></li>
-    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">2</span><span class="stack" style="gap:3px"><b>Напиши в Telegram</b><span class="muted" style="font-size:13px">Пришли видео и оплати разбор</span></span></li>
-    <li class="card row" style="gap:14px;padding:14px;border-radius:16px"><span class="thumb d" style="width:40px;height:40px;flex-basis:40px;border-radius:20px;color:var(--accent);font-size:18px;background:var(--surface-2)">3</span><span class="stack" style="gap:3px"><b>Получи разбор</b><span class="muted" style="font-size:13px" data-t="Видео с разбором в течение {h}">Видео с разбором в течение 24 ч</span></span></li>
-  </ol>
-  <h2 class="sec" style="margin-bottom:10px">Что ты получишь</h2>
-  <ul class="stack" style="gap:10px;margin:0;padding:0;list-style:none;font-size:14px">
-    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Видео-ответ с разбором ошибок</li>
-    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Упражнения под твой уровень</li>
-    <li class="row" style="gap:12px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent);stroke-width:2.5" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Один уточняющий вопрос после разбора</li>
-  </ul>
-  <button class="btn btn-accent" data-go="reviewpay" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px">
-    <svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Отправить на разбор</button>
-  <p class="muted" style="margin-top:10px;font-size:13px;text-align:center" data-t="{rub} · {usd} · видео с разбором в течение {h}">2 000 ₽ · $30 · видео с разбором в течение 24 ч</p>
-  <div hidden data-later="my-reviews">
-  <h2 class="sec" style="margin-bottom:4px">Мои разборы</h2>
-  <button class="list-item" data-toast="Разбор ещё в работе"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Windmill]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag">В работе</span></button>
-  <button class="list-item" data-toast="Здесь откроется видео-разбор"><span class="thumb ph"></span><span class="stack" style="gap:4px;flex:1"><span style="font-weight:600">[Раунд на батле]</span><span class="muted" style="font-size:12px">[Дата]</span></span><span class="tag" style="background:var(--accent);color:var(--on-accent)">Готов</span></button>
-  </div>
+<!-- ОНЛАЙН УСЛУГИ (вкладка id="review"; тексты услуг — в SERVICES в скрипте) -->
+<section class="screen" id="review" aria-label="Онлайн услуги" hidden>
+  <h1>Онлайн услуги</h1>
+  <p class="soft" style="margin-top:10px;line-height:1.45">Тренировки лично с Федоскиным — создателем приложения. Всё общение и видео — в Telegram.</p>
+  <div class="stack" id="svcList" style="gap:12px;margin-top:20px"></div>
 </section>
 
-<!-- РАЗБОР: ОПЛАТА -->
-<section class="screen" id="reviewpay" aria-label="Отправить на разбор" hidden>
+<!-- УСЛУГА: подробно -->
+<section class="screen" id="svc" aria-label="Услуга" hidden>
   <button class="back" data-back="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
-  <h1 style="margin-top:16px;font-size:34px">Отправить<br>на разбор</h1>
-  <div class="card row" style="margin-top:18px;padding:16px;gap:14px;border-radius:16px">
-    <span style="width:44px;height:44px;flex:0 0 44px;border-radius:22px;background:#229ED9;color:#fff;display:flex;align-items:center;justify-content:center"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></span>
-    <span class="stack" style="gap:4px;flex:1"><b>Всё через Telegram</b><span class="muted" style="font-size:13px;line-height:1.4">Выбери формат и нажми кнопку внизу — откроется чат с создателем приложения, где ты пришлёшь видео и оплатишь разбор.</span></span>
-  </div>
-  <p class="label" style="margin:24px 0 10px">Формат разбора</p>
-  <div class="stack" role="radiogroup" aria-label="Формат разбора" style="gap:10px" id="plans">
-    <button class="opt" role="radio" aria-checked="true"><span class="dot"></span><span class="stack" style="gap:3px;flex:1"><b>Один элемент</b><span class="muted" style="font-size:12px">Например, windmill или freeze</span></span></button>
-    <button class="opt" role="radio" aria-checked="false"><span class="dot"></span><span class="stack" style="gap:3px;flex:1"><b>Полный раунд</b><span class="muted" style="font-size:12px">Связки, музыкальность, переходы</span></span></button>
-  </div>
-  <p class="label" style="margin:24px 0 10px">Условия</p>
-  <ul class="card stack soft" style="margin:0;padding:16px;list-style:none;gap:12px;font-size:13px;line-height:1.4;border-radius:16px">
-    <li>• Разбор делает лично создатель приложения</li>
-    <li>• Видео и оплата — в Telegram</li>
-    <li data-t="• Вы получите видео с разбором в течение {h} после оплаты">• Вы получите видео с разбором в течение 24 ч после оплаты</li>
-    <li>• Формат ответа — видео с разбором ошибок и упражнениями</li>
-    <li>• Один уточняющий вопрос после разбора — бесплатно</li>
-  </ul>
-  <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:22px"><span class="muted">Стоимость</span><span><span class="d" style="font-size:28px" data-cfg="rub">2 000 ₽</span> <span class="muted" style="font-size:14px">или <span data-cfg="usd">$30</span></span></span></div>
-  <a class="btn btn-accent" id="tgLink" href="#" target="_blank" rel="noopener" style="margin-top:12px;min-height:56px;font-size:17px;border-radius:16px;background:#229ED9;color:#fff"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>Написать в Telegram</a>
+  <h1 id="svcTitle" style="margin-top:16px;font-size:34px"></h1>
+  <div class="row" style="gap:8px;align-items:baseline;margin-top:10px"><span class="d" id="svcPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" id="svcPer" style="font-size:14px"></span></div>
+  <div id="svcBody"></div>
+  <a class="btn btn-accent" id="tgLink" href="#" target="_blank" rel="noopener" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px;background:#229ED9;color:#fff"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>Написать в Telegram</a>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
 </section>
 
@@ -519,7 +498,7 @@ body.fsmode .bigplay{z-index:3}
 
   <div class="sec stack">
     <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-    <button class="list-item" data-go="review"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
     <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
     <button class="list-item" id="installItem"><span style="flex:1;font-weight:600">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
@@ -644,12 +623,12 @@ body.fsmode .bigplay{z-index:3}
   const TABS = [
     ['home','Главная','<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>'],
     // ['courses','Курсы', ...] — hidden for now, comes back later
-    ['review','Разбор','<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>'],
+    ['review','Онлайн услуги','<path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/>'],
     // promo tab hidden for now, comes back later
     // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
     ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
   ];
-  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',reviewpay:'review',promo:'promo',profile:'profile'};
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',promo:'promo',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== languages =====
@@ -692,7 +671,7 @@ body.fsmode .bigplay{z-index:3}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:50, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:600, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -1297,7 +1276,11 @@ body.fsmode .bigplay{z-index:3}
   TABS.forEach(([id, label, icon]) => {
     const b = document.createElement('button');
     b.className = 'tab'; b.dataset.tab = id;
-    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg>'+T(label);
+    // long labels go on two lines («Онлайн / услуги»)
+    const tl = T(label), sp = tl.indexOf(' ');
+    const lbl = document.createElement('span'); lbl.className = 'tl';
+    if (sp > 0) { lbl.append(tl.slice(0, sp), document.createElement('br'), tl.slice(sp + 1)); } else lbl.textContent = tl;
+    b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg>'; b.appendChild(lbl);
     b.addEventListener('click', () => go(id));
     tabsEl.appendChild(b);
   });
@@ -1316,20 +1299,89 @@ body.fsmode .bigplay{z-index:3}
     const t = e.target.closest('[data-toast]'); if (t){ toast(t.dataset.toast); }
   });
 
-  // chips + radios
-  $('#plans').addEventListener('click', e => { const o = e.target.closest('.opt'); if (!o) return; $('#plans').querySelectorAll('.opt').forEach(x => x.setAttribute('aria-checked', x === o)); });
-  // review: open the creator's Telegram chat with a ready message
-  const TG_USERNAME = String(CFG.tg || 'Fe_DoSk1n').replace(/^@/, ''); // <- Telegram username of the app creator, without @
+  // ===== online services =====
+  // Texts are Russian; T() translates them. Prices come from config.js (admin «Тексты и настройки»):
+  // Russian UI shows rubles, every other language shows dollars.
+  const SERVICES = [
+    { id: 'review', name: 'Разбор элемента или перехода', rub: CFG.reviewRub, usd: CFG.reviewUsd, per: 'за 1 видео',
+      short: 'Пойму, что тебе мешает, и распишу по пунктам, как это исправить.',
+      body: [
+        ['p', 'Сделаю твой путь к результату понятным: распишу, над чем работать и что исправить.'],
+        ['h', 'Как это работает'],
+        ['ol', ['Присылаешь 1 видео элемента или перехода.', 'Я лично разбираю его и присылаю тебе файлом.', 'По пунктам: какие есть ошибки, с чего начать исправлять и как именно.']],
+        ['h', 'Требования к видео'],
+        ['ul', ['Не в формате GIF.', 'Руки и ноги не вылетают за кадр, пока ты делаешь элемент.', 'Без пустого времени: обрежь, как включаешь камеру, отходишь и подходишь.']],
+        ['link', 'Посмотреть пример разбора', 'https://vk.com/wall-227244034_98'],
+        ['note', 'После разбора можно перейти на онлайн-ведение и прийти к результату ещё быстрее.']
+      ] },
+    { id: 'online', name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
+      short: 'Индивидуальные задания и разбор каждого видео. Один элемент — весь фокус на прогрессе.',
+      body: [
+        ['p', 'Выбираем один элемент или переход и направляем на него всё внимание и силы — так прогресс идёт быстрее всего.'],
+        ['h', 'Как проходит обучение'],
+        ['ol', ['Уточняем, что ты умеешь сейчас.', 'Я даю задание. Ты выполняешь его и снимаешь каждый пункт отдельным видео.', 'После каждого задания — консультация: техника, тренировочный процесс, питание и не только.', 'Следующее задание — только после проверки предыдущего.']],
+        ['h', 'Правила'],
+        ['ul', ['Всё обучение проходит в Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с 11:00 до 14:00 по Москве. Иногда отвечаю и в другое время.']]
+      ] },
+    { id: 'coach', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
+      short: 'Для тренеров, которые уже ведут учеников: методики, работа с группой, свежий взгляд.',
+      body: [
+        ['p', 'Ты уже тренируешь учеников, но сталкиваешься с трудностями:'],
+        ['ul', ['не хватает методик для разных возрастов и уровней;', 'сложно строить занятия или мотивировать группу;', 'есть сомнения в педагогических решениях;', 'выгорание или не хватает свежего взгляда со стороны.']],
+        ['p', 'Помогу не просто справляться, а работать уверенно, осмысленно и с удовольствием.'],
+        ['h', 'Что входит'],
+        ['ul', ['Стартовый созвон 60–90 минут в первый день: разбираем цели, трудности, твой стиль преподавания и строим план развития.', 'Разбор раз в неделю, 30–45 минут: реальные случаи за неделю — конфликты в группе, неудачное занятие, прогресс учеников, адаптация программ.', 'Поддержка в Telegram в приоритете: отвечаю в течение дня на любые вопросы — «что делать, если ребёнок не слушается?», «как изменить тренировку при травме?».']],
+        ['note', 'Это не лекции и не шаблоны, а живая работа с твоей реальной практикой — от коллеги, который прошёл этот путь и знает, где подводные камни.']
+      ] },
+    { id: 'full', name: 'Полное ведение', rub: CFG.fullRub, usd: CFG.fullUsd, per: 'в месяц',
+      short: 'Я думаю за тебя: план под тебя, питание, ежедневная коррекция и 8 тренировок один на один.',
+      body: [
+        ['p', 'Для тех, кто ценит своё время и здоровье. Я буду думать за тебя: что, как, когда и зачем тренировать.'],
+        ['p', 'Весь мой опыт и знания доступны тебе целый месяц. Это сильно экономит время и снижает риск травм. Тренироваться самому можно всегда, но тренер есть даже у чемпионов мира — и я очень жалею, что в моё время такой возможности не было.'],
+        ['h', 'План под твои особенности'],
+        ['ul', ['подводящие упражнения;', 'спортивное питание;', 'элементы и тренировочные тайминги;', 'ежедневная коррекция тренировок: устал, заболел, перетрудился;', '8 видеотренировок один на один со мной по 20 минут — 2 в неделю.']],
+        ['note', 'Отличный выбор, если финансовый вопрос решён и ты давно хотел всерьёз заняться брейкингом. С хорошим тренером брейкинг в радость, а результат не заставит себя ждать.']
+      ] }
+  ];
+  const money = (rub, usd) => LANG === 'ru' ? String(Math.round(+rub || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽' : '$' + (+usd || 0);
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const TG_USERNAME = String(CFG.tg || 'Fe_DoSk1n').replace(/^@/, ''); // Telegram username of the app creator, without @
+  let curSvc = SERVICES[0];
   function tgHref(){
-    const opt = $('#plans .opt[aria-checked="true"]');
-    const fmtName = opt ? opt.querySelector('b').textContent : '';
-    const text = T(CFG.tgMessage) + '\n' + T('Формат:') + ' ' + fmtName + '\n' + T('Сейчас пришлю видео.');
+    const text = T(CFG.tgMessage) + '\n' + T('Услуга:') + ' ' + T(curSvc.name);
     return 'https://t.me/' + TG_USERNAME + '?text=' + encodeURIComponent(text);
   }
-  function paintTg(){ $('#tgLink').href = tgHref(); }
-  $('#tgLink').addEventListener('click', () => goal('review_tg'));
-  $('#plans').addEventListener('click', paintTg);
-  paintTg();
+  (function renderServices(){
+    const box = $('#svcList');
+    SERVICES.forEach(s => {
+      const b = document.createElement('button'); b.className = 'card svccard';
+      b.innerHTML = '<span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
+        '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span>' +
+        '<span class="more">' + esc(T('Подробнее')) + '<svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
+      b.addEventListener('click', () => openService(s));
+      box.appendChild(b);
+    });
+  })();
+  function openService(s){
+    curSvc = s;
+    $('#svcTitle').textContent = T(s.name);
+    $('#svcPrice').textContent = money(s.rub, s.usd);
+    $('#svcPer').textContent = T(s.per);
+    const body = $('#svcBody'); body.className = 'svcb'; body.innerHTML = '';
+    s.body.forEach(([kind, a, b]) => {
+      let el;
+      if (kind === 'p') { el = document.createElement('p'); el.textContent = T(a); }
+      else if (kind === 'h') { el = document.createElement('span'); el.className = 'label'; el.textContent = T(a); }
+      else if (kind === 'ol' || kind === 'ul') { el = document.createElement(kind); a.forEach(t => { const li = document.createElement('li'); li.textContent = T(t); el.appendChild(li); }); }
+      else if (kind === 'note') { el = document.createElement('p'); el.className = 'note'; el.textContent = T(a); }
+      else if (kind === 'link') { el = document.createElement('p'); const l = document.createElement('a'); l.href = b; l.target = '_blank'; l.rel = 'noopener'; l.textContent = T(a) + ' ↗'; el.appendChild(l); }
+      if (el) body.appendChild(el);
+    });
+    $('#tgLink').href = tgHref();
+    go('svc');
+    $('#svc').scrollTop = 0;
+  }
+  $('#tgLink').addEventListener('click', () => goal('review_tg', {service: curSvc.id}));
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;
     try { navigator.clipboard.writeText(text).then(() => toast(T('Код скопирован')), () => toast(T('Выдели код и скопируй вручную'))); }
