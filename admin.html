@@ -73,7 +73,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .arrows .btn{width:36px;height:30px;min-height:30px;padding:0;border-radius:8px}
 .savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
 .savebar .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.savebar .msg{flex:1;font-size:14px;line-height:1.35}
+.savebar .msg{flex:1;font-size:14px;line-height:1.35;min-width:0}
+.savebar .msg .list{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.savebar.clean .msg{color:var(--muted)}
+.savebar.clean .okmark{color:var(--new);font-weight:700}
+.savebar.dirty{border-top:2px solid var(--accent);background:rgba(36,18,8,.96)}
+.savebar.dirty .cnt{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--accent);color:#0B0B0C;font-size:12px;font-weight:700;text-align:center;line-height:20px}
+.savebar.clean #pubBtn{background:#2E2E32;color:var(--muted);border-color:#2E2E32}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet .box{background:var(--bg);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 18px)}
 @media (min-width:700px){.sheet{align-items:center}.sheet .box{border-radius:22px;border-bottom:1px solid var(--line)}}
@@ -530,19 +536,73 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
 
   // ---------- dirty state / save bar ----------
-  const isDirty = () => remote && (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || JSON.stringify(cfg) !== JSON.stringify(remote.cfg) || Object.keys(uploads).length > 0 || deleted.length > 0 || dropGh.length > 0);
+  // What is really waiting to be published. Compares meaning, not text: key order, empty fields and default values
+  // (pv:true, hidden:false, ru:'') don't count, so just opening a lesson and pressing «Готово» changes nothing.
+  function normL(l){
+    const o = {};
+    Object.keys(l).sort().forEach(k => {
+      const v = l[k];
+      if (v === undefined || v === null || v === '') return;
+      if ((k === 'pv' || k === 'new') && v === true) return;
+      if (k === 'hidden' && !v) return;
+      o[k] = v;
+    });
+    return JSON.stringify(o);
+  }
+  const normCfg = c => JSON.stringify(Object.keys(Object.assign({}, CFG_DEFAULT, remote ? remote.cfg : {}, c)).sort().map(k => [k, String(c[k] ?? CFG_DEFAULT[k] ?? '')]));
+  function pending(){
+    const items = [];
+    if (!remote) return items;
+    const R = {}; remote.lessons.forEach(r => { R[r.id] = r; });
+    const diff = (a, b) => JSON.stringify(a ?? '') !== JSON.stringify(b ?? '');
+    lessons.forEach(l => {
+      const r = R[l.id], u = uploads[l.id];
+      if (!r) { items.push('новый урок «' + l.name + '»'); return; }
+      const what = [];
+      const rep = !!(u && u.replace);
+      if (rep) what.push('новое видео');
+      if (dropGh.includes(l.id)) what.push('удалить старое видео из GitHub');
+      if (normL(l) !== normL(r)) {
+        if (diff(l.name, r.name)) what.push('название');
+        if (diff(l.sec, r.sec)) what.push('раздел');
+        if (diff(l.ru, r.ru)) what.push('слова для поиска');
+        if (diff(l.added, r.added) || (l.new === false) !== (r.new === false)) what.push('дата / NEW');
+        if (!!l.hidden !== !!r.hidden) what.push(l.hidden ? 'скрыть' : 'показать');
+        if (!rep && diff(l.ks, r.ks)) what.push(l.ks ? 'видео из Kinescope' : 'отвязать Kinescope');
+        if (!rep && diff(l.dur, r.dur)) what.push('длительность');
+        if (!rep && (l.pv !== false) !== (r.pv !== false)) what.push('анимация обложки');
+        if (diff(l.chapters, r.chapters)) what.push('главы');
+      }
+      if (what.length) items.push('«' + l.name + '»: ' + [...new Set(what)].join(', '));
+    });
+    remote.lessons.forEach(r => { if (!lessons.some(l => l.id === r.id)) items.push('удалить урок «' + r.name + '»'); });
+    // order inside a section (lessons that stayed in the same section)
+    const same = new Set(lessons.filter(l => R[l.id] && R[l.id].sec === l.sec).map(l => l.id));
+    const moved = SECTIONS.filter(sec => lessons.filter(l => l.sec === sec && same.has(l.id)).map(l => l.id).join() !== remote.lessons.filter(r => r.sec === sec && same.has(r.id)).map(r => r.id).join());
+    if (moved.length) items.push('порядок уроков: ' + moved.join(', '));
+    if (normCfg(cfg) !== normCfg(remote.cfg)) items.push('тексты и настройки');
+    return items;
+  }
+  const isDirty = () => !!remote && pending().length > 0;
   function paintSaveBar(){
-    const d = isDirty(); $('#savebar').hidden = !d; if (!d) return;
-    const parts = [];
-    const nRep = Object.values(uploads).filter(u => u.replace).length, nUp = Object.keys(uploads).length - nRep;
-    if (nUp) parts.push('новых видео: ' + nUp);
-    if (nRep) parts.push('заменено видео: ' + nRep);
-    if (deleted.length) parts.push('удалено: ' + deleted.length);
-    if (dropGh.length) parts.push('убрать из GitHub: ' + dropGh.length);
-    if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) parts.push('настройки');
-    const changedLessons = JSON.stringify(lessons.filter(l => !uploads[l.id])) !== JSON.stringify(remote.lessons.filter(l => !deleted.includes(l.id)));
-    if (changedLessons) parts.push('уроки');
-    $('#saveMsg').innerHTML = '<b>Не опубликовано</b><br><span class="muted">' + (parts.join(', ') || 'изменения') + '</span>';
+    const bar = $('#savebar');
+    if (!remote) { bar.hidden = true; return; }
+    bar.hidden = false;
+    const items = pending(), dirty = items.length > 0;
+    bar.classList.toggle('dirty', dirty); bar.classList.toggle('clean', !dirty);
+    $('#undoBtn').hidden = !dirty;
+    const pub = $('#pubBtn');
+    pub.disabled = !dirty;
+    pub.textContent = dirty ? 'Опубликовать' : 'Нечего публиковать';
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    if (!dirty) {
+      $('#saveMsg').innerHTML = '<span class="okmark">✓</span> <b>Всё опубликовано</b><span class="list">В приложении сейчас то же, что здесь</span>';
+      $('#saveMsg').title = '';
+      return;
+    }
+    const shown = items.slice(0, 2).join(' · ') + (items.length > 2 ? ' · и ещё ' + (items.length - 2) : '');
+    $('#saveMsg').innerHTML = '<b>Не опубликовано</b><span class="cnt">' + items.length + '</span><span class="list soft">' + esc(shown) + '</span>';
+    $('#saveMsg').title = items.join('\n');
   }
   window.addEventListener('beforeunload', e => { if (isDirty() || pushList || ksXhr) { e.preventDefault(); e.returnValue = ''; } });
   $('#undoBtn').addEventListener('click', () => {
@@ -1135,7 +1195,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       toast('Не опубликовано: ' + (/too large/i.test(m) ? 'видео слишком большое для GitHub. Удалите этот урок из списка и подготовьте видео заново — теперь оно сожмётся до 70 МБ.' : m), true);
       paintSaveBar();
     } finally {
-      btn.disabled = false; $('#undoBtn').disabled = false;
+      btn.disabled = false; $('#undoBtn').disabled = false; paintSaveBar();
     }
   }
 
