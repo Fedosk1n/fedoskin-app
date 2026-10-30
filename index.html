@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://kinescope.io" crossorigin>
+<link rel="dns-prefetch" href="https://kinescope.io">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon2-192.png">
 <link rel="apple-touch-icon" href="icons/icon2-180.png">
 <meta name="apple-mobile-web-app-title" content="Fedoskin">
@@ -150,6 +152,14 @@ p{margin:0}
 .stage{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
 .stage video,.stage #figure{width:100%;height:100%;object-fit:contain;transition:transform .25s ease}
 .stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
+/* while a lesson loads: its 3-second cover animation + spinner instead of a black screen */
+.vload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:#111113 center/cover no-repeat}
+.vload[hidden]{display:none}
+.stage .vload video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.6}
+.vload.stall{background:transparent!important}
+.vload.stall video{display:none}
+.vload i{position:relative;width:46px;height:46px;border-radius:50%;border:3px solid rgba(242,239,232,.22);border-top-color:#E2611A;animation:vspin .8s linear infinite}
+@keyframes vspin{to{transform:rotate(360deg)}}
 .fsbtn{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(11,11,12,.7);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 .fsbar{display:none}
 body.fsmode{overflow:hidden}
@@ -304,6 +314,7 @@ body.fsmode .bigplay{z-index:3}
   <div class="player" id="player" style="margin-top:12px">
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
+      <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
       <svg id="figure" viewBox="0 0 200 200" aria-hidden="true">
         <g id="dancer" stroke="#F2EFE8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
           <circle cx="100" cy="42" r="15" fill="#F2EFE8" stroke="none"/>
@@ -762,6 +773,7 @@ body.fsmode .bigplay{z-index:3}
     else nm.textContent = l.name;
     b.querySelector('.muted').textContent = (opts.showSec ? l.sec + ' · ' : '') + fmtD(l.dur);
     if (isNew(l)) { const p = newPill(); p.style.marginLeft = '8px'; nm.appendChild(p); }
+    b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
     b.addEventListener('click', () => openLesson(l.id));
     return b;
   }
@@ -799,6 +811,7 @@ body.fsmode .bigplay{z-index:3}
     if (isNew(l)) { b.querySelector('.lname').prepend(newPill(), ' '); b.classList.add('isnew'); }
     if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
     b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
+    b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
     b.addEventListener('click', () => openLesson(l.id));
     return b;
   }
@@ -811,6 +824,7 @@ body.fsmode .bigplay{z-index:3}
     list.className = ls.length ? 'lgrid' : 'stack';
     ls.forEach(l => list.appendChild(lessonCard(l)));
     go('section');
+    setTimeout(() => warmKs(ls), 300);
   }
 
   // search
@@ -909,10 +923,76 @@ body.fsmode .bigplay{z-index:3}
   function dropHls(){ if (hls) { try { hls.destroy(); } catch (_) {} hls = null; } }
   let ksFailTimer = 0;
   function streamFailed(){
+    hideLoad();
     clearTimeout(ksFailTimer);
     ksFailTimer = setTimeout(() => toast(T('Видео не загрузилось. Проверь интернет и открой урок ещё раз.')), 300);
     setPlaying(false);
   }
+  // loading picture: the lesson's own 3-second cover animation (already downloaded on the section screen) + spinner
+  const vload = $('#vload'), vloadPv = vload.querySelector('video');
+  vloadPv.muted = true; vloadPv.defaultMuted = true;
+  let vloadT = 0;
+  function showLoad(l){
+    clearTimeout(vloadT);
+    vload.classList.remove('stall');
+    vload.style.backgroundImage = "url('v/" + l.id + ".jpg')";
+    if (l.pv !== false) { vloadPv.hidden = false; vloadPv.src = 'v/' + l.id + '-p3.mp4'; const r = vloadPv.play(); if (r && r.catch) r.catch(() => {}); }
+    else { vloadPv.hidden = true; vloadPv.removeAttribute('src'); }
+    vload.hidden = false;
+  }
+  function showStall(){ // the video stopped to load more: spinner only, and only if it lasts
+    clearTimeout(vloadT);
+    vloadT = setTimeout(() => { if (P.playing) { vload.classList.add('stall'); vload.hidden = false; } }, 500);
+  }
+  function hideLoad(){
+    clearTimeout(vloadT);
+    if (vload.hidden) return;
+    vload.hidden = true; vload.classList.remove('stall');
+    try { vloadPv.pause(); } catch (_) {}
+  }
+  vid.addEventListener('playing', hideLoad);
+  vid.addEventListener('waiting', () => { if (P.playing && vload.hidden) showStall(); });
+  vid.addEventListener('canplay', () => { if (!P.playing) hideLoad(); });
+  // warm-up: while the user looks at a section, open the connection to Kinescope and fetch the tiny playlists,
+  // so tapping a lesson skips those steps (small text files only, no video)
+  const ksWarm = new Set(), ksHosts = new Set(['https://kinescope.io']);
+  function preconnect(origin){
+    if (ksHosts.has(origin)) return; ksHosts.add(origin);
+    const ln = document.createElement('link'); ln.rel = 'preconnect'; ln.href = origin; ln.crossOrigin = 'anonymous';
+    document.head.appendChild(ln);
+  }
+  const firstUri = txt => (txt.split(/\r?\n/).find(x => x && x[0] !== '#') || '').trim();
+  // from the list of qualities pick the one the player starts with (720p or lower)
+  function startUri(txt){
+    const ln = txt.split(/\r?\n/); let best = '', bestSide = -1;
+    for (let i = 0; i < ln.length; i++) {
+      if (!/^#EXT-X-STREAM-INF/.test(ln[i])) continue;
+      const uri = (ln.slice(i + 1).find(x => x && x[0] !== '#') || '').trim();
+      const m = /RESOLUTION=(\d+)x(\d+)/.exec(ln[i]); const side = m ? Math.min(+m[1], +m[2]) : 0;
+      if (side <= 720 && side > bestSide) { best = uri; bestSide = side; }
+    }
+    return best || firstUri(txt);
+  }
+  async function warmOne(l){
+    if (!l || !l.ks || ksWarm.has(l.ks) || !window.fetch) return;
+    ksWarm.add(l.ks);
+    try {
+      const mUrl = ksUrl(l.ks);
+      const m = await fetch(mUrl, { mode: 'cors', credentials: 'omit' });
+      const vUri = startUri(await m.text()); if (!vUri) return;
+      const vUrl = new URL(vUri, m.url || mUrl).href; preconnect(new URL(vUrl).origin);
+      const v = await fetch(vUrl, { mode: 'cors', credentials: 'omit' });
+      const sUri = firstUri(await v.text()); if (sUri) preconnect(new URL(sUri, v.url || vUrl).origin);
+    } catch (_) {}
+  }
+  let warmGen = 0; // opening a lesson stops the background warm-up, so it doesn't compete with the video
+  function warmKs(ls){
+    const gen = ++warmGen;
+    const todo = ls.filter(l => l && l.ks && !ksWarm.has(l.ks)).slice(0, 8);
+    (async () => { for (const l of todo) { if (gen !== warmGen) return; await warmOne(l); } })();
+  }
+  // Android etc.: get the stream player ready in the background right after start, not on the first tap
+  if (!isApple && LESSONS.some(l => l.ks)) setTimeout(() => { loadHlsLib().catch(() => {}); }, 1200);
   function loadVideo(src, poster, ks){
     setPlaying(false);
     dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
@@ -930,7 +1010,17 @@ body.fsmode .bigplay{z-index:3}
       if (vid._ksToken !== token) return; // user already opened another lesson
       ksPending = false;
       if (!Hls.isSupported()) { if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing) vid.play().catch(() => {}); } else streamFailed(); return; }
-      hls = new Hls({ capLevelToPlayerSize: true, startLevel: -1, maxBufferLength: 30 });
+      // start with 720p or lower: the first piece downloads fast, then hls.js raises the quality by itself
+      hls = new Hls({ capLevelToPlayerSize: true, autoStartLoad: false, startFragPrefetch: true, maxBufferLength: 30 });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        let start = 0;
+        (hls.levels || []).forEach((lv, i) => {
+          const side = lv.width && lv.height ? Math.min(lv.width, lv.height) : 0;
+          if (side ? side <= 720 : (lv.bitrate || 0) <= 3e6) start = i;
+        });
+        try { hls.startLevel = start; } catch (_) {}
+        hls.startLoad(-1);
+      });
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d || !d.fatal) return;
         if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); return; }
@@ -939,7 +1029,7 @@ body.fsmode .bigplay{z-index:3}
       hls.loadSource(url);
       hls.attachMedia(vid);
       vid.playbackRate = P.rate;
-      if (P.playing) { const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { vid.muted = true; paintMute(); vid.play().catch(() => {}); }); }
+      if (P.playing) { const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { vid.muted = true; paintMute(); vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); }); }); }
     }).catch(() => { if (vid._ksToken === token) { ksPending = false; streamFailed(); } });
   }
   vid.addEventListener('error', () => { if (vid.src && /kinescope\.io/.test(vid.src)) streamFailed(); });
@@ -970,6 +1060,9 @@ body.fsmode .bigplay{z-index:3}
     if (list.length < 2) nl.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">' + T('Другие уроки раздела скоро появятся.') + '</p>';
     go('lesson');
     setPlaying(true);
+    warmGen++;
+    if (P.playing && (vid.paused || vid.readyState < 3)) showLoad(l);
+    setTimeout(() => { if (curLesson === l) warmKs(list.filter(x => x !== l)); }, 5000);
     $('#lesson').scrollTop = 0;
   }
   $('#lessonBack').addEventListener('click', () => goBack(() => openSection(curSection)));
@@ -987,9 +1080,9 @@ body.fsmode .bigplay{z-index:3}
         if (pr && pr.catch) pr.catch(() => {
           // browser blocked autoplay with sound: start muted, user can turn sound on
           vid.muted = true; paintMute();
-          vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; });
+          vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); });
         });
-      } else vid.pause();
+      } else { vid.pause(); hideLoad(); }
     }
     P.last = performance.now();
   }

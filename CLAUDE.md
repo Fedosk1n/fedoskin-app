@@ -35,6 +35,12 @@
   `api.kinescope.io` has NO CORS, and the sandbox can't reach kinescope at all (proxy 403) — don't design around the
   REST API. Kinescope token + project id live only in the owner's localStorage (`fedoskin-ks-token`/`-project`), never in
   config.js. Free plan = 100 min storage; admin «Статистика» shows minutes used. Admin can drop v/<id>.mp4 once ks works.
+- Fast lesson start (30.10.2026): `#vload` overlay shows the lesson's -p3 preview + jpg + spinner until `playing`
+  (spinner only on mid-play `waiting` >0.5 s); hls.js preloads ~1.2 s after app start on non-Apple; hls.js starts at the
+  highest level ≤720p (`autoStartLoad:false` + MANIFEST_PARSED → `startLevel`, `startLoad`), ABR raises it; section open
+  warms Kinescope (master + ≤720p media playlist, preconnect to hosts found), stopped by `warmGen` when a lesson opens.
+  iPhone plays native HLS (AVFoundation has its own network stack) — there only the overlay helps. Local test with a
+  fake HLS + throttling in Playwright: first frame 2.7 s → 1.0 s on Android.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
