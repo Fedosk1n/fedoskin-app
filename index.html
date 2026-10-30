@@ -33,12 +33,11 @@ button,input{font-family:inherit;font-size:inherit}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .app{max-width:480px;margin:0 auto;height:100%;position:relative}
-/* iOS home-screen apps sometimes report a viewport shorter than the screen: --gap pushes the menu down to the real bottom.
-   (Restored 30.10 — this is the version the owner confirmed. Keep the menu buttons no taller than icon + one label line,
-   otherwise the labels end up below the screen edge.) */
-html.gapfix .app{height:calc(100% + var(--gap))}
-html.gapfix .tabs{bottom:calc(-1 * var(--gap))}
-html.gapfix body.fsmode .stage{bottom:calc(-1 * var(--gap));height:auto!important}
+/* iOS 26 home-screen app bug (WebKit 301108): with viewport-fit=cover + black-translucent status bar the page gets a viewport
+   shorter than the screen by the status-bar height, and NOTHING is drawn below it (a menu pushed lower gets its labels cut).
+   iOS gives the full viewport as soon as the page is at least as tall as the screen — so make <html> that tall.
+   min() keeps it from scrolling when the status bar is opaque (top inset 0). Fix from frappe-ui #1284/#1289. */
+@media (display-mode: standalone){ html{min-height:min(100lvh, calc(100% + env(safe-area-inset-top, 0px)))} }
 .screen{height:100%;overflow-y:auto;
   padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
   padding-block:24px calc(110px + env(safe-area-inset-bottom, 0px))}
@@ -1070,8 +1069,7 @@ body.fsmode .bigplay{z-index:3}
   function isLandscapeVideo(){ return vid.videoWidth > 0 && vid.videoWidth > vid.videoHeight; }
   function setRot(on){
     const root = document.documentElement;
-    const gap = root.classList.contains('gapfix') ? (parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 0) : 0;
-    const h = window.innerHeight + gap, w = window.innerWidth;
+    const h = window.innerHeight, w = window.innerWidth;
     root.style.setProperty('--rotW', h + 'px'); root.style.setProperty('--rotH', w + 'px'); root.style.setProperty('--rotTop', (h / 2) + 'px');
     document.body.classList.toggle('fs-rot', !!on); $('#fsRotate').setAttribute('aria-pressed', !!on);
   }
@@ -1714,22 +1712,6 @@ body.fsmode .bigplay{z-index:3}
   })();
   renderStats();
 
-  // ===== iOS home-screen viewport fix =====
-  function fixViewportGap(){
-    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    const root = document.documentElement;
-    // only the iPhone home-screen app has this bug; on Android screen.height includes the system bars, so never "fix" there
-    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if (!standalone || !ios) { root.classList.remove('gapfix'); return; }
-    const land = window.innerWidth > window.innerHeight;
-    const full = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-    const gap = Math.round(full - window.innerHeight);
-    if (gap > 0 && gap < 160) { root.style.setProperty('--gap', gap + 'px'); root.classList.add('gapfix'); }
-    else root.classList.remove('gapfix');
-  }
-  fixViewportGap();
-  window.addEventListener('resize', fixViewportGap);
-  window.addEventListener('orientationchange', () => setTimeout(fixViewportGap, 300));
 
   // ===== "add to home screen" guide =====
   const UA = navigator.userAgent || '';
