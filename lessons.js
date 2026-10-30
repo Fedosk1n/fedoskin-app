@@ -12,6 +12,16 @@ window.LESSONS_DATA = [
   "pv": true
  },
  {
+  "id": "tr-windmill-head",
+  "sec": "Toprock",
+  "name": "Windmill(head)",
+  "dur": 570,
+  "ru": "гелик windmill гелик через голову гелик с головой",
+  "added": "2026-10-30",
+  "pv": true,
+  "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df"
+ },
+ {
   "id": "fw-6step",
   "sec": "Footwork",
   "name": "6-step",
