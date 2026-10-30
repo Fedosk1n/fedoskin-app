@@ -151,6 +151,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </nav>
 
     <div data-pane="lessons">
+      <div class="card" id="introCard" style="margin-top:12px" hidden>
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+          <div style="min-width:0"><b>Мгновенный старт уроков</b>
+            <div class="hint" id="introInfo" style="margin-top:4px"></div>
+            <div class="prog" id="introProg" hidden><i id="introBar"></i></div>
+          </div>
+          <button class="btn btn-sm" id="introGo" type="button" hidden>Сделать</button>
+        </div>
+      </div>
       <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Стрелки — порядок внутри раздела. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
       <div style="margin-top:12px"><input type="text" id="lFilter" placeholder="Найти урок…"></div>
       <div id="lessonList"></div>
@@ -337,6 +346,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let vFiles = {};              // name -> size, files in v/ on GitHub
   let dropGh = [];              // ids whose GitHub copy of the video (v/<id>.mp4) is removed because the lesson now plays from Kinescope
   const ksState = {};           // Kinescope video id -> 'ok' | 'wait' (still processing) | 'err'
+  let intros = {};              // intros.js on GitHub: lesson id -> Kinescope id its v/<id>-intro.mp4 was cut from
 
   // ---------- helpers ----------
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
@@ -442,7 +452,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const started = Date.now();
     const tick = async () => {
       const st = await ksCheck(id);
-      if (st === 'ok') { delete ksWatching[id]; toast('Kinescope обработал видео «' + name + '» — оно уже играет'); renderLessons(); return; }
+      if (st === 'ok') { delete ksWatching[id]; toast('Kinescope обработал видео «' + name + '» — оно уже играет'); renderLessons(); setTimeout(introAuto, 3000); return; }
       if (Date.now() - started > 40 * 60e3) { delete ksWatching[id]; renderLessons(); return; }
       renderLessons(); setTimeout(tick, 20000);
     };
@@ -491,11 +501,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     return {header: text.slice(0, at), data: JSON.parse(json)};
   }
   async function loadRemote(){
-    const [lf, cf, vdir] = await Promise.all([
+    const [lf, cf, vdir, inf] = await Promise.all([
       gh('/contents/lessons.js?ref=' + BRANCH),
       gh('/contents/config.js?ref=' + BRANCH).catch(e => { if (e.status === 404) return null; throw e; }),
-      gh('/contents/v?ref=' + BRANCH).catch(() => [])
+      gh('/contents/v?ref=' + BRANCH).catch(() => []),
+      gh('/contents/intros.js?ref=' + BRANCH).catch(() => null)
     ]);
+    intros = {}; try { if (inf) intros = parseData(b64ToUtf8(inf.content), 'window.LESSON_INTROS').data || {}; } catch(e) {}
     const lessonsText = b64ToUtf8(lf.content);
     const L = parseData(lessonsText, 'window.LESSONS_DATA');
     let cfgText = '', C = {header: '// Настройки приложения. Их меняет админка (admin.html). Формат — JSON.\n', data: {}};
@@ -517,6 +529,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       await loadRemote();
       $('#loading').hidden = true; $('#main').hidden = false;
       renderAll();
+      setTimeout(introAuto, 2500);
     } catch(e) {
       $('#loading').hidden = true; $('#login').hidden = false;
       const err = $('#loginErr'); err.hidden = false;
@@ -863,7 +876,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#repoSize').textContent = fmtMB(total);
   }
 
-  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
+  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); paintIntro(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
 
   // ---------- add video ----------
   const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
@@ -1156,7 +1169,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (pending.length && !confirm('Kinescope ещё обрабатывает: ' + pending.map(l => '«' + l.name + '»').join(', ') + '.\nЕсли опубликовать сейчас, эти уроки несколько минут не будут играть. Админка сама скажет, когда видео готово.\n\nОпубликовать всё равно?')) return;
     btn.disabled = true; $('#undoBtn').disabled = true;
     const say = t => { $('#saveMsg').innerHTML = '<span class="row"><span class="spin"></span><span>' + t + '</span></span>'; };
+    publishing = true;
     try {
+      if (introJob) { say('Дожидаюсь «мгновенного старта»…'); await introJob.catch(() => {}); }
       say('Проверяю GitHub…');
       const ref = await gh('/git/ref/heads/' + BRANCH);
       const head = await gh('/git/commits/' + ref.object.sha);
@@ -1184,7 +1199,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         tree.push({path: 'v/' + id + '.mp4', mode: '100644', type: 'blob', sha});
       }
       deleted.forEach(id => {
-        [id + '.mp4', id + '.jpg', id + '-p3.mp4'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
+        [id + '.mp4', id + '.jpg', id + '-p3.mp4', id + '-intro.mp4'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
       });
       dropGh.forEach(id => {
         const l = lessons.find(x => x.id === id);
@@ -1208,12 +1223,113 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const fresh = idsNew.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
       await loadRemote(); renderAll();
       if (fresh.length && cfg.pushUrl) schedulePush(fresh);
+      setTimeout(introAuto, 1500);
     } catch(e) {
       const m = String(e.message || e);
       toast('Не опубликовано: ' + (/too large/i.test(m) ? 'видео слишком большое для GitHub. Удалите этот урок из списка и подготовьте видео заново — теперь оно сожмётся до 70 МБ.' : m), true);
       paintSaveBar();
     } finally {
+      publishing = false;
       btn.disabled = false; $('#undoBtn').disabled = false; paintSaveBar();
+    }
+  }
+
+  // ---------- instant start ----------
+  // For every published Kinescope lesson the first 5 seconds are copied from the Kinescope stream (720p, no
+  // re-encoding, so the frames are exactly the stream's) into v/<id>-intro.mp4, and intros.js remembers which
+  // Kinescope video each one was cut from. The app plays this file at once and switches to the stream without a
+  // seam. Runs by itself after login, after «Опубликовать» and when Kinescope finishes a new video; publishes with
+  // its own small commit (lessons.js is not touched, so it never clashes with unpublished edits).
+  const INTRO_SEC = 5;
+  let introJob = null, publishing = false, introNote = '', introFail = {};
+  const introWanted = () => remote ? remote.lessons.filter(l => l.ks && !(intros[l.id] === l.ks && vFiles[l.id + '-intro.mp4'] != null)) : [];
+  function paintIntro(prog){
+    const card = $('#introCard'); if (!remote) { card.hidden = true; return; }
+    const all = remote.lessons.filter(l => l.ks), todo = introWanted();
+    card.hidden = !all.length;
+    const done = all.length - todo.length;
+    $('#introProg').hidden = prog == null; if (prog != null) $('#introBar').style.width = Math.round(prog * 100) + '%';
+    $('#introGo').hidden = !!introJob || !todo.length;
+    $('#introGo').textContent = 'Сделать (' + todo.length + ')';
+    $('#introInfo').textContent = introNote || (todo.length
+      ? 'Готово у ' + done + ' из ' + all.length + ' уроков Kinescope. Делается само; если что-то не получилось — нажмите «Сделать».'
+      : 'Готово у всех ' + all.length + ' уроков Kinescope: видео стартует сразу, без ожидания.');
+  }
+  async function cutIntro(ksId, dur){
+    const M = await mb();
+    const input = new M.Input({source: new M.UrlSource(ksHls(ksId)), formats: M.ALL_FORMATS.concat(M.HLS_FORMATS || [])});
+    // the quality the app starts with: the best one not above 720p
+    const vts = await input.getVideoTracks();
+    let pick = null, side = -1;
+    for (const t of vts) { const sd = Math.min(t.displayWidth, t.displayHeight); if (sd <= 720 && sd > side) { pick = t; side = sd; } }
+    if (!pick) pick = vts.reduce((a, t) => !a || Math.min(t.displayWidth, t.displayHeight) < Math.min(a.displayWidth, a.displayHeight) ? t : a, null);
+    if (!pick) throw new Error('в потоке нет видео');
+    const aud = pick.getPrimaryPairableAudioTrack ? await pick.getPrimaryPairableAudioTrack() : null;
+    const output = new M.Output({format: new M.Mp4OutputFormat({fastStart: 'in-memory'}), target: new M.BufferTarget()});
+    const conv = await M.Conversion.init({input, output, showWarnings: false, tracks: 'all',
+      trim: {start: 0, end: Math.min(INTRO_SEC, dur || INTRO_SEC)},
+      video: t => t === pick ? {} : {discard: true}, audio: t => aud && t === aud ? {} : {discard: true}});
+    if (!conv.isValid) throw new Error('не получилось прочитать поток (' + conv.discardedTracks.filter(d => d.reason !== 'discarded_by_user').map(d => d.reason).join(', ') + ')');
+    if (!conv.utilizedTracks.some(t => t.type === 'video')) throw new Error('в начале нет видео');
+    await conv.execute();
+    const blob = new Blob([output.target.buffer], {type: 'video/mp4'});
+    if (blob.size < 20000) throw new Error('получился пустой файл');
+    return blob;
+  }
+  function introAuto(){ if (!introJob && !publishing && remote && introWanted().length) runIntros(true); }
+  $('#introGo').addEventListener('click', () => { introFail = {}; runIntros(false); });
+  function runIntros(auto){
+    if (introJob || publishing) return introJob;
+    introJob = (async () => {
+      const list = introWanted().filter(l => !(auto && introFail[l.ks]));
+      const made = [], bad = [];
+      try {
+        for (let i = 0; i < list.length; i++) {
+          const l = list[i];
+          introNote = 'Готовлю начало урока «' + l.name + '» (' + (i + 1) + ' из ' + list.length + ')…'; paintIntro(i / (list.length + 1));
+          if (await ksCheck(l.ks) !== 'ok') { bad.push(l.name + ' — Kinescope ещё обрабатывает'); continue; }
+          try { made.push({l, blob: await withTimeout(cutIntro(l.ks, l.dur), 90000)}); }
+          catch(e) { introFail[l.ks] = true; bad.push(l.name + ' — ' + (e && e.message || e)); }
+        }
+        if (made.length) {
+          introNote = 'Публикую ' + made.length + ' ' + (made.length === 1 ? 'начало' : 'начал') + '…'; paintIntro(list.length / (list.length + 1));
+          await commitIntros(made);
+        }
+        introNote = '';
+        if (made.length) toast('Мгновенный старт готов: ' + made.map(m => '«' + m.l.name + '»').join(', ') + '. В приложении через 1–5 минут');
+        if (bad.length) introNote = 'Не получилось: ' + bad.join('; ') + '.';
+      } catch(e) {
+        introNote = 'Не получилось опубликовать начала: ' + (e && e.message || e) + '. Нажмите «Сделать» ещё раз.';
+      } finally {
+        introJob = null; paintIntro();
+      }
+    })();
+    paintIntro(0);
+    return introJob;
+  }
+  async function commitIntros(made){
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ref = await gh('/git/ref/heads/' + BRANCH);
+      const head = await gh('/git/commits/' + ref.object.sha);
+      // fresh copy of intros.js (another tab may have changed it), keep only lessons that still play that video
+      let cur = {};
+      try { const f = await gh('/contents/intros.js?ref=' + ref.object.sha); cur = parseData(b64ToUtf8(f.content), 'window.LESSON_INTROS').data || {}; } catch(e) {}
+      const tree = [];
+      for (const m of made) tree.push({path: 'v/' + m.l.id + '-intro.mp4', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(m.blob))});
+      const next = {};
+      remote.lessons.forEach(l => { if (l.ks && cur[l.id] === l.ks) next[l.id] = l.ks; });
+      made.forEach(m => { next[m.l.id] = m.l.ks; });
+      tree.push({path: 'intros.js', mode: '100644', type: 'blob', content:
+        '// Мгновенный старт уроков из Kinescope. Его меняет админка (admin.html) — формат JSON.\n' +
+        '// урок → id видео Kinescope, из которого вырезано начало v/<урок>-intro.mp4 (первые 5 сек, те же кадры, что в потоке).\n' +
+        '// Если видео урока в Kinescope заменили, id не совпадёт — приложение просто не будет использовать старое начало.\n' +
+        'window.LESSON_INTROS = ' + JSON.stringify(next, null, 1) + ';\n'});
+      const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
+      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: мгновенный старт — ' + made.map(m => m.l.name).join(', '), tree: newTree.sha, parents: [ref.object.sha]}});
+      try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); }
+      catch(e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; } // someone published in between: redo on top
+      intros = next; made.forEach(m => { vFiles[m.l.id + '-intro.mp4'] = m.blob.size; });
+      return;
     }
   }
 

@@ -155,6 +155,9 @@ p{margin:0}
 /* while a lesson loads: its 3-second cover animation + spinner instead of a black screen */
 .vload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:#111113 center/cover no-repeat}
 .vload[hidden]{display:none}
+/* the lesson's first 5 seconds (plain mp4, starts at once) on top of the stream until the stream catches up */
+.stage #vin{position:absolute;inset:0}
+.stage #vin[hidden]{display:none}
 .stage .vload video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.6}
 .vload.stall{background:transparent!important}
 .vload.stall video{display:none}
@@ -314,6 +317,7 @@ body.fsmode .bigplay{z-index:3}
   <div class="player" id="player" style="margin-top:12px">
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
+      <video id="vin" playsinline preload="auto" hidden></video>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
       <svg id="figure" viewBox="0 0 200 200" aria-hidden="true">
         <g id="dancer" stroke="#F2EFE8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -633,6 +637,7 @@ body.fsmode .bigplay{z-index:3}
 <script src="config.js"></script>
 <script src="i18n.js"></script>
 <script src="lessons.js"></script>
+<script src="intros.js"></script>
 <script>
 (function(){
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
@@ -895,7 +900,7 @@ body.fsmode .bigplay{z-index:3}
 
   // ===== lesson player =====
   const P = { t: 0, dur: 30, playing: false, rate: 1, mirror: false, loop: null, own: false, last: 0 };
-  const vid = $('#vid'), stage = $('#stage');
+  const vid = $('#vid'), vin = $('#vin'), stage = $('#stage');
   const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
   let curSection = 'Footwork';
   // Long lessons live on Kinescope (lesson field `ks` = video id) and play as an HLS stream in OUR <video>,
@@ -950,9 +955,11 @@ body.fsmode .bigplay{z-index:3}
     vload.hidden = true; vload.classList.remove('stall');
     try { vloadPv.pause(); } catch (_) {}
   }
-  vid.addEventListener('playing', hideLoad);
-  vid.addEventListener('waiting', () => { if (P.playing && vload.hidden) showStall(); });
-  vid.addEventListener('canplay', () => { if (!P.playing) hideLoad(); });
+  [vid, vin].forEach(el => {
+    el.addEventListener('playing', () => { if (el === av) hideLoad(); });
+    el.addEventListener('waiting', () => { if (el === av && P.playing && vload.hidden) showStall(); });
+    el.addEventListener('canplay', () => { if (el === av && !P.playing) hideLoad(); });
+  });
   // warm-up: while the user looks at a section, open the connection to Kinescope and fetch the tiny playlists,
   // so tapping a lesson skips those steps (small text files only, no video)
   const ksWarm = new Set(), ksHosts = new Set(['https://kinescope.io']);
@@ -986,30 +993,186 @@ body.fsmode .bigplay{z-index:3}
     } catch (_) {}
   }
   let warmGen = 0; // opening a lesson stops the background warm-up, so it doesn't compete with the video
+  // The first 5 seconds of the two lessons at the top of a section are downloaded in advance into memory
+  // (one at a time), so tapping one plays it straight from the phone. Skipped when the phone asks to save data.
+  // Opening a lesson stops downloads of the other lessons, so the opened one gets the whole connection.
+  const introMem = new Map(); // intro url -> blob: url
+  let introQ = [], introCur = null;
+  function warmIntro(l){
+    const u = introFor(l);
+    if (!u || introMem.has(u) || (introCur && introCur.u === u) || introQ.includes(u) || !window.fetch || !window.AbortController) return;
+    try { if (navigator.connection && navigator.connection.saveData) return; } catch (_) {}
+    introQ.push(u); if (!introCur) nextIntro();
+  }
+  async function nextIntro(){
+    const u = introQ.shift(); if (!u) return;
+    const job = introCur = { u, ac: new AbortController(), got: 0, total: 0 };
+    job.p = new Promise((ok, bad) => { job.ok = ok; job.bad = bad; }); job.p.catch(() => {});
+    try {
+      const r = await fetch(u, { signal: job.ac.signal });
+      if (!r.ok || !r.body) throw new Error('intro');
+      job.total = +r.headers.get('content-length') || 0;
+      const rd = r.body.getReader(), parts = [];
+      for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; }
+      const url = URL.createObjectURL(new Blob(parts, { type: 'video/mp4' }));
+      introMem.set(u, url);
+      // keep a few in memory; never throw away the one on screen
+      for (const [k, v] of introMem) { if (introMem.size <= 4) break; if (v !== vin.getAttribute('src')) { URL.revokeObjectURL(v); introMem.delete(k); } }
+      job.ok(url);
+    } catch (e) { job.bad(e); }
+    if (introCur === job) { introCur = null; nextIntro(); }
+  }
+  function stopIntroWarm(keepU){
+    introQ = [];
+    if (introCur && introCur.u !== keepU) { introCur.ac.abort(); introCur = null; }
+  }
+  // where the opened lesson's intro comes from: memory, a download that is already well under way, or the network
+  function introSource(l){
+    const u = introFor(l); if (!u) return null;
+    if (introMem.has(u)) return { url: introMem.get(u) };
+    const j = introCur && introCur.u === u ? introCur : null;
+    if (j && j.total && j.got >= j.total * 0.6) return { wait: j.p, url: u };
+    if (j) { j.ac.abort(); introCur = null; }
+    return { url: u };
+  }
   function warmKs(ls){
+    ls.filter(l => introFor(l)).slice(0, 2).forEach(l => warmIntro(l));
     const gen = ++warmGen;
     const todo = ls.filter(l => l && l.ks && !ksWarm.has(l.ks)).slice(0, 8);
     (async () => { for (const l of todo) { if (gen !== warmGen) return; await warmOne(l); } })();
   }
   // Android etc.: get the stream player ready in the background right after start, not on the first tap
   if (!isApple && LESSONS.some(l => l.ks)) setTimeout(() => { loadHlsLib().catch(() => {}); }, 1200);
-  function loadVideo(src, poster, ks){
+  // ===== instant start =====
+  // For Kinescope lessons the first 5 seconds also live on GitHub as a plain mp4 (v/<id>-intro.mp4, cut from the
+  // very same stream, so the frames are identical). It starts at once in #vin on top; the stream loads muted in
+  // #vid underneath, is brought to exactly the same moment, and then the two swap — sound and picture move to the
+  // stream. `av` is the element the user sees and hears; everything (timeline, speed, loop, stats) follows it.
+  const INTROS = window.LESSON_INTROS || {};
+  const introFor = l => l && l.ks && INTROS[l.id] === l.ks ? 'v/' + l.id + '-intro.mp4' : '';
+  let av = vid, introOn = false, soundOff = false, pendingStart = null;
+  // the stream starts loading once the intro is moving (so the intro gets the whole connection first)
+  let streamDefer = null, streamDeferT = 0;
+  function startStream(){ if (!streamDefer) return; const f = streamDefer; streamDefer = null; clearTimeout(streamDeferT); f(); }
+  function applyMute(){ vid.muted = av === vid ? soundOff : true; vin.muted = av === vin ? soundOff : true; }
+  function clearIntro(){
+    introOn = false; av = vid; streamDefer = null; clearTimeout(streamDeferT); vin._tok = null;
+    try { vin.pause(); } catch (_) {}
+    vin.hidden = true; vin.removeAttribute('src'); try { vin.load(); } catch (_) {}
+    vid.playbackRate = P.rate; applyMute();
+  }
+  // move picture and sound to the stream; the intro stays on top until the stream has really shown its frame
+  function toStream(seekTo){
+    if (!introOn) return;
+    startStream();
+    introOn = false; av = vid;
+    // the intro freezes on its frame and is removed the moment the stream shows that same frame (no step back).
+    // While loading, the browser reports the intro's position late; after pause() it is exact.
+    try { vin.pause(); } catch (_) {}
+    if (seekTo === 'here') seekTo = vin.currentTime;
+    const holdAt = seekTo != null ? seekTo : vin.currentTime;
+    vid.playbackRate = P.rate;
+    if (seekTo != null) mainSeek(seekTo);
+    applyMute();
+    if (P.playing) { playMain(); setTimeout(() => { if (P.playing && av === vid && vid.paused && !ksPending) playMain(); }, 300); }
+    const evs = ['seeked', 'canplay', 'playing', 'timeupdate'];
+    let gone = false;
+    const done = () => {
+      if (gone) return; gone = true;
+      evs.forEach(e => vid.removeEventListener(e, chk));
+      if (introOn || av !== vid) return;
+      vin.hidden = true; vin.removeAttribute('src'); try { vin.load(); } catch (_) {}
+      if (!vid.paused && vid.readyState >= 3) hideLoad(); // the stream was already playing underneath
+    };
+    const caught = t => t >= holdAt - 0.012 || !P.playing;
+    const chk = () => {
+      if (gone) return;
+      if (vid.readyState < 3 || vid.seeking) { if (P.playing) showStall(); return; }
+      if (!vid.requestVideoFrameCallback && caught(vid.currentTime)) requestAnimationFrame(() => requestAnimationFrame(done));
+    };
+    if (vid.requestVideoFrameCallback) {
+      const cb = (_, md) => { if (gone || introOn || av !== vid) return; if (!vid.seeking && caught(md.mediaTime)) done(); else vid.requestVideoFrameCallback(cb); };
+      vid.requestVideoFrameCallback(cb);
+    }
+    evs.forEach(e => vid.addEventListener(e, chk));
+    chk();
+  }
+  function mainSeek(t){
+    if (vid.readyState >= 1) { vid.currentTime = t; pendingStart = null; } else pendingStart = t;
+  }
+  // every frame while the intro plays: keep the hidden stream at the same moment, swap when they match
+  let lastNudge = 1;
+  function tickIntro(){
+    if (!introOn || !P.playing) return;
+    const ti = vin.currentTime, dur = vin.duration || 5;
+    if (vin.ended || ti >= dur - 0.04) { toStream(Math.min(ti, dur)); return; }
+    if (streamDefer || ksPending || vid.paused || vid.seeking || vid.readyState < 3) return;
+    // the intro is stuck loading but the stream is ready: carry on with the stream from this moment
+    if (vin.readyState < 3) { toStream('here'); return; }
+    const d = ti - vid.currentTime; // >0: the stream is behind
+    if (Math.abs(d) <= 0.02) { toStream(null); return; }
+    if (Math.abs(d) > 0.35) { vid.currentTime = ti + 0.12 * P.rate; return; }
+    // close: let the stream run a bit faster/slower (it is muted and hidden) until it lines up exactly
+    const k = Math.max(0.5, Math.min(1.6, 1 + d * 3));
+    if (Math.abs(k - lastNudge) > 0.02) { lastNudge = k; vid.playbackRate = P.rate * k; }
+  }
+  function playMain(){
+    const pr = vid.play();
+    if (pr && pr.catch) pr.catch(e => {
+      if (av !== vid || (e && e.name === 'AbortError')) return; // background stream: it gets another try at the swap
+      // browser blocked autoplay with sound: start muted, user can turn sound on
+      soundOff = true; applyMute(); paintMute();
+      vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); });
+    });
+  }
+  function playIntro(){
+    const pr = vin.play();
+    if (pr && pr.catch) pr.catch(e => {
+      if (!introOn || (e && e.name === 'AbortError')) return;
+      soundOff = true; applyMute(); paintMute();
+      vin.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); });
+    });
+  }
+  vin.addEventListener('loadedmetadata', () => { if (av === vin) stage.classList.toggle('portrait', vin.videoHeight > vin.videoWidth); });
+  vin.addEventListener('playing', () => { if (introOn) startStream(); });
+  vin.addEventListener('ended', () => { if (introOn) toStream(vin.duration || vin.currentTime); });
+  // no intro file (deleted, network): just carry on with the stream
+  vin.addEventListener('error', () => { if (introOn && vin.getAttribute('src')) { startStream(); introOn = false; av = vid; vin.hidden = true; vid.playbackRate = P.rate; applyMute(); if (P.playing && !ksPending) playMain(); if (!vid.paused && vid.readyState >= 3) hideLoad(); } });
+
+  function loadVideo(src, poster, ks, intro){
     setPlaying(false);
     dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
+    clearIntro(); pendingStart = null; lastNudge = 1;
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
     stage.classList.add('portrait');
+    if (ks && intro) {
+      introOn = true; av = vin;
+      vin.poster = poster || ''; vin.playbackRate = P.rate; vin.hidden = false;
+      if (!intro.wait) vin.src = intro.url;
+      else {
+        // its download is mostly done: finishing it is quicker than starting again
+        const tok = vin._tok = {};
+        const use = url => { if (vin._tok !== tok || !introOn) return; vin.src = url; vin.playbackRate = P.rate; if (P.playing) playIntro(); };
+        intro.wait.then(use, () => use(intro.url));
+      }
+      applyMute();
+    }
     if (!ks) { vid.src = src; vid.playbackRate = P.rate; return; }
+    if (introOn) { vid.removeAttribute('src'); vid.load(); streamDefer = () => loadStream(ks); streamDeferT = setTimeout(startStream, 1500); }
+    else loadStream(ks);
+  }
+  function loadStream(ks){
     const url = ksUrl(ks);
-    if (isApple && vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; vid.playbackRate = P.rate; return; }
+    if (isApple && vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; vid.playbackRate = P.rate; if (P.playing) playMain(); return; }
     vid.removeAttribute('src'); vid.load();
     const token = vid._ksToken = {};
     ksPending = true;
     loadHlsLib().then(Hls => {
       if (vid._ksToken !== token) return; // user already opened another lesson
       ksPending = false;
-      if (!Hls.isSupported()) { if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing) vid.play().catch(() => {}); } else streamFailed(); return; }
+      if (!Hls.isSupported()) { if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing) playMain(); } else streamFailed(); return; }
       // start with 720p or lower: the first piece downloads fast, then hls.js raises the quality by itself
       hls = new Hls({ capLevelToPlayerSize: true, autoStartLoad: false, startFragPrefetch: true, maxBufferLength: 30 });
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -1019,7 +1182,7 @@ body.fsmode .bigplay{z-index:3}
           if (side ? side <= 720 : (lv.bitrate || 0) <= 3e6) start = i;
         });
         try { hls.startLevel = start; } catch (_) {}
-        hls.startLoad(-1);
+        hls.startLoad(pendingStart != null ? pendingStart : -1);
       });
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d || !d.fatal) return;
@@ -1029,16 +1192,17 @@ body.fsmode .bigplay{z-index:3}
       hls.loadSource(url);
       hls.attachMedia(vid);
       vid.playbackRate = P.rate;
-      if (P.playing) { const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { vid.muted = true; paintMute(); vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); }); }); }
+      if (P.playing) playMain();
     }).catch(() => { if (vid._ksToken === token) { ksPending = false; streamFailed(); } });
   }
   vid.addEventListener('error', () => { if (vid.src && /kinescope\.io/.test(vid.src)) streamFailed(); });
   vid.addEventListener('loadedmetadata', () => {
-    P.dur = vid.duration || P.dur; vid.playbackRate = P.rate;
+    P.dur = vid.duration || P.dur; if (av === vid) vid.playbackRate = P.rate;
+    if (pendingStart != null) { vid.currentTime = pendingStart; pendingStart = null; }
     stage.classList.toggle('portrait', vid.videoHeight > vid.videoWidth);
     paint();
   });
-  vid.addEventListener('ended', () => { if (P.loop) { seekTo(P.loop.a); vid.play().catch(() => {}); } else setPlaying(false); });
+  vid.addEventListener('ended', () => { if (av !== vid) return; if (P.loop) { seekTo(P.loop.a); vid.play().catch(() => {}); } else setPlaying(false); });
   function openLesson(id){
     const l = BY_ID[id]; if (!l) return;
     curSection = l.sec; curLesson = l;
@@ -1051,7 +1215,8 @@ body.fsmode .bigplay{z-index:3}
     $('#badgeOwn').hidden = true;
     setLoop(null);
     P.dur = l.dur;
-    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks);
+    stopIntroWarm(introFor(l));
+    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, introSource(l));
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -1061,7 +1226,7 @@ body.fsmode .bigplay{z-index:3}
     go('lesson');
     setPlaying(true);
     warmGen++;
-    if (P.playing && (vid.paused || vid.readyState < 3)) showLoad(l);
+    if (P.playing && (av.paused || av.readyState < 3)) showLoad(l);
     setTimeout(() => { if (curLesson === l) warmKs(list.filter(x => x !== l)); }, 5000);
     $('#lesson').scrollTop = 0;
   }
@@ -1074,21 +1239,22 @@ body.fsmode .bigplay{z-index:3}
     $('#btnPlay').setAttribute('aria-label', on ? T('Пауза') : T('Смотреть'));
     if (document.body.classList.contains('fsmode')) { syncFs(); if (!on) { document.body.classList.remove('fs-hide'); clearTimeout(fsTimer); } else pokeFs(); }
     if (P.own){
-      if (on && ksPending) { /* the stream starts itself as soon as hls.js is attached */ }
-      else if (on) {
-        const pr = vid.play();
-        if (pr && pr.catch) pr.catch(() => {
-          // browser blocked autoplay with sound: start muted, user can turn sound on
-          vid.muted = true; paintMute();
-          vid.play().catch(() => { P.playing = false; $('#bigPlay').hidden = false; hideLoad(); });
-        });
-      } else { vid.pause(); hideLoad(); }
+      if (on) {
+        if (introOn) playIntro();
+        // the stream (in front, or loading underneath the intro); with hls.js not attached yet it starts itself
+        if (!ksPending) playMain();
+      } else { vid.pause(); if (introOn) vin.pause(); hideLoad(); }
     }
     P.last = performance.now();
   }
   function seekTo(t){
     P.t = Math.min(Math.max(0, t), P.dur);
-    if (P.own) vid.currentTime = P.t;
+    if (P.own) {
+      // inside the first 5 seconds the intro can jump by itself; further on, hand over to the stream
+      if (introOn && P.t < (vin.duration || 5) - 0.3) vin.currentTime = P.t;
+      else if (introOn) toStream(P.t);
+      else vid.currentTime = P.t;
+    }
     paint();
   }
   function setLoop(l){
@@ -1118,7 +1284,7 @@ body.fsmode .bigplay{z-index:3}
   }
   function frame(now){
     if (P.playing){
-      if (P.own){ P.t = vid.currentTime; }
+      if (P.own){ if (introOn) tickIntro(); P.t = av.currentTime; }
       else { P.t += (now - P.last) / 1000 * P.rate; }
       P.last = now;
       if (P.loop && P.t >= P.loop.b){ seekTo(P.loop.a); }
@@ -1132,7 +1298,8 @@ body.fsmode .bigplay{z-index:3}
   $('#bigPlay').addEventListener('click', () => setPlaying(true));
   $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
   $('#stage').addEventListener('click', e => {
-    if (e.target.closest('#bigPlay') || e.target.closest('#btnFs')) return;
+    // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
+    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute')) return;
     if (document.body.classList.contains('fsmode')){
       if (e.target.closest('.fstop') || e.target.closest('.fsbottom')) { pokeFs(); return; }
       document.body.classList.toggle('fs-hide'); if (!document.body.classList.contains('fs-hide')) pokeFs(); return;
@@ -1162,7 +1329,7 @@ body.fsmode .bigplay{z-index:3}
     } catch (_) {}
   }
   function paintRotBtn(){ const show = isLandscapeVideo() && window.innerHeight > window.innerWidth; $('#fsRotate').hidden = !show; $('#fsRotSpacer').hidden = show; }
-  function isLandscapeVideo(){ return vid.videoWidth > 0 && vid.videoWidth > vid.videoHeight; }
+  function isLandscapeVideo(){ const e = av.videoWidth > 0 ? av : vid; return e.videoWidth > 0 && e.videoWidth > e.videoHeight; }
   function setRot(on){
     const root = document.documentElement;
     const h = window.innerHeight, w = window.innerWidth;
@@ -1203,10 +1370,10 @@ body.fsmode .bigplay{z-index:3}
   }
   $('#btnFs').addEventListener('click', () => enterFs());
   function paintMute(){
-    $('#icoMute').innerHTML = vid.muted ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
-    $('#btnMute').setAttribute('aria-label', vid.muted ? T('Включить звук') : T('Выключить звук'));
+    $('#icoMute').innerHTML = soundOff ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
+    $('#btnMute').setAttribute('aria-label', soundOff ? T('Включить звук') : T('Выключить звук'));
   }
-  $('#btnMute').addEventListener('click', () => { vid.muted = !vid.muted; paintMute(); });
+  $('#btnMute').addEventListener('click', () => { soundOff = !soundOff; applyMute(); paintMute(); });
   paintMute();
   $('#fsExit').addEventListener('click', () => { if (history.state && history.state.fs) history.back(); else exitFs(); });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fsmode')) exitFs(); });
@@ -1227,7 +1394,7 @@ body.fsmode .bigplay{z-index:3}
     const b = e.target.closest('button'); if (!b) return;
     P.rate = +b.dataset.rate;
     $('#speedSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    vid.playbackRate = P.rate;
+    av.playbackRate = P.rate; if (introOn) { lastNudge = 1; vid.playbackRate = P.rate; }
     $('#badgeSpeed').hidden = P.rate === 1; $('#badgeSpeed').textContent = P.rate + 'x';
     $('#toolHint').textContent = P.rate === 1 ? T('Обычная скорость.') : T('Замедление {r}x — смотри, как ставятся ноги и куда переносится вес.', {r: P.rate});
   });
@@ -1516,7 +1683,7 @@ body.fsmode .bigplay{z-index:3}
   let sessionSec = 0, sessionCounted = false, lastLessonId = null;
   setInterval(() => {
     // count only real playback of a lesson video, with the app on screen
-    if (!P.playing || document.hidden || !curLesson || !$('#badgeOwn').hidden || vid.paused) return;
+    if (!P.playing || document.hidden || !curLesson || !$('#badgeOwn').hidden || av.paused) return;
     if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
     stats.sec += 1; sessionSec += 1;
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
