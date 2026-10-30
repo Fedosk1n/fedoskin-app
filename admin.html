@@ -168,7 +168,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <div class="f"><span>Куда загрузить видео</span>
           <div class="seg" role="group" aria-label="Куда загрузить видео"><button class="btn btn-sm" type="button" id="aDestKs" aria-pressed="true">Kinescope</button><button class="btn btn-sm" type="button" id="aDestGh" aria-pressed="false">GitHub</button></div>
           <span class="hint" id="aDestHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
-        <label class="sw" id="aCompressRow"><input type="checkbox" id="aCompress"><span><b>Сжать до 720p</b><br><span class="hint" id="aCompressHint">Делает файл в 5–10 раз меньше. Лучше на компьютере в Chrome.</span></span></label>
+        <div class="f" id="aCompressRow"><span>Качество в GitHub</span>
+          <div class="seg" role="group" aria-label="Качество в GitHub"><button class="btn btn-sm" type="button" data-q="720" aria-pressed="false">720p</button><button class="btn btn-sm" type="button" data-q="1080" aria-pressed="false">1080p</button><button class="btn btn-sm" type="button" data-q="orig" aria-pressed="false">Без сжатия</button></div>
+          <span class="hint" id="aCompressHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
         <div class="row" style="margin-top:18px;flex-wrap:wrap"><button class="btn btn-accent" id="aGo" disabled>Подготовить урок</button><button class="btn" id="aCancel" hidden>Отменить</button></div>
         <div id="aWork" hidden>
           <ul class="plist" id="aSteps"></ul>
@@ -182,7 +184,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       </div>
       <div id="aPhoneHelp">
       <h3>Если сжимаете на телефоне</h3>
-      <p class="soft small">Проще всего: в CapCut экспортируйте видео в <b>720p, 30 или 60 кадров</b>, выберите его здесь и выключите «Сжать до 720p». Файл должен быть меньше 70 МБ — это ограничение GitHub. Обложку и анимацию админка сделает сама.</p>
+      <p class="soft small">Проще всего: в CapCut экспортируйте видео в <b>720p, 30 или 60 кадров</b>, выберите его здесь и нажмите «Без сжатия». Можно и 1080p — тогда ролик весит в 3–5 раз больше. Файл должен быть меньше 70 МБ — это ограничение GitHub. Обложку и анимацию админка сделает сама.</p>
       </div>
     </div>
 
@@ -799,8 +801,20 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // ---------- add video ----------
   const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   const canEncode = typeof VideoEncoder !== 'undefined';
-  $('#aCompress').checked = canEncode && !isPhone;
-  if (!canEncode) { $('#aCompress').disabled = true; $('#aCompressHint').textContent = 'Этот браузер не умеет сжимать видео. Откройте админку на компьютере в Chrome или загрузите уже сжатое видео.'; }
+  // GitHub quality: 720p (smallest), 1080p (sharper, ~3x bigger), orig (upload the file as it is)
+  let quality = store.get('fedoskin-admin-quality') || (canEncode && !isPhone ? '720' : 'orig');
+  if (!canEncode) quality = 'orig';
+  const Q_HINT = {
+    '720': 'Самый лёгкий файл (~1 Мбит/с, ролик 30 сек ≈ 4 МБ). Сжимает браузер — лучше на компьютере в Chrome.',
+    '1080': 'Чётче, особенно в замедлении. Ролик 30 сек ≈ 10–13 МБ (в 3 раза больше, чем 720p). Сжимает браузер — лучше на компьютере в Chrome.',
+    'orig': 'Файл загрузится как есть, без потерь от админки. Должен быть меньше 70 МБ — например, экспорт из CapCut в 720p или 1080p.'
+  };
+  function paintQuality(){
+    document.querySelectorAll('#aCompressRow [data-q]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.q === quality)); b.disabled = !canEncode && b.dataset.q !== 'orig'; });
+    $('#aCompressHint').textContent = canEncode ? Q_HINT[quality] : 'Этот браузер не умеет сжимать видео — загрузится как есть. Для сжатия откройте админку на компьютере в Chrome.';
+  }
+  document.querySelectorAll('#aCompressRow [data-q]').forEach(b => b.addEventListener('click', () => { if (busy) return; quality = b.dataset.q; store.set('fedoskin-admin-quality', quality); paintQuality(); }));
+  paintQuality();
   let file = null, meta = null, idTouched = false, busy = false, cancelled = false;
   let dest = store.get('fedoskin-admin-dest') || 'ks';
   function paintDest(){
@@ -918,11 +932,12 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (lessons.some(l => l.id === id) || vFiles[id + '.mp4']) { $('#aErr').hidden = false; $('#aErr').textContent = 'Урок с именем файла «' + id + '» уже есть — поменяйте имя файла.'; return; }
     const toKs = dest === 'ks';
     if (toKs && !ksReady()) { $('#aErr').hidden = false; $('#aErr').textContent = 'Впишите токен и проект Kinescope во вкладке «Тексты и настройки» — или выберите «GitHub».'; return; }
-    const compress = !toKs && $('#aCompress').checked;
-    if (!toKs && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Включите «Сжать до 720p» или экспортируйте из CapCut в 720p.'; return; }
+    const compress = !toKs && canEncode && quality !== 'orig';
+    const target = quality === '1080' ? 1080 : 720;
+    if (!toKs && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Выберите «720p» или «1080p» — админка сожмёт, или экспортируйте из CapCut поменьше.'; return; }
     busy = true; cancelled = false; paintGo(); $('#aCancel').hidden = false;
     $('#aErr').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
-    setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до 720p' : 'Видео без сжатия']);
+    setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до ' + target + 'p' : 'Видео без сжатия']);
     let step = 0;
     try {
       if (!meta) meta = await readMeta(file);
@@ -958,14 +973,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         stepState(2, 'run');
         const vertical = meta.h >= meta.w;
         const short = Math.min(meta.w, meta.h);
-        const size = short > 720 ? (vertical ? {width: 720} : {height: 720}) : {};
-        // ~1 Mbit/s, but never more than ~90 MB for long videos
-        const br = Math.max(400000, Math.min(1000000, Math.floor(60e6 * 8 / Math.max(1, dur)) - 160000));
+        const size = short > target ? (vertical ? {width: target} : {height: target}) : {};
         // the encoder must be told the real frame rate, otherwise 60 fps video comes out about twice as big
         const fps = await sourceFps(file);
         const rate = fps >= 50 ? 60 : 30;
+        // 720p ~1 Mbit/s; 1080p ~3.5 Mbit/s at 60 fps (2.5 at 30); never more than ~60 MB for long videos
+        const cap = target === 1080 ? (rate === 60 ? 3500000 : 2500000) : 1000000;
+        const br = Math.max(target === 1080 ? 800000 : 400000, Math.min(cap, Math.floor(60e6 * 8 / Math.max(1, dur)) - 160000));
         const prog = (from, k, label) => p => { bar(.15 + (from + p * k) * .85); stepState(2, 'run', label + Math.round((from + p * k) * 100) + '%'); };
-        mp4 = await convert(file, {bitrate: br, video: Object.assign({frameRate: rate}, size)}, prog(0, 1, 'Сжатие видео до 720p — '));
+        mp4 = await convert(file, {bitrate: br, video: Object.assign({frameRate: rate}, size)}, prog(0, 1, 'Сжатие видео до ' + target + 'p — '));
         if (mp4.size > MAX_FILE && !cancelled) {
           // still too big: second try at 30 fps with a lower bitrate, scaled to fit ~85 MB
           const br2 = Math.max(250000, Math.floor(br * (58 * 1048576) / mp4.size));
@@ -994,7 +1010,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     } catch(e) {
       stepState(step, 'bad');
       $('#aErr').hidden = false;
-      $('#aErr').textContent = cancelled ? 'Отменено.' : 'Не получилось: ' + (e && e.message || e) + (step === 2 && compress && !/70 МБ/.test(String(e && e.message)) ? '. Попробуйте в Chrome на компьютере или экспортируйте видео из CapCut в 720p и выключите «Сжать».' : '');
+      $('#aErr').textContent = cancelled ? 'Отменено.' : 'Не получилось: ' + (e && e.message || e) + (step === 2 && compress && !/70 МБ/.test(String(e && e.message)) ? '. Попробуйте в Chrome на компьютере или экспортируйте видео из CapCut в 720p/1080p и нажмите «Без сжатия».' : '');
     } finally {
       busy = false; current = null; $('#aCancel').hidden = true; paintGo();
     }
