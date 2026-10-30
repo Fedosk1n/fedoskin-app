@@ -159,6 +159,9 @@ body.fsmode.fs-hide .fsbar *{pointer-events:none!important}
 .fstxt{font-weight:700;font-size:14px}
 body.fsmode .bigplay{z-index:3}
 .stage.portrait{aspect-ratio:9/16;height:min(56vh, 560px);width:auto;margin:0 auto}
+.pushcard{margin-top:10px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.pushcard .row{gap:10px}
+.pushcard .btn{min-height:42px;font-size:14px}
 .alphabar{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin-top:6px;padding:8px 12px;border-radius:12px;border:1px solid rgba(226,97,26,.45);background:rgba(226,97,26,.1);color:var(--fg);font-size:13px;font-weight:600;cursor:pointer}
 .alphatag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 7px;border-radius:5px;background:var(--accent);color:var(--on-accent)}
 .alphabadge{display:inline-flex;align-items:center;font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.6px;padding:4px 8px;border-radius:6px;background:var(--accent);color:var(--on-accent)}
@@ -235,6 +238,10 @@ body.fsmode .bigplay{z-index:3}
   </div>
   <div id="results" hidden style="margin-top:6px"></div>
   <div id="homeBody">
+  <div class="pushcard" id="pushCard" hidden>
+    <span class="stack" style="gap:4px"><b>Сообщать о новых уроках?</b><span class="muted" style="font-size:13px;line-height:1.4">Пришлём уведомление, когда в приложении появится новый элемент.</span></span>
+    <div class="row"><button class="btn btn-accent" id="pushYes" style="flex:1">Включить</button><button class="btn btn-ghost" id="pushNo" style="flex:1">Не сейчас</button></div>
+  </div>
   <div id="savedHome" hidden style="margin-top:20px">
     <div class="sec-head" style="margin-bottom:10px"><h2>Сохранённое</h2><button class="muted" data-go="profile" style="background:none;border:none;font-size:13px;padding:10px 0;cursor:pointer">Все</button></div>
     <div class="chips" id="savedChips"></div>
@@ -514,6 +521,7 @@ body.fsmode .bigplay{z-index:3}
     <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-go="review"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
+    <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
     <button class="list-item" id="installItem"><span style="flex:1;font-weight:600">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
     <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
   </div>
@@ -684,7 +692,7 @@ body.fsmode .bigplay{z-index:3}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Я на разбор из приложения Fedoskin team 🔥', reviewRub:2000, reviewUsd:30, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -1668,6 +1676,78 @@ body.fsmode .bigplay{z-index:3}
   })();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
+  // ===== notifications about new lessons (server: server/push-worker.js, address in config.js -> pushUrl) =====
+  (function pushNotifications(){
+    const URL_ = String(CFG.pushUrl || '').replace(/\/+$/, '');
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:';
+    const get = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+    const set = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
+    if (!URL_) return; // not set up yet
+    $('#pushItem').hidden = false;
+    const isOn = () => supported && Notification.permission === 'granted' && get('fedoskin-push') === 'on';
+    function paint(){
+      let st;
+      if (isOn()) st = T('Включены');
+      else if (!supported && isIOS && !isStandalone()) st = T('Сначала добавь на экран');
+      else if (!supported) st = T('Не поддерживается');
+      else if (Notification.permission === 'denied') st = T('Запрещены в настройках');
+      else st = T('Выключены');
+      $('#pushState').textContent = st;
+      $('#pushCard').hidden = !(supported && isStandalone() && Notification.permission === 'default' && !get('fedoskin-push-asked'));
+    }
+    const b64 = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+    async function send(path, body){
+      const r = await fetch(URL_ + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error('server ' + r.status);
+    }
+    async function turnOn(){
+      set('fedoskin-push-asked', '1');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { paint(); if (perm === 'denied') toast(T('Уведомления запрещены — включи их в настройках телефона')); return; }
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          const key = (await (await fetch(URL_ + '/key')).json()).key;
+          sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) });
+        }
+        await send('/subscribe', { sub: sub.toJSON(), lang: LANG });
+        set('fedoskin-push', 'on'); set('fedoskin-push-lang', LANG);
+        toast(T('Готово — сообщим о новых уроках'));
+      } catch (e) { toast(T('Не получилось включить уведомления, попробуй позже')); }
+      paint();
+    }
+    async function turnOff(){
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) { await send('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      } catch (_) {}
+      set('fedoskin-push', null); paint(); toast(T('Уведомления выключены'));
+    }
+    $('#pushItem').addEventListener('click', () => {
+      if (!supported) { if (isIOS && !isStandalone()) openInstall(); else toast(T('Этот браузер не умеет показывать уведомления')); return; }
+      if (isOn()) turnOff(); else turnOn();
+    });
+    $('#pushYes').addEventListener('click', () => { $('#pushCard').hidden = true; turnOn(); });
+    $('#pushNo').addEventListener('click', () => { set('fedoskin-push-asked', '1'); $('#pushCard').hidden = true; });
+    // language changed since subscribing: tell the server, so texts come in the new language
+    if (isOn() && get('fedoskin-push-lang') !== LANG) {
+      navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+        if (sub) return send('/subscribe', { sub: sub.toJSON(), lang: LANG }).then(() => set('fedoskin-push-lang', LANG));
+      }).catch(() => {});
+    }
+    paint();
+  })();
+
+  // opened from a notification: ./?lesson=<id>, or a message from the service worker when the app is already open
+  function openFromPush(id){
+    if (!id) return;
+    if (BY_ID[id]) { openSection(BY_ID[id].sec); openLesson(id); }
+    else toast(T('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить'));
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); });
+
   // ===== language picker =====
   (function langPicker(){
     const cur = I18N.langs.find(x => x[0] === LANG) || ['ru', 'Русский'];
@@ -1702,6 +1782,10 @@ body.fsmode .bigplay{z-index:3}
     else if (startState.s === 'section' && startState.sec) openSection(startState.sec);
     else if (document.getElementById(startState.s)) go(startState.s);
   }
+  try {
+    const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
+    if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
+  } catch (_) {}
 })();
 </script>
 </body>

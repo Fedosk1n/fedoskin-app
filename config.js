@@ -12,5 +12,6 @@ window.APP_CONFIG = {
  "subRub": 199,
  "subYearRub": 1990,
  "subUsd": 3.99,
- "subYearUsd": 39.99
+ "subYearUsd": 39.99,
+ "pushUrl": ""
 };
