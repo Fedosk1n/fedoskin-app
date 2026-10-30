@@ -34,12 +34,10 @@ a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .app{max-width:480px;margin:0 auto;height:100%;position:relative}
 /* iOS home-screen apps sometimes report a viewport shorter than the screen: --gap pushes the menu down to the real bottom */
-html.gapfix .app{height:calc(100% + var(--gap))}
 /* Seen on the owner's iPhone 30.10: the home-screen app is drawn only down to window.innerHeight; below it iOS paints its own
    black strip that the page cannot use. So the menu must sit at the bottom of the drawn area, and the home-indicator
    safe area is already outside it — no extra bottom padding (otherwise the menu looks lifted). */
 html.gapfix .tabs{bottom:0;padding-bottom:6px}
-html.gapfix body.fsmode .stage{bottom:calc(-1 * var(--gap));height:auto!important}
 .screen{height:100%;overflow-y:auto;
   padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px));
   padding-block:24px calc(110px + env(safe-area-inset-bottom, 0px))}
@@ -1071,8 +1069,7 @@ body.fsmode .bigplay{z-index:3}
   function isLandscapeVideo(){ return vid.videoWidth > 0 && vid.videoWidth > vid.videoHeight; }
   function setRot(on){
     const root = document.documentElement;
-    const gap = root.classList.contains('gapfix') ? (parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 0) : 0;
-    const h = window.innerHeight + gap, w = window.innerWidth;
+    const h = window.innerHeight, w = window.innerWidth; // nothing is drawn below innerHeight on the iPhone home-screen app
     root.style.setProperty('--rotW', h + 'px'); root.style.setProperty('--rotH', w + 'px'); root.style.setProperty('--rotTop', (h / 2) + 'px');
     document.body.classList.toggle('fs-rot', !!on); $('#fsRotate').setAttribute('aria-pressed', !!on);
   }
