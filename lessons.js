@@ -87,6 +87,16 @@ window.LESSONS_DATA = [
   "pv": true
  },
  {
+  "id": "gd-windmill-entry",
+  "sec": "Godowns",
+  "name": "windmill entry",
+  "dur": 488,
+  "ru": "заход в гелик windmill entry",
+  "added": "2026-10-30",
+  "pv": true,
+  "ks": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad"
+ },
+ {
   "id": "fr-easychair",
   "sec": "Freezes",
   "name": "Easy chair freeze",
