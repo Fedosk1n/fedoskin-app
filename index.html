@@ -1477,6 +1477,7 @@ body.fsmode .bigplay{z-index:3}
   async function lbSend(minGap){
     if (!LB_URL || !lbShow) return;
     const p = lbPayload(), sig = [p.m, p.v, p.s, p.nick, p.city, p.country, p.av].join('|');
+    if (p.m < 1) return; // nothing watched yet — don't fill the ranking with zeros
     if (sig === lbSent.sig || Date.now() - (lbSent.t || 0) < (minGap || 0)) return;
     try {
       const r = await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p), keepalive: true});
@@ -1507,7 +1508,7 @@ body.fsmode .bigplay{z-index:3}
     const part = rankScope === 'city' ? lbData.city : lbData.world;
     $('#myPlace').textContent = lbShow && part && part.place ? '#' + part.place : '—';
     if (!lbShow) say(T('Ты скрыт из рейтинга — другие тебя не видят.'));
-    else if (!part || !part.place) say(T('Твоё место появится через пару минут.'));
+    else if (!part || !part.place) say(statsView().mins < 1 ? T('Посмотри любой урок хотя бы минуту — и появишься в рейтинге.') : T('Твоё место появится через пару минут.'));
     else say('');
     if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
     part.top.forEach((r, i) => {
