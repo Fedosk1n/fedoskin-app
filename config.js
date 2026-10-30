@@ -15,9 +15,9 @@ window.APP_CONFIG = {
  "subYearUsd": 39.99,
  "pushUrl": "https://fedoskin-push.fedosk1n.workers.dev",
  "onlineRub": 4000,
- "onlineUsd": 50,
+ "onlineUsd": 99,
  "coachRub": 10000,
  "coachUsd": 120,
  "fullRub": 50000,
- "fullUsd": 600
+ "fullUsd": 1000
 };
