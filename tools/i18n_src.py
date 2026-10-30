@@ -49,6 +49,7 @@ t('Ничего не нашли по запросу «{q}». Попробуй п
   '没有找到“{q}”。试试英文名，例如 6-step 或 monkey flip。')
 
 # ---- lesson / player ----
+t('Видео не загрузилось. Проверь интернет и открой урок ещё раз.', "The video didn't load. Check your internet and open the lesson again.", 'El video no cargó. Revisa tu conexión y abre la lección de nuevo.', 'O vídeo não carregou. Verifique a internet e abra a aula de novo.', "La vidéo ne s'est pas chargée. Vérifie ta connexion et rouvre la leçon.", 'Das Video wurde nicht geladen. Prüf dein Internet und öffne die Lektion erneut.', '動画を読み込めませんでした。通信状況を確認して、もう一度レッスンを開いてください。', '영상을 불러오지 못했어요. 인터넷을 확인하고 레슨을 다시 열어 주세요.', '视频未能加载。请检查网络后重新打开课程。')
 t('Проверить на своём видео', 'Try on your own video', 'Probar con tu propio video', 'Testar com seu próprio vídeo', 'Essayer sur ta propre vidéo', 'Mit eigenem Video prüfen', '自分の動画で確認', '내 영상으로 확인', '用自己的视频对照')
 t('Зеркало', 'Mirror', 'Espejo', 'Espelho', 'Miroir', 'Spiegeln', 'ミラー', '미러', '镜像')
 t('Повтор', 'Loop', 'Bucle', 'Repetir', 'Boucle', 'Schleife', 'リピート', '반복', '循环')

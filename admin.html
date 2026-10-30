@@ -66,6 +66,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pill.new{background:var(--new);color:#0B0B0C}
 .pill.hid{background:#2E2E32;color:var(--soft)}
 .pill.up{background:var(--accent);color:#0B0B0C}
+.pill.ks{background:#1E3A5F;color:#BFD8FF}
+.seg{display:flex;gap:6px;margin-top:14px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);color:#0B0B0C;border-color:var(--accent)}
+.ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
 .arrows{display:flex;flex-direction:column;gap:4px}
 .arrows .btn{width:36px;height:30px;min-height:30px;padding:0;border-radius:8px}
 .savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
@@ -162,7 +165,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <label class="f"><span>Название</span><input type="text" id="aName" placeholder="Например: Windmill"></label>
         <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="aRu" placeholder="виндмил мельница"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как люди будут искать урок русскими буквами — через пробел.</span></label>
         <label class="f"><span>Имя файла (латиницей)</span><input type="text" id="aId" placeholder="pw-windmill" spellcheck="false"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Заполняется само. Менять не обязательно.</span></label>
-        <label class="sw"><input type="checkbox" id="aCompress"><span><b>Сжать до 720p</b><br><span class="hint" id="aCompressHint">Делает файл в 5–10 раз меньше. Лучше на компьютере в Chrome.</span></span></label>
+        <div class="f"><span>Куда загрузить видео</span>
+          <div class="seg" role="group" aria-label="Куда загрузить видео"><button class="btn btn-sm" type="button" id="aDestKs" aria-pressed="true">Kinescope</button><button class="btn btn-sm" type="button" id="aDestGh" aria-pressed="false">GitHub</button></div>
+          <span class="hint" id="aDestHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
+        <label class="sw" id="aCompressRow"><input type="checkbox" id="aCompress"><span><b>Сжать до 720p</b><br><span class="hint" id="aCompressHint">Делает файл в 5–10 раз меньше. Лучше на компьютере в Chrome.</span></span></label>
         <div class="row" style="margin-top:18px;flex-wrap:wrap"><button class="btn btn-accent" id="aGo" disabled>Подготовить урок</button><button class="btn" id="aCancel" hidden>Отменить</button></div>
         <div id="aWork" hidden>
           <ul class="plist" id="aSteps"></ul>
@@ -174,8 +180,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         </div>
         <div class="err" id="aErr" hidden></div>
       </div>
+      <div id="aPhoneHelp">
       <h3>Если сжимаете на телефоне</h3>
       <p class="soft small">Проще всего: в CapCut экспортируйте видео в <b>720p, 30 или 60 кадров</b>, выберите его здесь и выключите «Сжать до 720p». Файл должен быть меньше 70 МБ — это ограничение GitHub. Обложку и анимацию админка сделает сама.</p>
+      </div>
     </div>
 
     <div data-pane="settings" hidden>
@@ -190,6 +198,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>Срок разбора, часов</span><input type="number" id="sHours" min="1" step="1" inputmode="numeric"></label>
       <label class="f"><span>Telegram (без @)</span><input type="text" id="sTg" spellcheck="false"></label>
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится формат разбора и «Сейчас пришлю видео».</span></label>
+      <h3>Kinescope (видео уроков)</h3>
+      <p class="hint" style="margin:6px 0 0">Ключ и проект хранятся только в этом браузере и в приложение не публикуются. Кнопка «Опубликовать» для них не нужна.</p>
+      <label class="f"><span>API-токен Kinescope</span><input type="password" id="ksToken" placeholder="вставьте токен «Админка Fedoskin»" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Kinescope → Настройки → API-токены. Нужны права «Загружать файлы».</span></label>
+      <label class="f"><span>ID проекта или ссылка на проект</span><input type="text" id="ksProject" placeholder="ссылка из адресной строки Kinescope" spellcheck="false" autocomplete="off"><span class="hint" id="ksProjectHint" style="text-transform:none;letter-spacing:0;font-weight:400">Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.</span></label>
       <h3>Уведомления о новых уроках</h3>
       <label class="f"><span>Адрес сервера уведомлений</span><input type="text" id="sPush" placeholder="https://fedoskin-push.….workers.dev" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика» → «Уведомления». Пусто = уведомлений нет.</span></label>
       <h3>Подписка (заработает после альфа-теста)</h3>
@@ -264,6 +276,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     <div class="row"><h2 id="eTitle" style="margin:0;flex:1">Урок</h2><button class="btn ibtn" id="eClose" aria-label="Закрыть">✕</button></div>
     <div class="prevs" style="margin-top:12px"><figure><img id="eCover" alt=""><figcaption id="eFile"></figcaption></figure>
       <div style="flex:1;min-width:0"><a class="btn btn-sm" id="eWatch" target="_blank" rel="noopener">Посмотреть видео</a><p class="hint" id="eInfo" style="margin-top:10px"></p></div></div>
+    <div class="ksbox">
+      <b>Видео в Kinescope</b> <span class="pill ks" id="eKsPill" hidden>KINESCOPE</span>
+      <p class="hint" id="eKsState" style="margin:6px 0 0"></p>
+      <label class="f" style="margin-top:8px"><span>Ссылка на видео в Kinescope</span><input type="text" id="eKs" placeholder="https://kinescope.io/…" spellcheck="false" autocomplete="off"></label>
+      <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><label class="btn btn-sm" for="eKsFile" style="cursor:pointer">Загрузить файл в Kinescope</label><button class="btn btn-sm" id="eKsCheck" type="button">Проверить видео</button></div>
+      <input type="file" id="eKsFile" accept="video/*,.mov,.mp4" hidden>
+      <div class="prog" id="eKsProg" hidden><i id="eKsBar"></i></div>
+      <label class="sw" id="eKsDropRow" hidden><input type="checkbox" id="eKsDrop"><span><b>Удалить старую копию видео из GitHub</b><br><span class="hint">Обложка и анимация останутся. Включайте, когда видео из Kinescope уже играет в приложении.</span></span></label>
+    </div>
     <label class="f"><span>Название</span><input type="text" id="eName"></label>
     <label class="f"><span>Раздел</span><select id="eSec"></select></label>
     <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="eRu"></label>
@@ -299,6 +320,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let uploads = {};             // id -> {mp4: Blob, jpg: Blob, p3: Blob|null, coverUrl}
   let deleted = [];             // ids whose files must be removed
   let vFiles = {};              // name -> size, files in v/ on GitHub
+  let dropGh = [];              // ids whose GitHub copy of the video (v/<id>.mp4) is removed because the lesson now plays from Kinescope
+  const ksState = {};           // Kinescope video id -> 'ok' | 'wait' (still processing) | 'err'
 
   // ---------- helpers ----------
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
@@ -330,6 +353,88 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const taken = new Set(lessons.map(l => l.id).concat(Object.keys(vFiles).map(f => f.replace(/(-p3)?\.(mp4|jpg)$/, ''))));
     while (taken.has(id)) id = base + '-' + (n++);
     return id;
+  }
+
+  // ---------- Kinescope ----------
+  // Upload goes straight from this browser to uploader.kinescope.io (it allows that); the Kinescope REST API
+  // (api.kinescope.io) does NOT allow browser requests, so we never need it: the app plays
+  // https://kinescope.io/<id>/master.m3u8 and the admin only stores the video id in lessons.js (field `ks`).
+  const KS_TOKEN = 'fedoskin-ks-token', KS_PROJECT = 'fedoskin-ks-project';
+  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const ksToken = () => (store.get(KS_TOKEN) || '').trim();
+  const ksProject = () => (store.get(KS_PROJECT) || '').trim();
+  const ksReady = () => !!(ksToken() && ksProject());
+  const ksPlay = id => 'https://kinescope.io/' + encodeURIComponent(id);
+  const ksHls = id => ksPlay(id) + '/master.m3u8';
+  // video id from a Kinescope link (kinescope.io/<id>, kinescope.io/embed/<id>, a dashboard link with a UUID) or a bare id
+  function ksIdFrom(text){
+    text = String(text || '').trim(); if (!text) return '';
+    const u = text.match(UUID_RE); if (u) return u[0].toLowerCase();
+    const m = text.match(/kinescope\.io\/(?:embed\/|watch\/)?([A-Za-z0-9_-]{6,})/); if (m) return m[1];
+    if (/^[A-Za-z0-9_-]{6,}$/.test(text)) return text;
+    return null;
+  }
+  function ksErr(status, j){
+    const m = j && j.error && j.error.message ? String(j.error.message) : '';
+    if (status === 401) return 'Kinescope не принял токен. Проверьте его во вкладке «Тексты и настройки»';
+    if (status === 403) return 'у токена Kinescope нет права «Загружать файлы»';
+    if (status === 404 || /parent|project|folder/i.test(m)) return 'Kinescope не нашёл проект. Проверьте ID проекта во вкладке «Тексты и настройки»';
+    if (status === 402 || /limit|quota|tariff|plan/i.test(m)) return 'Kinescope: закончилось место на тарифе (' + (m || 'лимит') + ')';
+    return 'Kinescope ответил ошибкой ' + status + (m ? ': ' + m : '');
+  }
+  let ksXhr = null;
+  async function ksUpload(f, title, onProgress){
+    const tok = ksToken(), parent = ksProject();
+    if (!tok || !parent) throw new Error('впишите токен и проект Kinescope во вкладке «Тексты и настройки»');
+    let r, j = null;
+    try {
+      r = await fetch('https://uploader.kinescope.io/v2/init', {method: 'POST', headers: {'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json'},
+        body: JSON.stringify({type: 'video', parent_id: parent, title: title, filename: f.name || 'video.mp4', filesize: f.size})});
+    } catch(e) { throw new Error('нет связи с Kinescope'); }
+    try { j = await r.json(); } catch(e) {}
+    if (!r.ok) throw new Error(ksErr(r.status, j));
+    const d = (j && j.data) || {};
+    if (!d.endpoint) throw new Error('Kinescope не дал адрес для загрузки');
+    const res = await new Promise((ok, bad) => {
+      const x = ksXhr = new XMLHttpRequest();
+      x.open('POST', d.endpoint);
+      x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      x.onload = () => { ksXhr = null; let o = null; try { o = JSON.parse(x.responseText); } catch(e) {}
+        if (x.status >= 200 && x.status < 300) ok(o); else bad(new Error(ksErr(x.status, o))); };
+      x.onerror = () => { ksXhr = null; bad(new Error('связь с Kinescope оборвалась во время загрузки — попробуйте ещё раз')); };
+      x.onabort = () => { ksXhr = null; bad(new Error('загрузка отменена')); };
+      x.send(f);
+    });
+    const v = res && (res.data || res);
+    const id = (v && (v.video_id || (v.video && v.video.id) || v.id)) || d.id;
+    if (!id) throw new Error('Kinescope принял файл, но не сообщил номер видео — найдите его в Kinescope и вставьте ссылку в урок');
+    return String(id);
+  }
+  // is the stream ready to play? (Kinescope processes a fresh upload for a few minutes)
+  async function ksCheck(id){
+    try {
+      const r = await fetch(ksHls(id), {cache: 'no-store'});
+      const t = await r.text();
+      ksState[id] = r.ok && /#EXT-X-STREAM-INF|#EXTINF/.test(t) ? 'ok' : 'wait';
+    } catch(e) { ksState[id] = 'err'; }
+    return ksState[id];
+  }
+  const ksWatching = {};
+  function ksWatch(id, name){
+    if (ksWatching[id]) return; ksWatching[id] = true;
+    const started = Date.now();
+    const tick = async () => {
+      const st = await ksCheck(id);
+      if (st === 'ok') { delete ksWatching[id]; toast('Kinescope обработал видео «' + name + '» — оно уже играет'); renderLessons(); return; }
+      if (Date.now() - started > 40 * 60e3) { delete ksWatching[id]; renderLessons(); return; }
+      renderLessons(); setTimeout(tick, 20000);
+    };
+    setTimeout(tick, 15000);
+  }
+  function ksPill(l){
+    if (!l.ks) return '';
+    const st = ksState[l.ks];
+    return st === 'wait' ? '<span class="pill ks">KINESCOPE: ОБРАБОТКА</span>' : '<span class="pill ks">KINESCOPE</span>';
   }
 
   // ---------- GitHub API ----------
@@ -380,7 +485,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (cf) { cfgText = b64ToUtf8(cf.content); C = parseData(cfgText, 'window.APP_CONFIG'); }
     remote = {lessonsText, lessonsSha: lf.sha, cfgText, cfgSha: cf ? cf.sha : null, header: L.header, cfgHeader: C.header, lessons: L.data, cfg: Object.assign({}, CFG_DEFAULT, C.data)};
     vFiles = {}; (Array.isArray(vdir) ? vdir : []).forEach(f => { vFiles[f.name] = f.size; });
-    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = [];
+    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; dropGh = [];
   }
   const lessonsOut = () => remote.header + 'window.LESSONS_DATA = ' + JSON.stringify(lessons, null, 1) + ';\n';
   const cfgOut = () => remote.cfgHeader + 'window.APP_CONFIG = ' + JSON.stringify(cfg, null, 1) + ';\n';
@@ -421,12 +526,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
 
   // ---------- dirty state / save bar ----------
-  const isDirty = () => remote && (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || JSON.stringify(cfg) !== JSON.stringify(remote.cfg) || Object.keys(uploads).length > 0 || deleted.length > 0);
+  const isDirty = () => remote && (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || JSON.stringify(cfg) !== JSON.stringify(remote.cfg) || Object.keys(uploads).length > 0 || deleted.length > 0 || dropGh.length > 0);
   function paintSaveBar(){
     const d = isDirty(); $('#savebar').hidden = !d; if (!d) return;
     const parts = [];
     const nUp = Object.keys(uploads).length; if (nUp) parts.push('новых видео: ' + nUp);
     if (deleted.length) parts.push('удалено: ' + deleted.length);
+    if (dropGh.length) parts.push('убрать из GitHub: ' + dropGh.length);
     if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) parts.push('настройки');
     const changedLessons = JSON.stringify(lessons.filter(l => !uploads[l.id])) !== JSON.stringify(remote.lessons.filter(l => !deleted.includes(l.id)));
     if (changedLessons) parts.push('уроки');
@@ -435,7 +541,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   window.addEventListener('beforeunload', e => { if (isDirty() || pushList) { e.preventDefault(); e.returnValue = ''; } });
   $('#undoBtn').addEventListener('click', () => {
     if (!confirm('Отменить все неопубликованные изменения?')) return;
-    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; renderAll();
+    lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; dropGh = []; renderAll();
   });
 
   // ---------- lessons list ----------
@@ -456,6 +562,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = l.name;
         if (showsNew(l)) nm.insertAdjacentHTML('beforeend', '<span class="pill new">NEW</span>');
         if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
+        if (l.ks) nm.insertAdjacentHTML('beforeend', ksPill(l));
         if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">НЕ ОПУБЛИКОВАН</span>');
         const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
         tx.append(nm, mt);
@@ -492,9 +599,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#eCover').src = coverSrc(l);
     $('#eFile').textContent = l.id;
     const up = uploads[l.id];
-    $('#eWatch').href = up ? URL.createObjectURL(up.mp4) : 'v/' + l.id + '.mp4';
-    const size = up ? up.mp4.size : vFiles[l.id + '.mp4'];
-    $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (size ? ' · файл ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
+    $('#eWatch').href = l.ks ? ksPlay(l.ks) : up && up.mp4 ? URL.createObjectURL(up.mp4) : 'v/' + l.id + '.mp4';
+    const size = up && up.mp4 ? up.mp4.size : vFiles[l.id + '.mp4'];
+    $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (l.ks ? ' · играет из Kinescope' : '') + (size ? ' · в GitHub ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
+    $('#eKs').value = l.ks ? ksPlay(l.ks) : '';
+    paintKs(l);
     $('#eName').value = l.name;
     fillSecSelect($('#eSec')); $('#eSec').value = l.sec;
     $('#eRu').value = l.ru || '';
@@ -505,6 +614,49 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#editSheet').hidden = false;
     setTimeout(() => $('#eName').focus({preventScroll: true}), 50);
   }
+  function paintKs(l){
+    const has = !!l.ks;
+    $('#eKsPill').hidden = !has;
+    $('#eKsState').textContent = !has ? 'Урок играет из GitHub. Чтобы перенести: загрузите исходный файл (можно 4K, без сжатия) или вставьте ссылку на видео, уже загруженное в Kinescope.'
+      : ksState[l.ks] === 'ok' ? 'Видео готово и играет в приложении из Kinescope.'
+      : ksState[l.ks] === 'wait' ? 'Kinescope ещё обрабатывает видео (обычно несколько минут). Урок можно публиковать.'
+      : ksState[l.ks] === 'err' ? 'Не получилось проверить видео — нет связи. Нажмите «Проверить видео» ещё раз.'
+      : 'Видео привязано. Нажмите «Проверить видео», чтобы убедиться, что оно играет.';
+    const ghCopy = has && vFiles[l.id + '.mp4'] != null && !(uploads[l.id] && uploads[l.id].mp4);
+    $('#eKsDropRow').hidden = !ghCopy;
+    $('#eKsDrop').checked = ghCopy && dropGh.includes(l.id);
+    $('#eKsProg').hidden = true;
+  }
+  let ksBusy = false;
+  $('#eKsFile').addEventListener('change', async () => {
+    const f = $('#eKsFile').files[0]; $('#eKsFile').value = '';
+    const l = editing; if (!f || !l || ksBusy) return;
+    if (!ksReady()) { toast('Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки»', true); return; }
+    ksBusy = true; $('#eKsProg').hidden = false; $('#eKsBar').style.width = '0%';
+    const say = t => { if (editing === l) $('#eKsState').textContent = t; };
+    say('Загружаю ' + f.name + ' (' + fmtMB(f.size) + ') в Kinescope… Не закрывайте эту страницу.');
+    try {
+      let dur = null; try { dur = (await readMeta(f)).dur; } catch(e) {}
+      const id = await ksUpload(f, l.name, p => { $('#eKsBar').style.width = Math.round(p * 100) + '%'; say('Загружаю в Kinescope: ' + Math.round(p * 100) + '%… Не закрывайте эту страницу.'); });
+      l.ks = id; if (dur) l.dur = Math.round(dur);
+      ksState[id] = 'wait'; ksWatch(id, l.name);
+      if (editing === l) { $('#eKs').value = ksPlay(id); paintKs(l); }
+      toast('Загружено в Kinescope. Нажмите «Опубликовать» внизу');
+      renderLessons(); paintSaveBar();
+    } catch(e) {
+      say('Не получилось: ' + (e && e.message || e));
+      $('#eKsProg').hidden = true;
+    } finally { ksBusy = false; }
+  });
+  $('#eKsCheck').addEventListener('click', async () => {
+    const l = editing; if (!l) return;
+    const id = ksIdFrom($('#eKs').value);
+    if (!id) { $('#eKsState').textContent = id === null ? 'Не понял ссылку. Вставьте ссылку вида https://kinescope.io/… из Kinescope (кнопка «Поделиться»).' : 'Сначала загрузите файл или вставьте ссылку.'; return; }
+    $('#eKsState').textContent = 'Проверяю…';
+    const st = await ksCheck(id);
+    if (editing !== l) return;
+    $('#eKsState').textContent = st === 'ok' ? 'Видео готово и играет. Не забудьте «Готово» и «Опубликовать».' : st === 'wait' ? 'Kinescope пока не отдаёт это видео: оно ещё обрабатывается, или ссылка не та. Подождите пару минут и проверьте снова.' : 'Нет связи с Kinescope — попробуйте ещё раз.';
+  });
   function paintNewHint(){
     const d = $('#eDate').value || today();
     const until = new Date(Date.parse(d) + newDays() * 864e5);
@@ -530,6 +682,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       let at = -1; lessons.forEach((x, i) => { if (x.sec === l.sec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, l);
     }
+    const ks = ksIdFrom($('#eKs').value);
+    if (ks === null) { toast('Не понял ссылку на видео Kinescope. Вставьте ссылку вида https://kinescope.io/…', true); $('#eKs').focus(); return; }
+    if (ks) { if (l.ks !== ks) { l.ks = ks; if (!ksState[ks]) ksCheck(ks).then(renderLessons); } } else delete l.ks;
+    dropGh = dropGh.filter(x => x !== l.id);
+    if (l.ks && !$('#eKsDropRow').hidden && $('#eKsDrop').checked) dropGh.push(l.id);
     l.ru = $('#eRu').value.trim();
     if ($('#eDate').value) l.added = $('#eDate').value;
     delete l.new;
@@ -539,8 +696,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
   $('#eDel').addEventListener('click', () => {
     const l = editing; if (!l) return;
-    if (!confirm('Удалить урок «' + l.name + '» вместе с видео? Если хотите просто убрать его на время — лучше выключите «Показывать в приложении».')) return;
+    if (!confirm('Удалить урок «' + l.name + '» вместе с видео? Если хотите просто убрать его на время — лучше выключите «Показывать в приложении».' + (l.ks ? '\n\nВидео в Kinescope админка удалить не может — удалите его там вручную, чтобы освободить минуты.' : ''))) return;
     lessons.splice(lessons.indexOf(l), 1);
+    dropGh = dropGh.filter(x => x !== l.id);
     if (uploads[l.id]) delete uploads[l.id]; else deleted.push(l.id);
     closeEdit(); renderLessons(); paintSaveBar();
   });
@@ -563,6 +721,21 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     });
   });
 
+  // Kinescope token/project: this browser only, never published
+  function paintKsProject(){
+    const raw = $('#ksProject').value.trim(), id = ksProject();
+    $('#ksProjectHint').textContent = !raw ? 'Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.' : id ? 'ID проекта: ' + id : 'В этом тексте нет ID проекта (вида 1a2b3c4d-…). Скопируйте адрес страницы проекта в Kinescope.';
+  }
+  $('#ksToken').value = ksToken();
+  $('#ksProject').value = ksProject();
+  paintKsProject();
+  $('#ksToken').addEventListener('input', () => { const v = $('#ksToken').value.trim(); if (v) store.set(KS_TOKEN, v); else store.del(KS_TOKEN); paintDest(); });
+  $('#ksProject').addEventListener('input', () => {
+    const m = $('#ksProject').value.match(UUID_RE);
+    if (m) store.set(KS_PROJECT, m[0].toLowerCase()); else store.del(KS_PROJECT);
+    paintKsProject(); paintDest();
+  });
+
   // ---------- stats ----------
   function renderStats(){
     renderPush();
@@ -573,11 +746,12 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (id && !live) $('#metrikaOff').querySelector('.card b').textContent = 'Номер счётчика введён — нажмите «Опубликовать» внизу';
     const vis = lessons.filter(l => !l.hidden);
     const mins = Math.round(vis.reduce((a, l) => a + (l.dur || 0), 0) / 60);
-    const kp = [[vis.length, 'уроков в приложении'], [mins, 'минут видео'], [vis.filter(showsNew).length, 'со значком NEW'], [lessons.filter(l => l.hidden).length, 'скрыто']];
+    const ksMin = Math.ceil(lessons.filter(l => l.ks).reduce((a, l) => a + (l.dur || 0), 0) / 60);
+    const kp = [[vis.length, 'уроков в приложении'], [mins, 'минут видео'], [ksMin + ' / 100', 'минут в Kinescope (бесплатно 100)'], [vis.filter(showsNew).length, 'со значком NEW'], [lessons.filter(l => l.hidden).length, 'скрыто']];
     $('#kpis').innerHTML = kp.map(([n, t]) => '<div class="kpi"><b>' + n + '</b><span>' + t + '</span></div>').join('');
     const max = Math.max(1, ...SECTIONS.map(s => vis.filter(l => l.sec === s).length));
     $('#bars').innerHTML = SECTIONS.map(s => { const n = vis.filter(l => l.sec === s).length; return '<div class="b"><span>' + s + '</span><span class="t"><i style="width:' + (n / max * 100) + '%"></i></span><span class="muted">' + n + '</span></div>'; }).join('');
-    const total = Object.values(vFiles).reduce((a, b) => a + b, 0) + Object.values(uploads).reduce((a, u) => a + u.mp4.size + u.jpg.size + (u.p3 ? u.p3.size : 0), 0);
+    const total = Object.values(vFiles).reduce((a, b) => a + b, 0) + Object.values(uploads).reduce((a, u) => a + (u.mp4 ? u.mp4.size : 0) + u.jpg.size + (u.p3 ? u.p3.size : 0), 0);
     $('#repoSize').textContent = fmtMB(total);
   }
 
@@ -589,6 +763,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#aCompress').checked = canEncode && !isPhone;
   if (!canEncode) { $('#aCompress').disabled = true; $('#aCompressHint').textContent = 'Этот браузер не умеет сжимать видео. Откройте админку на компьютере в Chrome или загрузите уже сжатое видео.'; }
   let file = null, meta = null, idTouched = false, busy = false, cancelled = false;
+  let dest = store.get('fedoskin-admin-dest') || 'ks';
+  function paintDest(){
+    $('#aDestKs').setAttribute('aria-pressed', String(dest === 'ks'));
+    $('#aDestGh').setAttribute('aria-pressed', String(dest === 'gh'));
+    $('#aCompressRow').hidden = dest === 'ks'; $('#aPhoneHelp').hidden = dest === 'ks';
+    $('#aDestHint').textContent = dest === 'ks'
+      ? (ksReady() ? 'Загружайте исходник как есть — 4K, 60 кадров, любой длины. Kinescope сам сделает качества для телефонов. Бесплатно — 100 минут видео на всё.' : 'Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки».')
+      : 'Для коротких роликов до 70 МБ (после сжатия). Длинные уроки — только в Kinescope.';
+  }
+  $('#aDestKs').addEventListener('click', () => { if (busy) return; dest = 'ks'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  $('#aDestGh').addEventListener('click', () => { if (busy) return; dest = 'gh'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  paintDest();
   function autoId(){ if (!idTouched) $('#aId').value = uniqueId(PREFIX[$('#aSec').value] + '-' + (slug($('#aName').value) || 'lesson')); }
   $('#aName').addEventListener('input', () => { autoId(); paintGo(); });
   $('#aSec').addEventListener('change', autoId);
@@ -687,15 +873,17 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (extra != null) li.querySelector('.st').textContent = extra;
   }
   const bar = p => { $('#aBar').style.width = Math.round(p * 100) + '%'; };
-  $('#aCancel').addEventListener('click', () => { cancelled = true; if (current) current.cancel().catch(() => {}); });
+  $('#aCancel').addEventListener('click', () => { cancelled = true; if (current) current.cancel().catch(() => {}); if (ksXhr) ksXhr.abort(); });
   $('#aGo').addEventListener('click', async () => {
     const id = $('#aId').value, name = $('#aName').value.trim(), sec = $('#aSec').value;
     if (lessons.some(l => l.id === id) || vFiles[id + '.mp4']) { $('#aErr').hidden = false; $('#aErr').textContent = 'Урок с именем файла «' + id + '» уже есть — поменяйте имя файла.'; return; }
-    const compress = $('#aCompress').checked;
-    if (!compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Включите «Сжать до 720p» или экспортируйте из CapCut в 720p.'; return; }
+    const toKs = dest === 'ks';
+    if (toKs && !ksReady()) { $('#aErr').hidden = false; $('#aErr').textContent = 'Впишите токен и проект Kinescope во вкладке «Тексты и настройки» — или выберите «GitHub».'; return; }
+    const compress = !toKs && $('#aCompress').checked;
+    if (!toKs && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Включите «Сжать до 720p» или экспортируйте из CapCut в 720p.'; return; }
     busy = true; cancelled = false; paintGo(); $('#aCancel').hidden = false;
     $('#aErr').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
-    setSteps(['Обложка', 'Анимация обложки (3 сек)', compress ? 'Сжатие видео до 720p' : 'Видео без сжатия']);
+    setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до 720p' : 'Видео без сжатия']);
     let step = 0;
     try {
       if (!meta) meta = await readMeta(file);
@@ -721,8 +909,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       } else stepState(1, 'skip', 'Анимация обложки — этот браузер не умеет, будет просто картинка');
       step = 2; bar(.15);
       // 3. main video
-      let mp4 = file;
-      if (compress) {
+      let mp4 = file, ksId = null;
+      if (toKs) {
+        stepState(2, 'run', 'Загрузка в Kinescope — 0%');
+        ksId = await ksUpload(file, name, p => { bar(.15 + p * .85); stepState(2, 'run', 'Загрузка в Kinescope — ' + Math.round(p * 100) + '% из ' + fmtMB(file.size) + '. Не закрывайте страницу'); });
+        stepState(2, 'ok', 'Загружено в Kinescope (' + fmtMB(file.size) + '). Kinescope обработает видео за несколько минут');
+        mp4 = null;
+      } else if (compress) {
         stepState(2, 'run');
         const vertical = meta.h >= meta.w;
         const short = Math.min(meta.w, meta.h);
@@ -749,6 +942,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       bar(1);
       // add to the list as unpublished
       const lesson = {id, sec, name, dur: Math.round(dur), ru: $('#aRu').value.trim(), added: $('#aDate').value || today(), pv: !!p3};
+      if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, name); }
       let at = -1; lessons.forEach((x, i) => { if (x.sec === sec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
       uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
@@ -838,15 +1032,16 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       }
       const tree = [];
       const ids = Object.keys(uploads);
-      const big = ids.find(id => uploads[id].mp4.size > MAX_FILE);
+      const big = ids.find(id => uploads[id].mp4 && uploads[id].mp4.size > MAX_FILE);
       if (big) throw new Error('видео «' + lessons.find(l => l.id === big).name + '» весит ' + fmtMB(uploads[big].mp4.size) + ' — GitHub примет до 70 МБ. Удалите этот урок из списка (Уроки → урок → Удалить) и подготовьте видео заново.');
-      let n = 0, totalUp = ids.reduce((a, id) => a + uploads[id].mp4.size, 0) || 1, doneUp = 0;
+      let n = 0, totalUp = ids.reduce((a, id) => a + (uploads[id].mp4 ? uploads[id].mp4.size : 0), 0) || 1, doneUp = 0;
       for (const id of ids) {
         const u = uploads[id]; n++;
         const pre = ids.length > 1 ? 'Видео ' + n + ' из ' + ids.length + ': ' : '';
         say(pre + 'загружаю обложку…');
         tree.push({path: 'v/' + id + '.jpg', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(u.jpg))});
         if (u.p3) tree.push({path: 'v/' + id + '-p3.mp4', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(u.p3))});
+        if (!u.mp4) continue; // the video itself is on Kinescope
         say(pre + 'готовлю видео…');
         const b64 = await blobToB64(u.mp4);
         const sha = await ghBlob(b64, p => say(pre + 'загружаю видео ' + Math.round(((doneUp + p * u.mp4.size) / totalUp) * 100) + '%'));
@@ -856,6 +1051,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       deleted.forEach(id => {
         [id + '.mp4', id + '.jpg', id + '-p3.mp4'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
       });
+      dropGh.forEach(id => {
+        const l = lessons.find(x => x.id === id);
+        if (l && l.ks && vFiles[id + '.mp4'] != null) tree.push({path: 'v/' + id + '.mp4', mode: '100644', type: 'blob', sha: null});
+      });
       say('Сохраняю…');
       if (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || ids.length || deleted.length) tree.push({path: 'lessons.js', mode: '100644', type: 'blob', content: lessonsOut()});
       if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) tree.push({path: 'config.js', mode: '100644', type: 'blob', content: cfgOut()});
@@ -863,6 +1062,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const parts = [];
       if (ids.length) parts.push('новые уроки: ' + ids.map(id => lessons.find(l => l.id === id).name).join(', '));
       if (deleted.length) parts.push('удалены: ' + deleted.join(', '));
+      if (dropGh.length) parts.push('видео перенесены в Kinescope: ' + dropGh.join(', '));
       if (tree.some(t => t.path === 'config.js')) parts.push('настройки');
       if (!parts.length) parts.push('уроки');
       const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ' + parts.join('; '), tree: newTree.sha, parents: [ref.object.sha]}});

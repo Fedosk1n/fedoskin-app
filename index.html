@@ -888,14 +888,65 @@ body.fsmode .bigplay{z-index:3}
   const vid = $('#vid'), stage = $('#stage');
   const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
   let curSection = 'Footwork';
-  function loadVideo(src, poster){
+  // Long lessons live on Kinescope (lesson field `ks` = video id) and play as an HLS stream in OUR <video>,
+  // so slow motion, mirror, loop and our full screen keep working. iPhone/iPad/Safari play HLS natively;
+  // other browsers get hls.js, loaded only when the first Kinescope lesson is opened.
+  const ksUrl = id => 'https://kinescope.io/' + encodeURIComponent(id) + '/master.m3u8';
+  const isApple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)) ||
+    (/Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Android|Edg|OPR/.test(navigator.userAgent));
+  let hls = null, hlsLib = null, ksPending = false;
+  function loadHlsLib(){
+    if (hlsLib) return hlsLib;
+    const cdns = ['https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.20/hls.min.js', 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js', 'https://unpkg.com/hls.js@1.5.20/dist/hls.min.js'];
+    hlsLib = new Promise((res, rej) => {
+      const tryAt = i => {
+        if (i >= cdns.length) { hlsLib = null; rej(new Error('hls.js')); return; }
+        const s = document.createElement('script'); s.src = cdns[i]; s.async = true;
+        s.onload = () => window.Hls ? res(window.Hls) : tryAt(i + 1);
+        s.onerror = () => { s.remove(); tryAt(i + 1); };
+        document.head.appendChild(s);
+      };
+      tryAt(0);
+    });
+    return hlsLib;
+  }
+  function dropHls(){ if (hls) { try { hls.destroy(); } catch (_) {} hls = null; } }
+  let ksFailTimer = 0;
+  function streamFailed(){
+    clearTimeout(ksFailTimer);
+    ksFailTimer = setTimeout(() => toast(T('Видео не загрузилось. Проверь интернет и открой урок ещё раз.')), 300);
     setPlaying(false);
+  }
+  function loadVideo(src, poster, ks){
+    setPlaying(false);
+    dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
-    vid.src = src; vid.playbackRate = P.rate;
     stage.classList.add('portrait');
+    if (!ks) { vid.src = src; vid.playbackRate = P.rate; return; }
+    const url = ksUrl(ks);
+    if (isApple && vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; vid.playbackRate = P.rate; return; }
+    vid.removeAttribute('src'); vid.load();
+    const token = vid._ksToken = {};
+    ksPending = true;
+    loadHlsLib().then(Hls => {
+      if (vid._ksToken !== token) return; // user already opened another lesson
+      ksPending = false;
+      if (!Hls.isSupported()) { if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing) vid.play().catch(() => {}); } else streamFailed(); return; }
+      hls = new Hls({ capLevelToPlayerSize: true, startLevel: -1, maxBufferLength: 30 });
+      hls.on(Hls.Events.ERROR, (_, d) => {
+        if (!d || !d.fatal) return;
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); return; }
+        dropHls(); streamFailed();
+      });
+      hls.loadSource(url);
+      hls.attachMedia(vid);
+      vid.playbackRate = P.rate;
+      if (P.playing) { const pr = vid.play(); if (pr && pr.catch) pr.catch(() => { vid.muted = true; paintMute(); vid.play().catch(() => {}); }); }
+    }).catch(() => { if (vid._ksToken === token) { ksPending = false; streamFailed(); } });
   }
+  vid.addEventListener('error', () => { if (vid.src && /kinescope\.io/.test(vid.src)) streamFailed(); });
   vid.addEventListener('loadedmetadata', () => {
     P.dur = vid.duration || P.dur; vid.playbackRate = P.rate;
     stage.classList.toggle('portrait', vid.videoHeight > vid.videoWidth);
@@ -914,7 +965,7 @@ body.fsmode .bigplay{z-index:3}
     $('#badgeOwn').hidden = true;
     setLoop(null);
     P.dur = l.dur;
-    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg');
+    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks);
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -934,7 +985,8 @@ body.fsmode .bigplay{z-index:3}
     $('#btnPlay').setAttribute('aria-label', on ? T('Пауза') : T('Смотреть'));
     if (document.body.classList.contains('fsmode')) { syncFs(); if (!on) { document.body.classList.remove('fs-hide'); clearTimeout(fsTimer); } else pokeFs(); }
     if (P.own){
-      if (on) {
+      if (on && ksPending) { /* the stream starts itself as soon as hls.js is attached */ }
+      else if (on) {
         const pr = vid.play();
         if (pr && pr.catch) pr.catch(() => {
           // browser blocked autoplay with sound: start muted, user can turn sound on
