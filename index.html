@@ -473,15 +473,18 @@ body.fsmode .bigplay{z-index:3}
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
-    <p class="muted" style="font-size:14px;line-height:1.45">Общий рейтинг с другими брейкерами появится вместе с аккаунтами. А пока набирай минуты и делись своей статистикой в сторис.</p>
-    <div hidden data-later="rating">
-    <div class="seg" role="group" aria-label="Рейтинг: город или мир" id="rankSeg" style="margin-bottom:12px"><button aria-pressed="true" data-scope="city">Мой город</button><button aria-pressed="false" data-scope="world">Весь мир</button></div>
-    <div class="card row" style="padding:14px 16px;gap:14px;border-radius:16px;border-color:var(--accent)">
-      <span class="d" id="myPlace" style="font-size:22px;color:var(--accent);min-width:56px;font-variant-numeric:tabular-nums">#12</span>
+    <p class="muted" id="rankSoon" style="font-size:14px;line-height:1.45">Общий рейтинг с другими брейкерами появится вместе с аккаунтами. А пока набирай минуты и делись своей статистикой в сторис.</p>
+    <div id="rankBox" hidden>
+    <p class="muted" style="font-size:13px;line-height:1.45;margin:0 0 12px">Рейтинг по минутам тренировок в приложении. Обновляется раз в несколько минут.</p>
+    <div class="seg" role="group" aria-label="Рейтинг: город или мир" id="rankSeg" style="margin-bottom:12px"><button aria-pressed="true" data-scope="world">Весь мир</button><button aria-pressed="false" data-scope="city">Мой город</button></div>
+    <div class="card row" id="myRank" style="padding:14px 16px;gap:14px;border-radius:16px;border-color:var(--accent)">
+      <span class="d" id="myPlace" style="font-size:22px;color:var(--accent);min-width:56px;font-variant-numeric:tabular-nums">—</span>
       <span class="av-slot" data-size="40"></span>
-      <span class="stack" style="gap:2px;flex:1"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" style="font-size:12px">312 минут</span></span>
+      <span class="stack" style="gap:2px;flex:1;min-width:0"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" id="myMins" style="font-size:12px"></span></span>
     </div>
+    <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
     <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
+    <label class="row" style="gap:12px;margin-top:14px;font-size:14px;cursor:pointer"><input type="checkbox" id="rankShow" style="width:20px;height:20px;accent-color:var(--accent)"><span>Показывать меня в рейтинге</span></label>
     </div>
     <button class="btn btn-accent" id="shareRank" style="margin-top:14px;min-height:52px">
       <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
@@ -1240,19 +1243,10 @@ body.fsmode .bigplay{z-index:3}
   $('#sheetDone').addEventListener('click', () => {
     myAvatar = pending; try { localStorage.setItem('fedoskin-avatar-a', myAvatar); } catch (_) {}
     paintMine(); closeSheet(); toast(T('Аватар обновлён'));
+    if (typeof LB_URL !== 'undefined' && LB_URL) lbSend(0).then(lbLoad);
   });
 
-  const LEADERS = {
-    city: [['[Ник 1]', 1240, 'crown'], ['[Ник 2]', 980, 'boombox'], ['[Ник 3]', 870, 'spray']],
-    world: [['[Ник 1]', 5420, 'fire'], ['[Ник 2]', 4980, 'mic'], ['[Ник 3]', 4310, 'sneaker']]
-  };
-  function renderLeaders(scope){
-    $('#myPlace').textContent = scope === 'city' ? '#12' : '#1284';
-    $('#leaders').innerHTML = LEADERS[scope].map((l, i) =>
-      '<li class="row" style="gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)"><span class="d" style="font-size:20px;min-width:56px;color:'+(i===0?'var(--accent)':'var(--muted)')+'">#'+(i+1)+'</span>'+avatarHTML(l[2], 40)+'<span style="flex:1;font-weight:600">'+l[0]+' <span class="alphamini" title="Альфа-тестер">α</span></span><span class="muted" style="font-size:13px;font-variant-numeric:tabular-nums">'+l[1].toLocaleString('ru-RU')+' мин</span></li>').join('');
-  }
-  renderLeaders('city');
-  let rankScope = 'city';
+  let rankScope = 'world';
   function openStory(){
     $('#stAvatar').innerHTML = avatarHTML(myAvatar, 72);
     const st = statsView();
@@ -1269,7 +1263,7 @@ body.fsmode .bigplay{z-index:3}
   $('#rankSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     $('#rankSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    renderLeaders(b.dataset.scope); rankScope = b.dataset.scope;
+    rankScope = b.dataset.scope; renderLeaders();
   });
 
   // tabs
@@ -1461,9 +1455,88 @@ body.fsmode .bigplay{z-index:3}
     prof.city = $('#fCity').value.trim().slice(0, 30);
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
     paintProfile(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
+    if (LB_URL) lbSend(0).then(lbLoad);
   });
   const _goProfile = go;
-  go = function(id){ _goProfile(id); if (id === 'profile') renderStats(); };
+  go = function(id){ _goProfile(id); if (id === 'profile') { renderStats(); if (LB_URL) lbSend(2 * 60e3).then(() => { if (Date.now() - lbAt > 60e3) lbLoad(); else renderLeaders(); }); } };
+
+  // ===== leaderboard (alpha): our small Cloudflare server (the same one as notifications), no accounts =====
+  // The phone sends its nick, city, avatar and minutes; a random secret makes sure only this phone can change its line.
+  // KV on the free plan allows ~1000 writes a day, so we send only when something changed and not more often than every few minutes.
+  const LB_URL = String(CFG.pushUrl || '').replace(/\/+$/, '');
+  let lbData = null, lbErr = false, lbBusy = false, lbAt = 0;
+  let lbSecret = ''; try { lbSecret = localStorage.getItem('fedoskin-lb-secret') || ''; } catch (_) {}
+  if (!/^[0-9a-f]{32}$/.test(lbSecret)) {
+    const a = new Uint8Array(16); crypto.getRandomValues(a); lbSecret = Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
+    try { localStorage.setItem('fedoskin-lb-secret', lbSecret); } catch (_) {}
+  }
+  let lbShow = true; try { lbShow = localStorage.getItem('fedoskin-lb-show') !== '0'; } catch (_) {}
+  let lbSent = {}; try { lbSent = JSON.parse(localStorage.getItem('fedoskin-lb-sent') || '{}') || {}; } catch (_) {}
+  const nfmt = n => Number(n || 0).toLocaleString(LANG === 'ru' ? 'ru-RU' : undefined);
+  function lbPayload(){ const v = statsView(); return {id: prof.id, secret: lbSecret, nick: prof.nick, city: prof.city, country: prof.country, av: myAvatar, m: v.mins, v: v.views, s: v.streak}; }
+  async function lbSend(minGap){
+    if (!LB_URL || !lbShow) return;
+    const p = lbPayload(), sig = [p.m, p.v, p.s, p.nick, p.city, p.country, p.av].join('|');
+    if (sig === lbSent.sig || Date.now() - (lbSent.t || 0) < (minGap || 0)) return;
+    try {
+      const r = await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p), keepalive: true});
+      if (r.ok) { lbSent = {sig, t: Date.now()}; try { localStorage.setItem('fedoskin-lb-sent', JSON.stringify(lbSent)); } catch (_) {} }
+    } catch (_) {}
+  }
+  async function lbLoad(){
+    if (!LB_URL || lbBusy) return;
+    lbBusy = true; lbErr = false;
+    if (!lbData) renderLeaders();
+    try {
+      const q = new URLSearchParams({id: prof.id, city: prof.city || ''});
+      const r = await fetch(LB_URL + '/lb?' + q, {cache: 'no-store'});
+      if (!r.ok) throw new Error('lb');
+      lbData = await r.json(); lbAt = Date.now();
+    } catch (_) { lbErr = true; }
+    lbBusy = false; renderLeaders();
+  }
+  function renderLeaders(){
+    if (!LB_URL) return;
+    $('#myMins').textContent = T('{n} мин', {n: nfmt(statsView().mins)});
+    $('#rankShow').checked = lbShow;
+    const box = $('#leaders'), msg = $('#rankMsg');
+    const say = t => { msg.hidden = !t; msg.textContent = t || ''; };
+    box.innerHTML = '';
+    if (rankScope === 'city' && !prof.city) { $('#myPlace').textContent = '—'; say(T('Укажи город в профиле — и увидишь рейтинг своего города.')); return; }
+    if (!lbData) { $('#myPlace').textContent = '—'; say(lbErr ? T('Рейтинг не загрузился. Проверь интернет.') : T('Загружаю рейтинг…')); return; }
+    const part = rankScope === 'city' ? lbData.city : lbData.world;
+    $('#myPlace').textContent = lbShow && part && part.place ? '#' + part.place : '—';
+    if (!lbShow) say(T('Ты скрыт из рейтинга — другие тебя не видят.'));
+    else if (!part || !part.place) say(T('Твоё место появится через пару минут.'));
+    else say('');
+    if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
+    part.top.forEach((r, i) => {
+      const me = r.id === prof.id;
+      const li = document.createElement('li'); li.className = 'row';
+      li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
+      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + avatarHTML(me ? myAvatar : r.a, 40) +
+        '<span class="stack" style="gap:2px;flex:1;min-width:0"><span class="nm" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted ct" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></span>' +
+        '<span class="muted mn" style="font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap"></span>';
+      li.querySelector('.nm').textContent = (me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}))) + ' ';
+      const a = document.createElement('span'); a.className = 'alphamini'; a.title = T('Альфа-тестер'); a.textContent = 'α'; li.querySelector('.nm').appendChild(a);
+      li.querySelector('.ct').textContent = [r.c, rankScope === 'world' ? r.co : ''].filter(Boolean).join(', ');
+      li.querySelector('.mn').textContent = T('{n} мин', {n: nfmt(r.m)});
+      box.appendChild(li);
+    });
+  }
+  if (LB_URL) {
+    $('#rankSoon').hidden = true; $('#rankBox').hidden = false;
+    $('#rankShow').addEventListener('change', async () => {
+      lbShow = $('#rankShow').checked;
+      try { localStorage.setItem('fedoskin-lb-show', lbShow ? '1' : '0'); } catch (_) {}
+      if (lbShow) { lbSent = {}; await lbSend(0); }
+      else { try { await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: prof.id, secret: lbSecret, hide: true})}); } catch (_) {} lbSent = {}; }
+      lbLoad();
+    });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) lbSend(2 * 60e3); });
+    setInterval(() => lbSend(10 * 60e3), 60e3);
+    lbSend(10 * 60e3);
+  }
 
   // ===== pull down to refresh =====
   // The logo breaks into pieces, the pieces swirl into a round vortex, then fly back and rebuild the logo.

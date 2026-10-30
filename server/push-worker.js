@@ -8,6 +8,8 @@
 //   GET  /latest       — последнее отправленное уведомление
 //   GET  /stats        — сколько подписок (только для админа)
 //   POST /notify       — разослать уведомление (только для админа), по 40 телефонов за запрос
+//   GET  /lb?id=&city= — рейтинг: топ-50 мира и города + место этого пользователя
+//   POST /lb           — {id, secret, nick, city, country, av, m, v, s} обновить свои минуты; {id, secret, hide:true} — убрать себя
 // Админ = тот, чей ключ GitHub может записывать в репозиторий приложения. Своих паролей у сервера нет.
 
 const REPO = 'Fedosk1n/fedoskin-app';
@@ -43,6 +45,7 @@ export default {
       if (path === '/' ) return json({ ok: true, service: 'fedoskin-push' });
       if (path === '/key') return json({ key: (await vapid(env)).pub });
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
+      if (path === '/lb') return await leaderboard(req, env, json);
       if (req.method !== 'POST' && path !== '/stats') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
@@ -190,4 +193,48 @@ async function sendPush(rec, payload, keys) {
     },
     body,
   });
+}
+
+
+// ===== leaderboard (alpha, no accounts) =====
+// Everything lives in ONE KV key 'lb' (free KV allows ~1000 writes a day, so the app sends at most every ~10 minutes).
+// Each phone has a random secret; only that phone can change its own line. Minutes can't grow faster than real time.
+const LB_START = Date.UTC(2026, 9, 28); // alpha start: nobody can have more minutes than have passed since then
+const clean = (x, n) => String(x || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
+const normCity = c => clean(c, 30).toLowerCase().replace(/ё/g, 'е');
+async function leaderboard(req, env, json) {
+  const board = JSON.parse((await env.PUSH.get('lb')) || '{}');
+  if (req.method === 'GET') {
+    const q = new URL(req.url).searchParams;
+    const me = String(q.get('id') || ''), city = normCity(q.get('city'));
+    const all = Object.entries(board).map(([id, r]) => ({ id, ...r })).sort((a, b) => (b.m - a.m) || (a.f - b.f));
+    const pack = list => ({
+      total: list.length,
+      place: list.findIndex(r => r.id === me) + 1,
+      top: list.slice(0, 50).map(r => ({ id: r.id, n: r.n, c: r.c, co: r.co, a: r.a, m: r.m, v: r.v, s: r.s }))
+    });
+    return json({ world: pack(all), city: city ? pack(all.filter(r => normCity(r.c) === city)) : null });
+  }
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  const b = await req.json();
+  const id = String(b.id || '');
+  if (!/^\d{6,9}$/.test(id) || !/^[0-9a-f]{32}$/.test(String(b.secret || ''))) return json({ error: 'bad id' }, 400);
+  const h = await hash('lb:' + b.secret), old = board[id], now = Date.now();
+  if (old && old.h !== h) return json({ error: 'this id belongs to another phone' }, 403);
+  if (b.hide) { if (old) { delete board[id]; await env.PUSH.put('lb', JSON.stringify(board)); } return json({ ok: true, hidden: true }); }
+  if (!old && Object.keys(board).length >= 20000) return json({ error: 'board is full' }, 507);
+  const num = (x, max) => Math.max(0, Math.min(max, Math.floor(+x || 0)));
+  // plausibility: minutes grow at most as fast as the clock (+2 min slack); never more than since the alpha started
+  const sinceStart = Math.max(0, Math.floor((now - LB_START) / 60000));
+  let m = num(b.m, Math.min(sinceStart, 300)); // a new phone can bring at most 5 hours watched before the rating started
+  if (old) m = Math.max(old.m, Math.min(m, old.m + Math.ceil((now - old.t) / 60000) + 2));
+  const rec = {
+    n: clean(b.nick, 20), c: clean(b.city, 30), co: clean(b.country, 30), a: clean(b.av, 16) || 'alpha',
+    m, v: Math.min(num(b.v, 1e6), m * 12 + 5), s: Math.min(num(b.s, 3650), Math.ceil((now - LB_START) / 864e5) + 1),
+    h, f: old ? old.f : now, t: now
+  };
+  // skip the write when nothing changed and the last write was recent (saves the daily write limit)
+  const same = old && old.m === rec.m && old.v === rec.v && old.s === rec.s && old.n === rec.n && old.c === rec.c && old.co === rec.co && old.a === rec.a;
+  if (!(same && now - old.t < 6 * 3600e3)) { board[id] = rec; await env.PUSH.put('lb', JSON.stringify(board)); }
+  return json({ ok: true, m: rec.m });
 }
