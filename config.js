@@ -3,7 +3,7 @@ window.APP_CONFIG = {
  "alpha": true,
  "alphaBanner": "Все уроки бесплатно на время альфа-теста",
  "tg": "Fe_DoSk1n",
- "tgMessage": "Привет! Я на разбор из приложения Fedoskin team 🔥",
+ "tgMessage": "Привет! Пришёл на онлайн-услуги по брейкингу",
  "reviewRub": 2000,
  "reviewUsd": 30,
  "reviewHours": 24,
@@ -13,5 +13,11 @@ window.APP_CONFIG = {
  "subYearRub": 1990,
  "subUsd": 3.99,
  "subYearUsd": 39.99,
- "pushUrl": ""
+ "pushUrl": "",
+ "onlineRub": 4000,
+ "onlineUsd": 50,
+ "coachRub": 10000,
+ "coachUsd": 120,
+ "fullRub": 50000,
+ "fullUsd": 600
 };

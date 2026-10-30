@@ -290,6 +290,12 @@ t('Уведомления выключены', 'Notifications turned off', 'Avis
 t('Этот браузер не умеет показывать уведомления', 'This browser can’t show notifications', 'Este navegador no puede mostrar notificaciones', 'Este navegador não mostra notificações', 'Ce navigateur ne peut pas afficher de notifications', 'Dieser Browser kann keine Benachrichtigungen anzeigen', 'このブラウザは通知に対応していません', '이 브라우저는 알림을 지원하지 않아요', '此浏览器无法显示通知')
 t('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить', 'The new lesson will appear in a couple of minutes — pull down to refresh', 'La lección nueva aparecerá en un par de minutos — desliza hacia abajo para actualizar', 'A aula nova aparece em alguns minutos — puxe a tela para baixo para atualizar', 'La nouvelle leçon arrive dans quelques minutes — tire l’écran vers le bas pour actualiser', 'Die neue Lektion erscheint in ein paar Minuten — zum Aktualisieren nach unten ziehen', '新しいレッスンは数分で表示されます。下に引っぱって更新してください', '새 레슨은 몇 분 뒤에 나타나요. 아래로 당겨 새로고침하세요', '新课程几分钟后出现 — 下拉刷新')
 
+# ---- online services tab (long texts live in their own file) ----
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from i18n_services import ROWS as _SVC
+for _r in _SVC: t(*_r)
+
 LANGS = [['ru', 'Русский'], ['en', 'English'], ['es', 'Español'], ['pt', 'Português'], ['fr', 'Français'], ['de', 'Deutsch'], ['ja', '日本語'], ['ko', '한국어'], ['zh', '中文']]
 
 import json
