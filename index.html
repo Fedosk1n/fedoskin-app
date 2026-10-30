@@ -831,14 +831,26 @@ body.fsmode .bigplay{z-index:3}
 
   // search
   const norm = x => x.toLowerCase().replace(/[\s\-–—→]/g, '').replace(/ё/g, 'е');
-  const INDEX = LESSONS.map(l => ({ l, key: norm(l.name + ' ' + l.ru) }));
+  // word search: every meaningful word of the query must match a word of the lesson, by its start,
+  // so Russian endings don't matter («с флая в твист» finds «флай твист», «мельницу» finds «мельница»)
+  const STOP = new Set(['с','со','в','во','на','из','к','ко','и','до','по','от','за','под','to','into','in','on','the','a','and','from','of']);
+  const words = x => x.toLowerCase().replace(/ё/g, 'е').replace(/[→–—,;:()«»"'.!?\/]/g, ' ').split(/\s+/).filter(Boolean)
+    .flatMap(w => w.includes('-') ? [w, w.replace(/-/g, '')] : [w]);
+  const pre = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+  const wordHit = (q, k) => { if (k.startsWith(q)) return true; if (q.length < 4 || k.length < 4) return false; const n = pre(q, k); return n >= 3 && q.length - n <= 3 && k.length - n <= 3; };
+  const INDEX = LESSONS.map(l => ({ l, key: norm(l.name + ' ' + l.ru), w: words(l.name + ' ' + l.ru + ' ' + l.sec) }));
+  function matches(x, q, nq){
+    if (x.key.includes(nq) || norm(x.l.sec).includes(nq)) return true;
+    const qw = words(q).filter(w => !STOP.has(w));
+    return qw.length > 0 && qw.every(w => x.w.some(k => wordHit(w, k)));
+  }
   function runSearch(){
     const q = $('#q').value.trim();
     $('#qClear').hidden = !q;
     const res = $('#results');
     if (!q){ res.hidden = true; $('#homeBody').hidden = false; return; }
     const nq = norm(q);
-    const hits = INDEX.filter(x => x.key.includes(nq) || norm(x.l.sec).includes(nq)).slice(0, 14);
+    const hits = INDEX.filter(x => matches(x, q, nq)).slice(0, 14);
     res.innerHTML = '';
     if (!hits.length){
       res.innerHTML = '<p class="muted" style="padding:24px 4px;font-size:14px;line-height:1.5"></p>';
