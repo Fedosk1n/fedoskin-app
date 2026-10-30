@@ -187,6 +187,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           </div>
         </div>
         <div class="err" id="aErr" hidden></div>
+        <div class="card" id="aDone" hidden style="margin-top:14px;border-color:var(--new)"></div>
       </div>
       <div id="aPhoneHelp">
       <h3>Если сжимаете на телефоне</h3>
@@ -996,7 +997,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const target = quality === '1080' ? 1080 : 720;
     if (!toKs && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Выберите «720p» или «1080p» — админка сожмёт, или экспортируйте из CapCut поменьше.'; return; }
     busy = true; cancelled = false; paintGo(); $('#aCancel').hidden = false;
-    $('#aErr').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
+    $('#aErr').hidden = true; $('#aDone').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
     setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до ' + target + 'p' : 'Видео без сжатия']);
     let step = 0;
     try {
@@ -1055,14 +1056,25 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         mp4 = file.slice(0, file.size, 'video/mp4');
       }
       bar(1);
-      // add to the list as unpublished
-      const lesson = {id, sec, name, dur: Math.round(dur), ru: $('#aRu').value.trim(), added: $('#aDate').value || today(), pv: !!p3};
-      if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, name); }
-      let at = -1; lessons.forEach((x, i) => { if (x.sec === sec) at = i; });
+      // add to the list as unpublished. Name, section, words and date are read NOW, so whatever was typed
+      // while the video was uploading counts too.
+      const fName = $('#aName').value.trim() || name, fSec = $('#aSec').value || sec, fRu = $('#aRu').value.trim(), fAdded = $('#aDate').value || today();
+      const lesson = {id, sec: fSec, name: fName, dur: Math.round(dur), ru: fRu, added: fAdded, pv: !!p3};
+      if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, fName); }
+      let at = -1; lessons.forEach((x, i) => { if (x.sec === fSec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
       uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
       renderLessons(); paintSaveBar();
       toast('Урок готов. Нажмите «Опубликовать» внизу');
+      // what was saved — stays on screen after the form is cleared for the next video
+      const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      $('#aDone').innerHTML = '<b style="color:var(--new)">✓ Урок добавлен — осталось нажать «Опубликовать» внизу</b>' +
+        '<p class="soft small" style="margin:8px 0 0;line-height:1.6">Название: <b>' + esc(fName) + '</b><br>Раздел: ' + esc(fSec) +
+        '<br>Слова для поиска: ' + (fRu ? esc(fRu) : '<span class="muted">не заданы</span>') + '<br>Дата: ' + esc(fAdded) + (ksId ? '<br>Видео: Kinescope' : '') + '</p>' +
+        '<div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="aDoneEdit">Изменить урок</button></div>' +
+        '<p class="hint" style="margin-top:8px">Форма выше очищена для следующего видео.</p>';
+      $('#aDone').hidden = false;
+      $('#aDoneEdit').addEventListener('click', () => { showTab('lessons'); openEdit(id); });
       // reset the form for the next video
       file = null; meta = null; idTouched = false;
       $('#fileIn').value = ''; $('#aName').value = ''; $('#aRu').value = ''; $('#aId').value = '';
