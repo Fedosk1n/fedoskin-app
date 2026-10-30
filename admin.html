@@ -532,7 +532,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function paintSaveBar(){
     const d = isDirty(); $('#savebar').hidden = !d; if (!d) return;
     const parts = [];
-    const nUp = Object.keys(uploads).length; if (nUp) parts.push('новых видео: ' + nUp);
+    const nRep = Object.values(uploads).filter(u => u.replace).length, nUp = Object.keys(uploads).length - nRep;
+    if (nUp) parts.push('новых видео: ' + nUp);
+    if (nRep) parts.push('заменено видео: ' + nRep);
     if (deleted.length) parts.push('удалено: ' + deleted.length);
     if (dropGh.length) parts.push('убрать из GitHub: ' + dropGh.length);
     if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) parts.push('настройки');
@@ -565,7 +567,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         if (showsNew(l)) nm.insertAdjacentHTML('beforeend', '<span class="pill new">NEW</span>');
         if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
         if (l.ks) nm.insertAdjacentHTML('beforeend', ksPill(l));
-        if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">НЕ ОПУБЛИКОВАН</span>');
+        if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">' + (uploads[l.id].replace ? 'НОВОЕ ВИДЕО — НЕ ОПУБЛИКОВАНО' : 'НЕ ОПУБЛИКОВАН') + '</span>');
         const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
         tx.append(nm, mt);
         tx.addEventListener('click', () => openEdit(l.id));
@@ -638,12 +640,31 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const say = t => { if (editing === l) $('#eKsState').textContent = t; };
     say('Загружаю ' + f.name + ' (' + fmtMB(f.size) + ') в Kinescope… Не закрывайте эту страницу.');
     try {
-      let dur = null; try { dur = (await readMeta(f)).dur; } catch(e) {}
+      let m = null; try { m = await readMeta(f); } catch(e) {}
+      // new cover + 3-second preview from the new file (the lesson keeps its id, so saves and progress stay)
+      let jpg = null, p3 = null;
+      if (m) {
+        say('Делаю новую обложку…');
+        try { jpg = await makeCover(f, m.dur); } catch(e) {}
+        if (jpg && canEncode) {
+          say('Делаю анимацию обложки…');
+          try { p3 = await convert(f, {trim: {start: 0, end: Math.min(3, m.dur)}, audio: {discard: true}, bitrate: 600000,
+            video: {crop: crop34(m.w, m.h), width: 360, height: 480, fit: 'fill', frameRate: 30}}); } catch(e) { p3 = null; }
+        }
+      }
+      const oldKs = l.ks;
       const id = await ksUpload(f, l.name, p => { $('#eKsBar').style.width = Math.round(p * 100) + '%'; say('Загружаю в Kinescope: ' + Math.round(p * 100) + '%… Не закрывайте эту страницу.'); });
-      l.ks = id; if (dur) l.dur = Math.round(dur);
+      l.ks = id; if (m && m.dur) l.dur = Math.round(m.dur);
+      if (jpg) {
+        uploads[l.id] = {mp4: null, jpg, p3, coverUrl: URL.createObjectURL(jpg), replace: true};
+        l.pv = !!p3; // no new animation → show the new cover only, never the old animation
+      }
+      // the old 720p copy in GitHub is no longer needed
+      if (vFiles[l.id + '.mp4'] != null && !dropGh.includes(l.id)) dropGh.push(l.id);
       ksState[id] = 'wait'; ksWatch(id, l.name);
-      if (editing === l) { $('#eKs').value = ksPlay(id); paintKs(l); }
-      toast('Загружено в Kinescope. Нажмите «Опубликовать» внизу');
+      if (editing === l) { $('#eKs').value = ksPlay(id); $('#eCover').src = coverSrc(l); paintKs(l); }
+      if (oldKs && oldKs !== id) toast('Загружено. Старое видео этого урока осталось в Kinescope — удалите его там, чтобы освободить минуты');
+      else toast('Загружено в Kinescope. Нажмите «Готово», затем «Опубликовать» внизу');
       renderLessons(); paintSaveBar();
     } catch(e) {
       say('Не получилось: ' + (e && e.message || e));
@@ -701,7 +722,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!confirm('Удалить урок «' + l.name + '» вместе с видео? Если хотите просто убрать его на время — лучше выключите «Показывать в приложении».' + (l.ks ? '\n\nВидео в Kinescope админка удалить не может — удалите его там вручную, чтобы освободить минуты.' : ''))) return;
     lessons.splice(lessons.indexOf(l), 1);
     dropGh = dropGh.filter(x => x !== l.id);
-    if (uploads[l.id]) delete uploads[l.id]; else deleted.push(l.id);
+    // a lesson that is already published must have its files removed; a never-published one just disappears
+    const published = remote.lessons.some(x => x.id === l.id);
+    delete uploads[l.id];
+    if (published) deleted.push(l.id);
     closeEdit(); renderLessons(); paintSaveBar();
   });
 
@@ -1021,6 +1045,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#pubBtn').addEventListener('click', publish);
   async function publish(){
     const btn = $('#pubBtn'); if (btn.disabled) return;
+    const pending = lessons.filter(l => l.ks && ksState[l.ks] === 'wait' && !l.hidden && (dropGh.includes(l.id) || !remote.lessons.some(x => x.id === l.id && x.ks === l.ks)));
+    if (pending.length && !confirm('Kinescope ещё обрабатывает: ' + pending.map(l => '«' + l.name + '»').join(', ') + '.\nЕсли опубликовать сейчас, эти уроки несколько минут не будут играть. Админка сама скажет, когда видео готово.\n\nОпубликовать всё равно?')) return;
     btn.disabled = true; $('#undoBtn').disabled = true;
     const say = t => { $('#saveMsg').innerHTML = '<span class="row"><span class="spin"></span><span>' + t + '</span></span>'; };
     try {
@@ -1062,7 +1088,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) tree.push({path: 'config.js', mode: '100644', type: 'blob', content: cfgOut()});
       const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
       const parts = [];
-      if (ids.length) parts.push('новые уроки: ' + ids.map(id => lessons.find(l => l.id === id).name).join(', '));
+      const idsNew = ids.filter(id => !uploads[id].replace), idsRep = ids.filter(id => uploads[id].replace);
+      if (idsNew.length) parts.push('новые уроки: ' + idsNew.map(id => lessons.find(l => l.id === id).name).join(', '));
+      if (idsRep.length) parts.push('новое видео: ' + idsRep.map(id => lessons.find(l => l.id === id).name).join(', '));
       if (deleted.length) parts.push('удалены: ' + deleted.join(', '));
       if (dropGh.length) parts.push('видео перенесены в Kinescope: ' + dropGh.join(', '));
       if (tree.some(t => t.path === 'config.js')) parts.push('настройки');
@@ -1070,7 +1098,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ' + parts.join('; '), tree: newTree.sha, parents: [ref.object.sha]}});
       await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}});
       toast('Опубликовано! В приложении появится через 1–5 минут');
-      const fresh = ids.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
+      const fresh = idsNew.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
       await loadRemote(); renderAll();
       if (fresh.length && cfg.pushUrl) schedulePush(fresh);
     } catch(e) {
