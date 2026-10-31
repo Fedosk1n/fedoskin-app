@@ -1235,14 +1235,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
 
   // ---------- instant start ----------
-  // For every published Kinescope lesson the first 5 seconds are copied from the Kinescope stream (720p, no
-  // re-encoding, so the frames are exactly the stream's) into v/<id>-intro.mp4, and intros.js remembers which
-  // Kinescope video each one was cut from. The app plays this file at once and switches to the stream without a
+  // For every published Kinescope lesson the first 5 seconds are copied from the Kinescope stream (its 480p
+  // rendition, no re-encoding, so the frames are exactly the stream's) into v/<id>-intro.mp4, and intros.js
+  // remembers "<Kinescope id>:480" — the video and the quality each one was cut from (the app checks both). The app plays this file at once and switches to the stream without a
   // seam. Runs by itself after login, after «Опубликовать» and when Kinescope finishes a new video; publishes with
   // its own small commit (lessons.js is not touched, so it never clashes with unpublished edits).
-  const INTRO_SEC = 5;
+  const INTRO_SEC = 5, INTRO_Q = 480;
+  const introKey = l => l.ks + ':' + INTRO_Q;
   let introJob = null, publishing = false, introNote = '', introFail = {};
-  const introWanted = () => remote ? remote.lessons.filter(l => l.ks && !(intros[l.id] === l.ks && vFiles[l.id + '-intro.mp4'] != null)) : [];
+  const introWanted = () => remote ? remote.lessons.filter(l => l.ks && !(intros[l.id] === introKey(l) && vFiles[l.id + '-intro.mp4'] != null)) : [];
   function paintIntro(prog){
     const card = $('#introCard'); if (!remote) { card.hidden = true; return; }
     const all = remote.lessons.filter(l => l.ks), todo = introWanted();
@@ -1258,10 +1259,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   async function cutIntro(ksId, dur){
     const M = await mb();
     const input = new M.Input({source: new M.UrlSource(ksHls(ksId)), formats: M.ALL_FORMATS.concat(M.HLS_FORMATS || [])});
-    // the quality the app starts with: the best one not above 720p
+    // the quality the app starts the stream with after an intro: the best one not above 480p
     const vts = await input.getVideoTracks();
     let pick = null, side = -1;
-    for (const t of vts) { const sd = Math.min(t.displayWidth, t.displayHeight); if (sd <= 720 && sd > side) { pick = t; side = sd; } }
+    for (const t of vts) { const sd = Math.min(t.displayWidth, t.displayHeight); if (sd <= INTRO_Q && sd > side) { pick = t; side = sd; } }
     if (!pick) pick = vts.reduce((a, t) => !a || Math.min(t.displayWidth, t.displayHeight) < Math.min(a.displayWidth, a.displayHeight) ? t : a, null);
     if (!pick) throw new Error('в потоке нет видео');
     const aud = pick.getPrimaryPairableAudioTrack ? await pick.getPrimaryPairableAudioTrack() : null;
@@ -1317,11 +1318,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const tree = [];
       for (const m of made) tree.push({path: 'v/' + m.l.id + '-intro.mp4', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(m.blob))});
       const next = {};
-      remote.lessons.forEach(l => { if (l.ks && cur[l.id] === l.ks) next[l.id] = l.ks; });
-      made.forEach(m => { next[m.l.id] = m.l.ks; });
+      remote.lessons.forEach(l => { if (l.ks && cur[l.id] === introKey(l)) next[l.id] = cur[l.id]; });
+      made.forEach(m => { next[m.l.id] = introKey(m.l); });
       tree.push({path: 'intros.js', mode: '100644', type: 'blob', content:
         '// Мгновенный старт уроков из Kinescope. Его меняет админка (admin.html) — формат JSON.\n' +
-        '// урок → id видео Kinescope, из которого вырезано начало v/<урок>-intro.mp4 (первые 5 сек, те же кадры, что в потоке).\n' +
+        '// урок → "id видео Kinescope:480" — из какого видео и какого качества вырезано начало v/<урок>-intro.mp4 (первые 5 сек, те же кадры, что в потоке).\n' +
         '// Если видео урока в Kinescope заменили, id не совпадёт — приложение просто не будет использовать старое начало.\n' +
         'window.LESSON_INTROS = ' + JSON.stringify(next, null, 1) + ';\n'});
       const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
