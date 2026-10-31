@@ -1,6 +1,6 @@
 // Frame cache for scrubbing (index.html, «кадры для перемотки»). Runs in the background, off the app's main thread,
 // so playback and the interface never stutter because of it.
-// - build: a whole lesson file (a Blob already on the phone) is decoded once into sharp JPEG frames on a time grid
+// - build: a whole lesson file (a Blob already on the phone, or its URL once the player has it all) is decoded once into sharp JPEG frames on a time grid
 //   (every `step` seconds), starting from where the viewer is, then the beginning;
 // - frame: one frame captured from the playing video (an ImageBitmap) is turned into a JPEG.
 // Every frame goes back to the page as {key, k (grid index), t (its real time), h (its short side), blob}.
@@ -36,7 +36,8 @@ async function build(m){
   const j = job = { key: m.key, paused: false, stop: false, wake: null };
   try {
     const M = await mb();
-    const input = new M.Input({ source: new M.BlobSource(m.blob), formats: M.ALL_FORMATS });
+    // the file itself (already in memory), or its address: then it is read in pieces, mostly from the browser's cache
+    const input = new M.Input({ source: m.blob ? new M.BlobSource(m.blob) : new M.UrlSource(m.url), formats: M.ALL_FORMATS });
     const tr = await input.getPrimaryVideoTrack(); if (!tr) throw new Error('no video');
     const dur = await input.computeDuration();
     const [w, h] = fit(tr.displayWidth, tr.displayHeight, m.max || 720);

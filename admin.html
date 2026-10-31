@@ -160,6 +160,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <button class="btn btn-sm" id="introGo" type="button" hidden>Сделать</button>
         </div>
       </div>
+      <div class="card" id="moveCard" style="margin-top:12px" hidden>
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+          <div style="min-width:0"><b>Короткие уроки из Kinescope — на GitHub</b>
+            <div class="hint" id="moveInfo" style="margin-top:4px"></div>
+            <div class="prog" id="moveProg" hidden><i id="moveBar"></i></div>
+          </div>
+          <button class="btn btn-sm" id="moveGo" type="button" hidden>Перенести</button>
+        </div>
+      </div>
       <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Стрелки — порядок внутри раздела. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
       <div style="margin-top:12px"><input type="text" id="lFilter" placeholder="Найти урок…"></div>
       <div id="lessonList"></div>
@@ -880,7 +889,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#repoSize').textContent = fmtMB(total);
   }
 
-  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); paintIntro(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
+  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); paintIntro(); paintMove(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
 
   // ---------- add video ----------
   const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
@@ -1285,10 +1294,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     return blob;
   }
   // the strip: frames every 0.5 s (long lessons: at most ~120 frames), small, 10 in a row, one JPEG
-  async function cutStrip(l){
+  async function cutStrip(l, fileBlob){
     const M = await mb();
     const url = l.ks ? ksHls(l.ks) : new URL('v/' + l.id + '.mp4', location.href).href;
-    const input = new M.Input({source: new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
+    const input = new M.Input({source: fileBlob ? new M.BlobSource(fileBlob) : new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
     const vts = await input.getVideoTracks();
     const tr = vts.reduce((a, t) => !a || t.displayWidth * t.displayHeight < a.displayWidth * a.displayHeight ? t : a, null); // the lightest quality is plenty
     if (!tr) throw new Error('в видео нет картинки');
@@ -1394,6 +1403,114 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); }
       catch(e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; } // someone published in between: redo on top
       intros = next; made.forEach(m => { vFiles[m.l.id + '-intro.mp4'] = m.blob.size; });
+      return;
+    }
+  }
+
+  // ---------- short Kinescope lessons -> GitHub ----------
+  // A short lesson kept as one file on GitHub is fully on the phone after a few seconds, so the app can prepare every
+  // frame for scrubbing in advance (a Kinescope lesson only gets the parts already watched). The video is copied from
+  // Kinescope as it is — its 1080p quality, all its frames (60 per second), no re-encoding — together with the sound.
+  // One commit: v/<id>.mp4 + its strip of frames, lessons.js without `ks`, the 5-second start (only needed for
+  // Kinescope) removed. The video stays in Kinescope too (it can be deleted there by hand).
+  const MOVE_MAX_SEC = 60, MOVE_Q = 1080;
+  let moveJob = null, moveNote = '';
+  const moveWanted = () => remote ? remote.lessons.filter(l => l.ks && (l.dur || 999) <= MOVE_MAX_SEC) : [];
+  function paintMove(prog){
+    const card = $('#moveCard'), list = moveWanted();
+    card.hidden = !remote || (!list.length && !moveNote);
+    if (card.hidden) return;
+    $('#moveProg').hidden = prog == null; if (prog != null) $('#moveBar').style.width = Math.round(prog * 100) + '%';
+    $('#moveGo').hidden = !!moveJob || !list.length;
+    $('#moveGo').textContent = 'Перенести (' + list.length + ')';
+    $('#moveInfo').textContent = moveNote || ('Короткие уроки (до минуты), сейчас в Kinescope: ' + list.map(l => '«' + l.name + '»').join(', ') +
+      '. На GitHub они целиком попадают в телефон и перематываются пальцем чётко везде. Видео копируется без пережатия: 1080p, 60 кадров в секунду, со звуком.');
+  }
+  async function cutFull(l, onProgress){
+    const M = await mb();
+    const input = new M.Input({source: new M.UrlSource(ksHls(l.ks)), formats: M.ALL_FORMATS.concat(M.HLS_FORMATS || [])});
+    const vts = await input.getVideoTracks();
+    // 1080p (the short side); if the video has no such quality, the best one below it
+    let pick = null, side = -1;
+    for (const t of vts) { const sd = Math.min(t.displayWidth, t.displayHeight); if (sd <= MOVE_Q && sd > side) { pick = t; side = sd; } }
+    if (!pick) throw new Error('в Kinescope нет видео');
+    let fps = 0; try { const st = await pick.computePacketStats(120); fps = Math.round(st.averagePacketRate); } catch(e) {}
+    const aud = pick.getPrimaryPairableAudioTrack ? await pick.getPrimaryPairableAudioTrack() : null;
+    const output = new M.Output({format: new M.Mp4OutputFormat({fastStart: 'in-memory'}), target: new M.BufferTarget()});
+    const conv = await M.Conversion.init({input, output, showWarnings: false, tracks: 'all',
+      video: t => t === pick ? {} : {discard: true}, audio: t => aud && t === aud ? {} : {discard: true}});
+    if (!conv.isValid) throw new Error('не получилось прочитать видео (' + conv.discardedTracks.filter(d => d.reason !== 'discarded_by_user').map(d => d.reason).join(', ') + ')');
+    if (onProgress) conv.onProgress = onProgress;
+    await conv.execute();
+    const blob = new Blob([output.target.buffer], {type: 'video/mp4'});
+    if (blob.size < 100000) throw new Error('получился пустой файл');
+    if (blob.size > MAX_FILE) throw new Error('файл ' + fmtMB(blob.size) + ' — больше, чем примет GitHub');
+    let dur = 0; try { dur = await new M.Input({source: new M.BlobSource(blob), formats: M.ALL_FORMATS}).computeDuration(); } catch(e) {}
+    return {blob, w: pick.displayWidth, h: pick.displayHeight, fps, sound: !!aud, dur};
+  }
+  $('#moveGo').addEventListener('click', () => moveToGh());
+  async function moveToGh(){
+    if (moveJob || publishing) return;
+    if (pending().length) { toast('Сначала опубликуйте или отмените свои изменения — потом переносите', true); return; }
+    const list = moveWanted(); if (!list.length) return;
+    if (!confirm('Перенести на GitHub ' + list.length + ' ' + (list.length === 1 ? 'урок' : 'уроков') + ': ' + list.map(l => '«' + l.name + '»').join(', ') +
+      '?\n\nВидео скопируется из Kinescope без пережатия (1080p, 60 кадров/с, со звуком), ~20–35 МБ на урок. Займёт несколько минут — не закрывайте страницу.')) return;
+    moveJob = (async () => {
+      const made = [], bad = [];
+      try {
+        if (introJob) { moveNote = 'Дожидаюсь «мгновенного старта»…'; paintMove(0); await introJob.catch(() => {}); }
+        for (let i = 0; i < list.length; i++) {
+          const l = list[i], part = 1 / list.length, base = i / list.length;
+          const say = (t, p) => { moveNote = '«' + l.name + '» (' + (i + 1) + ' из ' + list.length + '): ' + t; paintMove(base + part * p); };
+          try {
+            say('копирую видео из Kinescope…', 0);
+            const r = await withTimeout(cutFull(l, p => say('копирую видео из Kinescope ' + Math.round(p * 100) + '%…', p * 0.6)), 600000);
+            say('делаю ленту кадров…', 0.6);
+            const gl = Object.assign({}, l); delete gl.ks;
+            const sb = await withTimeout(cutStrip(gl, r.blob), 240000).catch(() => null);
+            say('загружаю на GitHub (' + fmtMB(r.blob.size) + ')…', 0.7);
+            const sha = await ghBlob(await blobToB64(r.blob), p => say('загружаю на GitHub ' + Math.round(p * 100) + '%…', 0.7 + p * 0.28));
+            const sbSha = sb ? await ghBlob(await blobToB64(sb.blob)) : null;
+            made.push({l, r, sha, sb, sbSha});
+          } catch(e) { bad.push('«' + l.name + '» — ' + (e && e.message || e)); }
+        }
+        if (made.length) { moveNote = 'Сохраняю…'; paintMove(1); await commitMove(made); }
+        moveNote = bad.length ? 'Не получилось: ' + bad.join('; ') + '. Нажмите «Перенести» ещё раз.' : '';
+        if (made.length) toast('Перенесено на GitHub: ' + made.map(m => '«' + m.l.name + '» ' + Math.min(m.r.w, m.r.h) + 'p ' + (m.r.fps ? m.r.fps + ' к/с' : '')).join(', ') + '. В приложении через 1–5 минут');
+        await loadRemote(); renderAll();
+      } catch(e) {
+        moveNote = 'Не получилось сохранить: ' + (e && e.message || e) + '. Нажмите «Перенести» ещё раз.';
+      } finally { moveJob = null; paintMove(); }
+    })();
+    paintMove(0);
+  }
+  async function commitMove(made){
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ref = await gh('/git/ref/heads/' + BRANCH);
+      const head = await gh('/git/commits/' + ref.object.sha);
+      const [lf, inf, sbf] = await Promise.all([gh('/contents/lessons.js?ref=' + ref.object.sha), gh('/contents/intros.js?ref=' + ref.object.sha).catch(() => null), gh('/contents/storyboards.js?ref=' + ref.object.sha).catch(() => null)]);
+      const L = parseData(b64ToUtf8(lf.content), 'window.LESSONS_DATA');
+      const inT = inf ? b64ToUtf8(inf.content) : '', sbT = sbf ? b64ToUtf8(sbf.content) : '';
+      const I = inf ? parseData(inT, 'window.LESSON_INTROS') : {header: '', data: {}}, S = sbf ? parseData(sbT, 'window.LESSON_SB') : {header: '', data: {}};
+      const tree = [], names = [];
+      for (const m of made) {
+        const l = L.data.find(x => x.id === m.l.id && x.ks === m.l.ks); if (!l) continue; // changed meanwhile: skip
+        delete l.ks; if (m.r.dur) l.dur = Math.round(m.r.dur); if (m.r.h > m.r.w) l.vertical = true;
+        names.push(l.name);
+        tree.push({path: 'v/' + l.id + '.mp4', mode: '100644', type: 'blob', sha: m.sha});
+        if (vFiles[l.id + '-intro.mp4'] != null) tree.push({path: 'v/' + l.id + '-intro.mp4', mode: '100644', type: 'blob', sha: null});
+        delete I.data[l.id];
+        if (m.sbSha) { tree.push({path: 'v/' + l.id + '-sb.jpg', mode: '100644', type: 'blob', sha: m.sbSha}); S.data[l.id] = Object.assign({}, m.sb.info, {v: ((S.data[l.id] && S.data[l.id].v) || 0) + 1}); }
+        else delete S.data[l.id];
+      }
+      if (!names.length) return;
+      tree.push({path: 'lessons.js', mode: '100644', type: 'blob', content: L.header + 'window.LESSONS_DATA = ' + JSON.stringify(L.data, null, 1) + ';\n'});
+      if (inf) tree.push({path: 'intros.js', mode: '100644', type: 'blob', content: I.header + 'window.LESSON_INTROS = ' + JSON.stringify(I.data, null, 1) + ';\n'});
+      if (sbf) tree.push({path: 'storyboards.js', mode: '100644', type: 'blob', content: S.header + 'window.LESSON_SB = ' + JSON.stringify(S.data, null, 1) + ';\n'});
+      const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
+      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: короткие уроки из Kinescope перенесены на GitHub (1080p 60 к/с, без пережатия) — ' + names.join(', '), tree: newTree.sha, parents: [ref.object.sha]}});
+      try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); }
+      catch(e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; }
       return;
     }
   }
