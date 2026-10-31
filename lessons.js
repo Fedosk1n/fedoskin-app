@@ -125,6 +125,16 @@ window.LESSONS_DATA = [
   "vertical": true
  },
  {
+  "id": "fr-shoulder-freeze",
+  "sec": "Freezes",
+  "name": "shoulder freeze",
+  "dur": 59,
+  "ru": "shoulder на плече",
+  "added": "2026-10-31",
+  "pv": true,
+  "vertical": true
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
