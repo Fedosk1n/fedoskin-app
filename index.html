@@ -1342,6 +1342,7 @@ body.fsmode .bigplay{z-index:3}
     const list = inSec(l.sec), n = list.indexOf(l) + 1;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
+    $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
     $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: l.sec, n, m: list.length, dur: fmtD(l.dur)});
     $('#badgeOwn').hidden = true;
     setLoop(null);
@@ -1418,6 +1419,7 @@ body.fsmode .bigplay{z-index:3}
       dx = dir > 0 ? Math.min(0, mx) : Math.max(0, mx);
       const shown = nb ? dx : dx * 0.25; // nothing there: only a little give
       stage.style.setProperty('--sx', shown + 'px');
+      if (nb) $('#fsName').style.opacity = String(Math.max(0, 1 - Math.abs(shown) / w * 2));
       stage.style.setProperty('--px', (dir > 0 ? w + shown : -w + shown) + 'px');
     }, { passive: false });
     const end = () => {
@@ -1446,6 +1448,7 @@ body.fsmode .bigplay{z-index:3}
         }, 150);
       } else {
         stage.style.setProperty('--sx', '0px'); stage.style.setProperty('--px', (dir > 0 ? w : -w) + 'px');
+        $('#fsName').style.opacity = '';
         setTimeout(() => { stage.classList.remove('swipe-anim', 'swiping'); stage.style.removeProperty('--sx'); stage.style.removeProperty('--px'); }, 210);
       }
     };
