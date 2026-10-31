@@ -162,6 +162,13 @@
   copy as blob: was the prime suspect — played sound/time, drew only the poster). The watchdog reloads from the site URL
   when the stuck source is a blob:. loadVideo's async-source path clears the previous lesson's src first and playMain
   skips while no src (the old lesson used to play meanwhile).
+- Back from sheets (owner's recording 31.10 17:57: on iPhone the phone's own edge back-swipe — iOS 26 web apps have
+  one — from the language sheet went to an old Powermove section): every `.sheet-bg` and `#story` is a history step of
+  its own (MutationObserver on `hidden` → pushState {…, ov:id}; closing by tap → history.back with `ovPop`; popstate
+  with a sheet open just closes it). Language change / pull-to-refresh use `reloadClean()`: history.go(-navDepth) to the
+  app's start entry, then reload; the screen to reopen goes via sessionStorage `fedoskin-restore`. popstate with
+  navDepth 0 (an entry from before the app started) ⇒ home. Our iPhone edge swipe now also works over sheets (moves the
+  sheet) and steps aside on touchcancel (the system took the gesture).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.

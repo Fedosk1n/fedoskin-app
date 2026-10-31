@@ -2654,7 +2654,7 @@ body.fsmode .bigplay{z-index:3}
       await vortex(Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]));
       await new Promise(r => setTimeout(r, 120));
       try { sessionStorage.setItem('fedoskin-refreshed', '1'); } catch (_) {}
-      location.reload();
+      reloadClean();
     }
     document.addEventListener('touchstart', e => {
       if (blocked() || e.touches.length !== 1) return;
@@ -2715,9 +2715,44 @@ body.fsmode .bigplay{z-index:3}
     if (navDepth > 0) history.back();
     else if (fallback) fallback();
   }
+  // reload the app (new language, pull-to-refresh) without leaving old steps in the history: before, «back» after a
+  // reload went to screens from before it (e.g. a section seen long ago) instead of staying in the app
+  function reloadClean(){
+    const n = navDepth;
+    try { sessionStorage.setItem('fedoskin-restore', JSON.stringify(history.state || {})); } catch (_) {} // the screen to come back to
+    if (n > 0) { let done = false; const r = () => { if (!done) { done = true; location.reload(); } }; window.addEventListener('popstate', r, { once: true }); setTimeout(r, 600); history.go(-n); }
+    else location.reload();
+  }
+  // Sheets (language, profile, avatar, install, story card) are a step in the history of their own, so «back» — the
+  // phone's swipe from the edge, Android's back button, our iPhone edge swipe — closes the sheet and stays on the
+  // screen under it (before, it left that screen; the language sheet led back to some old section).
+  const OVERLAYS = [...document.querySelectorAll('.sheet-bg'), document.getElementById('story')].filter(Boolean);
+  let ovPop = 0;
+  const openOverlay = () => OVERLAYS.find(x => !x.hidden) || null;
+  const ovObs = new MutationObserver(recs => recs.forEach(r => {
+    const el = r.target, open = !el.hidden;
+    if (open && !el._ovPushed) { el._ovPushed = true; try { history.pushState(Object.assign({}, history.state || {}, { ov: el.id }), ''); navDepth++; } catch (_) {} }
+    else if (!open && el._ovPushed) {
+      el._ovPushed = false;
+      // closed by a tap (not by «back»): take its step out of the history too
+      if (!el._ovByBack && history.state && history.state.ov === el.id) { ovPop++; history.back(); }
+      el._ovByBack = false;
+    }
+  }));
+  OVERLAYS.forEach(el => ovObs.observe(el, { attributes: true, attributeFilter: ['hidden'] }));
   window.addEventListener('popstate', e => {
     const st = e.state || { s: 'home' };
+    const wasDepth = navDepth;
     navDepth = Math.max(0, navDepth - 1);
+    if (ovPop > 0) { ovPop--; return; } // the step of a sheet closed by a tap
+    const ov = openOverlay();
+    if (ov) { ov._ovByBack = true; ov.hidden = true; return; }
+    if (wasDepth === 0) {
+      // a step from before the app (re)started: the app's own start is its home screen
+      if (document.body.classList.contains('fsmode')) exitFs();
+      restoring = true; try { go('home'); } finally { restoring = false; }
+      return;
+    }
     // back while watching fullscreen: just leave fullscreen (a vertical lesson's own full screen is the lesson
     // itself: there «back» leaves the lesson)
     if (document.body.classList.contains('fsmode') && !st.fs) { const v = vertFs; exitFs(); if (!v) return; }
@@ -2736,12 +2771,12 @@ body.fsmode .bigplay{z-index:3}
     if (!ios || !standalone) return; // browsers and Android already have their own back gesture
     let sx = 0, sy = 0, dx = 0, active = false, decided = false, scr = null, t0 = 0;
     const bl = document.body.classList;
-    const blocked = () => (bl.contains('fsmode') && !bl.contains('fs-vert')) || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
+    const blocked = () => bl.contains('fsmode') && !bl.contains('fs-vert') && !openOverlay(); // a sheet: the swipe closes it
     // a label like the lesson swipe has, so the two gestures can't be mixed up: «← Назад к разделу Footwork»
     const lab = document.createElement('div'); lab.className = 'swlabel'; lab.style.cssText = 'position:fixed;z-index:60;top:42%';
     lab.innerHTML = '<b></b><i></i>'; document.body.appendChild(lab);
     const setLab = () => {
-      const fromLesson = !$('#lesson').hidden && curLesson, toPage = history.state && history.state.fs;
+      const fromLesson = !openOverlay() && !$('#lesson').hidden && curLesson, toPage = history.state && history.state.fs;
       lab.querySelector('b').textContent = '← ' + (fromLesson && !toPage ? T('Назад к разделу') : T('Назад'));
       lab.querySelector('i').textContent = fromLesson ? (toPage ? curLesson.name : curSection) : '';
       lab.querySelector('i').hidden = !fromLesson;
@@ -2750,7 +2785,7 @@ body.fsmode .bigplay{z-index:3}
       if (navDepth <= 0 || blocked() || e.touches.length !== 1) return;
       const t = e.touches[0]; if (t.clientX > EDGE_BACK || (e.target.closest && e.target.closest('.timeline'))) return;
       sx = t.clientX; sy = t.clientY; dx = 0; active = true; decided = false; t0 = Date.now();
-      scr = [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
+      scr = openOverlay() || [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
     }, { passive: true });
     document.addEventListener('touchmove', e => {
       if (!active || !scr) return;
@@ -2778,6 +2813,12 @@ body.fsmode .bigplay{z-index:3}
         el.style.transform = 'translateX(0)';
         setTimeout(() => { el.style.transition = ''; el.style.transform = ''; el.style.boxShadow = ''; }, 200);
       }
+    });
+    // the phone took the gesture over (its own back swipe): ours steps aside, so «back» never happens twice
+    document.addEventListener('touchcancel', () => {
+      if (!active) return; active = false;
+      const el = scr; scr = null; lab._on = false; lab.style.opacity = '0';
+      if (el) { el.style.transition = ''; el.style.transform = ''; el.style.boxShadow = ''; }
     });
   })();
   renderStats();
@@ -2935,7 +2976,7 @@ body.fsmode .bigplay{z-index:3}
         if (code === LANG) { $('#langSheet').hidden = true; return; }
         try { localStorage.setItem('fedoskin-lang', code); } catch (_) {}
         saveStats && saveStats();
-        location.reload();
+        reloadClean();
       });
       list.appendChild(b);
     });
@@ -2945,7 +2986,8 @@ body.fsmode .bigplay{z-index:3}
     $('#langSheet').addEventListener('click', e => { if (e.target.id === 'langSheet') $('#langSheet').hidden = true; });
   })();
 
-  const startState = history.state;
+  let startState = history.state;
+  try { const r = sessionStorage.getItem('fedoskin-restore'); if (r) { sessionStorage.removeItem('fedoskin-restore'); startState = JSON.parse(r); } } catch (_) {}
   restoring = true; go('home'); restoring = false;
   try { history.replaceState({ s: 'home' }, ''); } catch (_) {}
   // after "pull to refresh" reopen the same section / lesson
