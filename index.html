@@ -152,6 +152,21 @@ p{margin:0}
 .stage{touch-action:manipulation;position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
 .stage video,.stage #figure{width:100%;height:100%;object-fit:contain;transition:transform .25s ease}
 .stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
+/* swipe to the next / previous lesson: the video follows the finger, the neighbour's cover slides in */
+.stage.swiping #vid,.stage.swiping #vin,.stage.swiping .vload{translate:var(--sx,0) 0}
+.stage.swipe-anim #vid,.stage.swipe-anim #vin,.stage.swipe-anim .vload,.stage.swipe-anim .swpeek{transition:translate .2s ease}
+.swpeek{position:absolute;inset:0;background:#111113 center/cover no-repeat;display:none;align-items:center;justify-content:flex-start;padding:0 16px;box-sizing:border-box;pointer-events:none;translate:var(--px,100%) 0}
+.swpeek.from-left{justify-content:flex-end}
+.stage.swiping .swpeek{display:flex}
+.stage.swiping .bigplay{opacity:0;transition:opacity .1s}
+.swpeek span{max-width:80%;padding:10px 16px;border-radius:22px;background:rgba(11,11,12,.72);color:#F2EFE8;font-family:var(--display);text-transform:uppercase;font-size:18px;text-align:center;line-height:1.15}
+.swpeek b{display:block;font-family:var(--body);text-transform:none;font-size:11px;font-weight:600;color:#C9C5BD;letter-spacing:.3px;margin-bottom:3px}
+.swend{position:absolute;left:50%;top:30%;z-index:5;translate:-50% 0;padding:10px 16px;border-radius:20px;background:rgba(11,11,12,.8);color:#F2EFE8;font-size:13px;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .2s}
+.swend.on{opacity:1}
+.swhint{position:absolute;left:50%;top:44%;z-index:5;translate:-50% 0;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:22px;background:rgba(11,11,12,.8);color:#F2EFE8;font-size:14px;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .3s}
+.swhint.on{opacity:1}
+.swhint svg{animation:swnudge 1.1s ease-in-out infinite}
+@keyframes swnudge{0%,100%{transform:translateX(6px)}50%{transform:translateX(-6px)}}
 /* while a lesson loads: its 3-second cover animation + spinner instead of a black screen */
 .vload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:#111113 center/cover no-repeat}
 .vload[hidden]{display:none}
@@ -351,6 +366,9 @@ body.fsmode .bigplay{z-index:3}
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
       <video id="vin" playsinline preload="auto" hidden></video>
+      <div class="swpeek" id="swPeek" aria-hidden="true"><span><b id="swPeekDir"></b><i id="swPeekName" style="font-style:normal"></i></span></div>
+      <div class="swend" id="swEnd" aria-hidden="true"></div>
+      <div class="swhint" id="swHint" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Листай вбок — соседний урок</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
       <svg id="figure" viewBox="0 0 200 200" aria-hidden="true">
         <g id="dancer" stroke="#F2EFE8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -1322,10 +1340,85 @@ body.fsmode .bigplay{z-index:3}
     setPlaying(true);
     warmGen++;
     if (P.playing && (av.paused || av.readyState < 3)) showLoad(l);
-    setTimeout(() => { if (curLesson === l) warmKs(list.filter(x => x !== l)); }, 5000);
+    // the lessons next to this one first: a swipe to them starts from memory
+    const at = list.indexOf(l), near = [list[at + 1], list[at - 1]].filter(Boolean);
+    setTimeout(() => { if (curLesson === l) warmKs(near.concat(list.filter(x => x !== l && !near.includes(x)))); }, 3000);
+    maybeSwipeHint(list.length);
     $('#lesson').scrollTop = 0;
   }
   $('#lessonBack').addEventListener('click', () => goBack(() => openSection(curSection)));
+
+  // ===== swipe on the video: next / previous lesson of the section =====
+  // finger to the left = next lesson, to the right = previous. The video follows the finger and the neighbour's cover
+  // slides in with its name; let go past a quarter of the width (or flick) to switch. Full screen stays as it is.
+  (function lessonSwipe(){
+    let sx = 0, sy = 0, t0 = 0, dx = 0, w = 1, mode = 0, nb = null, dir = 0, rot = false; // mode: 0 idle, 1 deciding, 2 swiping
+    const neighbours = () => { const list = inSec(curSection), i = list.indexOf(curLesson); return { prev: list[i - 1] || null, next: list[i + 1] || null }; };
+    const pt = t => rot ? { x: t.clientY, y: -t.clientX } : { x: t.clientX, y: t.clientY }; // sideways picture (fs-rot): its «sideways» is the screen's up/down
+    stage.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1 || !curLesson || $('#lesson').hidden || !$('#badgeOwn').hidden) { mode = 0; return; }
+      if (e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')))) { mode = 0; return; }
+      const t = e.touches[0];
+      if (!document.body.classList.contains('fsmode') && t.clientX < 30) { mode = 0; return; } // iPhone «back» swipe from the edge
+      rot = document.body.classList.contains('fs-rot');
+      const p = pt(t); sx = p.x; sy = p.y; t0 = performance.now(); dx = 0; mode = 1;
+      const r = stage.getBoundingClientRect(); w = (rot ? r.height : r.width) || window.innerWidth;
+    }, { passive: true });
+    stage.addEventListener('touchmove', e => {
+      if (!mode) return;
+      const p = pt(e.touches[0]), mx = p.x - sx, my = p.y - sy;
+      if (mode === 1) {
+        if (Math.abs(mx) < 12 && Math.abs(my) < 12) return;
+        if (Math.abs(mx) < Math.abs(my) * 1.3) { mode = 0; return; } // up/down: leave it to the page
+        mode = 2; const n = neighbours(); dir = mx < 0 ? 1 : -1; nb = dir > 0 ? n.next : n.prev;
+        stage.classList.remove('swipe-anim'); stage.classList.add('swiping');
+        $('#swPeek').classList.toggle('from-left', dir < 0);
+        if (nb) {
+          $('#swPeek').style.backgroundImage = "url('v/" + nb.id + ".jpg')";
+          $('#swPeekDir').textContent = dir > 0 ? T('Следующий урок') + ' →' : '← ' + T('Предыдущий урок');
+          $('#swPeekName').textContent = nb.name;
+        } else {
+          $('#swPeek').style.backgroundImage = 'none';
+          $('#swEnd').textContent = dir > 0 ? T('Это последний урок раздела') : T('Это первый урок раздела');
+          $('#swEnd').classList.add('on');
+        }
+        hideSwipeHint();
+      }
+      e.preventDefault();
+      // the direction is chosen by the first move; going back past the start just returns to the middle
+      dx = dir > 0 ? Math.min(0, mx) : Math.max(0, mx);
+      const shown = nb ? dx : dx * 0.25; // nothing there: only a little give
+      stage.style.setProperty('--sx', shown + 'px');
+      stage.style.setProperty('--px', (dir > 0 ? w + shown : -w + shown) + 'px');
+    }, { passive: false });
+    const end = () => {
+      if (mode !== 2) { mode = 0; return; }
+      mode = 0;
+      $('#swEnd').classList.remove('on');
+      const fast = Math.abs(dx) > 50 && performance.now() - t0 < 280;
+      stage.classList.add('swipe-anim');
+      if (nb && (Math.abs(dx) > w * 0.25 || fast)) {
+        const target = nb;
+        stage.style.setProperty('--sx', (dir > 0 ? -w : w) + 'px'); stage.style.setProperty('--px', '0px');
+        setTimeout(() => {
+          navReplace = true;
+          try { openLesson(target.id); } finally { navReplace = false; }
+          stage.classList.remove('swipe-anim', 'swiping'); stage.style.removeProperty('--sx'); stage.style.removeProperty('--px');
+        }, 190);
+      } else {
+        stage.style.setProperty('--sx', '0px'); stage.style.setProperty('--px', (dir > 0 ? w : -w) + 'px');
+        setTimeout(() => { stage.classList.remove('swipe-anim', 'swiping'); stage.style.removeProperty('--sx'); stage.style.removeProperty('--px'); }, 210);
+      }
+    };
+    stage.addEventListener('touchend', end); stage.addEventListener('touchcancel', end);
+  })();
+  // a one-time tip on the first lesson that has neighbours
+  function hideSwipeHint(){ $('#swHint').classList.remove('on'); }
+  function maybeSwipeHint(count){
+    if (count < 2) return;
+    try { if (localStorage.getItem('fedoskin-swipe-tip')) return; localStorage.setItem('fedoskin-swipe-tip', '1'); } catch (_) { return; }
+    setTimeout(() => { $('#swHint').classList.add('on'); setTimeout(hideSwipeHint, 2800); }, 1200);
+  }
 
   function setPlaying(on){
     P.playing = on;
@@ -2156,7 +2249,7 @@ body.fsmode .bigplay{z-index:3}
 
   // ===== back navigation: history + edge swipe =====
   let restoring = false;
-  var navDepth = 0;
+  var navDepth = 0, navReplace = false;
   const _goNav = go;
   go = function(id){
     _goNav(id);
@@ -2164,6 +2257,7 @@ body.fsmode .bigplay{z-index:3}
     const st = { s: id, sec: curSection, lid: curLesson ? curLesson.id : null };
     const cur = history.state || {};
     const same = cur.s === st.s && (st.s !== 'lesson' || cur.lid === st.lid) && (st.s !== 'section' || cur.sec === st.sec);
+    if (navReplace && cur.s === 'lesson' && st.s === 'lesson') { if (cur.fs) st.fs = true; try { history.replaceState(st, ''); } catch (_) {} return; }
     if (!same) { try { history.pushState(st, ''); navDepth++; } catch (_) {} }
   };
   function goBack(fallback){

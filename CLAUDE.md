@@ -77,6 +77,14 @@
   From the lesson page the ⛶ button opens the same vertical layout (with an fs history step back to the page). Phone
   rotation does not touch the vertical mode. Lessons without the mark: decided on the first loadedmetadata
   (`vertAuto`). Landscape lessons unchanged. Stage click handler checks `composedPath()` (buttons re-render icons).
+- Swipe between lessons (31.10.2026): horizontal swipe on the video (`lessonSwipe()`, touch events on #stage; any
+  mode — page, vertical, only-video, landscape fs; fs-rot uses the screen's y) — finger left = next lesson of the
+  section, right = previous. Video layers follow the finger via CSS `translate` var `--sx` (independent of the mirror
+  `transform`), `#swPeek` shows the neighbour's cover + «Следующий/Предыдущий урок» + name; switch past 25 % width or a
+  flick. No neighbour: little give + chip «Это первый/последний урок раздела». Ignored: starts on .fstop/.fsbottom, own
+  video, x < 30 on the page (iPhone edge back). Switching uses `navReplace` → history.replaceState, so back still goes
+  to the section in one step; the full-screen mode is kept. Neighbours (next, prev) are warmed first. One-time tip
+  `#swHint` (`fedoskin-swipe-tip`).
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
