@@ -83,7 +83,9 @@
   `transform`), `#swPeek` shows the neighbour's cover / first frame; `#swLabel` («Следующий/Предыдущий урок» + name) stands still over the
   current video and fades in with the swipe (opacity 0 → 1 at the 25 % switch point; owner 31.10), the top title fades out; switch past 25 % width or a
   flick. No neighbour: little give + chip «Это первый/последний урок раздела». Ignored: starts on .fstop/.fsbottom, own
-  video, x < 30 on the page (iPhone edge back). Switching uses `navReplace` → history.replaceState, so back still goes
+  video, and the side edges (`EDGE_BACK` 24 px, every mode) — edges = «back»: our iPhone-app edge gesture (now also in the
+  vertical full screen, with a label «← Назад к разделу <section>») or the phone's own on Android/browsers (owner 31.10:
+  prev-lesson swipe and back swipe must not clash). Switching uses `navReplace` → history.replaceState, so back still goes
   to the section in one step; the full-screen mode is kept. Neighbours (next, prev) are warmed first. One-time tip
   `#swHint` (`fedoskin-swipe-tip`).
   Neighbour preload (31.10): once the lesson plays (+0.6 s, fallback 4 s) its neighbours — next, prev, next+1 — are
