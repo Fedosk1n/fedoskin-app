@@ -1378,6 +1378,7 @@ body.fsmode .bigplay{z-index:3}
   // ===== swipe on the video: next / previous lesson of the section =====
   // finger to the left = next lesson, to the right = previous. The video follows the finger and the neighbour's cover
   // slides in with its name; let go past a quarter of the width (or flick) to switch. Full screen stays as it is.
+  const EDGE_BACK = 24;
   (function lessonSwipe(){
     let sx = 0, sy = 0, t0 = 0, dx = 0, w = 1, mode = 0, nb = null, dir = 0, rot = false; // mode: 0 idle, 1 deciding, 2 swiping
     const neighbours = () => { const list = inSec(curSection), i = list.indexOf(curLesson); return { prev: list[i - 1] || null, next: list[i + 1] || null }; };
@@ -1386,7 +1387,8 @@ body.fsmode .bigplay{z-index:3}
       if (e.touches.length !== 1 || !curLesson || $('#lesson').hidden || !$('#badgeOwn').hidden) { mode = 0; return; }
       if (e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')))) { mode = 0; return; }
       const t = e.touches[0];
-      if (!document.body.classList.contains('fsmode') && t.clientX < 30) { mode = 0; return; } // iPhone «back» swipe from the edge
+      // the screen's side edges are for «back» (our gesture on iPhone, the phone's own on Android / in browsers)
+      if (t.clientX < EDGE_BACK || t.clientX > window.innerWidth - EDGE_BACK) { mode = 0; return; }
       rot = document.body.classList.contains('fs-rot');
       const p = pt(t); sx = p.x; sy = p.y; t0 = performance.now(); dx = 0; mode = 1;
       const r = stage.getBoundingClientRect(); w = (rot ? r.height : r.width) || window.innerWidth;
@@ -2342,10 +2344,20 @@ body.fsmode .bigplay{z-index:3}
     const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     if (!ios || !standalone) return; // browsers and Android already have their own back gesture
     let sx = 0, sy = 0, dx = 0, active = false, decided = false, scr = null, t0 = 0;
-    const blocked = () => document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
+    const bl = document.body.classList;
+    const blocked = () => (bl.contains('fsmode') && !bl.contains('fs-vert')) || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
+    // a label like the lesson swipe has, so the two gestures can't be mixed up: «← Назад к разделу Footwork»
+    const lab = document.createElement('div'); lab.className = 'swlabel'; lab.style.cssText = 'position:fixed;z-index:60;top:42%';
+    lab.innerHTML = '<b></b><i></i>'; document.body.appendChild(lab);
+    const setLab = () => {
+      const fromLesson = !$('#lesson').hidden && curLesson, toPage = history.state && history.state.fs;
+      lab.querySelector('b').textContent = '← ' + (fromLesson && !toPage ? T('Назад к разделу') : T('Назад'));
+      lab.querySelector('i').textContent = fromLesson ? (toPage ? curLesson.name : curSection) : '';
+      lab.querySelector('i').hidden = !fromLesson;
+    };
     document.addEventListener('touchstart', e => {
       if (navDepth <= 0 || blocked() || e.touches.length !== 1) return;
-      const t = e.touches[0]; if (t.clientX > 28) return;
+      const t = e.touches[0]; if (t.clientX > EDGE_BACK) return;
       sx = t.clientX; sy = t.clientY; dx = 0; active = true; decided = false; t0 = Date.now();
       scr = [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
     }, { passive: true });
@@ -2354,6 +2366,8 @@ body.fsmode .bigplay{z-index:3}
       const t = e.touches[0]; const mx = t.clientX - sx, my = t.clientY - sy;
       if (!decided) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; decided = true; if (Math.abs(my) > Math.abs(mx) || mx < 0) { active = false; return; } }
       dx = Math.max(0, mx);
+      if (decided && !lab._on) { lab._on = true; setLab(); }
+      lab.style.transition = 'none'; lab.style.opacity = String(Math.min(1, dx / (window.innerWidth * 0.33)));
       scr.style.transition = 'none';
       scr.style.transform = 'translateX(' + dx + 'px)';
       scr.style.boxShadow = '-12px 0 24px rgba(0,0,0,.5)';
@@ -2363,6 +2377,7 @@ body.fsmode .bigplay{z-index:3}
       if (!active || !scr) { active = false; return; }
       active = false;
       const el = scr; scr = null;
+      lab._on = false; lab.style.transition = 'opacity .15s'; lab.style.opacity = '0';
       const fast = dx > 40 && (Date.now() - t0) < 250;
       el.style.transition = 'transform .2s ease';
       if (dx > window.innerWidth * 0.33 || fast) {
