@@ -72,5 +72,158 @@ window.LESSON_SB = {
   "w": 180,
   "h": 320,
   "cols": 10
+ },
+ "fw-6step": {
+  "src": "a4e77791-70b3-458b-b62d-fb48d60dbc50",
+  "every": 0.5,
+  "n": 56,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
+ "gd-windmill-entry": {
+  "src": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
+  "every": 4.5,
+  "n": 109,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "fr-easychair": {
+  "src": "5d85dd25-d0a6-4429-b038-a828c8eb2f07",
+  "every": 0.5,
+  "n": 41,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
+ "fr-elbow": {
+  "src": "612865e9-a251-428a-a7b7-221ed67d3f9f",
+  "every": 0.5,
+  "n": 79,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
+ "tk-monkey": {
+  "src": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad",
+  "every": 0.5,
+  "n": 68,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
+ "tk-turtlehs": {
+  "src": "5a15190c-6108-414f-bbe0-73987bd64906",
+  "every": 0.5,
+  "n": 82,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-airflare": {
+  "src": "de8dad97-f470-4552-93c4-45575e6d3f29",
+  "every": 4,
+  "n": 113,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-turtle": {
+  "src": "634db7c3-35bc-4a80-b160-c44a09cdbab8",
+  "every": 4,
+  "n": 111,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-windmill": {
+  "src": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
+  "every": 3.5,
+  "n": 105,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-swipes": {
+  "src": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba",
+  "every": 3,
+  "n": 112,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-headspin": {
+  "src": "8a2e472e-d16f-4c45-9032-b4781ba7d840",
+  "every": 3,
+  "n": 107,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-munchmill": {
+  "src": "dfb81103-2a48-4752-938a-b851625ae79f",
+  "every": 7,
+  "n": 112,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "tr-windmill-head": {
+  "src": "8da3c6ff-6f53-41ab-9f02-755358e3e5df",
+  "every": 5,
+  "n": 114,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "tn-flare-to-airflare-to-flare": {
+  "src": "262fa2a3-9675-40ac-8b20-5092475a3192",
+  "every": 4.5,
+  "n": 120,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-flare-wm": {
+  "src": "fcbcbb79-43ca-482d-b0f2-01472155230a",
+  "every": 4.5,
+  "n": 119,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-flare-1990": {
+  "src": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f",
+  "every": 3.5,
+  "n": 120,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "pw-swipes-flare": {
+  "src": "6faac4e1-de8a-4952-8d09-6134e13ee34a",
+  "every": 4,
+  "n": 110,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
  }
 };
