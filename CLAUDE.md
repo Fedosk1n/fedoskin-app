@@ -25,7 +25,8 @@
 - Dark hip-hop design: Anton + Inter, accent #E2611A, NEW badge #3BD16F. Keep the look consistent.
 - Alpha mode: `alpha: true` in config.js — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
   link `t.me/Fe_DoSk1n?text=...` (`tg` in config.js).
-- Hidden for later (do not delete): courses, articles, promo tab, "my reviews". Elements carry `hidden data-later="..."`
+- Hidden for later (do not delete): courses, articles, promo tab, "my reviews", the lesson header's «Проверить на своём видео»
+  upload button (owner 31.10 «убери её»; `data-later="own-video"`, a 44px spacer keeps the title centred). Elements carry `hidden data-later="..."`
   or are commented out in TABS.
 - Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
   preview `<id>-p3.mp4` = first 3s, crop 720:960 → 360x480, 30fps, no audio; add a row to `lessons.js` with `added` date.
