@@ -752,6 +752,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       say('Загружено. Доделываю обложку…');
       const {m, jpg, p3} = await art;
       l.ks = id; if (m && m.dur) l.dur = Math.round(m.dur);
+      if (m && m.w && m.h) { if (m.h > m.w) l.vertical = true; else delete l.vertical; }
       if (jpg) { uploads[l.id] = {mp4: null, jpg, p3, coverUrl: URL.createObjectURL(jpg), replace: true}; l.pv = !!p3; }
       // the old 720p copy in GitHub is no longer needed
       if (vFiles[l.id + '.mp4'] != null && !dropGh.includes(l.id)) dropGh.push(l.id);
@@ -1079,6 +1080,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       // while the video was uploading counts too.
       const fName = $('#aName').value.trim() || name, fSec = $('#aSec').value || sec, fRu = $('#aRu').value.trim(), fAdded = $('#aDate').value || today();
       const lesson = {id, sec: fSec, name: fName, dur: Math.round(dur), ru: fRu, added: fAdded, pv: !!p3};
+      if (meta.h > meta.w) lesson.vertical = true; // the app opens vertical videos straight in full screen
       if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, fName); }
       let at = -1; lessons.forEach((x, i) => { if (x.sec === fSec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);

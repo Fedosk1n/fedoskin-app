@@ -6,7 +6,8 @@
   subscription prices subRub/subYearRub/subUsd/subYearUsd — ru UI pays in ₽, all other languages in $; `SUB` in index.html), `v/` (videos).
 - `admin.html` — owner's admin panel: edits lessons.js/config.js and uploads videos via the GitHub API (fine-grained token in
   the owner's browser). Keep lessons.js/config.js machine-readable JSON so the admin can parse them. Lesson fields:
-  id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge), ks (Kinescope video id).
+  id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge), ks (Kinescope video id),
+  vertical (true = portrait video → opens straight in full screen; admin sets it from the file's size on upload).
   `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression: admin quality choice 720p (~1 Mbit/s) / 1080p
   (~3.5 Mbit/s at 60 fps) / «Без сжатия» (`fedoskin-admin-quality`).
 - Languages: ru (source) + en, es, pt, fr, de, ja, ko, zh. UI texts in index.html stay Russian; `T('русский текст', {vars})`
@@ -62,6 +63,14 @@
   (stream alone: 2.2 / 2.0–3.5 / 3.1 s); wait at intro end ~0.1–0.35 s. Slow links (≤5) after the first visit go
   stream-only (2.8 s @5, 3.9 s @3). First-ever visit on a slow link with unknown speed (iPhone): fast start, then
   stalls — speed is learned. iPhone native-HLS path not testable here.
+- Vertical lessons (31.10.2026): `vertical: true` ⇒ openLesson → `enterVert()`: body `fsmode fs-vert` = video fills the
+  screen above, a solid control panel below (`--vpan` 142px + safe area, always visible, never over the dancer's feet):
+  timeline + «5 сек / Скорость / ▶ / Зеркало / Повтор», each round icon with a caption (`.fsk`). Top bar over the video:
+  ← (leave lesson), name (2 lines), sound, «Подробнее» (= lesson page; video keeps playing). Tap on video = pause/play.
+  This full screen pushes no history: system back leaves the lesson (popstate exits fs AND navigates when `vertFs`).
+  From the lesson page the ⛶ button opens the same vertical layout (with an fs history step back to the page). Phone
+  rotation does not touch the vertical mode. Lessons without the mark: decided on the first loadedmetadata
+  (`vertAuto`). Landscape lessons unchanged. Stage click handler checks `composedPath()` (buttons re-render icons).
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
