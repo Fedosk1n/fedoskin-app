@@ -135,7 +135,22 @@
   screen — «Звук / Без звука» 6th captioned button of the bottom row (`#fsSound`, hidden in fs-vert); `#btnMute` on the
   page player; the old top-bar icon `#fsMute` is not shown. `toggleSound()`: one state `soundOff`, remembered in
   `fedoskin-mute`, short centre sign `#sndFlash`. Autoplay-blocked fallback still mutes without saving.
-- Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
+- Video file size: admin publishes via the Git Data API (MAX_FILE 70 MB). Most lessons are 1.5–7 MB (720p); short
+  lessons moved from Kinescope are 1080p60 copies, ~20–35 MB.
+- Short Kinescope lessons → GitHub (owner 31.10: «1080, 60 кадров, не урезай»): admin «Уроки» → card «Короткие уроки из
+  Kinescope — на GitHub» (`#moveCard`, lessons with ks and dur ≤ 60): mediabunny copies the Kinescope HLS rendition with
+  short side 1080 (or best below) + pairable audio into a faststart mp4 WITHOUT re-encoding, cuts its strip from the
+  blob, one commit: v/<id>.mp4 + -sb.jpg, lessons.js without `ks` (dur from the file), intros.js entry and
+  -intro.mp4 removed. Kinescope keeps its copy (owner may delete it there). Tested with fake HLS → 1080x1920, 60 fps, AAC.
+- Videos on the phone (sw.js, 31.10): v/*.mp4 (not -p3) are downloaded ONCE whole by the service worker; player range
+  requests, app preloads and the frame-cache build all read that one download (streamed 206 answers; a jump > 3 MB ahead
+  of the download goes to the network). Finished files go to Cache Storage `fedoskin-video-1` (≤ 300 MB / 20 files,
+  oldest out; ETag/Last-Modified rechecked by HEAD at most hourly — a replaced video is dropped). Apple: the player's
+  own requests (`destination === 'video'`) bypass the SW (AVFoundation not risked); the app's fetches still go through.
+  App: `introSource` for GitHub lessons tries `fromSaved()` (caches.match → blob:) first, so a reopened lesson plays
+  without internet. Neighbour preload now takes files ≤ 40 MB (MEM_TOTAL 100 MB). fcBuild without a memory blob:
+  saved copy, or (non-Apple, SW controlling) fetch through the shared download; otherwise capture only.
+  SW registers on https and on localhost (tests).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.

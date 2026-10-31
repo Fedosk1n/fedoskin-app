@@ -1102,9 +1102,9 @@ body.fsmode .bigplay{z-index:3}
   //   short GitHub videos or the starts of Kinescope lessons, so a swipe shows the next video at once.
   // Skipped on slow connections and when the phone asks to save data. Opening a lesson stops the other downloads,
   // so the opened one gets the whole connection.
-  const introMem = new Map(); // video url -> blob: url
+  const introMem = new Map(), memSize = new Map(); // video url -> blob: url, its size
   const mediaFor = l => !l ? '' : l.ks ? introFor(l) : 'v/' + l.id + '.mp4';
-  const MEM_MAX = 5, MEM_FILE_MAX = 12 * 1048576;
+  const MEM_MAX = 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = 100 * 1048576; // short lessons in 1080p60 are 20–35 MB
   // Internet speed, remembered on the phone (measured on the stream's pieces and on the intro's download). The intro
   // is 480p (~3.5 Mbit/s): on a connection that can't comfortably carry it, the stream goes alone.
   const NET_KEY = 'fedoskin-net';
@@ -1139,16 +1139,24 @@ body.fsmode .bigplay{z-index:3}
       if (job.total > MEM_FILE_MAX) throw new Error('too big');
       const rd = r.body.getReader(), parts = [];
       for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; if (job.got > MEM_FILE_MAX) throw new Error('too big'); }
-      const url = URL.createObjectURL(new Blob(parts, { type: 'video/mp4' }));
-      introMem.set(u, url);
+      const blob = new Blob(parts, { type: 'video/mp4' }), url = URL.createObjectURL(blob);
+      introMem.set(u, url); memSize.set(u, blob.size);
       primePeek();
       // keep a few in memory; never throw away the one on screen
-      for (const [k, v] of introMem) { if (introMem.size <= MEM_MAX) break; if (v !== vin.getAttribute('src') && v !== vid.getAttribute('src')) { URL.revokeObjectURL(v); introMem.delete(k); } }
+      const total = () => [...memSize.values()].reduce((a, b) => a + b, 0);
+      for (const [k, v] of introMem) { if (introMem.size <= MEM_MAX && total() <= MEM_TOTAL) break; if (k !== u && v !== vin.getAttribute('src') && v !== vid.getAttribute('src')) { URL.revokeObjectURL(v); introMem.delete(k); memSize.delete(k); } }
       job.ok(url);
     } catch (e) { job.bad(e); }
     if (introCur === job) { introCur = null; nextIntro(); }
   }
   function abortIntro(j){ j.ac.abort(); }
+  async function fromSaved(u){
+    const r = await caches.match(new URL(u, location.href).href);
+    if (!r) throw new Error('not saved');
+    const blob = await r.blob(), url = URL.createObjectURL(blob);
+    if (!introMem.has(u)) { introMem.set(u, url); memSize.set(u, blob.size); }
+    return introMem.get(u);
+  }
   function stopIntroWarm(keepU){
     introQ = [];
     if (introCur && introCur.u !== keepU) { abortIntro(introCur); introCur = null; }
@@ -1161,7 +1169,10 @@ body.fsmode .bigplay{z-index:3}
     const j = introCur && introCur.u === u ? introCur : null;
     if (j && j.total && j.got >= j.total * 0.6) return { wait: j.p, url: u };
     if (j) { abortIntro(j); introCur = null; }
-    return !l.ks || introFast() ? { url: u } : null;
+    if (l.ks && !introFast()) return null;
+    // saved on the phone earlier (sw.js keeps watched videos): played from there, no internet needed
+    if (!l.ks && window.caches && navigator.serviceWorker && navigator.serviceWorker.controller) return { url: u, wait: fromSaved(u) };
+    return { url: u };
   }
   function warmKs(ls, neighbours){
     if (neighbours) neighbours.forEach(l => warmIntro(l));
@@ -1686,15 +1697,28 @@ body.fsmode .bigplay{z-index:3}
     if (!l || l.ks || curLesson !== l || !window.VideoDecoder) return;
     const c = fcFor(l, true); if (c.built || c.started || c.failed) return;
     const u = mediaFor(l), mem = introMem.get(u);
-    if (!mem && !introFast()) return;
     const w = fcWorker(); if (!w) return;
-    c.started = true;
-    let blob = null;
-    try { blob = await (await fetch(mem || u)).blob(); } catch (_) {}
-    if (!blob || curLesson !== l) { c.started = false; return; }
+    let blob = null, url = null;
+    if (mem) {
+      c.started = true;
+      try { blob = await (await fetch(mem)).blob(); } catch (_) {}
+      if (!blob || curLesson !== l) { c.started = false; return; }
+    } else {
+      // not in memory: the file is read from the phone's single download (sw.js keeps one per video and saves it), so
+      // nothing is downloaded twice. Where the player's own loading may bypass that (iPhone), only a saved copy is used.
+      if (!introFast()) return;
+      const abs = new URL(u, location.href).href;
+      let hit = null; try { hit = window.caches ? await caches.match(abs) : null; } catch (_) {}
+      if (curLesson !== l) return;
+      const shared = !!(navigator.serviceWorker && navigator.serviceWorker.controller) && !isApple;
+      if (!hit && !shared) { c.tries = (c.tries || 0) + 1; if (c.tries < 30) setTimeout(() => fcBuild(l), 3000); return; }
+      c.started = true;
+      try { blob = hit ? await hit.blob() : await (await fetch(u)).blob(); } catch (_) {}
+      if (!blob || curLesson !== l) { c.started = false; return; }
+    }
     if (fcBuilding && fcBuilding !== c) fcStopBuild();
     fcBuilding = c;
-    w.postMessage({ cmd: 'build', key: c.key, blob, step: c.step, max: FC_SIDE, q: FC_Q, from: Math.floor((P.t + 4) / c.step), skip: [...c.frames.keys()] });
+    w.postMessage({ cmd: 'build', key: c.key, blob, url, step: c.step, max: FC_SIDE, q: FC_Q, from: Math.floor((P.t + 4) / c.step), skip: [...c.frames.keys()] });
     if (scrub) w.postMessage({ cmd: 'pause' });
   }
   function fcStopBuild(){ const c = fcBuilding; if (!c) return; fcBuilding = null; if (!c.built) c.started = false; if (fcW) fcW.postMessage({ cmd: 'stop', key: c.key }); }
@@ -2799,7 +2823,7 @@ body.fsmode .bigplay{z-index:3}
     if (later && Date.now() - later < 3 * 864e5) return;
     setTimeout(openInstall, 1500);
   })();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // ===== notifications about new lessons (server: server/push-worker.js, address in config.js -> pushUrl) =====
   (function pushNotifications(){
