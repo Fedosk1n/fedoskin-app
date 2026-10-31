@@ -183,16 +183,18 @@ p{margin:0}
 .swhint.on{opacity:1}
 .swhint svg{animation:swnudge 1.1s ease-in-out infinite}
 @keyframes swnudge{0%,100%{transform:translateX(6px)}50%{transform:translateX(-6px)}}
-/* while a lesson loads: its 3-second cover animation + spinner instead of a black screen */
-.vload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:#111113 center/cover no-repeat}
+/* while a lesson loads: only its 3-second cover animation (full strength, nothing of the loading video behind it) and a
+   small spinner in the top-right corner (owner 31.10: the animation over the half-loaded picture looked messy) */
+.vload{position:absolute;inset:0;pointer-events:none;background:#0B0B0C}
 .vload[hidden]{display:none}
 /* the lesson's first 5 seconds (plain mp4, starts at once) on top of the stream until the stream catches up */
 .stage #vin{position:absolute;inset:0}
 .stage #vin[hidden]{display:none}
-.stage .vload video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.6}
+.stage .vload video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .vload.stall{background:transparent!important}
 .vload.stall video{display:none}
-.vload i{position:relative;width:46px;height:46px;border-radius:50%;border:3px solid rgba(242,239,232,.22);border-top-color:#E2611A;animation:vspin .8s linear infinite}
+.vload i{position:absolute;top:12px;right:12px;width:28px;height:28px;box-sizing:border-box;border-radius:50%;border:3px solid rgba(242,239,232,.25);border-top-color:#E2611A;animation:vspin .8s linear infinite;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+body.fsmode .vload i{top:calc(env(safe-area-inset-top, 0px) + 72px);right:16px} /* below the full screen's top bar */
 @keyframes vspin{to{transform:rotate(360deg)}}
 .fsbtn{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(11,11,12,.7);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 .fsbar{display:none}
@@ -1051,7 +1053,7 @@ body.fsmode .bigplay{z-index:3}
   function showLoad(l){
     clearTimeout(vloadT);
     vload.classList.remove('stall');
-    vload.style.backgroundImage = "url('v/" + l.id + ".jpg')";
+    vload.style.backgroundImage = 'none'; // never the lesson's own picture under the animation
     if (l.pv !== false) { vloadPv.hidden = false; vloadPv.src = 'v/' + l.id + '-p3.mp4'; const r = vloadPv.play(); if (r && r.catch) r.catch(() => {}); }
     else { vloadPv.hidden = true; vloadPv.removeAttribute('src'); }
     vload.hidden = false;

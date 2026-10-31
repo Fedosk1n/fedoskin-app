@@ -43,6 +43,9 @@
   warms Kinescope (master + ≤720p media playlist, preconnect to hosts found), stopped by `warmGen` when a lesson opens.
   iPhone plays native HLS (AVFoundation has its own network stack) — there only the overlay helps. Local test with a
   fake HLS + throttling in Playwright: first frame 2.7 s → 1.0 s on Android.
+  Owner 31.10 19:22: the animation (then 60 % opacity over the cover jpg) over the loading video's picture looked
+  messy ⇒ the overlay is now only the -p3 animation at full strength on solid #0B0B0C (no jpg, nothing of the video
+  behind); the spinner is small (28 px) in the top-right corner (fullscreen: below the top bar).
 - Instant start (31.10.2026): Kinescope lessons also have `v/<id>-intro.mp4` = first 5 s copied (no re-encode) from the
   480p rendition of the Kinescope HLS (~2 MB; Kinescope 720p is 5.1 Mbit/s — too heavy). `intros.js`
   (`window.LESSON_INTROS`) maps lesson id → "<ks>:480"; the app uses an intro only if it matches (replaced video or
