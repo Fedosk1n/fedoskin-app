@@ -238,8 +238,12 @@ body.fsmode.fs-vert.fs-full .stage{height:100%!important}
 body.fsmode.fs-vert.fs-full .fsbar{display:none}
 body.fsmode.fs-vert.fs-full .fscorner{bottom:calc(10px + env(safe-area-inset-bottom, 0px))}
 body.fsmode.fs-vert.fs-full #fsInfo{display:none}
-#fsSoundC{display:none!important}
-body.fsmode.fs-vert.fs-full #fsSoundC{display:flex!important}
+/* vertical full screen: sound sits in the video's corner, left of «Подробнее» and «во весь экран» (owner 31.10);
+   in «only video» «Подробнее» is hidden, so it moves next to the full-screen button. Landscape full screen keeps it
+   in the bottom row. Muted = orange, like the other switched-on buttons. */
+body.fsmode.fs-vert #fsSound{display:none}
+body.fsmode.fs-vert.fs-full #fsSoundC{right:62px!important}
+#fsSoundC[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 /* a short sign in the middle of the video when the sound is switched */
 .sndflash{position:absolute;left:50%;top:42%;z-index:6;translate:-50% -50%;width:74px;height:74px;border-radius:37px;background:rgba(11,11,12,.66);color:#F2EFE8;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .25s}
 .sndflash.on{opacity:1;transition:none}
@@ -412,7 +416,7 @@ body.fsmode .bigplay{z-index:3}
       <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <!-- vertical full screen: bottom-right corner of the video — lesson page («Подробнее») and true full screen -->
       <button class="fscorner" id="fsInfo" aria-label="Подробнее" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="4" y="3" width="16" height="10" rx="2"/><path d="m10.5 6.2 3.5 1.8-3.5 1.8z" fill="currentColor"/><path d="M4 17h16M4 21h10"/></svg></button>
-      <button class="fscorner" id="fsSoundC" aria-label="Выключить звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSoundC"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
+      <button class="fscorner" id="fsSoundC" aria-label="Выключить звук" style="right:114px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSoundC"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fscorner" id="fsFull" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoFull"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <div class="fsbar" id="fsbar">
         <div class="fstop">
@@ -1851,6 +1855,7 @@ body.fsmode .bigplay{z-index:3}
     $('#fsIcoSound').innerHTML = $('#fsIcoSoundC').innerHTML = $('#icoMute').innerHTML;
     $('#fsSound').setAttribute('aria-pressed', soundOff); $('#fsSoundL').textContent = soundOff ? T('Без звука') : T('Звук');
     ['#fsSound', '#fsSoundC'].forEach(id => $(id).setAttribute('aria-label', $('#btnMute').getAttribute('aria-label')));
+    $('#fsSoundC').setAttribute('aria-pressed', soundOff);
   }
   // sound on / off: every sound button does the same; the choice is remembered for the next lessons and next time
   let sndT = 0;
