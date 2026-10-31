@@ -19,7 +19,6 @@ window.LESSONS_DATA = [
   "dur": 28,
   "ru": "сикс степ шесть шагов",
   "pv": true,
-  "ks": "a4e77791-70b3-458b-b62d-fb48d60dbc50",
   "vertical": true
  },
  {
@@ -113,7 +112,6 @@ window.LESSONS_DATA = [
   "dur": 21,
   "ru": "изи чеир стул chair чер",
   "pv": true,
-  "ks": "5d85dd25-d0a6-4429-b038-a828c8eb2f07",
   "vertical": true
  },
  {
@@ -124,7 +122,6 @@ window.LESSONS_DATA = [
   "ru": "элбоу локоть",
   "added": "2026-10-26",
   "pv": true,
-  "ks": "612865e9-a251-428a-a7b7-221ed67d3f9f",
   "vertical": true
  },
  {
@@ -135,7 +132,6 @@ window.LESSONS_DATA = [
   "ru": "манки флип обезьяна",
   "added": "2026-10-26",
   "pv": true,
-  "ks": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad",
   "vertical": true
  },
  {
@@ -145,7 +141,6 @@ window.LESSONS_DATA = [
   "dur": 41,
   "ru": "черепаха стойка на руках хендстенд",
   "pv": true,
-  "ks": "5a15190c-6108-414f-bbe0-73987bd64906",
   "vertical": true
  },
  {

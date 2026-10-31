@@ -2,12 +2,7 @@
 // урок → "id видео Kinescope:480" — из какого видео и какого качества вырезано начало v/<урок>-intro.mp4 (первые 5 сек, те же кадры, что в потоке).
 // Если видео урока в Kinescope заменили, id не совпадёт — приложение просто не будет использовать старое начало.
 window.LESSON_INTROS = {
- "fw-6step": "a4e77791-70b3-458b-b62d-fb48d60dbc50:480",
  "gd-windmill-entry": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad:480",
- "fr-easychair": "5d85dd25-d0a6-4429-b038-a828c8eb2f07:480",
- "fr-elbow": "612865e9-a251-428a-a7b7-221ed67d3f9f:480",
- "tk-monkey": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad:480",
- "tk-turtlehs": "5a15190c-6108-414f-bbe0-73987bd64906:480",
  "pw-airflare": "de8dad97-f470-4552-93c4-45575e6d3f29:480",
  "pw-turtle": "634db7c3-35bc-4a80-b160-c44a09cdbab8:480",
  "pw-windmill": "8b3ef664-01b9-42db-a1e1-b88ad726c46c:480",
