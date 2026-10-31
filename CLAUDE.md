@@ -41,18 +41,27 @@
   warms Kinescope (master + ≤720p media playlist, preconnect to hosts found), stopped by `warmGen` when a lesson opens.
   iPhone plays native HLS (AVFoundation has its own network stack) — there only the overlay helps. Local test with a
   fake HLS + throttling in Playwright: first frame 2.7 s → 1.0 s on Android.
-- Instant start (30.10.2026): Kinescope lessons also have `v/<id>-intro.mp4` = first 5 s copied (no re-encode) from the
-  ≤720p rendition of the Kinescope HLS — frames identical to the stream. `intros.js` (`window.LESSON_INTROS`, JSON) maps
-  lesson id → ks id it was cut from; the app uses an intro only if it matches `l.ks` (replaced video ⇒ ignored).
-  Player: `#vin` plays the intro on top with sound, `#vid` loads the stream muted underneath (deferred until the intro
-  plays, max 1.5 s), `tickIntro()` seeks/nudges playbackRate until |Δt| ≤ 20 ms, then `toStream()`: intro pauses (read its
-  currentTime AFTER pause — it lags while loading) and hides on the stream's first frame ≥ that time (rVFC). `av` = element
-  seen/heard; timeline, speed, loop, stats, mute (`soundOff`) follow it. Stuck intro + ready stream ⇒ switch at once.
-  Two intros at the top of an opened section are prefetched into memory (blob: URLs, serial, aborted when a lesson opens).
-  Admin «Уроки» → card «Мгновенный старт»: cuts missing intros with mediabunny (`tracks:'all'`, pick ≤720 track +
-  pairable audio, trim 0–5) and commits them + intros.js in its own commit (never touches lessons.js); runs after login,
-  after publish, after a Kinescope upload is processed. Tested in Playwright with a fake HLS: first frame 0.24 s when
-  prefetched / ~0.8 s cold at 10 Mbit, swap step ≤ 2 frames forward, never back. iPhone native-HLS path not testable here.
+- Instant start (31.10.2026): Kinescope lessons also have `v/<id>-intro.mp4` = first 5 s copied (no re-encode) from the
+  480p rendition of the Kinescope HLS (~2 MB; Kinescope 720p is 5.1 Mbit/s — too heavy). `intros.js`
+  (`window.LESSON_INTROS`) maps lesson id → "<ks>:480"; the app uses an intro only if it matches (replaced video or
+  other quality ⇒ ignored). Player: `#vin` plays the intro on top with sound; `#vid` (stream, muted, paused) starts
+  loading only when the intro is fully downloaded, FROM the intro's end (`pendingStart` → hls `startLoad(5)` /
+  native currentTime), so 0–5 s is never fetched twice and the two never compete. Its start level is chosen so the
+  first 4-s piece arrives before the intro ends (speed measured on the intro download). At the intro's end
+  `toStream()`: intro pauses and hides when the stream draws a frame ≥ that time (rVFC). `av` = element seen/heard;
+  timeline, speed, loop, stats, mute (`soundOff`) follow it. Seek past the intro ⇒ switch at once.
+  Speed (`fedoskin-net`, "Mbps@time", forgotten after 6 h) from hls FRAG_LOADED + intro downloads; intro only if
+  unknown or ≥ 6 Mbit/s measured (saveData/`connection.downlink` < 5 ⇒ no). Without intro the stream starts at
+  ≤ 0.75×speed (480p if unknown). While a lesson starts, section cover animations stop (`pvStopAll`) and the
+  «more lessons» ones wait for `playing` (`pvHold`) — on slow links they used to eat the bandwidth.
+  Two intros at the top of an opened section are prefetched into memory (blob:, serial, aborted on lesson open).
+  Admin «Уроки» → card «Мгновенный старт»: cuts missing intros with mediabunny (`tracks:'all'`, track ≤480 + pairable
+  audio, trim 0–5), commits them + intros.js in its own commit; runs after login, publish, Kinescope processing.
+  Realistic test (fake HLS at Kinescope bitrates, 4-s fMP4, real throttled server — NOTE: Playwright route.fulfill
+  bypasses CDP throttling, serve media from a real local server): first frame 0.2 s @25 Mbit, 0.4–0.5 s @10, 0.5 s @7
+  (stream alone: 2.2 / 2.0–3.5 / 3.1 s); wait at intro end ~0.1–0.35 s. Slow links (≤5) after the first visit go
+  stream-only (2.8 s @5, 3.9 s @3). First-ever visit on a slow link with unknown speed (iPhone): fast start, then
+  stalls — speed is learned. iPhone native-HLS path not testable here.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
