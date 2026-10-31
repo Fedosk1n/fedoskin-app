@@ -95,6 +95,17 @@
   `#swPeekVid`; while swiping it (not the cover) slides in; at the switch it is copied to `#swPeekCan` (peek video freed)
   and held (`peekhold`, no cover/spinner: `quietOpen`) until the new video's `playing`. Slide 150 ms. Headless test
   @10–25 Mbit: video moving 0.2–0.45 s after letting go, real frame from 0.15 s (was 0.65–0.7 s with cover + spinner).
+- Slider scrubbing (31.10.2026, owner's screen recording: video kept playing and pulled the slider back, every move
+  cancelled the previous seek ⇒ spinner, jumps): `scrubStart/scrubMove/scrubEnd` on #seek/#fsSeek (pointer/touch/
+  change). While dragging: video paused (P.playing kept, `scrub` blocks frame loop, playMain/playIntro, showStall),
+  seeks chained (next only after `seeked`), Kinescope stream seeks only inside its buffer or when the finger rests
+  140 ms. Picture during the drag = frame strip `v/<id>-sb.jpg` drawn into `#sbCan` (object-fit contain, mirrored
+  with the video), replaced by the real frame once `seeked` lands within 0.15 s. `storyboards.js` (`window.LESSON_SB`):
+  id → {src: ks id or "gh", every, n, w, h, cols, v}; valid only if src matches. Strips: 180x320 (or 320x180) frames
+  every 0.5 s (long lessons: ≤ ~120 frames), 10 per row, JPEG ~q0.7, 140–590 KB; loaded 0.3 s after the lesson plays.
+  GitHub strips were made with ffmpeg in the sandbox; the admin card «Мгновенный старт и плавная перемотка» makes
+  missing ones itself (mediabunny CanvasSink on the lightest track: Kinescope HLS or v/<id>.mp4 on Pages) and commits
+  them + storyboards.js; deleting a lesson removes its -sb.jpg.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,

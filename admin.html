@@ -153,7 +153,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     <div data-pane="lessons">
       <div class="card" id="introCard" style="margin-top:12px" hidden>
         <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
-          <div style="min-width:0"><b>Мгновенный старт уроков</b>
+          <div style="min-width:0"><b>Мгновенный старт и плавная перемотка</b>
             <div class="hint" id="introInfo" style="margin-top:4px"></div>
             <div class="prog" id="introProg" hidden><i id="introBar"></i></div>
           </div>
@@ -347,6 +347,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let dropGh = [];              // ids whose GitHub copy of the video (v/<id>.mp4) is removed because the lesson now plays from Kinescope
   const ksState = {};           // Kinescope video id -> 'ok' | 'wait' (still processing) | 'err'
   let intros = {};              // intros.js on GitHub: lesson id -> Kinescope id its v/<id>-intro.mp4 was cut from
+  let strips = {};              // storyboards.js: lesson id -> {src, every, n, w, h, cols} of v/<id>-sb.jpg (smooth slider)
 
   // ---------- helpers ----------
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
@@ -501,13 +502,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     return {header: text.slice(0, at), data: JSON.parse(json)};
   }
   async function loadRemote(){
-    const [lf, cf, vdir, inf] = await Promise.all([
+    const [lf, cf, vdir, inf, sbf] = await Promise.all([
       gh('/contents/lessons.js?ref=' + BRANCH),
       gh('/contents/config.js?ref=' + BRANCH).catch(e => { if (e.status === 404) return null; throw e; }),
       gh('/contents/v?ref=' + BRANCH).catch(() => []),
-      gh('/contents/intros.js?ref=' + BRANCH).catch(() => null)
+      gh('/contents/intros.js?ref=' + BRANCH).catch(() => null),
+      gh('/contents/storyboards.js?ref=' + BRANCH).catch(() => null)
     ]);
     intros = {}; try { if (inf) intros = parseData(b64ToUtf8(inf.content), 'window.LESSON_INTROS').data || {}; } catch(e) {}
+    strips = {}; try { if (sbf) strips = parseData(b64ToUtf8(sbf.content), 'window.LESSON_SB').data || {}; } catch(e) {}
     const lessonsText = b64ToUtf8(lf.content);
     const L = parseData(lessonsText, 'window.LESSONS_DATA');
     let cfgText = '', C = {header: '// Настройки приложения. Их меняет админка (admin.html). Формат — JSON.\n', data: {}};
@@ -1201,7 +1204,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         tree.push({path: 'v/' + id + '.mp4', mode: '100644', type: 'blob', sha});
       }
       deleted.forEach(id => {
-        [id + '.mp4', id + '.jpg', id + '-p3.mp4', id + '-intro.mp4'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
+        [id + '.mp4', id + '.jpg', id + '-p3.mp4', id + '-intro.mp4', id + '-sb.jpg'].forEach(f => { if (vFiles[f] != null) tree.push({path: 'v/' + f, mode: '100644', type: 'blob', sha: null}); });
       });
       dropGh.forEach(id => {
         const l = lessons.find(x => x.id === id);
@@ -1246,17 +1249,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const introKey = l => l.ks + ':' + INTRO_Q;
   let introJob = null, publishing = false, introNote = '', introFail = {};
   const introWanted = () => remote ? remote.lessons.filter(l => l.ks && !(intros[l.id] === introKey(l) && vFiles[l.id + '-intro.mp4'] != null)) : [];
+  // strip of small frames for the slider: every lesson whose video can be read (Kinescope or GitHub file)
+  const stripSrc = l => l.ks || 'gh';
+  const stripWanted = () => remote ? remote.lessons.filter(l => (l.ks || vFiles[l.id + '.mp4'] != null) && !(strips[l.id] && strips[l.id].src === stripSrc(l) && vFiles[l.id + '-sb.jpg'] != null)) : [];
   function paintIntro(prog){
     const card = $('#introCard'); if (!remote) { card.hidden = true; return; }
-    const all = remote.lessons.filter(l => l.ks), todo = introWanted();
-    card.hidden = !all.length;
-    const done = all.length - todo.length;
+    const todo = introWanted().length + stripWanted().length, all = remote.lessons.filter(l => l.ks || vFiles[l.id + '.mp4'] != null).length;
+    card.hidden = !all;
     $('#introProg').hidden = prog == null; if (prog != null) $('#introBar').style.width = Math.round(prog * 100) + '%';
-    $('#introGo').hidden = !!introJob || !todo.length;
-    $('#introGo').textContent = 'Сделать (' + todo.length + ')';
-    $('#introInfo').textContent = introNote || (todo.length
-      ? 'Готово у ' + done + ' из ' + all.length + ' уроков Kinescope. Делается само; если что-то не получилось — нажмите «Сделать».'
-      : 'Готово у всех ' + all.length + ' уроков Kinescope: видео стартует сразу, без ожидания.');
+    $('#introGo').hidden = !!introJob || !todo;
+    $('#introGo').textContent = 'Сделать (' + todo + ')';
+    $('#introInfo').textContent = introNote || (todo
+      ? 'Осталось подготовить: ' + todo + ' (начала уроков Kinescope и ленты кадров для перемотки). Делается само; если что-то не получилось — нажмите «Сделать».'
+      : 'Готово у всех уроков: видео стартует сразу, перемотка ползунком плавная.');
   }
   async function cutIntro(ksId, dur){
     const M = await mb();
@@ -1279,7 +1284,30 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (blob.size < 20000) throw new Error('получился пустой файл');
     return blob;
   }
-  function introAuto(){ if (!introJob && !publishing && remote && introWanted().length) runIntros(true); }
+  // the strip: frames every 0.5 s (long lessons: at most ~120 frames), small, 10 in a row, one JPEG
+  async function cutStrip(l){
+    const M = await mb();
+    const url = l.ks ? ksHls(l.ks) : new URL('v/' + l.id + '.mp4', location.href).href;
+    const input = new M.Input({source: new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
+    const vts = await input.getVideoTracks();
+    const tr = vts.reduce((a, t) => !a || t.displayWidth * t.displayHeight < a.displayWidth * a.displayHeight ? t : a, null); // the lightest quality is plenty
+    if (!tr) throw new Error('в видео нет картинки');
+    const dur = (await input.computeDuration().catch(() => 0)) || l.dur || 0;
+    if (!dur) throw new Error('не узнал длину видео');
+    const vert = tr.displayHeight > tr.displayWidth, w = vert ? 180 : 320, h = vert ? 320 : 180;
+    const every = Math.max(0.5, Math.ceil(dur / 120 / 0.5) * 0.5);
+    const times = []; for (let i = 0; i * every < dur - 0.05; i++) times.push(+(i * every).toFixed(3));
+    const cols = 10, rows = Math.ceil(times.length / cols);
+    const cv = document.createElement('canvas'); cv.width = cols * w; cv.height = rows * h; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const sink = new M.CanvasSink(tr, {width: w, height: h, fit: 'fill', poolSize: 2});
+    let i = 0;
+    for await (const fr of sink.canvasesAtTimestamps(times)) { if (fr) ctx.drawImage(fr.canvas, (i % cols) * w, Math.floor(i / cols) * h); i++; }
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.7));
+    if (!blob || blob.size < 2000) throw new Error('лента не сохранилась');
+    return {blob, info: {src: stripSrc(l), every, n: times.length, w, h, cols}};
+  }
+  function introAuto(){ if (!introJob && !publishing && remote && (introWanted().length || stripWanted().length)) runIntros(true); }
   $('#introGo').addEventListener('click', () => { introFail = {}; runIntros(false); });
   function runIntros(auto){
     if (introJob || publishing) return introJob;
@@ -1298,8 +1326,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           introNote = 'Публикую ' + made.length + ' ' + (made.length === 1 ? 'начало' : 'начал') + '…'; paintIntro(list.length / (list.length + 1));
           await commitIntros(made);
         }
+        // strips for the slider
+        const sl = stripWanted().filter(l => !(auto && introFail['sb:' + l.id])), sm = [];
+        for (let i = 0; i < sl.length; i++) {
+          const l = sl[i];
+          introNote = 'Готовлю ленту кадров для перемотки: «' + l.name + '» (' + (i + 1) + ' из ' + sl.length + ')…'; paintIntro(i / (sl.length + 1));
+          if (l.ks && await ksCheck(l.ks) !== 'ok') { bad.push(l.name + ' — Kinescope ещё обрабатывает'); continue; }
+          try { const r = await withTimeout(cutStrip(l), 240000); sm.push({l, blob: r.blob, info: r.info}); }
+          catch(e) { introFail['sb:' + l.id] = true; bad.push('лента «' + l.name + '» — ' + (e && e.message || e)); }
+        }
+        if (sm.length) { introNote = 'Публикую ленты кадров (' + sm.length + ')…'; paintIntro(1); await commitStrips(sm); }
         introNote = '';
         if (made.length) toast('Мгновенный старт готов: ' + made.map(m => '«' + m.l.name + '»').join(', ') + '. В приложении через 1–5 минут');
+        if (sm.length) setTimeout(() => toast('Плавная перемотка готова: ' + sm.length + ' ' + (sm.length === 1 ? 'урок' : 'уроков') + '. В приложении через 1–5 минут'), made.length ? 3500 : 0);
         if (bad.length) introNote = 'Не получилось: ' + bad.join('; ') + '.';
       } catch(e) {
         introNote = 'Не получилось опубликовать начала: ' + (e && e.message || e) + '. Нажмите «Сделать» ещё раз.';
@@ -1309,6 +1348,29 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     })();
     paintIntro(0);
     return introJob;
+  }
+  async function commitStrips(made){
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ref = await gh('/git/ref/heads/' + BRANCH);
+      const head = await gh('/git/commits/' + ref.object.sha);
+      let cur = {};
+      try { const f = await gh('/contents/storyboards.js?ref=' + ref.object.sha); cur = parseData(b64ToUtf8(f.content), 'window.LESSON_SB').data || {}; } catch(e) {}
+      const tree = [];
+      for (const m of made) tree.push({path: 'v/' + m.l.id + '-sb.jpg', mode: '100644', type: 'blob', sha: await ghBlob(await blobToB64(m.blob))});
+      const next = {};
+      remote.lessons.forEach(l => { if (cur[l.id] && cur[l.id].src === stripSrc(l)) next[l.id] = cur[l.id]; });
+      made.forEach(m => { next[m.l.id] = Object.assign({}, m.info, {v: ((cur[m.l.id] && cur[m.l.id].v) || 0) + 1}); });
+      tree.push({path: 'storyboards.js', mode: '100644', type: 'blob', content:
+        '// Ленты кадров для плавной перемотки ползунком. Их делает админка (admin.html) — формат JSON.\n' +
+        '// урок → {src: id видео Kinescope или "gh", every: сек между кадрами, n: кадров, w/h: размер кадра, cols: кадров в ряду}; картинка v/<урок>-sb.jpg\n' +
+        'window.LESSON_SB = ' + JSON.stringify(next, null, 1) + ';\n'});
+      const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
+      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ленты кадров для перемотки — ' + made.map(m => m.l.name).join(', '), tree: newTree.sha, parents: [ref.object.sha]}});
+      try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); }
+      catch(e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; }
+      strips = next; made.forEach(m => { vFiles[m.l.id + '-sb.jpg'] = m.blob.size; });
+      return;
+    }
   }
   async function commitIntros(made){
     for (let attempt = 0; attempt < 2; attempt++) {
