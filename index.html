@@ -149,7 +149,7 @@ p{margin:0}
 .savebtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .savebtn[aria-pressed="true"] path{fill:currentColor}
 /* lesson player */
-.stage{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
+.stage{touch-action:manipulation;position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
 .stage video,.stage #figure{width:100%;height:100%;object-fit:contain;transition:transform .25s ease}
 .stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
 /* while a lesson loads: its 3-second cover animation + spinner instead of a black screen */
@@ -1397,16 +1397,28 @@ body.fsmode .bigplay{z-index:3}
     if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
-    if (document.body.classList.contains('fs-vert')){
-      if (!onBar) setPlaying(!P.playing);
-      return;
-    }
-    if (onBar) { if (document.body.classList.contains('fsmode')) pokeFs(); return; }
-    if (document.body.classList.contains('fsmode')){
-      document.body.classList.toggle('fs-hide'); if (!document.body.classList.contains('fs-hide')) pokeFs(); return;
-    }
-    if (P.playing) setPlaying(false);
+    if (onBar) { if (document.body.classList.contains('fsmode') && !document.body.classList.contains('fs-vert')) pokeFs(); return; }
+    // double tap = full screen and back; a single tap waits a moment to make sure it isn't the first of two
+    const now = performance.now();
+    if (tapT && now - tapT < 320 && Math.hypot(e.clientX - tapX, e.clientY - tapY) < 60) { clearTimeout(tapTimer); tapT = 0; doubleTap(); return; }
+    tapT = now; tapX = e.clientX; tapY = e.clientY;
+    clearTimeout(tapTimer); tapTimer = setTimeout(() => { tapT = 0; singleTap(); }, 280);
   });
+  let tapT = 0, tapX = 0, tapY = 0, tapTimer = 0;
+  function singleTap(){
+    const b = document.body.classList;
+    if (b.contains('fs-vert')) { setPlaying(!P.playing); return; }
+    if (b.contains('fsmode')) { b.toggle('fs-hide'); if (!b.contains('fs-hide')) pokeFs(); return; }
+    if (P.playing) setPlaying(false);
+  }
+  // the vertical lesson's own view <-> only the video; any other full screen <-> the lesson page
+  function doubleTap(){
+    const b = document.body.classList;
+    if (b.contains('fs-full')) setFull(false);
+    else if (b.contains('fs-vert') && vertFs) setFull(true);
+    else if (b.contains('fsmode')) { if (history.state && history.state.fs) history.back(); else exitFs(); }
+    else enterFs();
+  }
   // ===== fullscreen =====
   let fsTimer;
   function pokeFs(){ clearTimeout(fsTimer); if (document.body.classList.contains('fs-vert')) return; fsTimer = setTimeout(() => { if (P.playing && !document.body.classList.contains('fs-vert')) document.body.classList.add('fs-hide'); }, 3000); }
