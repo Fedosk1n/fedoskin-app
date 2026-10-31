@@ -120,6 +120,16 @@
   frames take over once ≤0.2 s behind the finger (never a step back), and give way to the strip when > 1 s behind (a
   quick sweep); sources keep 4-s GOPs (GitHub keyint 250), so fast sweeps show the strip, slow precise scrubbing is
   sharp: headless test 80–99 % of frames full quality at slow speed, both GitHub and Kinescope.
+- Frame cache for scrubbing (owner 31.10: clients disliked the blur): `fc-worker.js` (module Worker, OffscreenCanvas,
+  mediabunny) keeps the lesson's frames as sharp JPEGs (≤720 short side, q0.8) in memory on a grid `step` =
+  max(0.1 s, dur/600). Sources: (1) short GitHub lessons — whole file (blob from `introMem`, or fetched on a fast link)
+  decoded in the worker ~1.8 s after `playing`, starting 4 s ahead of playback, paused while the finger drags;
+  (2) capture of whatever plays on screen (rVFC → createImageBitmap → worker) — Kinescope lessons get sharp frames
+  for every watched part (iPhone native HLS refuses the copy ⇒ only the intro). Cap 90 MB total, other lessons evicted
+  first. Drag: `fcShow` (cached frame, drawn on #fqCan, `fcId/fcT`) → else fq decode → else strip. Unwatched Kinescope
+  parts still fall back to fq/strip. `window.fedoskinFrames()` shows the cache state. Headless: 33-s lesson cached in
+  ~8 s paused / ~16 s while playing (0 dropped frames), 26 MB; drags 100 % sharp, 0 backward steps.
+  Dot on the slider: `.knob` (#knob, #fsKnob) at the position, ×1.55 while dragging (`.timeline.drag`).
 - Sound button (owner 31.10): vertical full screen — `#fsSoundC` in the video's bottom-right corner, LEFT of «Подробнее»
   and «во весь экран» (right:114px; 62px in «only video» where «Подробнее» is hidden), orange when muted; landscape full
   screen — «Звук / Без звука» 6th captioned button of the bottom row (`#fsSound`, hidden in fs-vert); `#btnMute` on the

@@ -298,7 +298,10 @@ body.fsmode .bigplay{z-index:3}
 .track{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
 .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0}
 .track .loopzone{position:absolute;top:0;bottom:0;background:rgba(242,239,232,.35)}
-.timeline{touch-action:none} /* our own finger tracking on the slider: it follows from the very first pixel */
+.timeline{touch-action:none}
+/* the dot on the line: where the video is / where the finger holds it; bigger while dragging */
+.timeline .knob{position:absolute;top:14px;left:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#F2EFE8;border:3px solid var(--accent);box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;transition:transform .12s ease}
+.timeline.drag .knob{transform:scale(1.55)} /* our own finger tracking on the slider: it follows from the very first pixel */
 .timeline input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:pointer;pointer-events:none!important} /* never the browser's own slider under the finger: it lagged and pulled the picture back */
 .ctl{width:52px;height:52px;flex:0 0 52px;border-radius:26px;border:1px solid var(--line);background:transparent;color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer}
 .ctl .ico{width:18px;height:18px}
@@ -428,7 +431,7 @@ body.fsmode .bigplay{z-index:3}
           <span id="fsRotSpacer" style="width:48px"></span>
         </div>
         <div class="fsbottom">
-          <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
+          <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
           <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
             <button class="fsk" id="fsBack5" aria-label="Назад на 5 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span><span class="fsl">5 сек</span></button>
@@ -447,6 +450,7 @@ body.fsmode .bigplay{z-index:3}
         <div class="loopzone" id="loopZone" hidden></div>
         <div class="fill" id="fill"></div>
       </div>
+      <div class="knob" id="knob"></div>
       <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Перемотка">
     </div>
     <div class="row" style="justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums">
@@ -1277,7 +1281,7 @@ body.fsmode .bigplay{z-index:3}
   function loadVideo(src, poster, ks, intro){
     setPlaying(false);
     dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
-    clearIntro(); pendingStart = null; scrub = null; sbCan.hidden = true; fqStop(); fqCan.hidden = true;
+    clearIntro(); pendingStart = null; scrub = null; sbCan.hidden = true; fqStop(); fqCan.hidden = true; fqCan.fcId = null; if (fcBuilding && (!curLesson || fcBuilding.key !== fcKey(curLesson))) fcStopBuild(); if (fcW) fcW.postMessage({ cmd: 'resume' });
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
@@ -1377,7 +1381,7 @@ body.fsmode .bigplay{z-index:3}
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
     const srcInfo = introSource(l);
-    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, srcInfo);
+    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -1394,7 +1398,7 @@ body.fsmode .bigplay{z-index:3}
     const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(Boolean);
     let warmed = false;
     const warmNear = () => { if (warmed || curLesson !== l) return; warmed = true; warmKs(near.concat(list.filter(x => x !== l && !near.includes(x))), near); };
-    whenPlaying = () => { setTimeout(warmNear, 600); setTimeout(() => { if (curLesson === l) sbLoad(l); }, 300); setTimeout(fqPreload, 2500); };
+    whenPlaying = () => { setTimeout(warmNear, 600); setTimeout(() => { if (curLesson === l) sbLoad(l); }, 300); setTimeout(fqPreload, 2500); setTimeout(() => fcBuild(l), 1800); };
     setTimeout(warmNear, 4000);
     maybeSwipeHint(list.length);
     $('#lesson').scrollTop = 0;
@@ -1598,14 +1602,14 @@ body.fsmode .bigplay{z-index:3}
       const sink = await fqInput(src);
       for await (const wc of sink.canvasesAtTimestamps(targets())) {
         if (sess.done || fq !== sess) break;
-        if (!wc || !scrub) continue;
+        if (!wc || !scrub || fcGet(scrub.target)) continue;
         sess.lastT = wc.timestamp;
         // sharp frames take over once they have caught up with the finger (no step back to an old moment);
         // a quick sweep leaves them behind — then the strip shows until the finger slows down again
         if (!sess.on) { const d = scrub.target - wc.timestamp; if (d > 0.2 || d < -0.3) continue; sess.on = true; }
         const c = wc.canvas;
         if (fqCan.width !== c.width || fqCan.height !== c.height) { fqCan.width = c.width; fqCan.height = c.height; }
-        fqCan.getContext('2d').drawImage(c, 0, 0);
+        fqCan.getContext('2d').drawImage(c, 0, 0); fqCan.fcId = null;
         sess.drawn = true; fqCan.hidden = false; sbCan.hidden = true;
       }
     })().catch(() => { sess.failed = true; });
@@ -1627,6 +1631,126 @@ body.fsmode .bigplay{z-index:3}
     mbm().then(() => { const src = curLesson && fqSrcFor(curLesson.ks ? 0 : 1); if (src) fqInput(src).catch(() => {}); }).catch(() => { MBM = null; });
   }
 
+  // ===== frame cache: sharp frames under the finger =====
+  // The strip above is small (blurry) and decoding the video itself while dragging can only jump to its key frames
+  // (every 2–4 s), so fast drags used to show the strip. Now the lesson's frames are kept on the phone as sharp
+  // pictures on a time grid (every 0.1 s for short lessons; for long ones the grid matches what a finger can pick on
+  // the slider, ~600 points): a dragged finger always gets a sharp frame at once.
+  // Where they come from (both in a background worker, fc-worker.js, so playback never stutters):
+  // - a short GitHub lesson whose file is on the phone (downloaded ahead, or fetched on a fast connection) is turned
+  //   into frames once, ~5–10 s after it starts playing, from the current moment onwards;
+  // - whatever plays on screen is captured as it goes (Kinescope lessons: every part already watched).
+  // Up to ~90 MB of the phone's memory; the oldest lesson's frames go first. Nothing is downloaded extra for it.
+  const FC = new Map(), FC_MAX = 90 * 1048576, FC_SIDE = 720, FC_Q = 0.8;
+  let fcW = null, fcOwn = false, fcBytes = 0, fcBuilding = null, fcCapBusy = false;
+  const fcBm = new Map(); // a few frames ready to draw
+  function fcWorker(){
+    if (fcW === false) return null;
+    if (fcW) return fcW;
+    try {
+      if (!window.Worker || !window.OffscreenCanvas || !window.createImageBitmap) throw new Error('old');
+      fcW = new Worker('fc-worker.js', { type: 'module' });
+      fcW.onmessage = fcMsg; fcW.onerror = () => { fcW = false; };
+    } catch (_) { fcW = false; }
+    return fcW || null;
+  }
+  const fcKey = l => l.id + ':' + (l.ks || 'gh');
+  function fcFor(l, make){
+    if (!l) return null;
+    const key = fcKey(l); let c = FC.get(key);
+    if (!c && make) {
+      const d = (curLesson === l && P.dur) || l.dur || 60;
+      c = { key, step: Math.max(0.1, Math.round(d / 600 * 100) / 100), frames: new Map(), bytes: 0, no: {} };
+      FC.set(key, c);
+    }
+    return c || null;
+  }
+  function fcMsg(e){
+    const m = e.data || {}, c = FC.get(m.key); if (!c) return;
+    if (m.done) { c.built = true; if (fcBuilding === c) fcBuilding = null; return; }
+    if (m.failed) { c.failed = true; c.started = false; if (fcBuilding === c) fcBuilding = null; return; }
+    if (!m.blob) return;
+    const old = c.frames.get(m.k);
+    if (old && old.h >= m.h) return;
+    const add = m.blob.size - (old ? old.b.size : 0);
+    if (fcBytes + add > FC_MAX) {
+      // make room: other lessons' frames first (never the one on screen)
+      for (const [k2, c2] of FC) { if (fcBytes + add <= FC_MAX) break; if (c2 === c || (curLesson && k2 === fcKey(curLesson))) continue; fcBytes -= c2.bytes; FC.delete(k2); }
+      if (fcBytes + add > FC_MAX) return;
+    }
+    c.frames.set(m.k, { b: m.blob, t: m.t, h: m.h }); c.bytes += add; fcBytes += add;
+    const id = c.key + ':' + m.k, bm = fcBm.get(id); if (bm) { try { bm.close(); } catch (_) {} fcBm.delete(id); }
+  }
+  // turn the whole short GitHub lesson into frames (once it plays)
+  async function fcBuild(l){
+    if (!l || l.ks || curLesson !== l || !window.VideoDecoder) return;
+    const c = fcFor(l, true); if (c.built || c.started || c.failed) return;
+    const u = mediaFor(l), mem = introMem.get(u);
+    if (!mem && !introFast()) return;
+    const w = fcWorker(); if (!w) return;
+    c.started = true;
+    let blob = null;
+    try { blob = await (await fetch(mem || u)).blob(); } catch (_) {}
+    if (!blob || curLesson !== l) { c.started = false; return; }
+    if (fcBuilding && fcBuilding !== c) fcStopBuild();
+    fcBuilding = c;
+    w.postMessage({ cmd: 'build', key: c.key, blob, step: c.step, max: FC_SIDE, q: FC_Q, from: Math.floor((P.t + 4) / c.step), skip: [...c.frames.keys()] });
+    if (scrub) w.postMessage({ cmd: 'pause' });
+  }
+  function fcStopBuild(){ const c = fcBuilding; if (!c) return; fcBuilding = null; if (!c.built) c.started = false; if (fcW) fcW.postMessage({ cmd: 'stop', key: c.key }); }
+  // capture what plays on screen
+  function fcCapture(el, mt){
+    if (el !== av || scrub || fcCapBusy || !curLesson || fcOwn || el.seeking || document.hidden) return;
+    const c = fcFor(curLesson, true); if (c.no[el.id] || (c.built && !curLesson.ks)) return;
+    const k = Math.round(mt / c.step); if (Math.abs(mt - k * c.step) > Math.min(0.05, c.step / 2)) return;
+    const vh = Math.min(el.videoWidth, el.videoHeight); if (!vh) return;
+    const old = c.frames.get(k); if (old && old.h >= Math.min(vh, FC_SIDE)) return;
+    if (fcBytes > FC_MAX * 0.97) return;
+    const w = fcWorker(); if (!w) return;
+    fcCapBusy = true; const lesson = curLesson;
+    // big pictures are made smaller right away (where the phone can), so the copy stays cheap
+    const s = Math.min(1, FC_SIDE / vh), opt = s < 1 ? { resizeWidth: Math.round(el.videoWidth * s), resizeHeight: Math.round(el.videoHeight * s), resizeQuality: 'medium' } : null;
+    (opt ? createImageBitmap(el, opt).catch(() => createImageBitmap(el)) : createImageBitmap(el)).then(bmp => {
+      if (curLesson !== lesson) { bmp.close(); return; }
+      w.postMessage({ cmd: 'frame', key: c.key, k, t: mt, bmp, max: FC_SIDE, q: FC_Q }, [bmp]);
+    }).catch(() => { c.no[el.id] = true; }) // e.g. iPhone's own stream player doesn't let the picture be copied
+      .finally(() => { fcCapBusy = false; });
+  }
+  [vid, vin].forEach(el => {
+    if (!el.requestVideoFrameCallback) return;
+    const cb = (now, meta) => { el.requestVideoFrameCallback(cb); try { fcCapture(el, meta.mediaTime); } catch (_) {} };
+    el.requestVideoFrameCallback(cb);
+  });
+  window.fedoskinFrames = () => { const c = curLesson && FC.get(fcKey(curLesson)); return { lessons: FC.size, MB: +(fcBytes / 1048576).toFixed(1), frames: c ? c.frames.size : 0, step: c ? c.step : 0, built: !!(c && c.built), building: !!fcBuilding }; }; // for checking on a phone
+  // the frame for this moment, if the phone has it
+  function fcGet(T){
+    const c = curLesson && !fcOwn && FC.get(fcKey(curLesson)); if (!c || !c.frames.size) return null;
+    const k = Math.round(T / c.step);
+    for (const kk of [k, k - 1, k + 1]) { const f = c.frames.get(kk); if (f && Math.abs(f.t - T) <= c.step * 0.75 + 0.02) return { c, k: kk, f }; }
+    return null;
+  }
+  function fcShow(T){
+    const g = fcGet(T); if (!g) return false;
+    const id = g.c.key + ':' + g.k;
+    if (fqCan.fcId === id && !fqCan.hidden) return true;
+    const draw = bm => {
+      if (!scrub) return;
+      // a later answer only replaces the picture if it is closer to the finger
+      if (fqCan.fcId && !fqCan.hidden && fqCan.fcT != null && Math.abs(fqCan.fcT - scrub.target) < Math.abs(g.f.t - scrub.target)) return;
+      if (fqCan.width !== bm.width || fqCan.height !== bm.height) { fqCan.width = bm.width; fqCan.height = bm.height; }
+      fqCan.getContext('2d').drawImage(bm, 0, 0);
+      fqCan.fcId = id; fqCan.fcT = g.f.t; fqCan.hidden = false; sbCan.hidden = true;
+    };
+    const have = fcBm.get(id);
+    if (have) { fcBm.delete(id); fcBm.set(id, have); draw(have); return true; }
+    createImageBitmap(g.f.b).then(bm => {
+      fcBm.set(id, bm);
+      while (fcBm.size > 10) { const [k0, b0] = fcBm.entries().next().value; try { b0.close(); } catch (_) {} fcBm.delete(k0); }
+      draw(bm);
+    }).catch(() => {});
+    return true;
+  }
+
   let scrub = null;
   const isStreamEl = el => el === vid && !!(curLesson && curLesson.ks);
   const inBuffer = (el, t) => { const b = el.buffered; for (let i = 0; i < b.length; i++) if (t >= b.start(i) && t <= b.end(i) - 0.1) return true; return false; };
@@ -1635,6 +1759,8 @@ body.fsmode .bigplay{z-index:3}
     scrub = { was: P.playing, target: P.t, pending: null, rest: false, restT: 0 };
     try { vid.pause(); vin.pause(); } catch (_) {}
     hideLoad();
+    fqCan.fcId = null;
+    if (fcBuilding && fcW) fcW.postMessage({ cmd: 'pause' }); // the decoder is needed for the finger now
   }
   function scrubMove(t){
     if (!P.own) { seekTo(t); return; }
@@ -1642,7 +1768,9 @@ body.fsmode .bigplay{z-index:3}
     const s = scrub; if (!s) return;
     s.target = P.t = Math.min(Math.max(0, t), P.dur);
     paint();
-    const sharp = fqFeed(s.target);
+    const cached = fcShow(s.target), sharp = cached || fqFeed(s.target);
+    // a sharp picture of another moment must not stay over the strip (or under way to the decoded one)
+    if (!sharp || (!cached && fqCan.fcId)) { fqCan.hidden = true; fqCan.fcId = null; }
     const pic = sharp || sbShow(s.target);
     s.rest = false; clearTimeout(s.restT);
     s.restT = setTimeout(() => { if (scrub === s) { s.rest = true; scrubSeek(); scrubDone(); } }, 140);
@@ -1672,6 +1800,7 @@ body.fsmode .bigplay{z-index:3}
     clearTimeout(s.restT); s.rest = true;
     scrubSeek();
     scrub = null; fqStop();
+    if (fcBuilding && fcW) fcW.postMessage({ cmd: 'resume' });
     seekTo(s.target);
     if (s.was && P.playing) { if (introOn) playIntro(); else if (!ksPending) playMain(); }
     // the strip picture stays until the video shows the frame (or at most a moment)
@@ -1699,7 +1828,7 @@ body.fsmode .bigplay{z-index:3}
   }
   function paint(){
     const p = P.dur ? P.t / P.dur : 0;
-    $('#fill').style.width = (p * 100) + '%';
+    $('#fill').style.width = (p * 100) + '%'; $('#knob').style.left = $('#fsKnob').style.left = (p * 100) + '%';
     $('#seek').value = Math.round(p * 1000);
     $('#tCur').textContent = fmt(P.t); $('#tDur').textContent = fmt(P.dur);
     $('#fsFill').style.width = (p * 100) + '%'; $('#fsSeek').value = Math.round(p * 1000);
@@ -1917,12 +2046,12 @@ body.fsmode .bigplay{z-index:3}
     };
     tl.addEventListener('pointerdown', e => {
       if (e.button > 0) return;
-      active = true; pid = e.pointerId; try { tl.setPointerCapture(pid); } catch (_) {}
+      active = true; pid = e.pointerId; try { tl.setPointerCapture(pid); } catch (_) {} tl.classList.add('drag');
       scrubStart(); scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs();
       e.preventDefault();
     });
     tl.addEventListener('pointermove', e => { if (!active || e.pointerId !== pid) return; scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs(); });
-    const end = e => { if (!active || (e && e.pointerId != null && e.pointerId !== pid)) return; active = false; scrubEnd(); };
+    const end = e => { if (!active || (e && e.pointerId != null && e.pointerId !== pid)) return; active = false; tl.classList.remove('drag'); scrubEnd(); };
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tl.addEventListener(ev, end));
   });
 
@@ -1974,7 +2103,7 @@ body.fsmode .bigplay{z-index:3}
   $('#ownVideo').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
     setLoop(null);
-    loadVideo(URL.createObjectURL(f), '');
+    loadVideo(URL.createObjectURL(f), ''); fcOwn = true; // the viewer's own video: no lesson frames from it
     $('#badgeOwn').hidden = false;
     toast(T('Твоё видео загружено — проверь замедление и зеркало'));
   });
