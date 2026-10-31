@@ -383,7 +383,8 @@ body.fsmode .bigplay{z-index:3}
   <div class="row" style="justify-content:space-between;gap:12px">
     <button class="back" id="lessonBack" aria-label="Назад к разделу"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
     <span class="label" id="lessonCrumb" style="flex:1;text-align:center">Toprock</span>
-    <label class="back" for="ownVideo" title="Проверить на своём видео" aria-label="Проверить на своём видео" style="cursor:pointer"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg></label>
+    <span style="width:44px;flex:none" aria-hidden="true"></span><!-- keeps the title centred while the button below is hidden -->
+    <label class="back" for="ownVideo" hidden data-later="own-video" title="Проверить на своём видео" aria-label="Проверить на своём видео" style="cursor:pointer"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg></label>
     <input type="file" id="ownVideo" accept="video/*" hidden>
   </div>
 
