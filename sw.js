@@ -18,9 +18,9 @@ const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const u = new URL(req.url); if (u.origin !== location.origin || !isVideo(u)) return;
-  // iPhone/Mac: the player loads the video itself, as before (its media loading is not risked on this); the app's own
-  // downloads still go through here and are saved
-  if (APPLE && req.destination === 'video') return;
+  // iPhone/iPad/Mac Safari: videos load exactly as before, nothing goes through here (a lesson started from a copy kept
+  // here showed only its cover there)
+  if (APPLE) return;
   e.respondWith(serveVideo(req, u.origin + u.pathname).catch(() => fetch(req)));
 });
 
