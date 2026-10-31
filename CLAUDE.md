@@ -70,6 +70,9 @@
   (icon «screen + text lines» = «Подробнее» → lesson page, video keeps playing) and `#fsFull` (standard ⛶ corner icon) =
   `fs-full`: only the video edge to edge (panel + top bar hidden) + browser Fullscreen API where allowed; the same
   button (icon flips) or leaving the phone's full screen returns to the normal vertical view. Tap on video = pause/play.
+  Double tap on the video (owner 31.10, own detection in the stage click handler: 2nd tap < 320 ms and < 60 px; a single
+  tap waits 280 ms): vertical lesson view ⇄ only the video (`fs-full`); lesson page ⇄ full screen (vertical layout or
+  landscape fs). Stage has `touch-action:manipulation` (no browser double-tap zoom).
   This full screen pushes no history: system back leaves the lesson (popstate exits fs AND navigates when `vertFs`).
   From the lesson page the ⛶ button opens the same vertical layout (with an fs history step back to the page). Phone
   rotation does not touch the vertical mode. Lessons without the mark: decided on the first loadedmetadata
