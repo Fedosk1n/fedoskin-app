@@ -190,9 +190,10 @@ body.fsmode.fs-hide .fsbar *{pointer-events:none!important}
 .fsk .fsi.fsplay{width:58px;height:58px;border-radius:29px;background:#F2EFE8;color:#0B0B0C}
 .fskplay{flex:0 0 72px;margin-top:-6px}
 .fsk:active .fsi{transform:scale(.94)}
-#fsLeave,#fsMute,#fsMore{display:none}
+#fsLeave,#fsMute,.fscorner{display:none}
+.fscorner{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(11,11,12,.7);color:#F2EFE8;align-items:center;justify-content:center;cursor:pointer;z-index:4;-webkit-tap-highlight-color:transparent}
+.fscorner:active{transform:scale(.94)}
 #fsRotSpacer{width:0!important}
-.fsmore{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(242,239,232,.35);background:rgba(11,11,12,.45);color:#F2EFE8;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
 /* vertical lesson video: the video fills the screen above, the controls live in a panel below it (always visible,
    never covering the dancer's feet); tap on the video = pause/play */
 body.fsmode.fs-vert{--vpan:calc(142px + env(safe-area-inset-bottom, 0px))}
@@ -205,7 +206,12 @@ body.fsmode.fs-vert .fstop{padding-bottom:28px;background:linear-gradient(rgba(0
 body.fsmode.fs-vert .fsbottom{position:fixed;left:0;right:0;bottom:0;height:var(--vpan);box-sizing:border-box;padding:4px max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));background:#0B0B0C}
 body.fsmode.fs-vert .fsbottom .track{background:rgba(242,239,232,.18)}
 body.fsmode.fs-vert #fsExit,body.fsmode.fs-vert #fsRotate{display:none}
-body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert #fsMute,body.fsmode.fs-vert #fsMore{display:flex}
+body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert #fsMute,body.fsmode.fs-vert .fscorner{display:flex}
+/* «во весь экран» inside vertical mode: only the video, edge to edge; the corner buttons stay to come back */
+body.fsmode.fs-vert.fs-full .stage{height:100%!important}
+body.fsmode.fs-vert.fs-full .fsbar{display:none}
+body.fsmode.fs-vert.fs-full .fscorner{bottom:calc(10px + env(safe-area-inset-bottom, 0px))}
+body.fsmode.fs-vert.fs-full #fsInfo{display:none}
 body.fsmode.fs-vert .fsname{text-align:left;font-size:17px;line-height:1.1;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert #fsMute{background:rgba(11,11,12,.45)}
 .fsic{width:48px;height:48px;border-radius:24px;border:none;background:rgba(242,239,232,.12);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -364,13 +370,15 @@ body.fsmode .bigplay{z-index:3}
       <span class="badge" id="badgeOwn" style="top:auto;bottom:12px;left:auto;right:12px;background:var(--fg);color:var(--bg)" hidden>Твоё видео</span>
       <button class="fsbtn" id="btnMute" aria-label="Звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="icoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <!-- vertical full screen: bottom-right corner of the video — lesson page («Подробнее») and true full screen -->
+      <button class="fscorner" id="fsInfo" aria-label="Подробнее" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="4" y="3" width="16" height="10" rx="2"/><path d="m10.5 6.2 3.5 1.8-3.5 1.8z" fill="currentColor"/><path d="M4 17h16M4 21h10"/></svg></button>
+      <button class="fscorner" id="fsFull" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoFull"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <div class="fsbar" id="fsbar">
         <div class="fstop">
           <button class="fsic" id="fsExit" aria-label="Выйти из полноэкранного режима"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
           <button class="fsic" id="fsLeave" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:22px;height:22px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
           <span class="fsname" id="fsName"></span>
           <button class="fsic" id="fsMute" aria-label="Выключить звук"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
-          <button class="fsmore" id="fsMore">Подробнее</button>
           <button class="fsic" id="fsRotate" aria-pressed="false" aria-label="Повернуть видео" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" transform="rotate(-90 12 12)"/><path d="M4 8a8 8 0 0 1 6-4.5"/><path d="M8 2l2 1.5L8.5 6"/></svg></button>
           <span id="fsRotSpacer" style="width:48px"></span>
         </div>
@@ -1386,7 +1394,7 @@ body.fsmode .bigplay{z-index:3}
   $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
   $('#stage').addEventListener('click', e => {
     // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
-    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute')) return;
+    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
     if (document.body.classList.contains('fs-vert')){
@@ -1476,7 +1484,9 @@ body.fsmode .bigplay{z-index:3}
   window.addEventListener('resize', () => { clearTimeout(orientTimer); orientTimer = setTimeout(onOrientation, 120); });
   window.addEventListener('orientationchange', () => { clearTimeout(orientTimer); orientTimer = setTimeout(onOrientation, 250); });
   function exitFs(){
-    document.body.classList.remove('fsmode', 'fs-hide', 'fs-rot', 'fs-vert'); clearTimeout(fsTimer); autoFs = false; vertFs = false;
+    const wasFull = document.body.classList.contains('fs-full');
+    document.body.classList.remove('fsmode', 'fs-hide', 'fs-rot', 'fs-vert', 'fs-full'); clearTimeout(fsTimer); autoFs = false; vertFs = false;
+    if (wasFull) { $('#fsIcoFull').innerHTML = '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'; $('#fsFull').setAttribute('aria-label', T('Во весь экран')); }
     try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
     try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (_) {}
   }
@@ -1496,17 +1506,33 @@ body.fsmode .bigplay{z-index:3}
   }
   $('#btnMute').addEventListener('click', () => { soundOff = !soundOff; applyMute(); paintMute(); });
   $('#fsMute').addEventListener('click', () => { soundOff = !soundOff; applyMute(); paintMute(); });
-  // «Подробнее»: the lesson page (description, save, download, other lessons); the video keeps playing there
-  $('#fsMore').addEventListener('click', () => {
+  // «Подробнее» (corner button): the lesson page (description, save, download, other lessons); the video keeps playing
+  $('#fsInfo').addEventListener('click', () => {
     vertAuto = false;
     if (history.state && history.state.fs) history.back(); else exitFs();
     $('#lesson').scrollTop = 0;
   });
+  // «Во весь экран» (corner button): only the video, edge to edge, and where the browser allows it (Android) the
+  // phone's own bars hide too. The same button brings the controls back.
+  function setFull(on){
+    document.body.classList.toggle('fs-full', on);
+    $('#fsIcoFull').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+    $('#fsFull').setAttribute('aria-label', on ? T('Выйти из полноэкранного режима') : T('Во весь экран'));
+    try {
+      if (on) { const el = document.documentElement; const r = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : (el.webkitRequestFullscreen && el.webkitRequestFullscreen()); if (r && r.catch) r.catch(() => {}); }
+      else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    } catch (_) {}
+  }
+  $('#fsFull').addEventListener('click', () => setFull(!document.body.classList.contains('fs-full')));
   // «←» in vertical mode: leave the lesson, like «back» on the lesson page
   $('#fsLeave').addEventListener('click', () => { exitFs(); $('#lessonBack').click(); });
   paintMute();
   $('#fsExit').addEventListener('click', () => { if (history.state && history.state.fs) history.back(); else exitFs(); });
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fsmode')) exitFs(); });
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) return;
+    if (document.body.classList.contains('fs-full')) { setFull(false); return; }
+    if (document.body.classList.contains('fsmode') && !document.body.classList.contains('fs-vert')) exitFs();
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fsmode')) exitFs(); });
   $('#fsPlay').addEventListener('click', () => { $('#btnPlay').click(); syncFs(); pokeFs(); });
   $('#fsBack5').addEventListener('click', () => { $('#btnBack5').click(); pokeFs(); });
