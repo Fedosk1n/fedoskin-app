@@ -74,13 +74,13 @@ window.LESSON_SB = {
   "cols": 10
  },
  "fw-6step": {
-  "src": "a4e77791-70b3-458b-b62d-fb48d60dbc50",
+  "src": "gh",
   "every": 0.5,
   "n": 56,
   "w": 180,
   "h": 320,
   "cols": 10,
-  "v": 1
+  "v": 2
  },
  "gd-windmill-entry": {
   "src": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
@@ -92,40 +92,40 @@ window.LESSON_SB = {
   "v": 1
  },
  "fr-easychair": {
-  "src": "5d85dd25-d0a6-4429-b038-a828c8eb2f07",
+  "src": "gh",
   "every": 0.5,
   "n": 41,
   "w": 180,
   "h": 320,
   "cols": 10,
-  "v": 1
+  "v": 2
  },
  "fr-elbow": {
-  "src": "612865e9-a251-428a-a7b7-221ed67d3f9f",
+  "src": "gh",
   "every": 0.5,
   "n": 79,
   "w": 180,
   "h": 320,
   "cols": 10,
-  "v": 1
+  "v": 2
  },
  "tk-monkey": {
-  "src": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad",
+  "src": "gh",
   "every": 0.5,
   "n": 68,
   "w": 180,
   "h": 320,
   "cols": 10,
-  "v": 1
+  "v": 2
  },
  "tk-turtlehs": {
-  "src": "5a15190c-6108-414f-bbe0-73987bd64906",
+  "src": "gh",
   "every": 0.5,
   "n": 82,
   "w": 180,
   "h": 320,
   "cols": 10,
-  "v": 1
+  "v": 2
  },
  "pw-airflare": {
   "src": "de8dad97-f470-4552-93c4-45575e6d3f29",
