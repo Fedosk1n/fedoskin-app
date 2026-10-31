@@ -1173,7 +1173,8 @@ body.fsmode .bigplay{z-index:3}
     if (j) { abortIntro(j); introCur = null; }
     if (l.ks && !introFast()) return null;
     // saved on the phone earlier (sw.js keeps watched videos): played from there, no internet needed
-    if (!l.ks && window.caches && navigator.serviceWorker && navigator.serviceWorker.controller) return { url: u, wait: fromSaved(u) };
+    // (not on iPhone/iPad: a video started from such a saved copy kept showing only its cover there)
+    if (!l.ks && !isApple && window.caches && navigator.serviceWorker && navigator.serviceWorker.controller) return { url: u, wait: fromSaved(u) };
     return { url: u };
   }
   function warmKs(ls, neighbours){
@@ -1254,6 +1255,7 @@ body.fsmode .bigplay{z-index:3}
   }
   function playMain(){
     if (scrub) return;
+    if (!vid.getAttribute('src') && !hls) return; // the lesson's video is still on its way (its source is set when ready)
     const pr = vid.play();
     if (pr && pr.catch) pr.catch(e => {
       if (av !== vid || (e && e.name === 'AbortError')) return;
@@ -1316,6 +1318,7 @@ body.fsmode .bigplay{z-index:3}
     if (!ks) {
       if (intro && intro.wait) {
         const tok = vid._srcTok = {};
+        vid.removeAttribute('src'); try { vid.load(); } catch (_) {} // the previous lesson must not play meanwhile
         intro.wait.then(u => u, () => intro.url).then(u => { if (vid._srcTok !== tok) return; vid.src = u; vid.playbackRate = P.rate; if (P.playing) playMain(); });
       } else { vid._srcTok = null; vid.src = intro ? intro.url : src; vid.playbackRate = P.rate; }
       return;
@@ -1757,10 +1760,12 @@ body.fsmode .bigplay{z-index:3}
   setInterval(() => {
     if (!vid.requestVideoFrameCallback || !curLesson || curLesson.ks || fcOwn || scrub || !P.own || !P.playing) return;
     const el = av;
-    if (el !== vid || el.paused || el.seeking || el.readyState < 3 || document.hidden || $('#lesson').hidden || el.currentTime < 1) return;
+    if (el !== vid || el.paused || el.seeking || el.readyState < 3 || document.hidden || $('#lesson').hidden || el.currentTime < 0.5) return;
     if (performance.now() - Math.max(lastFrameAt, playingAt) < 1500 || wdLesson === curLesson) return;
     wdLesson = curLesson;
-    const t = el.currentTime, src = el.currentSrc || el.src; if (!src) return;
+    const t = el.currentTime;
+    // a copy from the phone's memory that won't draw: take the file from the site instead
+    const src = /^blob:/.test(el.currentSrc || el.src) ? new URL('v/' + curLesson.id + '.mp4', location.href).href : (el.currentSrc || el.src); if (!src) return;
     el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (_) {} if (P.playing) playMain(); }, { once: true });
     el.src = src; el.playbackRate = P.rate;
   }, 500);

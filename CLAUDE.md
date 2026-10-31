@@ -147,7 +147,7 @@
   requests, app preloads and the frame-cache build all read that one download (streamed 206 answers; a jump > 3 MB ahead
   of the download goes to the network). Finished files go to Cache Storage `fedoskin-video-1` (≤ 300 MB / 20 files,
   oldest out; ETag/Last-Modified rechecked by HEAD at most hourly — a replaced video is dropped). Apple: the player's
-  own requests (`destination === 'video'`) bypass the SW (AVFoundation not risked); the app's fetches still go through.
+  nothing goes through the SW (see the iPhone note below).
   App: `introSource` for GitHub lessons tries `fromSaved()` (caches.match → blob:) first, so a reopened lesson plays
   without internet. Neighbour preload now takes files ≤ 40 MB (MEM_TOTAL 100 MB). fcBuild without a memory blob:
   saved copy, or (non-Apple, SW controlling) fetch through the shared download; otherwise capture only.
@@ -157,6 +157,11 @@
   `isApple`; capture from the screen still works), memory caps lower (introMem 3 files / 60 MB, frame cache 40 MB).
   Watchdog (GitHub lessons): `vid` playing, readyState ≥ 3, t ≥ 1 s, but no rVFC frame for 1.5 s ⇒ reload the same src at
   the same time once per lesson (`wdLesson`). Tested: never fires in normal use; simulated no-frames ⇒ 1 reload, keeps playing.
+  Still frozen on the owner's iPhone after that (17:48, «зависает на старте, зашёл из раздела») ⇒ everything new in
+  video loading is OFF on Apple: sw.js does not touch any video request (`if (APPLE) return`), no `fromSaved()` (a saved
+  copy as blob: was the prime suspect — played sound/time, drew only the poster). The watchdog reloads from the site URL
+  when the stuck source is a blob:. loadVideo's async-source path clears the previous lesson's src first and playMain
+  skips while no src (the old lesson used to play meanwhile).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
