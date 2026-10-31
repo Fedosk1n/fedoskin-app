@@ -159,14 +159,14 @@ p{margin:0}
 .swpeek.from-left{justify-content:flex-end}
 .stage .swpeek video,.stage .swpeek canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:transparent}
 .stage .swpeek canvas[hidden]{display:none}
-.swpeek span{position:relative}
 /* after the switch the neighbour's first frame stays until its video really plays: no cover, no spinner */
 .stage.peekhold .swpeek{display:flex;translate:0 0}
-.stage.peekhold .swpeek span{display:none}
 .stage.swiping .swpeek{display:flex}
 .stage.swiping .bigplay{opacity:0;transition:opacity .1s}
-.swpeek span{max-width:80%;padding:10px 16px;border-radius:22px;background:rgba(11,11,12,.72);color:#F2EFE8;font-family:var(--display);text-transform:uppercase;font-size:18px;text-align:center;line-height:1.15}
-.swpeek b{display:block;font-family:var(--body);text-transform:none;font-size:11px;font-weight:600;color:#C9C5BD;letter-spacing:.3px;margin-bottom:3px}
+.swlabel{position:absolute;left:50%;top:42%;z-index:5;translate:-50% -50%;max-width:78%;opacity:0;pointer-events:none;text-align:center;padding:12px 18px;border-radius:24px;background:rgba(11,11,12,.72);color:#F2EFE8}
+.swlabel i{display:block;font-style:normal;font-family:var(--display);text-transform:uppercase;font-size:22px;line-height:1.1}
+.swlabel b{display:block;font-family:var(--body);font-size:12px;font-weight:600;color:#C9C5BD;letter-spacing:.3px;margin-bottom:4px;white-space:nowrap}
+.stage.swipe-anim .swlabel{transition:opacity .15s ease-out}
 .swend{position:absolute;left:50%;top:30%;z-index:5;translate:-50% 0;padding:10px 16px;border-radius:20px;background:rgba(11,11,12,.8);color:#F2EFE8;font-size:13px;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .2s}
 .swend.on{opacity:1}
 .swhint{position:absolute;left:50%;top:44%;z-index:5;translate:-50% 0;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:22px;background:rgba(11,11,12,.8);color:#F2EFE8;font-size:14px;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .3s}
@@ -372,7 +372,8 @@ body.fsmode .bigplay{z-index:3}
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
       <video id="vin" playsinline preload="auto" hidden></video>
-      <div class="swpeek" id="swPeek" aria-hidden="true"><video id="swPeekVid" muted playsinline preload="auto"></video><canvas id="swPeekCan" hidden></canvas><span><b id="swPeekDir"></b><i id="swPeekName" style="font-style:normal"></i></span></div>
+      <div class="swpeek" id="swPeek" aria-hidden="true"><video id="swPeekVid" muted playsinline preload="auto"></video><canvas id="swPeekCan" hidden></canvas></div>
+      <div class="swlabel" id="swLabel" aria-hidden="true"><b id="swPeekDir"></b><i id="swPeekName"></i></div>
       <div class="swend" id="swEnd" aria-hidden="true"></div>
       <div class="swhint" id="swHint" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Листай вбок — соседний урок</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
@@ -1419,7 +1420,12 @@ body.fsmode .bigplay{z-index:3}
       dx = dir > 0 ? Math.min(0, mx) : Math.max(0, mx);
       const shown = nb ? dx : dx * 0.25; // nothing there: only a little give
       stage.style.setProperty('--sx', shown + 'px');
-      if (nb) $('#fsName').style.opacity = String(Math.max(0, 1 - Math.abs(shown) / w * 2));
+      if (nb) {
+        // the next lesson's name over the video: invisible at the start, fully visible where letting go switches
+        const k = Math.min(1, Math.abs(shown) / (w * 0.25));
+        $('#swLabel').style.opacity = String(k);
+        $('#fsName').style.opacity = String(Math.max(0, 1 - k));
+      }
       stage.style.setProperty('--px', (dir > 0 ? w + shown : -w + shown) + 'px');
     }, { passive: false });
     const end = () => {
@@ -1428,6 +1434,7 @@ body.fsmode .bigplay{z-index:3}
       $('#swEnd').classList.remove('on');
       const fast = Math.abs(dx) > 50 && performance.now() - t0 < 280;
       stage.classList.add('swipe-anim');
+      $('#swLabel').style.opacity = '0';
       if (nb && (Math.abs(dx) > w * 0.25 || fast)) {
         const target = nb;
         stage.style.setProperty('--sx', (dir > 0 ? -w : w) + 'px'); stage.style.setProperty('--px', '0px');
