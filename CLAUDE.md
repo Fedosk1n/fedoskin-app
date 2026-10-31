@@ -96,6 +96,10 @@
   `#swPeekVid`; while swiping it (not the cover) slides in; at the switch it is copied to `#swPeekCan` (peek video freed)
   and held (`peekhold`, no cover/spinner: `quietOpen`) until the new video's `playing`. Slide 150 ms. Headless test
   @10–25 Mbit: video moving 0.2–0.45 s after letting go, real frame from 0.15 s (was 0.65–0.7 s with cover + spinner).
+- Pull down = «Подробнее» (owner 31.10): in the vertical lesson view (fs-vert, also «only video») a downward drag on the
+  video (lessonSwipe mode 3, decided like the side swipe: |dy| > 1.3·|dx|, not from .fstop/.fsbottom/edges) moves the
+  video down (`.stage.pulling`, --sy = 0.6·dy, slight scale) with a chip «↓ Подробнее» (#pullLabel) fading in; past 18 %
+  of the height or a quick flick ⇒ `#fsInfo` click (lesson page, video keeps playing); otherwise springs back. Up drag: nothing.
 - Slider scrubbing (31.10.2026, owner's screen recording: video kept playing and pulled the slider back, every move
   cancelled the previous seek ⇒ spinner, jumps): `scrubStart/scrubMove/scrubEnd` on #seek/#fsSeek (pointer/touch/
   change). While dragging: video paused (P.playing kept, `scrub` blocks frame loop, playMain/playIntro, showStall),
