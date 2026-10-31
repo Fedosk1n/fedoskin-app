@@ -151,7 +151,10 @@ p{margin:0}
 /* lesson player */
 .stage{touch-action:manipulation;position:relative;aspect-ratio:16/10;max-width:100%;border-radius:18px;overflow:hidden;background:#111113;border:1px solid #222225;display:flex;align-items:center;justify-content:center}
 .stage video,.stage #figure{width:100%;height:100%;object-fit:contain;transition:transform .25s ease}
-.stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
+.stage.mirror video,.stage.mirror #figure,.stage.mirror #sbCan{transform:scaleX(-1)}
+/* while dragging the slider: frames from the lesson's strip of small pictures, instantly; the sharp frame follows */
+.stage #sbCan{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.stage #sbCan[hidden]{display:none}
 /* swipe to the next / previous lesson: the video follows the finger, the neighbour's cover slides in */
 .stage.swiping #vid,.stage.swiping #vin,.stage.swiping .vload{translate:var(--sx,0) 0}
 .stage.swipe-anim #vid,.stage.swipe-anim #vin,.stage.swipe-anim .vload,.stage.swipe-anim .swpeek{transition:translate .15s ease-out}
@@ -372,6 +375,7 @@ body.fsmode .bigplay{z-index:3}
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
       <video id="vin" playsinline preload="auto" hidden></video>
+      <canvas id="sbCan" hidden aria-hidden="true"></canvas>
       <div class="swpeek" id="swPeek" aria-hidden="true"><video id="swPeekVid" muted playsinline preload="auto"></video><canvas id="swPeekCan" hidden></canvas></div>
       <div class="swlabel" id="swLabel" aria-hidden="true"><b id="swPeekDir"></b><i id="swPeekName"></i></div>
       <div class="swend" id="swEnd" aria-hidden="true"></div>
@@ -701,6 +705,7 @@ body.fsmode .bigplay{z-index:3}
 <script src="i18n.js"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
+<script src="storyboards.js"></script>
 <script>
 (function(){
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
@@ -1022,6 +1027,7 @@ body.fsmode .bigplay{z-index:3}
     vload.hidden = false;
   }
   function showStall(){ // the video stopped to load more: spinner only, and only if it lasts
+    if (scrub) return; // dragging the slider: the picture comes from the strip / the last frame, no spinner
     clearTimeout(vloadT);
     vloadT = setTimeout(() => { if (P.playing) { vload.classList.add('stall'); vload.hidden = false; } }, 500);
   }
@@ -1033,7 +1039,7 @@ body.fsmode .bigplay{z-index:3}
   }
   [vid, vin].forEach(el => {
     el.addEventListener('playing', () => { if (el === av && stage.classList.contains('peekhold')) requestAnimationFrame(() => requestAnimationFrame(dropPeek)); if (el === av) { if (whenPlaying) { const f = whenPlaying; whenPlaying = null; f(); } hideLoad(); if (pvHold) { clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 2000); } } });
-    el.addEventListener('waiting', () => { if (el === av && P.playing && vload.hidden) showStall(); });
+    el.addEventListener('waiting', () => { if (el === av && P.playing && vload.hidden && !scrub) showStall(); });
     el.addEventListener('canplay', () => { if (el === av && !P.playing) hideLoad(); });
   });
   // warm-up: while the user looks at a section, open the connection to Kinescope and fetch the tiny playlists,
@@ -1212,6 +1218,7 @@ body.fsmode .bigplay{z-index:3}
     if (P.playing && (vin.ended || vin.currentTime >= introEnd() - 0.03)) toStream(introEnd());
   }
   function playMain(){
+    if (scrub) return;
     const pr = vid.play();
     if (pr && pr.catch) pr.catch(e => {
       if (av !== vid || (e && e.name === 'AbortError')) return;
@@ -1221,6 +1228,7 @@ body.fsmode .bigplay{z-index:3}
     });
   }
   function playIntro(){
+    if (scrub) return;
     const pr = vin.play();
     if (pr && pr.catch) pr.catch(e => {
       if (!introOn || (e && e.name === 'AbortError')) return;
@@ -1251,7 +1259,7 @@ body.fsmode .bigplay{z-index:3}
   function loadVideo(src, poster, ks, intro){
     setPlaying(false);
     dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
-    clearIntro(); pendingStart = null;
+    clearIntro(); pendingStart = null; scrub = null; sbCan.hidden = true;
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
@@ -1368,7 +1376,7 @@ body.fsmode .bigplay{z-index:3}
     const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(Boolean);
     let warmed = false;
     const warmNear = () => { if (warmed || curLesson !== l) return; warmed = true; warmKs(near.concat(list.filter(x => x !== l && !near.includes(x))), near); };
-    whenPlaying = () => setTimeout(warmNear, 600);
+    whenPlaying = () => { setTimeout(warmNear, 600); setTimeout(() => { if (curLesson === l) sbLoad(l); }, 300); };
     setTimeout(warmNear, 4000);
     maybeSwipeHint(list.length);
     $('#lesson').scrollTop = 0;
@@ -1495,6 +1503,78 @@ body.fsmode .bigplay{z-index:3}
     }
     P.last = performance.now();
   }
+  // ===== dragging the slider =====
+  // While the finger is on the slider the video stands still (it used to keep playing and pull the slider back) and
+  // seeks follow one after another — a new one only when the previous has shown its frame (before, every move
+  // cancelled the last one, so nothing was shown until the finger stopped). If the lesson has a strip of small frames
+  // (storyboards.js, v/<id>-sb.jpg) the picture follows the finger from it instantly; the sharp frame replaces it as
+  // soon as the video has got there. A Kinescope stream is only asked for parts it doesn't have yet when the finger
+  // rests, so it isn't flooded with downloads that will never be shown. Letting go: playback goes on from there.
+  const SB = window.LESSON_SB || {};
+  const sbFor = l => { const s = l && SB[l.id]; return s && s.src === (l.ks || 'gh') ? s : null; };
+  const sbImg = new Image(); let sbUrl = '';
+  function sbLoad(l){ const s = sbFor(l); if (!s) return; const u = 'v/' + l.id + '-sb.jpg?v=' + (s.v || 1); if (sbUrl !== u) { sbUrl = u; sbImg.src = u; } }
+  const sbCan = $('#sbCan');
+  function sbShow(t){
+    const s = sbFor(curLesson);
+    if (!s || !sbImg.complete || !sbImg.naturalWidth || !sbUrl.includes('/' + curLesson.id + '-sb.')) return false;
+    const i = Math.max(0, Math.min(s.n - 1, Math.round(t / s.every)));
+    if (sbCan.width !== s.w || sbCan.height !== s.h) { sbCan.width = s.w; sbCan.height = s.h; }
+    sbCan.getContext('2d').drawImage(sbImg, (i % s.cols) * s.w, Math.floor(i / s.cols) * s.h, s.w, s.h, 0, 0, s.w, s.h);
+    sbCan.hidden = false;
+    return true;
+  }
+  let scrub = null;
+  const isStreamEl = el => el === vid && !!(curLesson && curLesson.ks);
+  const inBuffer = (el, t) => { const b = el.buffered; for (let i = 0; i < b.length; i++) if (t >= b.start(i) && t <= b.end(i) - 0.1) return true; return false; };
+  function scrubStart(){
+    if (scrub || !P.own || !curLesson) return;
+    scrub = { was: P.playing, target: P.t, pending: null, rest: false, restT: 0 };
+    try { vid.pause(); vin.pause(); } catch (_) {}
+    hideLoad();
+  }
+  function scrubMove(t){
+    if (!P.own) { seekTo(t); return; }
+    if (!scrub) scrubStart();
+    const s = scrub; if (!s) return;
+    s.target = P.t = Math.min(Math.max(0, t), P.dur);
+    paint();
+    const pic = sbShow(s.target);
+    s.rest = false; clearTimeout(s.restT);
+    s.restT = setTimeout(() => { if (scrub === s) { s.rest = true; scrubSeek(); } }, 140);
+    scrubSeek(pic);
+  }
+  function scrubSeek(pic){
+    const s = scrub; if (!s) return;
+    const T = s.target;
+    // inside the first 5 seconds the intro answers; further on the stream does
+    if (introOn && T >= introEnd() - 0.3) toStream(T);
+    const el = av;
+    if (s.pending === el && el.seeking) return; // the previous seek is still on its way: this one waits for it
+    if (Math.abs(el.currentTime - T) < 0.03 && el.readyState >= 2) { scrubDone(); return; }
+    if (isStreamEl(el) && !s.rest && !inBuffer(el, T) && (pic || sbFor(curLesson))) return;
+    s.pending = el;
+    if (el.readyState >= 1) el.currentTime = T; else if (el === vid) mainSeek(T);
+  }
+  // the sharp frame is there: the strip picture goes
+  function scrubDone(){ if (!sbCan.hidden && (!scrub || Math.abs(av.currentTime - scrub.target) < 0.15)) sbCan.hidden = true; }
+  [vid, vin].forEach(el => el.addEventListener('seeked', () => {
+    if (el !== av) return;
+    if (scrub) { if (scrub.pending === el) scrub.pending = null; if (Math.abs(el.currentTime - scrub.target) < 0.15) scrubDone(); else scrubSeek(); }
+    else if (!sbCan.hidden) sbCan.hidden = true;
+  }));
+  function scrubEnd(){
+    const s = scrub; if (!s) return;
+    clearTimeout(s.restT); s.rest = true;
+    scrubSeek();
+    scrub = null;
+    seekTo(s.target);
+    if (s.was && P.playing) { if (introOn) playIntro(); else if (!ksPending) playMain(); }
+    // the strip picture stays until the video shows the frame (or at most a moment)
+    if (!sbCan.hidden) setTimeout(() => { if (!scrub) sbCan.hidden = true; }, 1500);
+  }
+  [vid, vin].forEach(el => el.addEventListener('playing', () => { if (el === av && !scrub && !sbCan.hidden) requestAnimationFrame(() => { sbCan.hidden = true; }); }));
+
   function seekTo(t){
     P.t = Math.min(Math.max(0, t), P.dur);
     if (P.own) {
@@ -1531,7 +1611,7 @@ body.fsmode .bigplay{z-index:3}
     }
   }
   function frame(now){
-    if (P.playing){
+    if (P.playing && !scrub){
       if (P.own){ if (introOn) tickIntro(); P.t = av.currentTime; }
       else { P.t += (now - P.last) / 1000 * P.rate; }
       P.last = now;
@@ -1707,9 +1787,15 @@ body.fsmode .bigplay{z-index:3}
   });
   $('#fsMirror').addEventListener('click', () => { $('#btnMirror').click(); syncFs(); pokeFs(); });
   $('#fsLoop').addEventListener('click', () => { $('#btnLoop').click(); syncFs(); pokeFs(); });
-  $('#fsSeek').addEventListener('input', e => { seekTo(e.target.value / 1000 * P.dur); pokeFs(); });
+  $('#fsSeek').addEventListener('input', e => { scrubMove(e.target.value / 1000 * P.dur); pokeFs(); });
   $('#btnBack5').addEventListener('click', () => seekTo(P.t - 5));
-  $('#seek').addEventListener('input', e => seekTo(e.target.value / 1000 * P.dur));
+  $('#seek').addEventListener('input', e => scrubMove(e.target.value / 1000 * P.dur));
+  ['#seek', '#fsSeek'].forEach(id => {
+    const el = $(id);
+    el.addEventListener('pointerdown', () => scrubStart());
+    el.addEventListener('touchstart', () => scrubStart(), { passive: true });
+    ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'change'].forEach(ev => el.addEventListener(ev, () => scrubEnd()));
+  });
 
   $('#speedSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
