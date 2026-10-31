@@ -232,12 +232,18 @@ body.fsmode.fs-vert .fstop{padding-bottom:28px;background:linear-gradient(rgba(0
 body.fsmode.fs-vert .fsbottom{position:fixed;left:0;right:0;bottom:0;height:var(--vpan);box-sizing:border-box;padding:4px max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));background:#0B0B0C}
 body.fsmode.fs-vert .fsbottom .track{background:rgba(242,239,232,.18)}
 body.fsmode.fs-vert #fsExit,body.fsmode.fs-vert #fsRotate{display:none}
-body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert #fsMute,body.fsmode.fs-vert .fscorner{display:flex}
+body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert .fscorner{display:flex}
 /* «во весь экран» inside vertical mode: only the video, edge to edge; the corner buttons stay to come back */
 body.fsmode.fs-vert.fs-full .stage{height:100%!important}
 body.fsmode.fs-vert.fs-full .fsbar{display:none}
 body.fsmode.fs-vert.fs-full .fscorner{bottom:calc(10px + env(safe-area-inset-bottom, 0px))}
 body.fsmode.fs-vert.fs-full #fsInfo{display:none}
+#fsSoundC{display:none!important}
+body.fsmode.fs-vert.fs-full #fsSoundC{display:flex!important}
+/* a short sign in the middle of the video when the sound is switched */
+.sndflash{position:absolute;left:50%;top:42%;z-index:6;translate:-50% -50%;width:74px;height:74px;border-radius:37px;background:rgba(11,11,12,.66);color:#F2EFE8;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .25s}
+.sndflash.on{opacity:1;transition:none}
+.fsctl .fsk .fsl{font-size:10.5px}
 body.fsmode.fs-vert .fsname{text-align:left;font-size:17px;line-height:1.1;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 body.fsmode.fs-vert #fsLeave,body.fsmode.fs-vert #fsMute{background:rgba(11,11,12,.45)}
 .fsic{width:48px;height:48px;border-radius:24px;border:none;background:rgba(242,239,232,.12);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -378,6 +384,7 @@ body.fsmode .bigplay{z-index:3}
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
       <video id="vin" playsinline preload="auto" hidden></video>
+      <div class="sndflash" id="sndFlash" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" style="width:32px;height:32px" id="sndFlashIco"></svg></div>
       <canvas id="sbCan" hidden aria-hidden="true"></canvas>
       <canvas id="fqCan" hidden aria-hidden="true"></canvas>
       <div class="swpeek" id="swPeek" aria-hidden="true"><video id="swPeekVid" muted playsinline preload="auto"></video><canvas id="swPeekCan" hidden></canvas></div>
@@ -405,6 +412,7 @@ body.fsmode .bigplay{z-index:3}
       <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <!-- vertical full screen: bottom-right corner of the video — lesson page («Подробнее») and true full screen -->
       <button class="fscorner" id="fsInfo" aria-label="Подробнее" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="4" y="3" width="16" height="10" rx="2"/><path d="m10.5 6.2 3.5 1.8-3.5 1.8z" fill="currentColor"/><path d="M4 17h16M4 21h10"/></svg></button>
+      <button class="fscorner" id="fsSoundC" aria-label="Выключить звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSoundC"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fscorner" id="fsFull" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoFull"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <div class="fsbar" id="fsbar">
         <div class="fstop">
@@ -424,6 +432,7 @@ body.fsmode .bigplay{z-index:3}
             <button class="fsk fskplay" id="fsPlay" aria-label="Смотреть"><span class="fsi fsplay"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" id="fsIcoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></span></button>
             <button class="fsk" id="fsMirror" aria-pressed="false" aria-label="Зеркало"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></span><span class="fsl">Зеркало</span></button>
             <button class="fsk" id="fsLoop" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></span><span class="fsl">Повтор</span></button>
+            <button class="fsk" id="fsSound" aria-pressed="false" aria-label="Выключить звук"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSound"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></span><span class="fsl" id="fsSoundL">Звук</span></button>
           </div>
         </div>
       </div>
@@ -1166,6 +1175,7 @@ body.fsmode .bigplay{z-index:3}
   const INTRO_Q = 480;
   const introFor = l => l && l.ks && INTROS[l.id] === l.ks + ':' + INTRO_Q ? 'v/' + l.id + '-intro.mp4' : '';
   let av = vid, introOn = false, soundOff = false, pendingStart = null;
+  try { soundOff = localStorage.getItem('fedoskin-mute') === '1'; } catch (_) {}
   // the stream starts loading only when the intro is fully downloaded — they don't fight over the connection
   let streamDefer = null, streamDeferT = 0;
   function startStream(){ if (!streamDefer) return; const f = streamDefer; streamDefer = null; clearTimeout(streamDeferT); f(); }
@@ -1717,7 +1727,7 @@ body.fsmode .bigplay{z-index:3}
   $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
   $('#stage').addEventListener('click', e => {
     // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
-    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull')) return;
+    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
     if (onBar) { if (document.body.classList.contains('fsmode') && !document.body.classList.contains('fs-vert')) pokeFs(); return; }
@@ -1838,9 +1848,19 @@ body.fsmode .bigplay{z-index:3}
     $('#icoMute').innerHTML = soundOff ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
     $('#btnMute').setAttribute('aria-label', soundOff ? T('Включить звук') : T('Выключить звук'));
     $('#fsIcoMute').innerHTML = $('#icoMute').innerHTML; $('#fsMute').setAttribute('aria-label', $('#btnMute').getAttribute('aria-label'));
+    $('#fsIcoSound').innerHTML = $('#fsIcoSoundC').innerHTML = $('#icoMute').innerHTML;
+    $('#fsSound').setAttribute('aria-pressed', soundOff); $('#fsSoundL').textContent = soundOff ? T('Без звука') : T('Звук');
+    ['#fsSound', '#fsSoundC'].forEach(id => $(id).setAttribute('aria-label', $('#btnMute').getAttribute('aria-label')));
   }
-  $('#btnMute').addEventListener('click', () => { soundOff = !soundOff; applyMute(); paintMute(); });
-  $('#fsMute').addEventListener('click', () => { soundOff = !soundOff; applyMute(); paintMute(); });
+  // sound on / off: every sound button does the same; the choice is remembered for the next lessons and next time
+  let sndT = 0;
+  function toggleSound(){
+    soundOff = !soundOff; applyMute(); paintMute();
+    try { localStorage.setItem('fedoskin-mute', soundOff ? '1' : '0'); } catch (_) {}
+    const f = $('#sndFlash'); $('#sndFlashIco').innerHTML = $('#icoMute').innerHTML;
+    f.classList.add('on'); clearTimeout(sndT); sndT = setTimeout(() => f.classList.remove('on'), 650);
+  }
+  ['#btnMute', '#fsMute', '#fsSound', '#fsSoundC'].forEach(id => $(id).addEventListener('click', () => { toggleSound(); if (id === '#fsSound') pokeFs(); }));
   // «Подробнее» (corner button): the lesson page (description, save, download, other lessons); the video keeps playing
   $('#fsInfo').addEventListener('click', () => {
     vertAuto = false;

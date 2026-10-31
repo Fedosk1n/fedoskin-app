@@ -120,6 +120,10 @@
   frames take over once ≤0.2 s behind the finger (never a step back), and give way to the strip when > 1 s behind (a
   quick sweep); sources keep 4-s GOPs (GitHub keyint 250), so fast sweeps show the strip, slow precise scrubbing is
   sharp: headless test 80–99 % of frames full quality at slow speed, both GitHub and Kinescope.
+- Sound button (owner 31.10): «Звук / Без звука» is the 6th captioned button of the bottom row (`#fsSound`, every
+  full-screen mode, orange when muted), `#fsSoundC` in the corner in «only video» (`fs-full`), `#btnMute` on the page
+  player; the small top-bar icon `#fsMute` is no longer shown. `toggleSound()`: one state `soundOff`, remembered in
+  `fedoskin-mute`, short centre sign `#sndFlash`. Autoplay-blocked fallback still mutes without saving.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
