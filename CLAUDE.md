@@ -112,6 +112,14 @@
   lagging values ⇒ back-and-forth. While the finger moves only the strip is shown (frame floor(t) blended into the next
   by the fraction — never ahead of the finger); the sharp frame replaces it only when the finger rests 140 ms / lets go.
   Test (jit.js): steady forward drag ⇒ 0 backward steps, 0 strip↔sharp switches mid-drag.
+  Full quality while dragging (owner 31.10 «как в монтажке, без потери качества»): `fqFeed/fqStart` decode the real
+  frames with mediabunny (lazy `import('./vendor/mediabunny.min.mjs')`, preloaded 2.5 s after playing on fast links,
+  WebCodecs) into `#fqCan` at the video's own size: GitHub lessons from the file (blob from memory or UrlSource), the
+  Kinescope intro while < 5 s, beyond that the Kinescope HLS itself (rendition ≤720, only needed pieces fetched).
+  `canvasesAtTimestamps(async generator of the newest finger position)` — moving forward it keeps decoding onwards. Sharp
+  frames take over once ≤0.2 s behind the finger (never a step back), and give way to the strip when > 1 s behind (a
+  quick sweep); sources keep 4-s GOPs (GitHub keyint 250), so fast sweeps show the strip, slow precise scrubbing is
+  sharp: headless test 80–99 % of frames full quality at slow speed, both GitHub and Kinescope.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
