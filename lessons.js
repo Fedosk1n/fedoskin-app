@@ -9,7 +9,8 @@ window.LESSONS_DATA = [
   "name": "Cross step",
   "dur": 52,
   "ru": "кросс степ",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-6step",
@@ -18,7 +19,8 @@ window.LESSONS_DATA = [
   "dur": 28,
   "ru": "сикс степ шесть шагов",
   "pv": true,
-  "ks": "a4e77791-70b3-458b-b62d-fb48d60dbc50"
+  "ks": "a4e77791-70b3-458b-b62d-fb48d60dbc50",
+  "vertical": true
  },
  {
   "id": "fw-3step",
@@ -26,7 +28,8 @@ window.LESSONS_DATA = [
   "name": "3-step",
   "dur": 33,
   "ru": "три степ",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-cc",
@@ -34,7 +37,8 @@ window.LESSONS_DATA = [
   "name": "CC",
   "dur": 26,
   "ru": "сиси сс",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-zulu",
@@ -42,7 +46,8 @@ window.LESSONS_DATA = [
   "name": "Zulu spin",
   "dur": 23,
   "ru": "зулу спин",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-hooks",
@@ -51,7 +56,8 @@ window.LESSONS_DATA = [
   "dur": 26,
   "ru": "хуки хук",
   "added": "2026-10-26",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-kickout",
@@ -59,7 +65,8 @@ window.LESSONS_DATA = [
   "name": "Kick-out steps",
   "dur": 35,
   "ru": "кик аут",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "fw-fishtail",
@@ -68,7 +75,8 @@ window.LESSONS_DATA = [
   "dur": 34,
   "ru": "фиштейл флип",
   "added": "2026-10-26",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "gd-underknee",
@@ -76,7 +84,8 @@ window.LESSONS_DATA = [
   "name": "Underknee",
   "dur": 13,
   "ru": "андерни под колено",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "gd-unknown",
@@ -84,7 +93,8 @@ window.LESSONS_DATA = [
   "name": "[Godown без названия]",
   "dur": 32,
   "ru": "",
-  "pv": true
+  "pv": true,
+  "vertical": true
  },
  {
   "id": "gd-windmill-entry",
@@ -103,7 +113,8 @@ window.LESSONS_DATA = [
   "dur": 21,
   "ru": "изи чеир стул chair чер",
   "pv": true,
-  "ks": "5d85dd25-d0a6-4429-b038-a828c8eb2f07"
+  "ks": "5d85dd25-d0a6-4429-b038-a828c8eb2f07",
+  "vertical": true
  },
  {
   "id": "fr-elbow",
@@ -113,7 +124,8 @@ window.LESSONS_DATA = [
   "ru": "элбоу локоть",
   "added": "2026-10-26",
   "pv": true,
-  "ks": "612865e9-a251-428a-a7b7-221ed67d3f9f"
+  "ks": "612865e9-a251-428a-a7b7-221ed67d3f9f",
+  "vertical": true
  },
  {
   "id": "tk-monkey",
@@ -123,7 +135,8 @@ window.LESSONS_DATA = [
   "ru": "манки флип обезьяна",
   "added": "2026-10-26",
   "pv": true,
-  "ks": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad"
+  "ks": "8eb7c39d-271c-40ac-bcfe-f0558e8e30ad",
+  "vertical": true
  },
  {
   "id": "tk-turtlehs",
@@ -132,7 +145,8 @@ window.LESSONS_DATA = [
   "dur": 41,
   "ru": "черепаха стойка на руках хендстенд",
   "pv": true,
-  "ks": "5a15190c-6108-414f-bbe0-73987bd64906"
+  "ks": "5a15190c-6108-414f-bbe0-73987bd64906",
+  "vertical": true
  },
  {
   "id": "pw-airflare",

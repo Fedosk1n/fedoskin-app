@@ -7,6 +7,7 @@ def t(ru, *vals):
 
 # ---- navigation / tabs ----
 t('Главная', 'Home', 'Inicio', 'Início', 'Accueil', 'Start', 'ホーム', '홈', '首页')
+t('Подробнее', 'Details', 'Detalles', 'Detalhes', 'Détails', 'Details', '詳細', '자세히', '详情')
 t('Разбор', 'Review', 'Revisión', 'Análise', 'Analyse', 'Feedback', '添削', '피드백', '点评')
 t('Профиль', 'Profile', 'Perfil', 'Perfil', 'Profil', 'Profil', 'プロフィール', '프로필', '我的')
 t('Основное меню', 'Main menu', 'Menú principal', 'Menu principal', 'Menu principal', 'Hauptmenü', 'メインメニュー', '메인 메뉴', '主菜单')
