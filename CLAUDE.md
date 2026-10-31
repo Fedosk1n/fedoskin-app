@@ -106,6 +106,12 @@
   GitHub strips were made with ffmpeg in the sandbox; the admin card «Мгновенный старт и плавная перемотка» makes
   missing ones itself (mediabunny CanvasSink on the lightest track: Kinescope HLS or v/<id>.mp4 on Pages) and commits
   them + storyboards.js; deleting a lesson removes its -sb.jpg.
+  Smoothness fix (owner 31.10 «кадры дергаются туда-сюда»): the finger on .timeline is tracked by OUR pointer handlers
+  (setPointerCapture; fs-rot uses clientY); the range inputs are `pointer-events:none!important` (keyboard only) — the
+  native slider has a ~50 px dead zone and, in fs-vert (`.fsbar *{pointer-events:auto}`), fired alongside ours with
+  lagging values ⇒ back-and-forth. While the finger moves only the strip is shown (frame floor(t) blended into the next
+  by the fraction — never ahead of the finger); the sharp frame replaces it only when the finger rests 140 ms / lets go.
+  Test (jit.js): steady forward drag ⇒ 0 backward steps, 0 strip↔sharp switches mid-drag.
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,

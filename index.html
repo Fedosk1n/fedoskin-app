@@ -286,7 +286,8 @@ body.fsmode .bigplay{z-index:3}
 .track{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
 .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0}
 .track .loopzone{position:absolute;top:0;bottom:0;background:rgba(242,239,232,.35)}
-.timeline input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:pointer}
+.timeline{touch-action:none} /* our own finger tracking on the slider: it follows from the very first pixel */
+.timeline input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:pointer;pointer-events:none!important} /* never the browser's own slider under the finger: it lagged and pulled the picture back */
 .ctl{width:52px;height:52px;flex:0 0 52px;border-radius:26px;border:1px solid var(--line);background:transparent;color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer}
 .ctl .ico{width:18px;height:18px}
 .ctl-main{background:var(--fg);color:var(--bg);border:none}
@@ -1518,9 +1519,13 @@ body.fsmode .bigplay{z-index:3}
   function sbShow(t){
     const s = sbFor(curLesson);
     if (!s || !sbImg.complete || !sbImg.naturalWidth || !sbUrl.includes('/' + curLesson.id + '-sb.')) return false;
-    const i = Math.max(0, Math.min(s.n - 1, Math.round(t / s.every)));
+    // the frame at or just before the finger (never one ahead of it), blended into the next one by how far the
+    // finger is between them — a smooth dissolve instead of jumps from frame to frame
+    const x = Math.max(0, Math.min(s.n - 1, t / s.every)), i = Math.floor(x), f = x - i;
     if (sbCan.width !== s.w || sbCan.height !== s.h) { sbCan.width = s.w; sbCan.height = s.h; }
-    sbCan.getContext('2d').drawImage(sbImg, (i % s.cols) * s.w, Math.floor(i / s.cols) * s.h, s.w, s.h, 0, 0, s.w, s.h);
+    const g = sbCan.getContext('2d'), at = k => [(k % s.cols) * s.w, Math.floor(k / s.cols) * s.h];
+    g.globalAlpha = 1; g.drawImage(sbImg, ...at(i), s.w, s.h, 0, 0, s.w, s.h);
+    if (f > 0.02 && i + 1 < s.n) { g.globalAlpha = f; g.drawImage(sbImg, ...at(i + 1), s.w, s.h, 0, 0, s.w, s.h); g.globalAlpha = 1; }
     sbCan.hidden = false;
     return true;
   }
@@ -1541,7 +1546,7 @@ body.fsmode .bigplay{z-index:3}
     paint();
     const pic = sbShow(s.target);
     s.rest = false; clearTimeout(s.restT);
-    s.restT = setTimeout(() => { if (scrub === s) { s.rest = true; scrubSeek(); } }, 140);
+    s.restT = setTimeout(() => { if (scrub === s) { s.rest = true; scrubSeek(); scrubDone(); } }, 140);
     scrubSeek(pic);
   }
   function scrubSeek(pic){
@@ -1557,7 +1562,7 @@ body.fsmode .bigplay{z-index:3}
     if (el.readyState >= 1) el.currentTime = T; else if (el === vid) mainSeek(T);
   }
   // the sharp frame is there: the strip picture goes
-  function scrubDone(){ if (!sbCan.hidden && (!scrub || Math.abs(av.currentTime - scrub.target) < 0.15)) sbCan.hidden = true; }
+  function scrubDone(){ if (!sbCan.hidden && (!scrub || (scrub.rest && !av.seeking && Math.abs(av.currentTime - scrub.target) < 0.15))) sbCan.hidden = true; }
   [vid, vin].forEach(el => el.addEventListener('seeked', () => {
     if (el !== av) return;
     if (scrub) { if (scrub.pending === el) scrub.pending = null; if (Math.abs(el.currentTime - scrub.target) < 0.15) scrubDone(); else scrubSeek(); }
@@ -1790,11 +1795,25 @@ body.fsmode .bigplay{z-index:3}
   $('#fsSeek').addEventListener('input', e => { scrubMove(e.target.value / 1000 * P.dur); pokeFs(); });
   $('#btnBack5').addEventListener('click', () => seekTo(P.t - 5));
   $('#seek').addEventListener('input', e => scrubMove(e.target.value / 1000 * P.dur));
+  // the finger on the slider: tracked by us (the browser's own slider ignores the first ~50 px of movement and then
+  // jumps); the hidden range input stays for the keyboard
   ['#seek', '#fsSeek'].forEach(id => {
-    const el = $(id);
-    el.addEventListener('pointerdown', () => scrubStart());
-    el.addEventListener('touchstart', () => scrubStart(), { passive: true });
-    ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'change'].forEach(ev => el.addEventListener(ev, () => scrubEnd()));
+    const input = $(id), tl = input.closest('.timeline');
+    input.addEventListener('change', () => scrubEnd());
+    let active = false, pid = null;
+    const frac = e => {
+      const r = tl.getBoundingClientRect(), rot = document.body.classList.contains('fs-rot'); // sideways picture: the slider runs top → bottom
+      return Math.min(1, Math.max(0, rot ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width));
+    };
+    tl.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
+      active = true; pid = e.pointerId; try { tl.setPointerCapture(pid); } catch (_) {}
+      scrubStart(); scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs();
+      e.preventDefault();
+    });
+    tl.addEventListener('pointermove', e => { if (!active || e.pointerId !== pid) return; scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs(); });
+    const end = e => { if (!active || (e && e.pointerId != null && e.pointerId !== pid)) return; active = false; scrubEnd(); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tl.addEventListener(ev, end));
   });
 
   $('#speedSeg').addEventListener('click', e => {
@@ -2443,7 +2462,7 @@ body.fsmode .bigplay{z-index:3}
     };
     document.addEventListener('touchstart', e => {
       if (navDepth <= 0 || blocked() || e.touches.length !== 1) return;
-      const t = e.touches[0]; if (t.clientX > EDGE_BACK) return;
+      const t = e.touches[0]; if (t.clientX > EDGE_BACK || (e.target.closest && e.target.closest('.timeline'))) return;
       sx = t.clientX; sy = t.clientY; dx = 0; active = true; decided = false; t0 = Date.now();
       scr = [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
     }, { passive: true });
