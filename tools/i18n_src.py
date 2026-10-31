@@ -13,6 +13,7 @@ t('Предыдущий урок', 'Previous lesson', 'Lección anterior', 'Aula
 t('Это последний урок раздела', 'This is the last lesson in the section', 'Es la última lección de la sección', 'Esta é a última aula da seção', "C'est la dernière leçon de la section", 'Das ist die letzte Lektion im Bereich', 'このセクションの最後のレッスンです', '이 섹션의 마지막 레슨이에요', '这是本部分的最后一课')
 t('Это первый урок раздела', 'This is the first lesson in the section', 'Es la primera lección de la sección', 'Esta é a primeira aula da seção', "C'est la première leçon de la section", 'Das ist die erste Lektion im Bereich', 'このセクションの最初のレッスンです', '이 섹션의 첫 번째 레슨이에요', '这是本部分的第一课')
 t('Листай вбок — соседний урок', 'Swipe sideways for the next lesson', 'Desliza de lado para otra lección', 'Deslize para o lado para outra aula', 'Glisse sur le côté pour changer de leçon', 'Zur Seite wischen für die nächste Lektion', '左右にスワイプで隣のレッスン', '옆으로 밀어 다른 레슨 보기', '左右滑动切换课程')
+t('Без звука', 'Muted', 'Sin sonido', 'Sem som', 'Muet', 'Stumm', '消音中', '음소거', '静音')
 t('Разбор', 'Review', 'Revisión', 'Análise', 'Analyse', 'Feedback', '添削', '피드백', '点评')
 t('Профиль', 'Profile', 'Perfil', 'Perfil', 'Profil', 'Profil', 'プロフィール', '프로필', '我的')
 t('Основное меню', 'Main menu', 'Menú principal', 'Menu principal', 'Menu principal', 'Hauptmenü', 'メインメニュー', '메인 메뉴', '主菜单')
