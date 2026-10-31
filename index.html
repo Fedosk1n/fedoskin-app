@@ -136,6 +136,7 @@ p{margin:0}
 .st-stats span{display:flex;flex-direction:column;gap:2px;padding:10px 4px;border-radius:12px;background:rgba(242,239,232,.06)}
 .st-stats b{font-size:24px;font-weight:400;line-height:1}
 .st-stats i{font-style:normal;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.st-link{align-self:center;margin-top:8px;padding:5px 12px;border-radius:999px;border:1px solid var(--accent);background:rgba(242,239,232,.08);font-size:11px;font-weight:700;color:var(--fg);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-cta{margin-top:14px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--soft)}
 /* search + save */
 .search{display:flex;align-items:center;gap:10px;height:50px;padding:0 6px 0 14px;border-radius:14px;background:var(--surface);border:1px solid #222225}
@@ -716,11 +717,13 @@ body.fsmode .bigplay{z-index:3}
         <span><b class="d" id="sStreak">0</b><i>дней подряд</i></span>
       </div>
       <div class="st-cta">Сможешь выше? · Fedoskin team app</div>
+      <div class="st-link" id="stLink"></div>
     </div>
     <div class="row" style="gap:10px;margin-top:14px">
       <button class="btn btn-ghost" id="storyClose" style="flex:1">Закрыть</button>
       <button class="btn btn-accent" id="storyShare" style="flex:2">Поделиться в сторис</button>
     </div>
+    <p class="muted" id="storyHint" style="margin:10px 2px 0;font-size:12px;line-height:1.4;text-align:center">В Instagram выбери «История». Ссылка на приложение скопируется — добавь её стикером «Ссылка».</p>
   </div>
 </div>
 
@@ -2260,12 +2263,92 @@ body.fsmode .bigplay{z-index:3}
     $('#stWhere').textContent = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
     $('#stNick').textContent = prof.nick || T('Брейкер');
     $('#sLvl').textContent = st.level; $('#sViews').textContent = st.views; $('#sStreak').textContent = st.streak;
+    $('#stLink').textContent = APP_LINK.replace(/^https?:\/\//, '');
     $('#story').hidden = false;
+    prepStory();
   }
   $('#shareRank').addEventListener('click', openStory);
   $('#storyClose').addEventListener('click', () => { $('#story').hidden = true; });
   $('#story').addEventListener('click', e => { if (e.target.id === 'story') $('#story').hidden = true; });
-  $('#storyShare').addEventListener('click', () => { toast(T('В приложении откроется Instagram со сторис')); });
+  // ===== the rating as an Instagram story =====
+  // The card is drawn into a 1080×1920 picture (the story size) as soon as it opens, so the tap on «Поделиться» can
+  // hand it to the phone's share menu at once (iPhone allows that only right inside the tap): there Instagram →
+  // «История». A web page can't put a link sticker into the story itself, so the app's link is printed on the picture
+  // and copied — in Instagram it goes into the «Ссылка» sticker with one paste.
+  const APP_LINK = (CFG.appUrl || (location.origin + location.pathname.replace(/index\.html$/, ''))).replace(/\/$/, '');
+  let storyFile = null, storyPrep = null;
+  const loadImg = src => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = src; });
+  async function storyImage(){
+    const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    try { await Promise.all(['300px Anton', '76px Anton', '600 42px Inter', '700 38px Inter'].map(f => document.fonts.load(f))); } catch (_) {}
+    const DISP = 'Anton, Impact, "Arial Narrow", sans-serif', BODY = 'Inter, system-ui, -apple-system, sans-serif';
+    // background: dark with the orange glow, like the card
+    g.fillStyle = '#0B0B0C'; g.fillRect(0, 0, W, H);
+    g.save(); g.translate(W / 2, H * 0.62); g.scale(1.2 * W / (0.7 * H), 1);
+    const rg = g.createRadialGradient(0, 0, 0, 0, 0, 0.7 * H * 0.6); rg.addColorStop(0, 'rgba(226,97,26,.30)'); rg.addColorStop(1, 'rgba(226,97,26,0)');
+    g.fillStyle = rg; g.fillRect(-W, -H, 2 * W, 2 * H); g.restore();
+    const centre = (text, y, font, color) => { g.font = font; g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(text, W / 2, y); };
+    const fitFont = (text, size, max, fam, weight) => { let s = size; g.font = (weight || '') + ' ' + s + 'px ' + fam; while (g.measureText(text).width > max && s > 20) { s -= 4; g.font = (weight || '') + ' ' + s + 'px ' + fam; } return g.font; };
+    const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+    // logo
+    try { const lg = await loadImg('logo.png'); const lw = 420, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 230, lw, lh); } catch (_) {}
+    // avatar
+    const a = byId(myAvatar), R = 105, cy = 700;
+    const m = /linear-gradient\((\d+)deg\s*,\s*([^,]+),\s*([^)]+)\)/.exec(a.bg);
+    if (m) { const lgr = g.createLinearGradient(W / 2 - R, cy - R, W / 2 + R, cy + R); lgr.addColorStop(0, m[2].trim()); lgr.addColorStop(1, m[3].trim()); g.fillStyle = lgr; } else g.fillStyle = a.bg;
+    g.beginPath(); g.arc(W / 2, cy, R, 0, Math.PI * 2); g.fill();
+    if (a.bg === '#1F1F22') { g.strokeStyle = '#2A2A2D'; g.lineWidth = 4; g.stroke(); }
+    try {
+      const S = Math.round(R * 2 * 0.55), svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + S + '" height="' + S + '" fill="none" stroke="' + a.fg + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="' + a.fg + '">' + a.d.replace(/currentColor/g, a.fg) + '</svg>';
+      const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)); g.drawImage(im, W / 2 - S / 2, cy - S / 2, S, S);
+    } catch (_) {}
+    // nick + alpha badge
+    const nick = (prof.nick || T('Брейкер')).toUpperCase();
+    g.font = fitFont(nick, 76, W - 160, DISP); g.fillStyle = '#F2EFE8'; g.textAlign = 'center'; g.fillText(nick, W / 2, 890);
+    const badge = T('α АЛЬФА-ТЕСТЕР'); g.font = '800 34px ' + BODY; const bw = g.measureText(badge).width + 48;
+    g.fillStyle = '#E2611A'; rr(W / 2 - bw / 2, 920, bw, 58, 14); g.fill(); centre(badge, 961, '800 34px ' + BODY, '#0B0B0C');
+    // minutes
+    const st = statsView();
+    g.font = fitFont(String(st.mins), 300, W - 120, DISP); g.fillStyle = '#E2611A'; g.fillText(String(st.mins), W / 2, 1290);
+    const where = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
+    g.font = fitFont(where, 42, W - 140, BODY, 600); g.fillStyle = '#F2EFE8'; g.fillText(where, W / 2, 1360);
+    // three numbers
+    const items = [[st.level, T('уровень')], [st.views, T('роликов')], [st.streak, T('дней подряд')]];
+    const gap = 24, bx = 72, bwid = (W - 2 * bx - 2 * gap) / 3;
+    items.forEach(([v, l], i) => {
+      const x = bx + i * (bwid + gap); g.fillStyle = 'rgba(242,239,232,.07)'; rr(x, 1410, bwid, 150, 36); g.fill();
+      g.textAlign = 'center'; g.font = '76px ' + DISP; g.fillStyle = '#F2EFE8'; g.fillText(String(v), x + bwid / 2, 1494);
+      g.font = fitFont(String(l).toUpperCase(), 26, bwid - 24, BODY, 600); g.fillStyle = '#9A968E'; g.fillText(String(l).toUpperCase(), x + bwid / 2, 1536);
+    });
+    // call to action + the app's link
+    const cta = T('Сможешь выше? · Fedoskin team app').toUpperCase();
+    g.font = fitFont(cta, 30, W - 140, BODY, 700); g.fillStyle = '#C9C5BD'; g.fillText(cta, W / 2, 1626);
+    const link = APP_LINK.replace(/^https?:\/\//, '');
+    g.font = fitFont(link, 38, W - 220, BODY, 700); const lw2 = g.measureText(link).width + 80;
+    g.fillStyle = 'rgba(242,239,232,.08)'; rr(W / 2 - lw2 / 2, 1662, lw2, 84, 42); g.fill(); g.strokeStyle = '#E2611A'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = '#F2EFE8'; g.fillText(link, W / 2, 1717);
+    return await new Promise((ok, bad) => c.toBlob(b => b ? ok(b) : bad(new Error('png')), 'image/png'));
+  }
+  function prepStory(){
+    storyFile = null;
+    storyPrep = storyImage().then(b => { storyFile = new File([b], 'fedoskin-rating.png', { type: 'image/png' }); return storyFile; });
+    storyPrep.catch(() => {});
+  }
+  function saveStory(f){
+    const a = document.createElement('a'), u = URL.createObjectURL(f); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 20000);
+    toast(T('Картинка сохранена, ссылка скопирована — выложи её в сторис Instagram'));
+  }
+  $('#storyShare').addEventListener('click', () => {
+    // the link first (the paste in Instagram's «Ссылка» sticker), then the picture to the share menu
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(APP_LINK).catch(() => {}); } catch (_) {}
+    if (!storyFile) { toast(T('Секунду, готовлю картинку…')); if (storyPrep) storyPrep.then(() => {}, () => {}); return; }
+    const data = { files: [storyFile] };
+    if (navigator.share && navigator.canShare && navigator.canShare(data)) {
+      navigator.share(data).then(() => toast(T('Ссылка скопирована — в сторис добавь стикер «Ссылка»'))).catch(e => { if (!e || e.name !== 'AbortError') saveStory(storyFile); });
+    } else saveStory(storyFile);
+  });
   $('#rankSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     $('#rankSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));

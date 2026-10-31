@@ -174,6 +174,12 @@
   app's start entry, then reload; the screen to reopen goes via sessionStorage `fedoskin-restore`. popstate with
   navDepth 0 (an entry from before the app started) ⇒ home. Our iPhone edge swipe now also works over sheets (moves the
   sheet) and steps aside on touchcancel (the system took the gesture).
+- Share rating to Instagram stories (owner 31.10): opening the card (`openStory`) pre-renders a 1080×1920 PNG on a canvas
+  (`storyImage`: same look as #storyCard — logo, avatar incl. its SVG, nick, alpha badge, minutes, 3 stats, CTA, and the
+  app link pill `APP_LINK` = CFG.appUrl or the page URL). «Поделиться в сторис» (must stay synchronous for iPhone's
+  user-gesture rule): copies APP_LINK to the clipboard, then navigator.share({files:[png]}) → phone share menu →
+  Instagram → «История»; a web page can't add a link sticker, so the hint under the card (#storyHint) tells to paste the
+  link into the «Ссылка» sticker. No file sharing ⇒ the PNG is downloaded + toast. The link is shown on the card too (#stLink).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
