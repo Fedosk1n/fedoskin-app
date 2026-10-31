@@ -85,6 +85,13 @@
   video, x < 30 on the page (iPhone edge back). Switching uses `navReplace` → history.replaceState, so back still goes
   to the section in one step; the full-screen mode is kept. Neighbours (next, prev) are warmed first. One-time tip
   `#swHint` (`fedoskin-swipe-tip`).
+  Neighbour preload (31.10): once the lesson plays (+0.6 s, fallback 4 s) its neighbours — next, prev, next+1 — are
+  downloaded whole into memory (`introMem`, blob:, serial, max 5, ≤12 MB each): GitHub lessons = the whole mp4
+  (`mediaFor`), Kinescope = the intro. Same gate as intros (`introFast`, saveData). GitHub lessons then play from the
+  blob (`introSource` → loadVideo non-ks path). The next lesson's first frame is pre-decoded in the hidden
+  `#swPeekVid`; while swiping it (not the cover) slides in; at the switch it is copied to `#swPeekCan` (peek video freed)
+  and held (`peekhold`, no cover/spinner: `quietOpen`) until the new video's `playing`. Slide 150 ms. Headless test
+  @10–25 Mbit: video moving 0.2–0.45 s after letting go, real frame from 0.15 s (was 0.65–0.7 s with cover + spinner).
 - Keep each video file well under 25 MB (GitHub web limit) — current lessons are 1.5–7 MB.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,

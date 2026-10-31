@@ -154,9 +154,15 @@ p{margin:0}
 .stage.mirror video,.stage.mirror #figure{transform:scaleX(-1)}
 /* swipe to the next / previous lesson: the video follows the finger, the neighbour's cover slides in */
 .stage.swiping #vid,.stage.swiping #vin,.stage.swiping .vload{translate:var(--sx,0) 0}
-.stage.swipe-anim #vid,.stage.swipe-anim #vin,.stage.swipe-anim .vload,.stage.swipe-anim .swpeek{transition:translate .2s ease}
+.stage.swipe-anim #vid,.stage.swipe-anim #vin,.stage.swipe-anim .vload,.stage.swipe-anim .swpeek{transition:translate .15s ease-out}
 .swpeek{position:absolute;inset:0;background:#111113 center/cover no-repeat;display:none;align-items:center;justify-content:flex-start;padding:0 16px;box-sizing:border-box;pointer-events:none;translate:var(--px,100%) 0}
 .swpeek.from-left{justify-content:flex-end}
+.stage .swpeek video,.stage .swpeek canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:transparent}
+.stage .swpeek canvas[hidden]{display:none}
+.swpeek span{position:relative}
+/* after the switch the neighbour's first frame stays until its video really plays: no cover, no spinner */
+.stage.peekhold .swpeek{display:flex;translate:0 0}
+.stage.peekhold .swpeek span{display:none}
 .stage.swiping .swpeek{display:flex}
 .stage.swiping .bigplay{opacity:0;transition:opacity .1s}
 .swpeek span{max-width:80%;padding:10px 16px;border-radius:22px;background:rgba(11,11,12,.72);color:#F2EFE8;font-family:var(--display);text-transform:uppercase;font-size:18px;text-align:center;line-height:1.15}
@@ -366,7 +372,7 @@ body.fsmode .bigplay{z-index:3}
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
       <video id="vin" playsinline preload="auto" hidden></video>
-      <div class="swpeek" id="swPeek" aria-hidden="true"><span><b id="swPeekDir"></b><i id="swPeekName" style="font-style:normal"></i></span></div>
+      <div class="swpeek" id="swPeek" aria-hidden="true"><video id="swPeekVid" muted playsinline preload="auto"></video><canvas id="swPeekCan" hidden></canvas><span><b id="swPeekDir"></b><i id="swPeekName" style="font-style:normal"></i></span></div>
       <div class="swend" id="swEnd" aria-hidden="true"></div>
       <div class="swhint" id="swHint" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Листай вбок — соседний урок</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
@@ -1005,7 +1011,7 @@ body.fsmode .bigplay{z-index:3}
   // loading picture: the lesson's own 3-second cover animation (already downloaded on the section screen) + spinner
   const vload = $('#vload'), vloadPv = vload.querySelector('video');
   vloadPv.muted = true; vloadPv.defaultMuted = true;
-  let vloadT = 0;
+  let vloadT = 0, whenPlaying = null;
   function showLoad(l){
     clearTimeout(vloadT);
     vload.classList.remove('stall');
@@ -1025,7 +1031,7 @@ body.fsmode .bigplay{z-index:3}
     try { vloadPv.pause(); } catch (_) {}
   }
   [vid, vin].forEach(el => {
-    el.addEventListener('playing', () => { if (el === av) { hideLoad(); if (pvHold) { clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 2000); } } });
+    el.addEventListener('playing', () => { if (el === av && stage.classList.contains('peekhold')) requestAnimationFrame(() => requestAnimationFrame(dropPeek)); if (el === av) { if (whenPlaying) { const f = whenPlaying; whenPlaying = null; f(); } hideLoad(); if (pvHold) { clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 2000); } } });
     el.addEventListener('waiting', () => { if (el === av && P.playing && vload.hidden) showStall(); });
     el.addEventListener('canplay', () => { if (el === av && !P.playing) hideLoad(); });
   });
@@ -1062,10 +1068,15 @@ body.fsmode .bigplay{z-index:3}
     } catch (_) {}
   }
   let warmGen = 0; // opening a lesson stops the background warm-up, so it doesn't compete with the video
-  // The first 5 seconds of the two lessons at the top of a section are downloaded in advance into memory
-  // (one at a time), so tapping one plays it straight from the phone. Skipped when the phone asks to save data.
-  // Opening a lesson stops downloads of the other lessons, so the opened one gets the whole connection.
-  const introMem = new Map(); // intro url -> blob: url
+  // Downloads in advance into the phone's memory (one at a time), so the video then plays straight from the phone:
+  // - opening a section: the 5-second starts of its two top Kinescope lessons;
+  // - watching a lesson (once it plays): its neighbours in the section — next, previous, the one after next — whole
+  //   short GitHub videos or the starts of Kinescope lessons, so a swipe shows the next video at once.
+  // Skipped on slow connections and when the phone asks to save data. Opening a lesson stops the other downloads,
+  // so the opened one gets the whole connection.
+  const introMem = new Map(); // video url -> blob: url
+  const mediaFor = l => !l ? '' : l.ks ? introFor(l) : 'v/' + l.id + '.mp4';
+  const MEM_MAX = 5, MEM_FILE_MAX = 12 * 1048576;
   // Internet speed, remembered on the phone (measured on the stream's pieces and on the intro's download). The intro
   // is 480p (~3.5 Mbit/s): on a connection that can't comfortably carry it, the stream goes alone.
   const NET_KEY = 'fedoskin-net';
@@ -1084,7 +1095,7 @@ body.fsmode .bigplay{z-index:3}
   }
   let introQ = [], introCur = null;
   function warmIntro(l){
-    const u = introFor(l);
+    const u = mediaFor(l);
     if (!u || introMem.has(u) || (introCur && introCur.u === u) || introQ.includes(u) || !window.fetch || !window.AbortController) return;
     if (!introFast()) return;
     introQ.push(u); if (!introCur) nextIntro();
@@ -1097,12 +1108,14 @@ body.fsmode .bigplay{z-index:3}
       const r = await fetch(u, { signal: job.ac.signal });
       if (!r.ok || !r.body) throw new Error('intro');
       job.total = +r.headers.get('content-length') || 0;
+      if (job.total > MEM_FILE_MAX) throw new Error('too big');
       const rd = r.body.getReader(), parts = [];
-      for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; }
+      for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; if (job.got > MEM_FILE_MAX) throw new Error('too big'); }
       const url = URL.createObjectURL(new Blob(parts, { type: 'video/mp4' }));
       introMem.set(u, url);
+      primePeek();
       // keep a few in memory; never throw away the one on screen
-      for (const [k, v] of introMem) { if (introMem.size <= 4) break; if (v !== vin.getAttribute('src')) { URL.revokeObjectURL(v); introMem.delete(k); } }
+      for (const [k, v] of introMem) { if (introMem.size <= MEM_MAX) break; if (v !== vin.getAttribute('src') && v !== vid.getAttribute('src')) { URL.revokeObjectURL(v); introMem.delete(k); } }
       job.ok(url);
     } catch (e) { job.bad(e); }
     if (introCur === job) { introCur = null; nextIntro(); }
@@ -1112,17 +1125,19 @@ body.fsmode .bigplay{z-index:3}
     introQ = [];
     if (introCur && introCur.u !== keepU) { abortIntro(introCur); introCur = null; }
   }
-  // where the opened lesson's intro comes from: memory, a download that is already well under way, or the network
+  // where the opened lesson's video (the GitHub file, or a Kinescope lesson's start) comes from: memory, a download
+  // that is already well under way, or the network
   function introSource(l){
-    const u = introFor(l); if (!u) return null;
+    const u = mediaFor(l); if (!u) return null;
     if (introMem.has(u)) return { url: introMem.get(u) };
     const j = introCur && introCur.u === u ? introCur : null;
     if (j && j.total && j.got >= j.total * 0.6) return { wait: j.p, url: u };
     if (j) { abortIntro(j); introCur = null; }
-    return introFast() ? { url: u } : null;
+    return !l.ks || introFast() ? { url: u } : null;
   }
-  function warmKs(ls){
-    ls.filter(l => introFor(l)).slice(0, 2).forEach(l => warmIntro(l));
+  function warmKs(ls, neighbours){
+    if (neighbours) neighbours.forEach(l => warmIntro(l));
+    else ls.filter(l => introFor(l)).slice(0, 2).forEach(l => warmIntro(l));
     const gen = ++warmGen;
     const todo = ls.filter(l => l && l.ks && !ksWarm.has(l.ks)).slice(0, 8);
     (async () => { for (const l of todo) { if (gen !== warmGen) return; await warmOne(l); } })();
@@ -1254,7 +1269,13 @@ body.fsmode .bigplay{z-index:3}
       applyMute();
       pendingStart = 5; // the stream loads from the intro's end
     }
-    if (!ks) { vid.src = src; vid.playbackRate = P.rate; return; }
+    if (!ks) {
+      if (intro && intro.wait) {
+        const tok = vid._srcTok = {};
+        intro.wait.then(u => u, () => intro.url).then(u => { if (vid._srcTok !== tok) return; vid.src = u; vid.playbackRate = P.rate; if (P.playing) playMain(); });
+      } else { vid._srcTok = null; vid.src = intro ? intro.url : src; vid.playbackRate = P.rate; }
+      return;
+    }
     if (introOn) { vid.removeAttribute('src'); vid.load(); streamDefer = () => loadStream(ks); }
     else loadStream(ks);
   }
@@ -1325,9 +1346,10 @@ body.fsmode .bigplay{z-index:3}
     $('#badgeOwn').hidden = true;
     setLoop(null);
     P.dur = l.dur;
-    stopIntroWarm(introFor(l));
+    stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
-    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, introSource(l));
+    const srcInfo = introSource(l);
+    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, srcInfo);
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -1339,10 +1361,13 @@ body.fsmode .bigplay{z-index:3}
     go('lesson');
     setPlaying(true);
     warmGen++;
-    if (P.playing && (av.paused || av.readyState < 3)) showLoad(l);
-    // the lessons next to this one first: a swipe to them starts from memory
-    const at = list.indexOf(l), near = [list[at + 1], list[at - 1]].filter(Boolean);
-    setTimeout(() => { if (curLesson === l) warmKs(near.concat(list.filter(x => x !== l && !near.includes(x)))); }, 3000);
+    if (P.playing && (av.paused || av.readyState < 3) && !quietOpen) showLoad(l);
+    // the lessons next to this one: downloaded once this one plays, so a swipe to them starts from memory
+    const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(Boolean);
+    let warmed = false;
+    const warmNear = () => { if (warmed || curLesson !== l) return; warmed = true; warmKs(near.concat(list.filter(x => x !== l && !near.includes(x))), near); };
+    whenPlaying = () => setTimeout(warmNear, 600);
+    setTimeout(warmNear, 4000);
     maybeSwipeHint(list.length);
     $('#lesson').scrollTop = 0;
   }
@@ -1373,6 +1398,10 @@ body.fsmode .bigplay{z-index:3}
         mode = 2; const n = neighbours(); dir = mx < 0 ? 1 : -1; nb = dir > 0 ? n.next : n.prev;
         stage.classList.remove('swipe-anim'); stage.classList.add('swiping');
         $('#swPeek').classList.toggle('from-left', dir < 0);
+        const pv = $('#swPeekVid'), mem = nb && introMem.get(mediaFor(nb));
+        // the neighbour is in memory: its real first frame slides in (the cover until it is decoded)
+        if (mem) { if (pv.getAttribute('src') !== mem) { pv.src = mem; try { pv.load(); } catch (_) {} } pv.hidden = false; }
+        else { pv.hidden = true; pv.removeAttribute('src'); }
         if (nb) {
           $('#swPeek').style.backgroundImage = "url('v/" + nb.id + ".jpg')";
           $('#swPeekDir').textContent = dir > 0 ? T('Следующий урок') + ' →' : '← ' + T('Предыдущий урок');
@@ -1401,10 +1430,20 @@ body.fsmode .bigplay{z-index:3}
         const target = nb;
         stage.style.setProperty('--sx', (dir > 0 ? -w : w) + 'px'); stage.style.setProperty('--px', '0px');
         setTimeout(() => {
+          const pv = $('#swPeekVid'), cv = $('#swPeekCan');
+          let hold = !pv.hidden && pv.readyState >= 2 && pv.videoWidth > 0;
+          if (hold) {
+            try { cv.width = pv.videoWidth; cv.height = pv.videoHeight; cv.getContext('2d').drawImage(pv, 0, 0); cv.hidden = false; }
+            catch (_) { hold = false; }
+          }
+          if (hold) {
+            pv.hidden = true; pv.removeAttribute('src'); try { pv.load(); } catch (_) {}
+            stage.classList.add('peekhold'); quietOpen = true; clearTimeout(peekT); peekT = setTimeout(dropPeek, 2500);
+          }
           navReplace = true;
-          try { openLesson(target.id); } finally { navReplace = false; }
+          try { openLesson(target.id); } finally { navReplace = false; quietOpen = false; }
           stage.classList.remove('swipe-anim', 'swiping'); stage.style.removeProperty('--sx'); stage.style.removeProperty('--px');
-        }, 190);
+        }, 150);
       } else {
         stage.style.setProperty('--sx', '0px'); stage.style.setProperty('--px', (dir > 0 ? w : -w) + 'px');
         setTimeout(() => { stage.classList.remove('swipe-anim', 'swiping'); stage.style.removeProperty('--sx'); stage.style.removeProperty('--px'); }, 210);
@@ -1412,6 +1451,15 @@ body.fsmode .bigplay{z-index:3}
     };
     stage.addEventListener('touchend', end); stage.addEventListener('touchcancel', end);
   })();
+  let peekT = 0, quietOpen = false;
+  // the next lesson's first frame, decoded in advance in the hidden sliding picture
+  function primePeek(){
+    if (!curLesson || stage.classList.contains('swiping') || stage.classList.contains('peekhold')) return;
+    const list = inSec(curSection), nx = list[list.indexOf(curLesson) + 1], mem = nx && introMem.get(mediaFor(nx));
+    const pv = $('#swPeekVid');
+    if (mem && pv.getAttribute('src') !== mem) { pv.src = mem; try { pv.load(); } catch (_) {} }
+  }
+  function dropPeek(){ clearTimeout(peekT); if (!stage.classList.contains('peekhold')) return; stage.classList.remove('peekhold'); $('#swPeekCan').hidden = true; const pv = $('#swPeekVid'); pv.hidden = true; pv.removeAttribute('src'); try { pv.load(); } catch (_) {} primePeek(); }
   // a one-time tip on the first lesson that has neighbours
   function hideSwipeHint(){ $('#swHint').classList.remove('on'); }
   function maybeSwipeHint(count){
