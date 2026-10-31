@@ -1105,7 +1105,8 @@ body.fsmode .bigplay{z-index:3}
   // so the opened one gets the whole connection.
   const introMem = new Map(), memSize = new Map(); // video url -> blob: url, its size
   const mediaFor = l => !l ? '' : l.ks ? introFor(l) : 'v/' + l.id + '.mp4';
-  const MEM_MAX = 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = 100 * 1048576; // short lessons in 1080p60 are 20–35 MB
+  // short lessons in 1080p60 are 20–35 MB; an iPhone gets less room (under memory pressure it drops the video's picture)
+  const MEM_MAX = isApple ? 3 : 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = (isApple ? 60 : 100) * 1048576;
   // Internet speed, remembered on the phone (measured on the stream's pieces and on the intro's download). The intro
   // is 480p (~3.5 Mbit/s): on a connection that can't comfortably carry it, the stream goes alone.
   const NET_KEY = 'fedoskin-net';
@@ -1653,7 +1654,7 @@ body.fsmode .bigplay{z-index:3}
   //   into frames once, ~5–10 s after it starts playing, from the current moment onwards;
   // - whatever plays on screen is captured as it goes (Kinescope lessons: every part already watched).
   // Up to ~90 MB of the phone's memory; the oldest lesson's frames go first. Nothing is downloaded extra for it.
-  const FC = new Map(), FC_MAX = 90 * 1048576, FC_SIDE = 720, FC_Q = 0.8;
+  const FC = new Map(), FC_MAX = (isApple ? 40 : 90) * 1048576, FC_SIDE = 720, FC_Q = 0.8;
   let fcW = null, fcOwn = false, fcBytes = 0, fcBuilding = null, fcCapBusy = false;
   const fcBm = new Map(); // a few frames ready to draw
   function fcWorker(){
@@ -1695,7 +1696,9 @@ body.fsmode .bigplay{z-index:3}
   }
   // turn the whole short GitHub lesson into frames (once it plays)
   async function fcBuild(l){
-    if (!l || l.ks || curLesson !== l || !window.VideoDecoder) return;
+    // not on iPhone/iPad: a second video decoder working in the background while the lesson plays made the lesson
+    // show only its cover picture (time and sound running) — there the frames come from what plays on screen instead
+    if (!l || l.ks || curLesson !== l || !window.VideoDecoder || isApple) return;
     const c = fcFor(l, true); if (c.built || c.started || c.failed) return;
     const u = mediaFor(l), mem = introMem.get(u);
     const w = fcWorker(); if (!w) return;
@@ -1743,10 +1746,24 @@ body.fsmode .bigplay{z-index:3}
   }
   [vid, vin].forEach(el => {
     if (!el.requestVideoFrameCallback) return;
-    const cb = (now, meta) => { el.requestVideoFrameCallback(cb); try { fcCapture(el, meta.mediaTime); } catch (_) {} };
+    const cb = (now, meta) => { el.requestVideoFrameCallback(cb); if (el === av) lastFrameAt = performance.now(); try { fcCapture(el, meta.mediaTime); } catch (_) {} };
     el.requestVideoFrameCallback(cb);
   });
   window.fedoskinFrames = () => { const c = curLesson && FC.get(fcKey(curLesson)); return { lessons: FC.size, MB: +(fcBytes / 1048576).toFixed(1), frames: c ? c.frames.size : 0, step: c ? c.step : 0, built: !!(c && c.built), building: !!fcBuilding }; }; // for checking on a phone
+  // Watchdog: the lesson plays (time runs, sound) but the screen keeps showing its cover — the phone stopped drawing
+  // the video (seen on iPhone). Then the video is reloaded once at the same moment, which brings the picture back.
+  let lastFrameAt = 0, playingAt = 0, wdLesson = null;
+  [vid, vin].forEach(el => el.addEventListener('playing', () => { if (el === av) playingAt = performance.now(); }));
+  setInterval(() => {
+    if (!vid.requestVideoFrameCallback || !curLesson || curLesson.ks || fcOwn || scrub || !P.own || !P.playing) return;
+    const el = av;
+    if (el !== vid || el.paused || el.seeking || el.readyState < 3 || document.hidden || $('#lesson').hidden || el.currentTime < 1) return;
+    if (performance.now() - Math.max(lastFrameAt, playingAt) < 1500 || wdLesson === curLesson) return;
+    wdLesson = curLesson;
+    const t = el.currentTime, src = el.currentSrc || el.src; if (!src) return;
+    el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (_) {} if (P.playing) playMain(); }, { once: true });
+    el.src = src; el.playbackRate = P.rate;
+  }, 500);
   // the frame for this moment, if the phone has it
   function fcGet(T){
     const c = curLesson && !fcOwn && FC.get(fcKey(curLesson)); if (!c || !c.frames.size) return null;

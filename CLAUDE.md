@@ -152,6 +152,11 @@
   without internet. Neighbour preload now takes files ≤ 40 MB (MEM_TOTAL 100 MB). fcBuild without a memory blob:
   saved copy, or (non-Apple, SW controlling) fetch through the shared download; otherwise capture only.
   SW registers on https and on localhost (tests).
+- iPhone «cover stays, time and sound run» (owner's screen recording 31.10, lesson CC at 0:08–0:11 showing the 2-s cover
+  frame): on Apple the background frame-cache build (worker VideoDecoder during playback) is OFF (`fcBuild` returns when
+  `isApple`; capture from the screen still works), memory caps lower (introMem 3 files / 60 MB, frame cache 40 MB).
+  Watchdog (GitHub lessons): `vid` playing, readyState ≥ 3, t ≥ 1 s, but no rVFC frame for 1.5 s ⇒ reload the same src at
+  the same time once per lesson (`wdLesson`). Tested: never fires in normal use; simulated no-frames ⇒ 1 reload, keeps playing.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
