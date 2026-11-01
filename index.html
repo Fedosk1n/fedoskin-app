@@ -755,17 +755,22 @@ body.fsmode .bigplay{z-index:3}
   // ===== languages =====
   const I18N = window.I18N || {langs: [['ru', 'Русский']]};
   const LANG_CODES = I18N.langs.map(x => x[0]);
-  const LANG = (function(){
-    let v = ''; try { v = localStorage.getItem('fedoskin-lang') || ''; } catch (_) {}
-    if (LANG_CODES.includes(v)) return v;
-    // first visit: take the phone's language; Russian-speaking countries get Russian, unknown languages get English
-    for (const l of (navigator.languages || [navigator.language || 'ru'])) {
-      const c = String(l).toLowerCase().slice(0, 2);
+  // the phone's language: the first of its preferred languages we have; Russian-speaking countries get Russian,
+  // unknown languages get English. Romanian only from Moldova (ro-MD) counts as Russian-speaking.
+  function phoneLang(){
+    const list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for (const l of list) {
+      const tag = String(l).toLowerCase().replace('_', '-'), c = tag.slice(0, 2);
       if (LANG_CODES.includes(c)) return c;
-      if (['uk','be','kk','uz','ky','tg','hy','az','ka','mo','ro'].includes(c)) return 'ru';
+      if (['uk','be','kk','uz','ky','tg','hy','az','ka','mo'].includes(c) || tag === 'ro-md') return 'ru';
     }
     return 'en';
-  })();
+  }
+  // 'fedoskin-lang' is saved only when the user picks a language by hand; otherwise ("Как на телефоне") the app
+  // follows the phone's language every time it starts (and when the phone's language changes while it is open)
+  const LANG_SAVED = (function(){ let v = ''; try { v = localStorage.getItem('fedoskin-lang') || ''; } catch (_) {} return LANG_CODES.includes(v) ? v : ''; })();
+  const LANG_AUTO = !LANG_SAVED;
+  const LANG = LANG_SAVED || phoneLang();
   document.documentElement.lang = LANG;
   // T('русский текст', {vars}) -> the same text in the chosen language (falls back to Russian)
   const T = (ru, vars) => {
@@ -3084,20 +3089,27 @@ body.fsmode .bigplay{z-index:3}
   (function langPicker(){
     const cur = I18N.langs.find(x => x[0] === LANG) || ['ru', 'Русский'];
     $('#langPill').textContent = LANG.toUpperCase();
-    $('#langName').textContent = cur[1];
+    $('#langName').textContent = LANG_AUTO ? T('Как на телефоне') + ' · ' + cur[1] : cur[1];
     const list = $('#langList');
-    I18N.langs.forEach(([code, name]) => {
+    const nameOf = c => (I18N.langs.find(x => x[0] === c) || [c, c])[1];
+    // first option: follow the phone (the language it gives now is shown on the right)
+    [['auto', T('Как на телефоне'), nameOf(phoneLang())]].concat(I18N.langs.map(([code, name]) => [code, name, code.toUpperCase()])).forEach(([code, name, side]) => {
       const b = document.createElement('button');
-      b.className = 'opt'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(code === LANG)); b.lang = code;
+      const on = code === 'auto' ? LANG_AUTO : (!LANG_AUTO && code === LANG);
+      b.className = 'opt'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(on)); if (code !== 'auto') b.lang = code;
       b.innerHTML = '<span class="dot"></span><span style="flex:1;font-weight:600;text-align:left"></span><span class="muted" style="font-size:12px"></span>';
-      b.children[1].textContent = name; b.children[2].textContent = code.toUpperCase();
+      b.children[1].textContent = name; b.children[2].textContent = side;
       b.addEventListener('click', () => {
-        if (code === LANG) { $('#langSheet').hidden = true; return; }
-        try { localStorage.setItem('fedoskin-lang', code); } catch (_) {}
+        if (on) { $('#langSheet').hidden = true; return; }
+        try { if (code === 'auto') localStorage.removeItem('fedoskin-lang'); else localStorage.setItem('fedoskin-lang', code); } catch (_) {}
         saveStats && saveStats();
         reloadClean();
       });
       list.appendChild(b);
+    });
+    // the phone's language changed while the app is open (Android: settings, then back to the app)
+    window.addEventListener('languagechange', () => {
+      if (LANG_AUTO && phoneLang() !== LANG) { saveStats && saveStats(); reloadClean(); }
     });
     const open = () => { $('#langSheet').hidden = false; };
     $('#langPill').addEventListener('click', open);
