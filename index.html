@@ -325,6 +325,14 @@ body.fsmode .bigplay{z-index:3}
 .av-pick{aspect-ratio:1;max-width:100%;border-radius:50%;padding:0;border:3px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .av-pick[aria-checked="true"]{border-color:var(--fg)}
 @media (prefers-reduced-motion: reduce){.tile{transition:none}.sheet{animation:none}}
+.tipbg{background:transparent;display:block;z-index:22}
+.tiphole{position:fixed;border-radius:16px;border:2px solid var(--accent);box-shadow:0 0 0 9999px rgba(0,0,0,.74);pointer-events:none;animation:tipPulse 1.4s ease-in-out infinite}
+@keyframes tipPulse{50%{border-color:rgba(226,97,26,.3)}}
+.tiparrow{position:fixed;width:30px;height:40px;fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;animation:tipBob 1s ease-in-out infinite}
+@keyframes tipBob{50%{transform:translateY(7px)}}
+.tipbox{position:fixed;width:min(300px,calc(100vw - 32px));box-sizing:border-box;background:#141416;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:tipIn .25s ease-out}
+@keyframes tipIn{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion: reduce){.tiphole,.tiparrow,.tipbox{animation:none}}
 </style>
 </head>
 <body>
@@ -688,6 +696,16 @@ body.fsmode .bigplay{z-index:3}
     <p class="lead" style="margin-top:6px">Аватар видят другие в рейтинге. «α» — только для альфа-тестеров.</p>
     <div id="avGrid" role="radiogroup" aria-label="Аватары" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px"></div>
     <button class="btn btn-accent" id="sheetDone" style="margin-top:20px;min-height:52px">Готово</button>
+  </div>
+</div>
+
+<div class="sheet-bg tipbg" id="profTip" hidden>
+  <div class="tiphole" id="tipHole"></div>
+  <svg class="tiparrow" id="tipArrow" viewBox="0 0 36 48" aria-hidden="true"><path d="M18 3v38M6 29l12 13 12-13"/></svg>
+  <div class="tipbox" id="tipBox" role="dialog" aria-modal="true" aria-labelledby="tipTitle">
+    <h2 id="tipTitle" style="font-size:24px">Заполни профиль</h2>
+    <p class="muted" style="margin:8px 0 0;font-size:14px;line-height:1.4">Придумай никнейм, укажи город и выбери аватар — так тебя увидят в рейтинге брейкеров.</p>
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-accent" id="tipGo" style="flex:1;min-height:44px">Заполнить</button><button class="btn btn-ghost" id="tipLater" style="flex:1;min-height:44px">Позже</button></div>
   </div>
 </div>
 
@@ -3010,6 +3028,49 @@ body.fsmode .bigplay{z-index:3}
     let later = 0; try { later = +localStorage.getItem('fedoskin-install-later') || 0; } catch (_) {}
     if (later && Date.now() - later < 3 * 864e5) return;
     setTimeout(openInstall, 1500);
+  })();
+
+  // ===== first-run tip «fill in your profile» (owner 01.11.2026) =====
+  // Once per phone (and once more in the iPhone home-screen app — it has its own storage), after the
+  // «add to home screen» guide is closed: dims the screen, highlights the Profile tab with an arrow.
+  (function profileTip(){
+    const KEY = 'fedoskin-prof-tip';
+    const seen = () => { try { return !!localStorage.getItem(KEY); } catch (_) { return true; } };
+    if (seen() || prof.nick) return;
+    const tip = $('#profTip'), hole = $('#tipHole'), arrow = $('#tipArrow'), box = $('#tipBox');
+    const tabBtn = () => tabsEl.querySelector('.tab[data-tab="profile"]');
+    function place(){
+      const t = tabBtn(); if (!t) return;
+      const r = t.getBoundingClientRect(), vw = window.innerWidth, cx = r.left + r.width / 2;
+      Object.assign(hole.style, { left: (r.left + 4) + 'px', top: (r.top + 3) + 'px', width: (r.width - 8) + 'px', height: (r.height - 6) + 'px' });
+      Object.assign(arrow.style, { left: (cx - 15) + 'px', top: (r.top - 50) + 'px' });
+      const bw = box.offsetWidth || 300;
+      box.style.left = Math.max(16, Math.min(vw - bw - 16, cx - bw + 44)) + 'px';
+      box.style.top = Math.max(12, r.top - 62 - (box.offsetHeight || 170)) + 'px';
+    }
+    const ready = () => !$('#home').hidden && !openOverlay() && !document.body.classList.contains('fsmode') && tabBtn();
+    function tryShow(){
+      if (seen() || prof.nick) return;
+      if (!ready()) { setTimeout(tryShow, 800); return; }
+      try { localStorage.setItem(KEY, new Date().toISOString().slice(0, 10)); } catch (_) {}
+      tip.hidden = false; place();
+      requestAnimationFrame(place);
+    }
+    const close = () => { tip.hidden = true; };
+    function fill(){
+      close(); go('profile');
+      setTimeout(openProf, 400); // after the tip's history step is gone
+    }
+    window.addEventListener('resize', () => { if (!tip.hidden) place(); });
+    $('#tipGo').addEventListener('click', fill);
+    $('#tipLater').addEventListener('click', close);
+    tip.addEventListener('click', e => {
+      if (box.contains(e.target)) return;
+      const r = tabBtn().getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) fill(); else close();
+    });
+    // the install guide opens 1.5 s after start; start looking a bit later so it goes first
+    setTimeout(tryShow, 2600);
   })();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
