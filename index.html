@@ -98,6 +98,10 @@ p{margin:0}
 .svccard .nm{font-size:22px;line-height:1.05}
 .svccard .pr{font-weight:700;white-space:nowrap;color:var(--accent)}
 .svccard .pr small{font-weight:600;color:var(--muted);font-size:12px}
+/* long names / prices in other languages (owner 01.11: «Treino personalizado», «$1,000 por mês») must not run off a narrow phone */
+#review > h1{font-size:clamp(28px, 9.6vw, 40px);overflow-wrap:anywhere}
+.svccard .pr{white-space:normal;text-align:right;flex:0 1 auto;max-width:46%}
+.svccard .pr small{white-space:nowrap}
 .svccard .more{font-size:13px;font-weight:600;color:var(--soft);display:flex;align-items:center;gap:4px}
 .svcb p{margin:16px 0 0;line-height:1.5}
 .svcb .label{display:block;margin:24px 0 10px}

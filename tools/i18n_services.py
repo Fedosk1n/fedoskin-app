@@ -1,6 +1,6 @@
 # Translations for the «Онлайн услуги» tab: (ru, en, es, pt, fr, de, ja, ko, zh). Imported by i18n_src.py.
 ROWS = [
-("Онлайн услуги", "Online services", "Servicios online", "Serviços online", "Services en ligne", "Online-Angebote", "オンラインサービス", "온라인 서비스", "线上服务"),
+("Онлайн услуги", "Personal coaching", "Entreno personal", "Treino personalizado", "Coaching perso", "Personal Coaching", "パーソナル指導", "1:1 코칭", "私人教练"),  # owner 01.11.2026: «Личный коучинг»
 ("Тренировки лично с Федоскиным — создателем приложения. Всё общение и видео — в Telegram.",
  "Personal training with Fedoskin, the creator of this app. All chat and videos go through Telegram.",
  "Entrenamiento personal con Fedoskin, el creador de la app. Toda la comunicación y los videos van por Telegram.",
