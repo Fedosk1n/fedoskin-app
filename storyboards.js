@@ -9,6 +9,15 @@ window.LESSON_SB = {
   "h": 320,
   "cols": 10
  },
+ "fw-6step": {
+  "src": "gh",
+  "every": 0.5,
+  "n": 56,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 2
+ },
  "fw-3step": {
   "src": "gh",
   "every": 0.5,
@@ -72,15 +81,6 @@ window.LESSON_SB = {
   "w": 180,
   "h": 320,
   "cols": 10
- },
- "fw-6step": {
-  "src": "gh",
-  "every": 0.5,
-  "n": 56,
-  "w": 180,
-  "h": 320,
-  "cols": 10,
-  "v": 2
  },
  "gd-windmill-entry": {
   "src": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
@@ -223,6 +223,15 @@ window.LESSON_SB = {
   "n": 110,
   "w": 320,
   "h": 180,
+  "cols": 10,
+  "v": 1
+ },
+ "fr-shoulder-freeze": {
+  "src": "gh",
+  "every": 0.5,
+  "n": 118,
+  "w": 180,
+  "h": 320,
   "cols": 10,
   "v": 1
  }
