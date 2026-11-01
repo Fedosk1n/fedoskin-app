@@ -3181,6 +3181,34 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // the install guide opens 1.5 s after start; start looking a bit later so it goes first
     setTimeout(tryShow, 2600);
   })();
+
+  // ===== visit counter (owner 01.11.2026; server: /hit on the same Cloudflare worker, admin «Статистика») =====
+  // No cookies and nothing personal: the random profile number (the server keeps only its hash), the kind of device,
+  // whether the app was opened from the home-screen icon. A visit = the app opened after 30+ minutes away, so pull-to-refresh,
+  // a language change or a quick switch to Instagram and back don't count twice. The owner's own browser (where the admin
+  // is logged in) sets 'fedoskin-noping' and isn't counted.
+  (function visitCounter(){
+    const URL_ = String(CFG.pushUrl || '').replace(/\/+$/, '');
+    if (!URL_ || location.protocol !== 'https:') return;
+    const get = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+    const set = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+    if (get('fedoskin-noping') === '1') return;
+    const GAP = 30 * 60e3;
+    const plat = isIOS ? 'ios' : isAndroid ? 'android' : (navigator.maxTouchPoints > 0 && /Mobile|Tablet/i.test(UA)) ? 'other' : 'desktop';
+    const touch = () => set('fedoskin-seen', String(Date.now()));
+    function ping(){
+      const last = +get('fedoskin-seen') || 0;
+      touch();
+      if (Date.now() - last < GAP || !prof.id) return;
+      const body = JSON.stringify({ id: prof.id, p: plat, a: isStandalone() ? 1 : 0 });
+      try { if (navigator.sendBeacon && navigator.sendBeacon(URL_ + '/hit', new Blob([body], { type: 'text/plain' }))) return; } catch (_) {}
+      fetch(URL_ + '/hit', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
+    }
+    ping();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ping(); else touch(); });
+    window.addEventListener('pagehide', touch);
+    setInterval(() => { if (document.visibilityState === 'visible') touch(); }, 60e3);
+  })();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // ===== notifications about new lessons (server: server/push-worker.js, address in config.js -> pushUrl) =====

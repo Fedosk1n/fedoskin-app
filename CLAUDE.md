@@ -192,6 +192,14 @@
   copied by MutationObserver). `placeCorners()` sets `--cx` so .fscorner buttons sit at the video's edge. JS `TABLET`
   (screen's short side ≥ 600 + touch): no fs-rot, no orientation lock, no auto full screen on turning, «телефон» texts →
   «планшет»; iPad install guide: Share is in Safari's top bar.
+- Visit counter (owner 01.11.2026 «посещаемость и охваты»; Metrika stays OFF): app `visitCounter()` → POST `/hit`
+  {id: prof.id, p: ios|android|desktop|other, a: standalone} via sendBeacon (text/plain, no preflight), only on https,
+  only after 30+ min away (`fedoskin-seen` touched on hide/pagehide/every minute), skipped when `fedoskin-noping`='1'
+  (admin sets it on load in its browser, switch «Не считать мои заходы»). Worker: D1 binding `DB` (KV's 1000 writes/day is
+  too little), tables made on first call: hits(day: visits/uniq/fresh/app), seen(day,id) pruned, devices(id hash,first,
+  country,plat), geo(day,country). Moscow days. GET `/visits` (admin) → today/all/30 days/countries/platforms. Admin
+  «Статистика» → «Посещаемость»; old worker (404) or no DB ⇒ setup steps + «Скопировать код сервера» (fetches
+  server/push-worker.js from Pages). Tested with node:sqlite as a D1 stand-in (sandbox can't install wrangler).
 - Share rating to Instagram stories (owner 31.10): opening the card (`openStory`) pre-renders a 1080×1920 PNG on a canvas
   (`storyImage`: same look as #storyCard — logo, avatar incl. its SVG, nick, alpha badge, minutes, 3 stats, CTA, and the
   app link pill `APP_LINK` = CFG.appUrl or the page URL). «Поделиться в сторис» (must stay synchronous for iPhone's

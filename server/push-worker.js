@@ -10,6 +10,8 @@
 //   POST /notify       — разослать уведомление (только для админа), по 40 телефонов за запрос
 //   GET  /lb?id=&city= — рейтинг: топ-50 мира и города + место этого пользователя
 //   POST /lb           — {id, secret, nick, city, country, av, m, v, s} обновить свои минуты; {id, secret, hide:true} — убрать себя
+//   POST /hit          — {id, p, a} приложение открыли (счётчик посещений; нужна база D1 с именем DB)
+//   GET  /visits       — посещаемость: сегодня, за всё время, 30 дней, страны, устройства (только для админа)
 // Админ = тот, чей ключ GitHub может записывать в репозиторий приложения. Своих паролей у сервера нет.
 
 const REPO = 'Fedosk1n/fedoskin-app';
@@ -46,7 +48,8 @@ export default {
       if (path === '/key') return json({ key: (await vapid(env)).pub });
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
       if (path === '/lb') return await leaderboard(req, env, json);
-      if (req.method !== 'POST' && path !== '/stats') return json({ error: 'not found' }, 404);
+      if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
+      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
@@ -68,6 +71,7 @@ export default {
         do { const r = await env.PUSH.list({ prefix: 's:', cursor }); n += r.keys.length; cursor = r.list_complete ? null : r.cursor; } while (cursor);
         return json({ subscribers: n });
       }
+      if (path === '/visits') return await visits(env, json);
       if (path === '/notify') {
         const body = await req.json();
         // first page: remember the message so phones without payload support can fetch it
@@ -237,4 +241,70 @@ async function leaderboard(req, env, json) {
   const same = old && old.m === rec.m && old.v === rec.v && old.s === rec.s && old.n === rec.n && old.c === rec.c && old.co === rec.co && old.a === rec.a;
   if (!(same && now - old.t < 6 * 3600e3)) { board[id] = rec; await env.PUSH.put('lb', JSON.stringify(board)); }
   return json({ ok: true, m: rec.m });
+}
+
+// ----- visit counter (D1 database bound as DB) -----
+// No cookies and no personal data: the app sends its random device number (stored here only as a hash), the kind of
+// device and whether it was opened from the home-screen icon; the country comes from Cloudflare. IP addresses are not
+// kept. Days are Moscow days. A "visit" = the app opened after 30+ minutes away (the app decides that).
+const mskDay = (t = Date.now()) => new Date(t + 3 * 3600e3).toISOString().slice(0, 10);
+let schemaReady = null;
+function schema(db) {
+  if (!schemaReady) schemaReady = db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS hits (day TEXT PRIMARY KEY, visits INTEGER NOT NULL DEFAULT 0, uniq INTEGER NOT NULL DEFAULT 0, fresh INTEGER NOT NULL DEFAULT 0, app INTEGER NOT NULL DEFAULT 0)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS seen (day TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY (day, id)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, first TEXT, country TEXT, plat TEXT) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS geo (day TEXT NOT NULL, country TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, country)) WITHOUT ROWID'),
+  ]).catch(e => { schemaReady = null; throw e; });
+  return schemaReady;
+}
+async function hit(req, env, json) {
+  if (!env.DB) return json({ ok: false, nodb: true });
+  const b = JSON.parse((await req.text()) || '{}');
+  const raw = String(b.id || '').slice(0, 40);
+  if (!/^[\w-]{4,40}$/.test(raw)) return json({ error: 'bad id' }, 400);
+  const db = env.DB;
+  await schema(db);
+  const id = await hash('v1:' + raw), day = mskDay();
+  const country = /^[A-Z]{2}$/.test((req.cf && req.cf.country) || '') ? req.cf.country : 'XX';
+  const plat = ['ios', 'android', 'desktop', 'other'].includes(b.p) ? b.p : 'other';
+  const app = b.a ? 1 : 0;
+  const [s, d] = await db.batch([
+    db.prepare('INSERT OR IGNORE INTO seen (day, id) VALUES (?, ?)').bind(day, id),
+    db.prepare('INSERT OR IGNORE INTO devices (id, first, country, plat) VALUES (?, ?, ?, ?)').bind(id, day, country, plat),
+  ]);
+  const newToday = s.meta.changes > 0 ? 1 : 0, newDevice = d.meta.changes > 0 ? 1 : 0;
+  const more = [db.prepare('INSERT INTO hits (day, visits, uniq, fresh, app) VALUES (?, 1, ?, ?, ?) ON CONFLICT(day) DO UPDATE SET visits = visits + 1, uniq = uniq + excluded.uniq, fresh = fresh + excluded.fresh, app = app + excluded.app').bind(day, newToday, newDevice, app)];
+  if (newToday) {
+    more.push(db.prepare('INSERT INTO geo (day, country, n) VALUES (?, ?, 1) ON CONFLICT(day, country) DO UPDATE SET n = n + 1').bind(day, country));
+    // the list of who was here only matters for today: drop older days now and then
+    if (Math.random() < 0.02) more.push(db.prepare('DELETE FROM seen WHERE day < ?').bind(mskDay(Date.now() - 86400e3)));
+  }
+  await db.batch(more);
+  return json({ ok: true });
+}
+async function visits(env, json) {
+  if (!env.DB) return json({ nodb: true });
+  const db = env.DB;
+  await schema(db);
+  const day = mskDay();
+  const [today, all, devs, days, geoToday, geoAll, plat] = await db.batch([
+    db.prepare('SELECT visits, uniq, fresh, app FROM hits WHERE day = ?').bind(day),
+    db.prepare('SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(app), 0) AS app, MIN(day) AS since FROM hits'),
+    db.prepare('SELECT COUNT(*) AS n FROM devices'),
+    db.prepare('SELECT day, visits, uniq, fresh FROM hits ORDER BY day DESC LIMIT 30'),
+    db.prepare('SELECT country, n FROM geo WHERE day = ? ORDER BY n DESC LIMIT 12').bind(day),
+    db.prepare('SELECT country, COUNT(*) AS n FROM devices GROUP BY country ORDER BY n DESC LIMIT 12'),
+    db.prepare('SELECT plat, COUNT(*) AS n FROM devices GROUP BY plat ORDER BY n DESC'),
+  ]);
+  const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
+  return json({
+    day,
+    today: t,
+    all: { visits: a.visits || 0, app: a.app || 0, uniq: (devs.results[0] || {}).n || 0, since: a.since || day },
+    days: days.results.reverse(),
+    countriesToday: geoToday.results.map(r => [r.country, r.n]),
+    countriesAll: geoAll.results.map(r => [r.country, r.n]),
+    platforms: plat.results.map(r => [r.plat, r.n]),
+  });
 }

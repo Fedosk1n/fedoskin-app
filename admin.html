@@ -106,6 +106,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .bars .b{display:grid;grid-template-columns:110px 1fr 40px;gap:10px;align-items:center;margin-top:8px;font-size:14px}
 .bars .t{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
 .bars .t i{display:block;height:100%;background:var(--accent)}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.vgrid .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.vgrid .kpi{background:var(--surface-2);border-color:transparent}
+.kpi small{display:block;font-size:11px;color:var(--soft);margin-top:4px}
+.vchart{display:flex;align-items:flex-end;gap:3px;height:150px;padding:10px 10px 0;background:var(--surface);border:1px solid #222225;border-radius:14px 14px 0 0}
+.vchart .c{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:flex-end;position:relative}
+.vchart .c i{position:absolute;left:0;right:0;bottom:0;border-radius:3px 3px 0 0;background:#3A3A3F}
+.vchart .c b{position:absolute;left:0;right:0;bottom:0;border-radius:3px 3px 0 0;background:var(--accent)}
+.vchart .c.today i{background:#4A4A50}
+.vaxis{display:flex;justify-content:space-between;padding:6px 10px 8px;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid #222225;border-top:0;border-radius:0 0 14px 14px}
+#visOn .bars .b{grid-template-columns:150px 1fr 48px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);background:var(--fg);color:#0B0B0C;font-weight:600;padding:12px 18px;border-radius:14px;z-index:50;max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.bad{background:var(--bad);color:#fff}
 .err{color:var(--bad);font-size:14px;margin-top:10px;line-height:1.4}
@@ -254,6 +267,37 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </div>
 
     <div data-pane="stats" hidden>
+      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm" id="visRefresh" hidden>Обновить</button></div>
+      <div id="visOff" class="card" style="margin-top:12px" hidden>
+        <b id="visOffTitle">Подключите счётчик посещений — один раз, минут 5, бесплатно</b>
+        <p class="soft small" style="margin:6px 0 12px">Счётчик работает на том же сервере Cloudflare, что уведомления и рейтинг. Нужно добавить к нему бесплатную базу данных и обновить код сервера.</p>
+        <ol class="steps">
+          <li>Откройте <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> → слева <b>Storage &amp; Databases → D1 SQL Database</b> → <b>Create</b> (или «Create database»). Имя: <code>fedoskin-stats</code> → <b>Create</b>.</li>
+          <li>Нажмите кнопку ниже — код сервера скопируется. Затем слева <b>Workers &amp; Pages → fedoskin-push → Edit code</b>: удалите всё в окне с кодом, вставьте скопированное → <b>Deploy</b>.<br><button class="btn btn-sm" id="visCopy" style="margin-top:8px">Скопировать код сервера</button></li>
+          <li>Вернитесь к <b>fedoskin-push → Settings → Bindings → Add → D1 database</b>. Variable name: <code>DB</code> (большими буквами), база: <code>fedoskin-stats</code> → <b>Deploy</b> / <b>Save</b>.</li>
+          <li>Нажмите «Проверить». Цифры начнут расти с первого захода в приложение.<br><button class="btn btn-sm btn-accent" id="visCheck" style="margin-top:8px">Проверить</button></li>
+        </ol>
+        <p class="hint" id="visErr" style="margin-top:4px"></p>
+      </div>
+      <div id="visOn" hidden>
+        <div class="vgrid" style="margin-top:12px">
+          <div class="card"><h3 style="margin-top:0">Сегодня <span id="visDay" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visToday"></div></div>
+          <div class="card"><h3 style="margin-top:0">За всё время <span id="visSince" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visAll"></div></div>
+        </div>
+        <h3>Последние 30 дней</h3>
+        <div class="vchart" id="visChart"></div>
+        <div class="vaxis"><span id="visAxisA"></span><span id="visAxisB"></span></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>человек</span><span><i style="background:#3A3A3F"></i>посещений</span><span>Нажмите на столбик — покажу цифры дня</span></div>
+        <p class="hint" id="visDayInfo" style="margin-top:6px;min-height:18px"></p>
+        <div class="vgrid">
+          <div><h3>Страны сегодня</h3><div class="bars" id="visGeoToday"></div></div>
+          <div><h3>Страны — все люди</h3><div class="bars" id="visGeoAll"></div></div>
+        </div>
+        <h3>Устройства — все люди</h3>
+        <div class="bars" id="visPlat"></div>
+        <p class="hint" style="margin-top:14px">Посещение — открыли приложение (повторно считается, если человека не было 30+ минут). Человек — одно устройство: один и тот же человек на телефоне и компьютере посчитается дважды, а приложение на экране «Домой» у iPhone — отдельно от Safari. Новые — зашли впервые. День считается по Москве. Cookie и личные данные не собираются: только случайный номер устройства, тип устройства и страна.</p>
+      </div>
+      <label class="sw" id="visMeRow"><input type="checkbox" id="visMe"><span><b>Не считать мои заходы с этого браузера</b><br><span class="hint">Ваши собственные заходы в приложение здесь не попадут в статистику. На телефоне откройте админку один раз — и там тоже не будут.</span></span></label>
       <div id="metrikaOn" hidden>
         <div class="card" style="margin-top:12px">
           <b>Яндекс Метрика подключена</b>
@@ -873,6 +917,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // ---------- stats ----------
   function renderStats(){
     renderPush();
+    renderVisits();
     const id = String(cfg.metrikaId || '');
     const live = String(remote.cfg.metrikaId || '');
     $('#metrikaOn').hidden = true; $('#metrikaOff').hidden = true; // Метрика отключена
@@ -1138,6 +1183,66 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#pushCount').textContent = '…';
     pushApi('/stats').then(j => { $('#pushCount').textContent = j.subscribers; }).catch(e => { $('#pushCount').textContent = '—'; $('#pushResult').textContent = 'Сервер не отвечает: ' + e.message; });
   }
+  // ---------- visits (server /visits; the app pings /hit) ----------
+  // the owner's own visits from this browser don't count: the app (same site) reads this mark
+  if (store.get('fedoskin-noping') === null) store.set('fedoskin-noping', '1');
+  $('#visMe').checked = store.get('fedoskin-noping') === '1';
+  $('#visMe').addEventListener('change', () => store.set('fedoskin-noping', $('#visMe').checked ? '1' : '0'));
+  let workerCode = '';
+  const nf = n => Number(n || 0).toLocaleString('ru-RU');
+  const ccName = (() => { let dn = null; try { dn = new Intl.DisplayNames(['ru'], { type: 'region' }); } catch (_) {} const SHORT = { US: 'США', GB: 'Великобритания', AE: 'ОАЭ', KR: 'Южная Корея', CZ: 'Чехия' }; return cc => cc === 'XX' ? 'Неизвестно' : (SHORT[cc] || (dn && dn.of(cc)) || cc); })();
+  const flag = cc => /^[A-Z]{2}$/.test(cc) && cc !== 'XX' ? String.fromCodePoint(...[...cc].map(c => 127397 + c.charCodeAt(0))) + ' ' : '';
+  const PLAT = { ios: 'iPhone / iPad', android: 'Android', desktop: 'Компьютер', other: 'Другое' };
+  const fmtDay = d => { const [y, m, dd] = d.split('-'); return +dd + ' ' + ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][+m - 1]; };
+  function barsHtml(rows, label){
+    if (!rows.length) return '<p class="hint" style="margin:8px 0 0">Пока пусто</p>';
+    const max = Math.max(1, ...rows.map(r => r[1]));
+    return rows.map(([k, n]) => '<div class="b"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + label(k) + '</span><span class="t"><i style="width:' + (n / max * 100) + '%"></i></span><span class="muted">' + nf(n) + '</span></div>').join('');
+  }
+  function visOff(title, err){
+    $('#visOn').hidden = true; $('#visOff').hidden = false; $('#visRefresh').hidden = true;
+    if (title) $('#visOffTitle').textContent = title;
+    $('#visErr').textContent = err || '';
+    if (!workerCode) fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : '').then(t => { workerCode = t; }).catch(() => {});
+  }
+  async function renderVisits(){
+    if (!remote.cfg.pushUrl) { visOff('Сначала подключите сервер уведомлений (ниже), потом — счётчик'); $('#visOff').querySelector('ol').hidden = true; return; }
+    $('#visOff').querySelector('ol').hidden = false;
+    let j;
+    try { j = await pushApi('/visits'); }
+    catch (e) {
+      if (/not found/.test(e.message)) return visOff('Обновите код сервера и добавьте базу — тогда заработает счётчик');
+      return visOff(null, 'Сервер не отвечает: ' + e.message);
+    }
+    if (j.nodb) return visOff('Код сервера обновлён — осталось добавить базу (шаги 1 и 3)');
+    $('#visOff').hidden = true; $('#visOn').hidden = false; $('#visRefresh').hidden = false;
+    const t = j.today, a = j.all;
+    $('#visDay').textContent = '· ' + fmtDay(j.day);
+    $('#visSince').textContent = '· с ' + fmtDay(a.since);
+    $('#visToday').innerHTML = [[t.visits, 'посещений'], [t.uniq, 'человек'], [t.fresh, 'новых'], [t.app, 'открыли с иконки']].map(([n, l]) => '<div class="kpi"><b>' + nf(n) + '</b><span>' + l + '</span></div>').join('');
+    $('#visAll').innerHTML = [[a.visits, 'посещений'], [a.uniq, 'человек (охват)'], [a.uniq ? (a.visits / a.uniq).toFixed(1).replace('.', ',') : '0', 'посещений на человека'], [a.app, 'открыли с иконки']].map(([n, l]) => '<div class="kpi"><b>' + (typeof n === 'number' ? nf(n) : n) + '</b><span>' + l + '</span></div>').join('');
+    // 30 days, empty days included
+    const byDay = {}; j.days.forEach(d => { byDay[d.day] = d; });
+    const days = []; const end = new Date(j.day + 'T12:00:00Z');
+    for (let i = 29; i >= 0; i--) { const d = new Date(end - i * 864e5).toISOString().slice(0, 10); days.push(byDay[d] || { day: d, visits: 0, uniq: 0, fresh: 0 }); }
+    const max = Math.max(1, ...days.map(d => d.visits));
+    $('#visChart').innerHTML = days.map(d => '<button class="c' + (d.day === j.day ? ' today' : '') + '" data-d="' + d.day + '" title="' + fmtDay(d.day) + ': ' + d.uniq + ' чел., ' + d.visits + ' посещ." style="border:0;padding:0;background:none;cursor:pointer"><i style="height:' + (d.visits / max * 100) + '%"></i><b style="height:' + (d.uniq / max * 100) + '%"></b></button>').join('');
+    $('#visChart').onclick = e => { const c = e.target.closest('.c'); if (!c) return; const d = days.find(x => x.day === c.dataset.d); $('#visDayInfo').textContent = fmtDay(d.day) + ': ' + nf(d.uniq) + ' чел. · ' + nf(d.visits) + ' посещений · новых ' + nf(d.fresh); };
+    $('#visAxisA').textContent = fmtDay(days[0].day); $('#visAxisB').textContent = 'сегодня';
+    $('#visGeoToday').innerHTML = barsHtml(j.countriesToday, cc => flag(cc) + ccName(cc));
+    $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
+    $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
+  }
+  $('#visRefresh').addEventListener('click', () => renderVisits());
+  $('#visCheck').addEventListener('click', () => { $('#visErr').textContent = 'Проверяю…'; renderVisits().then(() => { if (!$('#visOff').hidden && $('#visErr').textContent === 'Проверяю…') $('#visErr').textContent = 'Пока не видно — проверьте шаги выше.'; }); });
+  $('#visCopy').addEventListener('click', () => {
+    if (!workerCode) { toast('Код ещё загружается — нажмите через секунду', true); return; }
+    const ok = () => toast('Код сервера скопирован — вставьте его в Cloudflare');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(workerCode).then(ok, () => fallbackCopy(workerCode) ? ok() : toast('Не удалось скопировать', true));
+    else if (fallbackCopy(workerCode)) ok(); else toast('Не удалось скопировать', true);
+  });
+  function fallbackCopy(text){ const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); return ok; }
+
   async function sendPush(list){
     const first = list[0];
     let cursor = null, sent = 0, removed = 0, failed = 0, guard = 0;
