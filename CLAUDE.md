@@ -183,6 +183,15 @@
   dims the screen (`.tiphole` box-shadow spotlight on the Profile tab), bouncing arrow, «Заполни профиль» + «Заполнить»
   (→ Профиль + profile sheet) / «Позже»; tap on the tab = fill, elsewhere = close. Once (`fedoskin-prof-tip`), skipped
   if a nick is set; waits until home is shown with no sheet/full screen.
+- Tablets (owner 01.11.2026 «приложение должно быть качественным»): CSS only at `(min-width:680px) and (min-height:560px)`
+  (a phone on its side is never 560 tall ⇒ phones unchanged): .app up to 1180, sections 4 columns, lesson covers auto-fill
+  176px, reading screens ≤ 760 centred, sheets = centred cards (handle hidden), fs buttons ≤ 620 wide. ≥ 960 wide: lesson page
+  = 2 columns (`.lcol-a` player sticky — `body.fsmode .lcol-a{position:static}` or the fs video ends up UNDER the right
+  column; `.lcol-b` title/text/«Ещё в разделе»), profile 2 columns (`.pcol-a/.pcol-b`), services 2 columns. Sideways tablet
+  (≥900, aspect ≥ 5/4) vertical lesson: video full height, controls in a right panel `--vside` with name+meta (`.fsside`,
+  copied by MutationObserver). `placeCorners()` sets `--cx` so .fscorner buttons sit at the video's edge. JS `TABLET`
+  (screen's short side ≥ 600 + touch): no fs-rot, no orientation lock, no auto full screen on turning, «телефон» texts →
+  «планшет»; iPad install guide: Share is in Safari's top bar.
 - Share rating to Instagram stories (owner 31.10): opening the card (`openStory`) pre-renders a 1080×1920 PNG on a canvas
   (`storyImage`: same look as #storyCard — logo, avatar incl. its SVG, nick, alpha badge, minutes, 3 stats, CTA, and the
   app link pill `APP_LINK` = CFG.appUrl or the page URL). «Поделиться в сторис» (must stay synchronous for iPhone's

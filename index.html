@@ -196,6 +196,9 @@ p{margin:0}
 .vload i{position:absolute;top:12px;right:12px;width:28px;height:28px;box-sizing:border-box;border-radius:50%;border:3px solid rgba(242,239,232,.25);border-top-color:#E2611A;animation:vspin .8s linear infinite;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
 body.fsmode .vload i{top:calc(env(safe-area-inset-top, 0px) + 72px);right:16px} /* below the full screen's top bar */
 @keyframes vspin{to{transform:rotate(360deg)}}
+.fsside{display:none}
+.fsside b{display:block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:34px;line-height:1.05;color:#F2EFE8;overflow-wrap:anywhere}
+.fsside span{display:block;margin-top:8px;font-size:13px;color:#9A968E}
 .fsbtn{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:22px;border:none;background:rgba(11,11,12,.7);color:#F2EFE8;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 .fsbar{display:none}
 body.fsmode{overflow:hidden}
@@ -333,6 +336,75 @@ body.fsmode .bigplay{z-index:3}
 .tipbox{position:fixed;width:min(300px,calc(100vw - 32px));box-sizing:border-box;background:#141416;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:tipIn .25s ease-out}
 @keyframes tipIn{from{opacity:0;transform:translateY(10px)}}
 @media (prefers-reduced-motion: reduce){.tiphole,.tiparrow,.tipbox{animation:none}}
+
+/* ===== tablets (iPad, Android tablets) — owner 01.11.2026. Phones, also held sideways, keep the layout above.
+   680px+ wide AND 560px+ tall = a tablet screen (a phone on its side is never 560px tall). ===== */
+@media (min-width: 680px) and (min-height: 560px){
+  .app{max-width:1180px}
+  .screen{padding-left:max(32px, env(safe-area-inset-left, 0px));padding-right:max(32px, env(safe-area-inset-right, 0px));padding-top:32px}
+  .chips{margin-inline:-32px;padding-inline:32px}
+  .top img{height:84px}
+  /* home: the 8 sections in 4 columns, bigger tiles */
+  #sections{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .tile{height:132px;padding:18px;border-radius:18px}
+  .tile .n{font-size:16px}
+  .tile .t{font-size:clamp(20px, 2.6vw, 27px)}
+  .tilenew{top:16px;right:16px}
+  /* lesson covers: as many columns as fit (4 upright, 5 sideways) */
+  .lgrid{grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:24px 16px}
+  .lname{font-size:18px}
+  /* reading screens stay a comfortable width, centred */
+  #review > *,#svc > *{max-width:760px;margin-left:auto;margin-right:auto}
+  .stage.portrait{height:min(62vh, 760px)}
+  /* bottom menu */
+  .tabs-in{max-width:560px}
+  .tab{min-height:56px;font-size:12px}
+  /* sheets (language, profile, avatar, install): a card in the middle of the screen, not a strip from the bottom */
+  .sheet-bg:not(.tipbg){align-items:center;padding:24px}
+  .sheet{max-width:460px;max-height:calc(100dvh - 48px);overflow-y:auto;border-radius:24px;border:1px solid var(--line);padding:22px 24px 24px;animation:pop .2s ease;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+  .sheet > div:first-child:empty{display:none} /* the little handle of a bottom sheet */
+  /* full screen: the buttons stay together in the middle instead of spreading over the whole width */
+  .fsctl{max-width:620px;margin-left:auto;margin-right:auto}
+  body.fsmode.fs-vert .fsbottom{padding-left:max(24px, calc((100% - 600px) / 2));padding-right:max(24px, calc((100% - 600px) / 2))}
+  .toast{bottom:calc(110px + env(safe-area-inset-bottom, 0px))}
+}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+/* upright tablet: lesson and profile in one comfortable column */
+@media (min-width: 680px) and (max-width: 959.98px) and (min-height: 560px){
+  #lesson > *,#profile > *{max-width:760px;margin-left:auto;margin-right:auto}
+}
+/* wide tablet (sideways, or a big one): lesson = video on the left, title, text and «more lessons» on the right;
+   profile = two columns */
+@media (min-width: 960px) and (min-height: 560px){
+  #lesson:not([hidden]){display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);column-gap:40px;align-items:start}
+  #lesson > .row:first-child{grid-column:1 / -1}
+  .lcol-a{position:sticky;top:0;min-width:0}
+  body.fsmode .lcol-a{position:static} /* sticky makes its own layer: the full-screen video must be above everything */
+  .lcol-b{min-width:0;padding-top:12px}
+  .lcol-b > .row:first-child{margin-top:0!important}
+  .lcol-b .lgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .stage.portrait{height:max(340px, calc(100dvh - 400px))}
+  #profile:not([hidden]){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:48px;align-items:start}
+  .pcol-a,.pcol-b{min-width:0}
+  #review > *{max-width:960px}
+  #review > #svcList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .pcol-b > .sec:first-child{margin-top:0}
+}
+/* sideways tablet, vertical lesson: the video uses the whole height, the controls move to a panel on the right */
+@media (min-width: 900px) and (min-height: 560px) and (min-aspect-ratio: 5/4){
+  body.fsmode.fs-vert{--vside:min(400px, 34vw)}
+  body.fsmode.fs-vert .stage{height:100%!important;width:calc(100% - var(--vside))!important}
+  body.fsmode.fs-vert.fs-full .stage{width:100%!important}
+  body.fsmode.fs-vert .fsbottom{left:auto;right:0;top:0;bottom:0;width:var(--vside);height:auto;display:flex;flex-direction:column;justify-content:center;
+    padding:calc(24px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 24px;border-left:1px solid var(--hair)}
+  body.fsmode.fs-vert .fsctl{margin:22px 0 0;max-width:none;justify-content:space-between;gap:4px}
+  body.fsmode.fs-vert .fsctl .fsk{flex:1 1 0}
+  body.fsmode.fs-vert .fsctl .fskplay{flex:0 0 72px}
+  body.fsmode.fs-vert .fsside{display:block;margin-bottom:26px}
+  body.fsmode.fs-vert .fstop .fsname{visibility:hidden} /* the name is in the side panel */
+}
+/* vertical full screen: the corner buttons sit at the video's edge, not at the screen's (wide screens) */
+body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </style>
 </head>
 <body>
@@ -403,6 +475,7 @@ body.fsmode .bigplay{z-index:3}
     <input type="file" id="ownVideo" accept="video/*" hidden>
   </div>
 
+  <div class="lcol-a">
   <div class="player" id="player" style="margin-top:12px">
     <div class="stage" id="stage">
       <video id="vid" playsinline preload="auto" hidden></video>
@@ -448,6 +521,7 @@ body.fsmode .bigplay{z-index:3}
           <span id="fsRotSpacer" style="width:48px"></span>
         </div>
         <div class="fsbottom">
+          <div class="fsside" aria-hidden="true"><b id="fsSideName"></b><span id="fsSideMeta"></span></div>
           <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
           <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
@@ -498,6 +572,8 @@ body.fsmode .bigplay{z-index:3}
     </button>
   </div>
   <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и повтор 3 сек помогут разобрать движение. Повтор зацикливает момент, на котором стоит видео.</p>
+  </div>
+  <div class="lcol-b">
 
   <div class="row" style="gap:12px;margin-top:8px;align-items:flex-start">
     <h1 id="lessonTitle" style="font-size:30px;flex:1;min-width:0">[Урок 1]</h1>
@@ -508,6 +584,7 @@ body.fsmode .bigplay{z-index:3}
 
   <h2 class="sec" style="margin-bottom:14px">Ещё в разделе</h2>
   <div id="nextList"></div>
+  </div>
 </section>
 
 <!-- КУРСЫ -->
@@ -559,6 +636,7 @@ body.fsmode .bigplay{z-index:3}
 
 <!-- ПРОФИЛЬ -->
 <section class="screen" id="profile" aria-label="Профиль" hidden>
+  <div class="pcol-a">
   <div class="row" style="gap:14px">
     <button id="profileAvatar" aria-label="Сменить аватар" style="position:relative;width:72px;height:72px;flex:0 0 72px;padding:0;border:none;background:none;cursor:pointer">
       <span class="av-slot" data-size="72"></span>
@@ -589,7 +667,7 @@ body.fsmode .bigplay{z-index:3}
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stMins">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stStreak">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">дней подряд</span></div>
   </div>
-  <p class="muted" style="margin-top:8px;font-size:11px">Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом телефоне.</p>
+  <p class="muted" id="statsNote" style="margin-top:8px;font-size:11px">Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом телефоне.</p>
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
@@ -610,6 +688,8 @@ body.fsmode .bigplay{z-index:3}
       <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
       Поделиться статистикой</button>
   </div>
+  </div>
+  <div class="pcol-b">
 
   <div class="sec">
     <h2 style="margin-bottom:4px">Сохранённое</h2>
@@ -626,8 +706,9 @@ body.fsmode .bigplay{z-index:3}
     <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
     <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
-    <button class="list-item" id="installItem"><span style="flex:1;font-weight:600">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
+    <button class="list-item" id="installItem"><span style="flex:1;font-weight:600" id="installLabel">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
     <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
+  </div>
   </div>
 </section>
 
@@ -1037,6 +1118,9 @@ body.fsmode .bigplay{z-index:3}
   // ===== lesson player =====
   const P = { t: 0, dur: 30, playing: false, rate: 1, mirror: false, loop: null, own: false, last: 0 };
   const vid = $('#vid'), vin = $('#vin'), stage = $('#stage');
+  // a tablet (iPad, Android tablet): its shorter side is 600+ px; phones are ≤ 440. On a tablet the phone tricks for
+  // landscape videos (picture turned sideways, full screen when the phone is turned) are off — people simply turn it.
+  const TABLET = Math.min(screen.width || 0, screen.height || 0) >= 600 && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
   const fmt = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
   let curSection = 'Footwork';
   // Long lessons live on Kinescope (lesson field `ks` = video id) and play as an HLS stream in OUR <video>,
@@ -2008,6 +2092,24 @@ body.fsmode .bigplay{z-index:3}
     if (el.videoHeight > el.videoWidth && !document.body.classList.contains('fsmode')) enterVert();
   }));
   const isVertVideo = () => { const e = av.videoWidth > 0 ? av : vid; return e.videoWidth > 0 ? e.videoHeight > e.videoWidth : !!(curLesson && curLesson.vertical); };
+  // vertical full screen on a wide screen: the video is narrower than the screen — put its corner buttons
+  // (sound, «Подробнее», «во весь экран») at the video's own edge (CSS: .fscorner translate by --cx)
+  function placeCorners(){
+    if (!document.body.classList.contains('fs-vert')) { stage.style.removeProperty('--cx'); return; }
+    const e = av.videoWidth ? av : vid, ar = e.videoWidth ? e.videoWidth / e.videoHeight : 9 / 16;
+    const cx = Math.max(0, (stage.clientWidth - stage.clientHeight * ar) / 2);
+    stage.style.setProperty('--cx', Math.round(cx) + 'px');
+  }
+  new MutationObserver(() => requestAnimationFrame(placeCorners)).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('resize', () => requestAnimationFrame(placeCorners));
+  [vid, vin].forEach(el => el.addEventListener('loadedmetadata', () => requestAnimationFrame(placeCorners)));
+  // side panel (sideways tablet): lesson name + «section · lesson n of m» copied from the page
+  (function(){
+    const copy = () => { $('#fsSideName').textContent = $('#fsName').textContent; $('#fsSideMeta').textContent = $('#lessonMeta').textContent; };
+    const mo = new MutationObserver(copy);
+    mo.observe($('#fsName'), { childList: true, characterData: true, subtree: true });
+    mo.observe($('#lessonMeta'), { childList: true, characterData: true, subtree: true });
+  })();
   function enterVert(){
     if (document.body.classList.contains('fsmode')) return;
     vertFs = true; autoFs = false;
@@ -2033,16 +2135,16 @@ body.fsmode .bigplay{z-index:3}
     const land = isLandscapeVideo();
     paintRotBtn();
     // landscape video opened by the button while the phone is upright: turn the picture sideways
-    setRot(!autoFs && land && window.innerHeight > window.innerWidth);
+    setRot(!TABLET && !autoFs && land && window.innerHeight > window.innerWidth);
     try {
       const el = document.documentElement; const r = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
       if (r && r.then) r.then(() => {
         // where the browser allows it (Android), really switch the screen to landscape instead
-        if (!autoFs && land && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').then(() => setRot(false)).catch(() => {});
+        if (!TABLET && !autoFs && land && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').then(() => setRot(false)).catch(() => {});
       }).catch(() => {});
     } catch (_) {}
   }
-  function paintRotBtn(){ const show = isLandscapeVideo() && window.innerHeight > window.innerWidth; $('#fsRotate').hidden = !show; $('#fsRotSpacer').hidden = show; }
+  function paintRotBtn(){ const show = !TABLET && isLandscapeVideo() && window.innerHeight > window.innerWidth; $('#fsRotate').hidden = !show; $('#fsRotSpacer').hidden = show; }
   function isLandscapeVideo(){ const e = av.videoWidth > 0 ? av : vid; return e.videoWidth > 0 && e.videoWidth > e.videoHeight; }
   function setRot(on){
     const root = document.documentElement;
@@ -2059,6 +2161,7 @@ body.fsmode .bigplay{z-index:3}
     const fs = document.body.classList.contains('fsmode');
     const onLesson = !$('#lesson').hidden && curLesson;
     if (fs) paintRotBtn();
+    if (TABLET) return; // tablet: turning it changes the layout, never the full screen
     if (fs && document.body.classList.contains('fs-vert')) return;
     if (land) {
       if (fs) { setRot(false); if (turned) autoFs = true; } // phone held sideways now: turning back upright will close fullscreen
@@ -2964,6 +3067,10 @@ body.fsmode .bigplay{z-index:3}
     });
   })();
   renderStats();
+  if (TABLET) {
+    $('#installLabel').textContent = T('Установить на планшет');
+    $('#statsNote').textContent = T('Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом планшете.');
+  }
 
 
   // ===== "add to home screen" guide =====
@@ -2971,6 +3078,7 @@ body.fsmode .bigplay{z-index:3}
   const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/.test(UA);
+  const isIPad = /iPad/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
   const inAppBrowser = /Instagram|FBAN|FBAV|Line\/|VK|OKApp|YaBrowser\/.*Mobile.*YaApp/.test(UA);
   const SHARE_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
   const PLUS_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>';
@@ -2986,7 +3094,8 @@ body.fsmode .bigplay{z-index:3}
     ];
     if (isIOS) return [
       T('Открой эту ссылку в {k}', {k: K('Safari')}),
-      T('Нажми {k} внизу экрана', {k: K(SHARE_ICO + ' ' + T('Поделиться'))}),
+      isIPad ? T('Нажми {k} в верхней панели Safari', {k: K(SHARE_ICO + ' ' + T('Поделиться'))})
+             : T('Нажми {k} внизу экрана', {k: K(SHARE_ICO + ' ' + T('Поделиться'))}),
       T('Пролистай вниз и выбери {k}', {k: K(PLUS_ICO + ' ' + T('На экран «Домой»'))}),
       T('Нажми {k} в правом верхнем углу', {k: K(T('Добавить'))})
     ];
@@ -3004,7 +3113,7 @@ body.fsmode .bigplay{z-index:3}
   }
   const K = x => '<span class="k">' + x + '</span>';
   function openInstall(){
-    if (isStandalone()) { toast(T('Приложение уже на экране телефона')); return; }
+    if (isStandalone()) { toast(T(TABLET ? 'Приложение уже на экране планшета' : 'Приложение уже на экране телефона')); return; }
     $('#installSteps').innerHTML = installSteps().map(t => '<li><span>' + t + '</span></li>').join('');
     $('#installNative').hidden = !deferredPrompt;
     $('#installSheet').hidden = false;
@@ -3101,7 +3210,7 @@ body.fsmode .bigplay{z-index:3}
     async function turnOn(){
       set('fedoskin-push-asked', '1');
       const perm = await Notification.requestPermission();
-      if (perm !== 'granted') { paint(); if (perm === 'denied') toast(T('Уведомления запрещены — включи их в настройках телефона')); return; }
+      if (perm !== 'granted') { paint(); if (perm === 'denied') toast(T(TABLET ? 'Уведомления запрещены — включи их в настройках планшета' : 'Уведомления запрещены — включи их в настройках телефона')); return; }
       try {
         const reg = await navigator.serviceWorker.ready;
         let sub = await reg.pushManager.getSubscription();
