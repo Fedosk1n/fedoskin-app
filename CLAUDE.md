@@ -106,6 +106,10 @@
   from .fstop/.fsbottom/edges) moves the video up (`.stage.pulling`, --sy = −0.6·dy, slight scale) with a chip
   «↑ Подробнее» (#pullLabel) fading in; past 18 % of the height or a flick (> 40 px fast: < 300 ms or > 0.4 px/ms) ⇒ `#fsInfo` click (lesson page, video
   keeps playing); otherwise springs back. Down drag: nothing.
+- Swipe distances (owner 01.11.2026, iPad: «не работает свайп в Подробнее»): thresholds were shares of the screen
+  (18 % height / 25 % width = 200+ px on iPad ⇒ springs back). Now `PULL_GO`/`SIDE_GO` = min(share, 100 px), flick > 36/45 px
+  fast. In fsmode the stage is `touch-action:none` and touchmove is preventDefault'ed from the very first move (iOS Safari
+  decides on the first move whether the page pans). Test with in-page TouchEvents on rAF (CDP touch is too slow for flicks).
 - Slider scrubbing (31.10.2026, owner's screen recording: video kept playing and pulled the slider back, every move
   cancelled the previous seek ⇒ spinner, jumps): `scrubStart/scrubMove/scrubEnd` on #seek/#fsSeek (pointer/touch/
   change). While dragging: video paused (P.playing kept, `scrub` blocks frame loop, playMain/playIntro, showStall),
