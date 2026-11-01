@@ -179,6 +179,10 @@
   app's start entry, then reload; the screen to reopen goes via sessionStorage `fedoskin-restore`. popstate with
   navDepth 0 (an entry from before the app started) ⇒ home. Our iPhone edge swipe now also works over sheets (moves the
   sheet) and steps aside on touchcancel (the system took the gesture).
+- First-run profile tip (owner 01.11.2026): `#profTip` (a .sheet-bg ⇒ own history step) after the install guide closes:
+  dims the screen (`.tiphole` box-shadow spotlight on the Profile tab), bouncing arrow, «Заполни профиль» + «Заполнить»
+  (→ Профиль + profile sheet) / «Позже»; tap on the tab = fill, elsewhere = close. Once (`fedoskin-prof-tip`), skipped
+  if a nick is set; waits until home is shown with no sheet/full screen.
 - Share rating to Instagram stories (owner 31.10): opening the card (`openStory`) pre-renders a 1080×1920 PNG on a canvas
   (`storyImage`: same look as #storyCard — logo, avatar incl. its SVG, nick, alpha badge, minutes, 3 stats, CTA, and the
   app link pill `APP_LINK` = CFG.appUrl or the page URL). «Поделиться в сторис» (must stay synchronous for iPhone's
