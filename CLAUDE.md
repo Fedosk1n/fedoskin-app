@@ -13,7 +13,9 @@
 - Languages: ru (source) + en, es, pt, fr, de, ja, ko, zh. UI texts in index.html stay Russian; `T('русский текст', {vars})`
   translates in JS, `translateDom()` translates fixed HTML text/aria/placeholder by exact match. Dictionary is generated:
   edit `tools/i18n_src.py`, then `python3 tools/i18n_src.py i18n.js`. Every new visible Russian string needs a key there.
-  Language is picked from the phone (CIS -> ru, unknown -> en), changed via the RU pill / Профиль → Язык (`fedoskin-lang`).
+  Language = the phone's (`phoneLang()`: first supported of navigator.languages; CIS -> ru, ro only ro-MD -> ru, unknown -> en)
+  unless picked by hand (RU pill / Профиль → Язык saves `fedoskin-lang`). First option «Как на телефоне» removes it (`LANG_AUTO`);
+  in auto mode a `languagechange` while open reloads (owner 01.11.2026).
   Lesson videos are Russian speech; move names are international. Admin stays Russian only.
 - Analytics: owner decided NO Yandex Metrika (29.10.2026, legal/consent hassle). `metrikaId` stays empty; the dormant
   code in index.html loads nothing. Admin hides the Metrika field/instructions (`data-later="metrika"`).
