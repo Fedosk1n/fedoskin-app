@@ -13,6 +13,16 @@ window.LESSONS_DATA = [
   "vertical": true
  },
  {
+  "id": "tr-kick-step",
+  "sec": "Toprock",
+  "name": "Kick step",
+  "dur": 70,
+  "ru": "кикстеп kick step",
+  "added": "2026-11-02",
+  "pv": true,
+  "vertical": true
+ },
+ {
   "id": "fw-6step",
   "sec": "Footwork",
   "name": "6-step",
