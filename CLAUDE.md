@@ -204,6 +204,10 @@
   country,plat), geo(day,country). Moscow days. GET `/visits` (admin) → today/all/30 days/countries/platforms. Admin
   «Статистика» → «Посещаемость»; old worker (404) or no DB ⇒ setup steps + «Скопировать код сервера» (fetches
   server/push-worker.js from Pages). Tested with node:sqlite as a D1 stand-in (sandbox can't install wrangler).
+- Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
+  orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
+  translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the
+  home-screen admin has its own storage ⇒ the GitHub key is entered once more there.
 - Share rating to Instagram stories (owner 31.10): opening the card (`openStory`) pre-renders a 1080×1920 PNG on a canvas
   (`storyImage`: same look as #storyCard — logo, avatar incl. its SVG, nick, alpha badge, minutes, 3 stats, CTA, and the
   app link pill `APP_LINK` = CFG.appUrl or the page URL). «Поделиться в сторис» (must stay synchronous for iPhone's
