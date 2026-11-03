@@ -77,6 +77,9 @@ def cmd_build():
             assert len(tr[l]) == len(times), (lid, l, len(tr[l]), len(times))
         # an empty Russian line = a dropped cue (a lone «ну», a merge with the next one)
         cues = [[t[0], t[1], {l: tr[l][i] for l in langs}] for i, t in enumerate(times) if tr['ru'][i].strip()]
+        # a word stretched over a pause made some cues hang for 10–20 s: show a line about as long as it takes to read
+        for c in cues:
+            c[1] = round(min(c[1], c[0] + max(1.6, 1.0 + 0.075 * len(c[2]['ru']))), 2)
         ks = (L.get(lid) or {}).get('ks', '')
         json.dump({'ks': ks, 'cues': cues}, open(os.path.join(ROOT, 'subs', lid + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
         index[lid] = {'ks': ks, 'langs': langs, 'v': 1}

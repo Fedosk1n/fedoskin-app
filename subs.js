@@ -1,6 +1,21 @@
 // Субтитры уроков: id урока → {ks: видео в Kinescope, langs: языки, v: версия}. Тексты — subs/<id>.json.
 // Делаются через Claude (tools/subs_build.py). Если видео урока заменили (другой ks) — субтитры не показываются.
 window.LESSON_SUBS = {
+ "pw-headspin": {
+  "ks": "8a2e472e-d16f-4c45-9032-b4781ba7d840",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "pw-swipes": {
   "ks": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba",
   "langs": [
