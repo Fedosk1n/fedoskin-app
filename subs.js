@@ -1,0 +1,1 @@
+window.LESSON_SUBS = {};
