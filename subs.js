@@ -76,6 +76,21 @@ window.LESSON_SUBS = {
   ],
   "v": 1
  },
+ "pw-munchmill": {
+  "ks": "dfb81103-2a48-4752-938a-b851625ae79f",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "pw-swipes-flare": {
   "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a",
   "langs": [
