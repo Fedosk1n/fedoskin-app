@@ -30,5 +30,20 @@ window.LESSON_SUBS = {
    "zh"
   ],
   "v": 1
+ },
+ "pw-windmill": {
+  "ks": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
  }
 };
