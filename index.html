@@ -258,6 +258,19 @@ body.fsmode.fs-vert.fs-full #fsInfo{display:none}
 body.fsmode.fs-vert #fsSound{display:none}
 body.fsmode.fs-vert.fs-full #fsSoundC{right:62px!important}
 #fsSoundC[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+/* subtitles (owner 03.11.2026): our own line over the video, so they work with the intro, slow motion, mirror, loop and our full screen */
+.subtl{position:absolute;left:50%;bottom:64px;translate:-50% 0;z-index:3;width:max-content;max-width:min(90%, 680px);text-align:center;pointer-events:none;transition:bottom .2s ease,opacity .15s}
+.subtl span{padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.74);color:#fff;font:600 15px/1.5 var(--body);-webkit-box-decoration-break:clone;box-decoration-break:clone;white-space:pre-line}
+.stage.swiping .subtl,.stage.pulling .subtl{opacity:0}
+body.fsmode .subtl span{font-size:17px}
+body.fsmode:not(.fs-vert) .subtl{bottom:178px}
+body.fsmode.fs-hide:not(.fs-vert) .subtl{bottom:calc(28px + env(safe-area-inset-bottom, 0px))}
+body.fsmode.fs-vert.fs-full .subtl{bottom:calc(66px + env(safe-area-inset-bottom, 0px))}
+body.fsmode.fs-vert.fs-full #fsSubsC{right:114px!important}
+body.fsmode.fs-vert #fsSubsTop{display:none!important}
+body.fsmode .sheet-bg{z-index:60} /* a sheet opened from the full-screen video must be above it */
+#btnSubs[aria-pressed="true"],#fsSubsC[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+#fsSubsTop[aria-pressed="true"]{background:var(--fg);color:#0B0B0C}
 /* a short sign in the middle of the video when the sound is switched */
 .sndflash{position:absolute;left:50%;top:42%;z-index:6;translate:-50% -50%;width:74px;height:74px;border-radius:37px;background:rgba(11,11,12,.66);color:#F2EFE8;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .25s}
 .sndflash.on{opacity:1;transition:none}
@@ -509,11 +522,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="badge" id="badgeSpeed" hidden>0.5x</span>
       <span class="badge" id="badgeMirror" style="left:auto;right:12px" hidden>Зеркало</span>
       <span class="badge" id="badgeLoop" style="top:auto;bottom:12px" hidden>Повтор 3 сек</span>
+      <div class="subtl" id="subtl" hidden aria-live="off"><span id="subtlText"></span></div>
       <span class="badge" id="badgeOwn" style="top:auto;bottom:12px;left:auto;right:12px;background:var(--fg);color:var(--bg)" hidden>Твоё видео</span>
+      <button class="fsbtn" id="btnSubs" aria-label="Субтитры" aria-pressed="false" style="right:114px" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.6 10.3a2.2 2.2 0 1 0 0 3.4M17.1 10.3a2.2 2.2 0 1 0 0 3.4"/></svg></button>
       <button class="fsbtn" id="btnMute" aria-label="Звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="icoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <!-- vertical full screen: bottom-right corner of the video — lesson page («Подробнее») and true full screen -->
       <button class="fscorner" id="fsInfo" aria-label="Подробнее" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="4" y="3" width="16" height="10" rx="2"/><path d="m10.5 6.2 3.5 1.8-3.5 1.8z" fill="currentColor"/><path d="M4 17h16M4 21h10"/></svg></button>
+      <button class="fscorner" id="fsSubsC" aria-label="Субтитры" aria-pressed="false" style="right:166px" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.6 10.3a2.2 2.2 0 1 0 0 3.4M17.1 10.3a2.2 2.2 0 1 0 0 3.4"/></svg></button>
       <button class="fscorner" id="fsSoundC" aria-label="Выключить звук" style="right:114px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSoundC"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fscorner" id="fsFull" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoFull"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <div class="fsbar" id="fsbar">
@@ -522,6 +538,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           <button class="fsic" id="fsLeave" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:22px;height:22px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
           <span class="fsname" id="fsName"></span>
           <button class="fsic" id="fsMute" aria-label="Выключить звук"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
+          <button class="fsic" id="fsSubsTop" aria-label="Субтитры" aria-pressed="false" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.6 10.3a2.2 2.2 0 1 0 0 3.4M17.1 10.3a2.2 2.2 0 1 0 0 3.4"/></svg></button>
           <button class="fsic" id="fsRotate" aria-pressed="false" aria-label="Повернуть видео" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" transform="rotate(-90 12 12)"/><path d="M4 8a8 8 0 0 1 6-4.5"/><path d="M8 2l2 1.5L8.5 6"/></svg></button>
           <span id="fsRotSpacer" style="width:48px"></span>
         </div>
@@ -795,6 +812,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </div>
 
+<div class="sheet-bg" id="subsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="subsTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="subsTitle" style="font-size:24px">Субтитры</h2>
+    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4">В уроке говорят по-русски. Выбери язык субтитров.</p>
+    <div class="stack" id="subsList" role="radiogroup" aria-labelledby="subsTitle" style="gap:8px;margin-top:14px"></div>
+  </div>
+</div>
+
 <div class="sheet-bg" id="langSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="langTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -842,6 +868,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
+<script src="subs.js"></script>
 <script>
 (function(){
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
@@ -1514,6 +1541,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
     $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: l.sec, n, m: list.length, dur: fmtD(l.dur)});
     $('#badgeOwn').hidden = true;
+    loadSubs(l);
     setLoop(null);
     setRepeat(navReplace ? P.repeat !== false : true);
     $('#toolHint').textContent = T('Замедление, зеркало и «3 сек» помогут разобрать движение: «3 сек» зацикливает момент, на котором стоит видео. «Повтор» крутит весь урок по кругу.');
@@ -2032,7 +2060,66 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#loopZone').hidden = !l;
     if (l){ $('#loopZone').style.left = (l.a / P.dur * 100) + '%'; $('#loopZone').style.width = ((l.b - l.a) / P.dur * 100) + '%'; }
   }
+  // ===== subtitles: subs.js (window.LESSON_SUBS: id → {ks, langs, v}) + subs/<id>.json {ks, cues: [[from, to, {ru, en, …}]]}
+  // valid only while the lesson still plays the same Kinescope video (a replaced video ⇒ ignored, like intros).
+  // Choice in 'fedoskin-subs': 'off' or a language; nothing chosen ⇒ the app's language, off for Russian (the lessons are Russian).
+  var SUBS = window.LESSON_SUBS || {};
+  var subsCues = null, subsFor = null, subsIdx = 0, subsShown = null;
+  function subsInfo(l){ const x = l && SUBS && SUBS[l.id]; return x && (!x.ks || x.ks === (l.ks || '')) ? x : null; }
+  function subsPref(){ try { return localStorage.getItem('fedoskin-subs') || ''; } catch (_) { return ''; } }
+  function subsLang(){
+    const info = subsInfo(curLesson); if (!info) return null;
+    let p = subsPref(); if (p === 'off') return null;
+    if (!p) { if (LANG === 'ru') return null; p = LANG; }
+    return info.langs.includes(p) ? p : (info.langs.includes('en') ? 'en' : null);
+  }
+  function paintSubsBtns(){
+    const has = !!subsInfo(curLesson), on = !!subsLang();
+    ['#btnSubs', '#fsSubsC', '#fsSubsTop'].forEach(id => { const b = $(id); b.hidden = !has; b.setAttribute('aria-pressed', on); });
+  }
+  function loadSubs(l){
+    subsCues = null; subsFor = l.id; subsIdx = 0; subsShown = null; $('#subtl').hidden = true;
+    paintSubsBtns();
+    const info = subsInfo(l); if (!info) return;
+    fetch('subs/' + l.id + '.json?v=' + (info.v || 1)).then(r => r.ok ? r.json() : null).then(j => {
+      if (!j || subsFor !== l.id || (j.ks && l.ks && j.ks !== l.ks)) return;
+      subsCues = j.cues || []; renderSub();
+    }).catch(() => {});
+  }
+  function renderSub(){
+    const lang = subsLang();
+    let txt = '';
+    if (lang && subsCues && subsCues.length && !$('#lesson').hidden) {
+      const t = P.t;
+      if (!subsCues[subsIdx] || subsCues[subsIdx][0] > t) subsIdx = 0;
+      while (subsIdx < subsCues.length - 1 && subsCues[subsIdx][1] <= t) subsIdx++;
+      const c = subsCues[subsIdx];
+      if (c && c[0] <= t && t < c[1]) txt = c[2][lang] || '';
+    }
+    if (txt === subsShown) return;
+    subsShown = txt; $('#subtlText').textContent = txt; $('#subtl').hidden = !txt;
+  }
+  function openSubsSheet(){
+    const info = subsInfo(curLesson); if (!info) return;
+    const cur = subsLang() || 'off', list = $('#subsList'); list.innerHTML = '';
+    const names = Object.fromEntries(I18N.langs);
+    [['off', T('Выключены')]].concat(info.langs.map(c => [c, names[c] || c])).forEach(([code, name]) => {
+      const b = document.createElement('button');
+      b.className = 'opt'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(code === cur)); if (code !== 'off') b.lang = code;
+      b.innerHTML = '<span class="dot"></span><span style="flex:1;font-weight:600;text-align:left"></span><span class="muted" style="font-size:12px"></span>';
+      b.children[1].textContent = name; b.children[2].textContent = code === 'off' ? '' : code.toUpperCase();
+      b.addEventListener('click', () => {
+        try { localStorage.setItem('fedoskin-subs', code); } catch (_) {}
+        $('#subsSheet').hidden = true; subsShown = null; paintSubsBtns(); renderSub();
+      });
+      list.appendChild(b);
+    });
+    $('#subsSheet').hidden = false;
+  }
+  ['#btnSubs', '#fsSubsC', '#fsSubsTop'].forEach(id => $(id).addEventListener('click', e => { e.stopPropagation(); openSubsSheet(); }));
+  $('#subsSheet').addEventListener('click', e => { if (e.target.id === 'subsSheet') $('#subsSheet').hidden = true; });
   function paint(){
+    renderSub();
     const p = P.dur ? P.t / P.dur : 0;
     $('#fill').style.width = (p * 100) + '%'; $('#knob').style.left = $('#fsKnob').style.left = (p * 100) + '%';
     $('#seek').value = Math.round(p * 1000);
@@ -2068,7 +2155,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
   $('#stage').addEventListener('click', e => {
     // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
-    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC')) return;
+    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC' || n.id === 'btnSubs' || n.id === 'fsSubsC')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
     if (onBar) { if (document.body.classList.contains('fsmode') && !document.body.classList.contains('fs-vert')) pokeFs(); return; }
