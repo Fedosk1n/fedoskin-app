@@ -109,6 +109,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 2
  },
+ "fr-shoulder-freeze": {
+  "src": "gh",
+  "every": 0.5,
+  "n": 118,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "tk-monkey": {
   "src": "gh",
   "every": 0.5,
@@ -226,10 +235,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "fr-shoulder-freeze": {
+ "tr-kick-step": {
   "src": "gh",
-  "every": 0.5,
-  "n": 118,
+  "every": 1,
+  "n": 70,
   "w": 180,
   "h": 320,
   "cols": 10,
