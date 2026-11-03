@@ -31,6 +31,21 @@ window.LESSON_SUBS = {
   ],
   "v": 1
  },
+ "pw-flare-1990": {
+  "ks": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "pw-headspin": {
   "ks": "8a2e472e-d16f-4c45-9032-b4781ba7d840",
   "langs": [
