@@ -150,5 +150,20 @@ window.LESSON_SUBS = {
    "zh"
   ],
   "v": 1
+ },
+ "tn-flare-to-airflare-to-flare": {
+  "ks": "262fa2a3-9675-40ac-8b20-5092475a3192",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
  }
 };
