@@ -75,7 +75,8 @@ def cmd_build():
         langs = [l for l in LANGS if l in tr]
         for l in langs:
             assert len(tr[l]) == len(times), (lid, l, len(tr[l]), len(times))
-        cues = [[t[0], t[1], {l: tr[l][i] for l in langs}] for i, t in enumerate(times)]
+        # an empty Russian line = a dropped cue (a lone «ну», a merge with the next one)
+        cues = [[t[0], t[1], {l: tr[l][i] for l in langs}] for i, t in enumerate(times) if tr['ru'][i].strip()]
         ks = (L.get(lid) or {}).get('ks', '')
         json.dump({'ks': ks, 'cues': cues}, open(os.path.join(ROOT, 'subs', lid + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
         index[lid] = {'ks': ks, 'langs': langs, 'v': 1}
