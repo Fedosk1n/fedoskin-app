@@ -165,5 +165,20 @@ window.LESSON_SUBS = {
    "zh"
   ],
   "v": 1
+ },
+ "tr-windmill-head": {
+  "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
  }
 };

@@ -219,6 +219,15 @@
   user-gesture rule): copies APP_LINK to the clipboard, then navigator.share({files:[png]}) → phone share menu →
   Instagram → «История»; a web page can't add a link sticker, so the hint under the card (#storyHint) tells to paste the
   link into the «Ссылка» sticker. No file sharing ⇒ the PNG is downloaded + toast. The link is shown on the card too (#stLink).
+- Subtitles (owner 03.11.2026 «субтитры под 8 языков»): speech recognised in the owner's Chrome (transformers.js 3.7.5,
+  whisper-large-v3-turbo_timestamped, WebGPU; Kinescope HLS audio via mediabunny AudioBufferSink) → word timings
+  committed to `subs/raw/<id>.json`. `python3 tools/subs_build.py cues` → `subs/work/<id>.ru.json`; Claude proofreads the
+  Russian and writes `subs/work/<id>.tr.json` ({ru,en,es,pt,fr,de,ja,ko,zh}: one line per cue, same order, empty ru =
+  dropped cue); `python3 tools/subs_build.py build` → `subs/<id>.json` ({ks, cues:[[a,b,{lang:text}]]}) + `subs.js`
+  (`window.LESSON_SUBS`, valid only if ks matches). Player: CC buttons `#btnSubs`/`#fsSubsC`/`#fsSubsTop` → sheet
+  `#subsSheet` (language or off), pref `fedoskin-subs`; default = app language, off for ru. Glossary: гелик=windmill,
+  флай=flare, твист=airflare, бочка/мачмил=munchmill, 99/наинтинайн=1990, спичак=handstand press (owner to confirm),
+  промокашка=low windmill (to confirm). All 12 long Kinescope lessons done 03.11.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
