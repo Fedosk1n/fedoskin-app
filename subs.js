@@ -31,6 +31,21 @@ window.LESSON_SUBS = {
   ],
   "v": 1
  },
+ "pw-turtle": {
+  "ks": "634db7c3-35bc-4a80-b160-c44a09cdbab8",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "pw-windmill": {
   "ks": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
   "langs": [
