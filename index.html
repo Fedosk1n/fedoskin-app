@@ -320,6 +320,7 @@ body.fsmode .bigplay{z-index:3}
 .ctl{width:52px;height:52px;flex:0 0 52px;border-radius:26px;border:1px solid var(--line);background:transparent;color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer}
 .ctl .ico{width:18px;height:18px}
 .ctl-main{background:var(--fg);color:var(--bg);border:none}
+.ctl[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:rgba(226,97,26,.1)}
 #speedSeg button{font-size:13px}
 .tool{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer}
 .tool[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:rgba(226,97,26,.1)}
@@ -507,7 +508,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       </svg>
       <span class="badge" id="badgeSpeed" hidden>0.5x</span>
       <span class="badge" id="badgeMirror" style="left:auto;right:12px" hidden>Зеркало</span>
-      <span class="badge" id="badgeLoop" style="top:auto;bottom:12px" hidden>Повтор</span>
+      <span class="badge" id="badgeLoop" style="top:auto;bottom:12px" hidden>Повтор 3 сек</span>
       <span class="badge" id="badgeOwn" style="top:auto;bottom:12px;left:auto;right:12px;background:var(--fg);color:var(--bg)" hidden>Твоё видео</span>
       <button class="fsbtn" id="btnMute" aria-label="Звук" style="right:62px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="icoMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       <button class="fsbtn" id="btnFs" aria-label="Во весь экран"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -529,11 +530,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
           <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
-            <button class="fsk" id="fsBack5" aria-label="Назад на 5 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span><span class="fsl">5 сек</span></button>
+            <button class="fsk" id="fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">3 сек</span></button>
             <button class="fsk" id="fsSpeed" aria-label="Скорость"><span class="fsi fstxt" id="fsSpeedVal">1x</span><span class="fsl">Скорость</span></button>
             <button class="fsk fskplay" id="fsPlay" aria-label="Смотреть"><span class="fsi fsplay"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" id="fsIcoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></span></button>
             <button class="fsk" id="fsMirror" aria-pressed="false" aria-label="Зеркало"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></span><span class="fsl">Зеркало</span></button>
-            <button class="fsk" id="fsLoop" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></span><span class="fsl">Повтор</span></button>
+            <button class="fsk" id="fsLoop" aria-pressed="true" aria-label="Повтор урока"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></span><span class="fsl">Повтор</span></button>
             <button class="fsk" id="fsSound" aria-pressed="false" aria-label="Выключить звук"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSound"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></span><span class="fsl" id="fsSoundL">Звук</span></button>
           </div>
         </div>
@@ -554,7 +555,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 
   <div class="row" style="gap:10px;margin-top:10px">
-    <button class="ctl" id="btnBack5" aria-label="Назад на 5 секунд"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span style="font-size:11px">5 сек</span></button>
+    <button class="ctl" id="btnLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg><span style="font-size:11px">3 сек</span></button>
     <button class="ctl ctl-main" id="btnPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" id="icoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
     <div class="seg" role="group" aria-label="Скорость" id="speedSeg" style="flex:1;margin:0">
       <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
@@ -566,16 +567,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg>
       <span>Зеркало</span>
     </button>
-    <button class="tool" id="btnLoop" aria-pressed="false">
+    <button class="tool" id="btnLoop" aria-pressed="true" aria-label="Повтор урока">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
-      <span id="loopText">Повтор 3 сек</span>
+      <span id="loopText">Повтор</span>
     </button>
     <button class="tool" id="btnDownload" aria-pressed="false">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" id="icoDl"><path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/></svg>
       <span id="dlText">Скачать</span>
     </button>
   </div>
-  <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и повтор 3 сек помогут разобрать движение. Повтор зацикливает момент, на котором стоит видео.</p>
+  <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и «3 сек» помогут разобрать движение: «3 сек» зацикливает момент, на котором стоит видео. «Повтор» крутит весь урок по кругу.</p>
   </div>
   <div class="lcol-b">
 
@@ -1120,7 +1121,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
 
   // ===== lesson player =====
-  const P = { t: 0, dur: 30, playing: false, rate: 1, mirror: false, loop: null, own: false, last: 0 };
+  const P = { t: 0, dur: 30, playing: false, rate: 1, mirror: false, loop: null, repeat: true, own: false, last: 0 };
   const vid = $('#vid'), vin = $('#vin'), stage = $('#stage');
   // a tablet (iPad, Android tablet): its shorter side is 600+ px; phones are ≤ 440. On a tablet the phone tricks for
   // landscape videos (picture turned sideways, full screen when the phone is turned) are off — people simply turn it.
@@ -1501,7 +1502,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     stage.classList.toggle('portrait', vid.videoHeight > vid.videoWidth);
     paint();
   });
-  vid.addEventListener('ended', () => { if (av !== vid) return; if (P.loop) { seekTo(P.loop.a); vid.play().catch(() => {}); } else setPlaying(false); });
+  vid.addEventListener('ended', () => { if (av !== vid) return; if (P.loop || P.repeat) { seekTo(P.loop ? P.loop.a : 0); vid.play().catch(() => {}); } else setPlaying(false); });
   function openLesson(id){
     const l = BY_ID[id]; if (!l) return;
     curSection = l.sec; curLesson = l;
@@ -1514,6 +1515,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: l.sec, n, m: list.length, dur: fmtD(l.dur)});
     $('#badgeOwn').hidden = true;
     setLoop(null);
+    setRepeat(navReplace ? P.repeat !== false : true);
+    $('#toolHint').textContent = T('Замедление, зеркало и «3 сек» помогут разобрать движение: «3 сек» зацикливает момент, на котором стоит видео. «Повтор» крутит весь урок по кругу.');
     P.dur = l.dur;
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
@@ -2018,12 +2021,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }
     paint();
   }
+  function setRepeat(on){
+    P.repeat = !!on;
+    $('#btnLoop').setAttribute('aria-pressed', P.repeat); $('#fsLoop').setAttribute('aria-pressed', P.repeat);
+  }
   function setLoop(l){
     P.loop = l;
-    $('#btnLoop').setAttribute('aria-pressed', !!l);
+    $('#btnLoop3').setAttribute('aria-pressed', !!l); $('#fsLoop3').setAttribute('aria-pressed', !!l);
     $('#badgeLoop').hidden = !l;
     $('#loopZone').hidden = !l;
-    $('#loopText').textContent = l ? fmt(l.a) + '–' + fmt(l.b) : T('Повтор 3 сек');
     if (l){ $('#loopZone').style.left = (l.a / P.dur * 100) + '%'; $('#loopZone').style.width = ((l.b - l.a) / P.dur * 100) + '%'; }
   }
   function paint(){
@@ -2048,7 +2054,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (P.own){ if (introOn) tickIntro(); P.t = av.currentTime; }
       else { P.t += (now - P.last) / 1000 * P.rate; }
       P.last = now;
-      if (P.loop && P.t >= P.loop.b){ seekTo(P.loop.a); }
+      // the 3-second piece goes first; otherwise the whole lesson starts again (or stops if the loop is off)
+      if (P.loop){ if (P.t >= Math.min(P.loop.b, P.dur - 0.05)) seekTo(P.loop.a); }
+      else if (P.repeat && P.dur && P.t >= P.dur - 0.05){ seekTo(0); }
       else if (P.t >= P.dur){ P.t = P.dur; setPlaying(false); }
       paint();
     }
@@ -2190,7 +2198,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function syncFs(){
     $('#fsSpeedVal').textContent = P.rate + 'x'; $('#fsSpeed').setAttribute('aria-pressed', P.rate !== 1);
     $('#fsMirror').setAttribute('aria-pressed', P.mirror);
-    $('#fsLoop').setAttribute('aria-pressed', !!P.loop);
+    $('#fsLoop').setAttribute('aria-pressed', !!P.repeat); $('#fsLoop3').setAttribute('aria-pressed', !!P.loop);
     $('#fsLoopZone').hidden = !P.loop;
     if (P.loop){ $('#fsLoopZone').style.left = (P.loop.a / P.dur * 100) + '%'; $('#fsLoopZone').style.width = ((P.loop.b - P.loop.a) / P.dur * 100) + '%'; }
     $('#fsIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
@@ -2243,7 +2251,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fsmode')) exitFs(); });
   $('#fsPlay').addEventListener('click', () => { $('#btnPlay').click(); syncFs(); pokeFs(); });
-  $('#fsBack5').addEventListener('click', () => { $('#btnBack5').click(); pokeFs(); });
+  $('#fsLoop3').addEventListener('click', () => { $('#btnLoop3').click(); syncFs(); pokeFs(); });
   $('#fsSpeed').addEventListener('click', () => {
     const next = { '1': '0.5', '0.5': '0.25', '0.25': '1' }[String(P.rate)];
     $('#speedSeg').querySelector('[data-rate="' + next + '"]').click(); syncFs(); pokeFs();
@@ -2251,7 +2259,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#fsMirror').addEventListener('click', () => { $('#btnMirror').click(); syncFs(); pokeFs(); });
   $('#fsLoop').addEventListener('click', () => { $('#btnLoop').click(); syncFs(); pokeFs(); });
   $('#fsSeek').addEventListener('input', e => { scrubMove(e.target.value / 1000 * P.dur); pokeFs(); });
-  $('#btnBack5').addEventListener('click', () => seekTo(P.t - 5));
   $('#seek').addEventListener('input', e => scrubMove(e.target.value / 1000 * P.dur));
   // the finger on the slider: tracked by us (the browser's own slider ignores the first ~50 px of movement and then
   // jumps); the hidden range input stays for the keyboard
@@ -2290,6 +2297,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#toolHint').textContent = P.mirror ? T('Зеркало включено: повторяй движения, как перед зеркалом в зале.') : T('Зеркало выключено.');
   });
   $('#btnLoop').addEventListener('click', () => {
+    setRepeat(!P.repeat);
+    $('#toolHint').textContent = P.repeat ? T('Повтор урока включён: видео крутится по кругу.') : T('Повтор урока выключен: видео остановится в конце.');
+  });
+  $('#btnLoop3').addEventListener('click', () => {
     if (P.loop){ setLoop(null); $('#toolHint').textContent = T('Повтор выключен.'); return; }
     const a = Math.min(P.t, P.dur - 3), b = a + 3;
     setLoop({ a, b });

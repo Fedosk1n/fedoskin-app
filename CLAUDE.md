@@ -71,7 +71,7 @@
   stalls — speed is learned. iPhone native-HLS path not testable here.
 - Vertical lessons (31.10.2026): `vertical: true` ⇒ openLesson → `enterVert()`: body `fsmode fs-vert` = video fills the
   screen above, a solid control panel below (`--vpan` 142px + safe area, always visible, never over the dancer's feet):
-  timeline + «5 сек / Скорость / ▶ / Зеркало / Повтор», each round icon with a caption (`.fsk`). Top bar over the video:
+  timeline + «3 сек / Скорость / ▶ / Зеркало / Повтор», each round icon with a caption (`.fsk`). Top bar over the video:
   ← (leave lesson), name (2 lines), sound. Bottom-right corner of the video (owner's request 31.10): `#fsInfo`
   (icon «screen + text lines» = «Подробнее» → lesson page, video keeps playing) and `#fsFull` (standard ⛶ corner icon) =
   `fs-full`: only the video edge to edge (panel + top bar hidden) + browser Fullscreen API where allowed; the same
@@ -110,6 +110,11 @@
   (18 % height / 25 % width = 200+ px on iPad ⇒ springs back). Now `PULL_GO`/`SIDE_GO` = min(share, 100 px), flick > 36/45 px
   fast. In fsmode the stage is `touch-action:none` and touchmove is preventDefault'ed from the very first move (iOS Safari
   decides on the first move whether the page pans). Test with in-page TouchEvents on rAF (CDP touch is too slow for flicks).
+- Loop buttons (owner 03.11.2026): «Повтор» (`#btnLoop`/`#fsLoop`) = the WHOLE lesson repeats (`P.repeat`, `setRepeat`), ON
+  by default; the old 3-second loop moved to the round button left of ▶ / first in the fs panel (`#btnLoop3`/`#fsLoop3`,
+  «3 сек», replaced «назад 5 сек» which is gone). openLesson: `setRepeat(true)` unless opened by a swipe (`navReplace`) —
+  then the viewer's choice is kept. frame(): 3-s piece first (b capped at dur−0.05), else repeat ⇒ seekTo(0) at dur−0.05,
+  else stop; `ended` does the same as a fallback.
 - Slider scrubbing (31.10.2026, owner's screen recording: video kept playing and pulled the slider back, every move
   cancelled the previous seek ⇒ spinner, jumps): `scrubStart/scrubMove/scrubEnd` on #seek/#fsSeek (pointer/touch/
   change). While dragging: video paused (P.playing kept, `scrub` blocks frame loop, playMain/playIntro, showStall),
