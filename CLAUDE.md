@@ -10,6 +10,9 @@
   vertical (true = portrait video → opens straight in full screen; admin sets it from the file's size on upload).
   `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression: admin quality choice 720p (~1 Mbit/s) / 1080p
   (~3.5 Mbit/s at 60 fps) / «Без сжатия» (`fedoskin-admin-quality`).
+  Vendored mediabunny is PATCHED (04.11.2026): line 2 sets `Symbol.dispose ??= Symbol.for('Symbol.dispose')` (+asyncDispose) —
+  Safari has no Symbol.dispose, and the stock build then throws «Object not disposable» on every re-encode on iPhone.
+  Keep the patch if mediabunny is ever updated; imports carry `?v=2` (bump it on any change of the file).
 - Languages: ru (source) + en, es, pt, fr, de, ja, ko, zh. UI texts in index.html stay Russian; `T('русский текст', {vars})`
   translates in JS, `translateDom()` translates fixed HTML text/aria/placeholder by exact match. Dictionary is generated:
   edit `tools/i18n_src.py`, then `python3 tools/i18n_src.py i18n.js`. Every new visible Russian string needs a key there.
