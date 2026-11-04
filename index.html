@@ -2066,7 +2066,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   var SUBS = window.LESSON_SUBS || {};
   var subsCues = null, subsFor = null, subsIdx = 0, subsShown = null;
   function subsInfo(l){ const x = l && SUBS && SUBS[l.id]; return x && (!x.ks || x.ks === (l.ks || '')) ? x : null; }
-  function subsPref(){ try { return localStorage.getItem('fedoskin-subs') || ''; } catch (_) { return ''; } }
+  // The choice is remembered together with the app language it was made in: after switching the app to another
+  // language the subtitles follow the new language again (owner 04.11: «субтитры того языка, на котором говорит пользователь»).
+  // Old plain values ('en', 'off' — saved before this rule) are ignored.
+  function subsPref(){
+    try { const o = JSON.parse(localStorage.getItem('fedoskin-subs') || 'null'); return o && o.app === LANG ? String(o.c || '') : ''; } catch (_) { return ''; }
+  }
   function subsLang(){
     const info = subsInfo(curLesson); if (!info) return null;
     let p = subsPref(); if (p === 'off') return null;
@@ -2109,7 +2114,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       b.innerHTML = '<span class="dot"></span><span style="flex:1;font-weight:600;text-align:left"></span><span class="muted" style="font-size:12px"></span>';
       b.children[1].textContent = name; b.children[2].textContent = code === 'off' ? '' : code.toUpperCase();
       b.addEventListener('click', () => {
-        try { localStorage.setItem('fedoskin-subs', code); } catch (_) {}
+        try { localStorage.setItem('fedoskin-subs', JSON.stringify({c: code, app: LANG})); } catch (_) {}
         $('#subsSheet').hidden = true; subsShown = null; paintSubsBtns(); renderSub();
       });
       list.appendChild(b);

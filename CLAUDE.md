@@ -228,7 +228,8 @@
   Russian and writes `subs/work/<id>.tr.json` ({ru,en,es,pt,fr,de,ja,ko,zh}: one line per cue, same order, empty ru =
   dropped cue); `python3 tools/subs_build.py build` → `subs/<id>.json` ({ks, cues:[[a,b,{lang:text}]]}) + `subs.js`
   (`window.LESSON_SUBS`, valid only if ks matches). Player: CC buttons `#btnSubs`/`#fsSubsC`/`#fsSubsTop` → sheet
-  `#subsSheet` (language or off), pref `fedoskin-subs`; default = app language, off for ru. Glossary: гелик=windmill,
+  `#subsSheet` (language or off), pref `fedoskin-subs` = JSON {c, app} — valid only while the app language is still `app`
+  (owner 04.11: subtitles follow the app language; a choice made in another language is ignored); default = app language, off for ru. Glossary: гелик=windmill,
   флай=flare, твист=airflare, бочка/мачмил=munchmill, 99/наинтинайн=1990, спичак=handstand press (owner to confirm),
   промокашка=low windmill (to confirm). All 12 long Kinescope lessons done 03.11.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
