@@ -143,7 +143,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 6</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 7</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1051,7 +1051,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     });
   }
   let MB = null;
-  async function mb(){ if (!MB) MB = await import('./vendor/mediabunny.min.mjs'); return MB; }
+  async function mb(){ if (!MB) MB = await import('./vendor/mediabunny.min.mjs?v=2'); return MB; }
   let current = null; // running conversion
   async function sourceFps(src){
     try {
