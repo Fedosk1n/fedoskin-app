@@ -23,6 +23,16 @@ window.LESSONS_DATA = [
   "vertical": true
  },
  {
+  "id": "tr-indian-step",
+  "sec": "Toprock",
+  "name": "Indian step",
+  "dur": 40,
+  "ru": "Indian step Индиан степ",
+  "added": "2026-11-04",
+  "pv": true,
+  "vertical": true
+ },
+ {
   "id": "fw-6step",
   "sec": "Footwork",
   "name": "6-step",
