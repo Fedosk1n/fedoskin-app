@@ -143,7 +143,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 5</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 6</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -532,14 +532,24 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
 
   // ---------- GitHub API ----------
+  // GitHub can be unreachable on some mobile networks: a request that hangs used to leave «Загружаю…» forever.
+  // Small requests now give up after 25 s (big uploads go through ghBlob/XHR and are not limited).
   async function gh(path, opts){
     opts = opts || {};
-    const r = await fetch(path.startsWith('http') ? path : API + path, {
-      method: opts.method || 'GET',
-      cache: 'no-store',
-      headers: Object.assign({'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}, opts.body ? {'Content-Type': 'application/json'} : {}),
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    const tm = ac && !opts.noTimeout ? setTimeout(() => ac.abort(), opts.timeout || 25000) : 0;
+    let r;
+    try {
+      r = await fetch(path.startsWith('http') ? path : API + path, {
+        method: opts.method || 'GET',
+        cache: 'no-store',
+        signal: ac ? ac.signal : undefined,
+        headers: Object.assign({'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}, opts.body ? {'Content-Type': 'application/json'} : {}),
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    } catch(e) {
+      const err = new Error(e && e.name === 'AbortError' ? 'GitHub не отвечает' : 'нет связи с GitHub'); err.net = true; throw err;
+    } finally { if (tm) clearTimeout(tm); }
     if (!r.ok) {
       let msg = ''; try { msg = (await r.json()).message || ''; } catch(e){}
       const err = new Error(msg || ('HTTP ' + r.status)); err.status = r.status; throw err;
@@ -602,7 +612,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     } catch(e) {
       $('#loading').hidden = true; $('#login').hidden = false;
       const err = $('#loginErr'); err.hidden = false;
-      err.textContent = (e.status === 401 ? 'Ключ не подошёл (возможно, истёк срок или опечатка). ' : e.status === 404 ? 'Ключ не видит репозиторий fedoskin-app — проверьте шаг 3. ' : 'Не получилось войти: ') + (e.status === 401 || e.status === 404 ? '' : e.message);
+      err.textContent = e.net ? 'Не получилось связаться с GitHub (' + e.message + '). Похоже на интернет: на мобильной сети GitHub иногда недоступен — попробуйте Wi‑Fi или другую сеть и нажмите «Войти» ещё раз. Ключ сохранён.'
+        : (e.status === 401 ? 'Ключ не подошёл (возможно, истёк срок или опечатка). ' : e.status === 404 ? 'Ключ не видит репозиторий fedoskin-app — проверьте шаг 3. ' : 'Не получилось войти: ') + (e.status === 401 || e.status === 404 ? '' : e.message);
+      if (e.net && token) $('#tokenIn').value = token;
     }
   }
   $('#loginBtn').addEventListener('click', () => {
