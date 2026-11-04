@@ -5,7 +5,7 @@
 // - frame: one frame captured from the playing video (an ImageBitmap) is turned into a JPEG.
 // Every frame goes back to the page as {key, k (grid index), t (its real time), h (its short side), blob}.
 let MB = null;
-const mb = () => MB || (MB = import('./vendor/mediabunny.min.mjs'));
+const mb = () => MB || (MB = import('./vendor/mediabunny.min.mjs?v=2'));
 let job = null;
 
 function fit(w, h, max){ const s = Math.min(1, max / Math.min(w, h)); return [Math.max(2, Math.round(w * s / 2) * 2), Math.max(2, Math.round(h * s / 2) * 2)]; }

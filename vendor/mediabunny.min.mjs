@@ -1,4 +1,6 @@
 /*! mediabunny 1.63.0 — MPL-2.0, https://github.com/Vanilagy/mediabunny — see mediabunny-LICENSE.txt */
+// Fedoskin patch: Safari has no Symbol.dispose. mediabunny keyed its helper on Symbol.for("Symbol.dispose") but its classes on a new Symbol(...) ⇒ "Object not disposable" on iPhone. Use one shared symbol before anything else runs.
+Symbol.dispose??=Symbol.for("Symbol.dispose");Symbol.asyncDispose??=Symbol.for("Symbol.asyncDispose");
 var Wf=Symbol.dispose||Symbol.for("Symbol.dispose"),Hf=Symbol.asyncDispose||Symbol.for("Symbol.asyncDispose"),ot=(e,t,r)=>{if(t!=null){if(typeof t!=="object"&&typeof t!=="function")throw TypeError('Object expected to be assigned to "using" declaration');var i;if(r)i=t[Hf];if(i===void 0)i=t[Wf];if(typeof i!=="function")throw TypeError("Object not disposable");e.push([r,i,t])}else if(r)e.push([r]);return t},ct=(e,t,r)=>{var i=typeof SuppressedError==="function"?SuppressedError:function(s,o,c,u){return u=Error(c),u.name="SuppressedError",u.error=s,u.suppressed=o,u},n=(s)=>t=r?new i(s,t,"An error was suppressed during disposal"):(r=!0,s),a=(s)=>{while(s=e.pop())try{var o=s[1]&&s[1].call(s[2]);if(s[0])return Promise.resolve(o).then(a,(c)=>(n(c),a()))}catch(c){n(c)}if(r)throw t};return a()};/*!
  * Copyright (c) 2026-present, Vanilagy and contributors
  *

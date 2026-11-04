@@ -1754,7 +1754,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the first 5 s of a Kinescope one) the app decodes it itself (mediabunny, WebCodecs) frame by frame at its own
   // size. Moving forward it just keeps decoding onwards (no restart), so it keeps up with the finger; the newest
   // finger position always wins. Until its first frame is ready (and on parts of a Kinescope stream) the strip shows.
-  let MBM = null; const mbm = () => MBM || (MBM = import('./vendor/mediabunny.min.mjs'));
+  let MBM = null; const mbm = () => MBM || (MBM = import('./vendor/mediabunny.min.mjs?v=2'));
   const fqCan = $('#fqCan'), fqInputs = new Map();
   let fq = null;
   function fqSrcFor(T){
