@@ -206,7 +206,8 @@
   «планшет»; iPad install guide: Share is in Safari's top bar.
 - Visit counter (owner 01.11.2026 «посещаемость и охваты»; Metrika stays OFF): app `visitCounter()` → POST `/hit`
   {id: prof.id, p: ios|android|desktop|other, a: standalone} via sendBeacon (text/plain, no preflight), only on https,
-  only after 30+ min away (`fedoskin-seen` touched on hide/pagehide/every minute), skipped when `fedoskin-noping`='1'
+  only after 30+ min away (`fedoskin-active` touched on hide/pagehide/every minute — NOT `fedoskin-seen`, that is the
+  list of opened lessons for NEW badges; until 05.11 the counter overwrote it ⇒ NEW came back daily, old value migrated), skipped when `fedoskin-noping`='1'
   (admin sets it on load in its browser, switch «Не считать мои заходы»). Worker: D1 binding `DB` (KV's 1000 writes/day is
   too little), tables made on first call: hits(day: visits/uniq/fresh/app), seen(day,id) pruned, devices(id hash,first,
   country,plat), geo(day,country). Moscow days. GET `/visits` (admin) → today/all/30 days/countries/platforms. Admin
