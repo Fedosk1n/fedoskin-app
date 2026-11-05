@@ -301,24 +301,26 @@ body.fsmode .bigplay{z-index:3}
 .nickbtn .d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .screen{overscroll-behavior-y:contain}
-/* pull to refresh: logo inside a thin orange ring. Only transform/opacity are animated (the phone's GPU does it,
-   nothing is redrawn per frame) — the old particle vortex redrew ~300 pieces on a canvas every frame and stuttered. */
+/* pull to refresh, tied to the graffiti logo (owner 05.11.2026): pulling «sprays» the logo on from left to right
+   (a spray dot leads the stroke, a faint ghost shows the rest); full = pop. Loading: the letters fill with orange
+   paint from the bottom while the logo nods to a beat. Done: all orange, pop, reload. Only transform/opacity/clip move. */
 .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) - 23px);z-index:15;width:120px;height:120px;margin-left:-60px;opacity:0;transform:translate3d(0,-70px,0);pointer-events:none;will-change:transform,opacity}
-.ptr .ring{position:absolute;inset:0;width:120px;height:120px;overflow:visible}
-.ptr .ring circle{fill:none;stroke-width:3;stroke-linecap:round}
-.ptr .ring .bg{stroke:rgba(255,255,255,.10);fill:#0E0E10} /* solid disc: the header logo fading behind never shows through */
-.ptr .ring .arc{stroke:var(--accent);transition:stroke-dashoffset .3s cubic-bezier(.3,.7,.3,1)}
-.ptr #ptrLogo{position:absolute;left:50%;top:50%;width:70px;height:auto;margin:-26px 0 0 -35px;transform:scale(.7);transition:transform .16s ease;will-change:transform}
-.ptr::before{content:"";position:absolute;inset:14px;border-radius:50%;box-shadow:0 0 28px 6px rgba(226,97,26,.35);opacity:0;transition:opacity .25s ease}
+.ptr .pl{position:absolute;left:50%;top:50%;width:96px;height:72px;margin:-36px 0 0 -48px;transform:scale(.8);transition:transform .16s ease;will-change:transform}
+.ptr .pl img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ptr .ghost{opacity:.16}
+.ptr .ink{clip-path:inset(0 100% 0 0);-webkit-clip-path:inset(0 100% 0 0)}
+.ptr .paint{clip-path:inset(100% 0 0 0);-webkit-clip-path:inset(100% 0 0 0);opacity:0}
+.ptr .can{position:absolute;left:0;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,170,110,.95),rgba(226,97,26,.55) 45%,rgba(226,97,26,0));opacity:0;will-change:transform,opacity}
+.ptr::before{content:"";position:absolute;left:50%;top:50%;width:110px;height:84px;margin:-42px 0 0 -55px;border-radius:50%;background:radial-gradient(closest-side,rgba(226,97,26,.32),rgba(226,97,26,0));opacity:0;transition:opacity .25s ease}
 .ptr.ready::before,.ptr.spin::before{opacity:1}
-.ptr.ready #ptrLogo{transform:scale(1.06);transition:transform .22s cubic-bezier(.3,1.7,.5,1)}
-.ptr.spin .ring{animation:ptrSpin .85s linear infinite}
-.ptr.spin #ptrLogo{animation:ptrBreath 1.2s ease-in-out infinite}
-.ptr.done .ring{animation-play-state:paused}
-.ptr.done #ptrLogo{animation:none;transform:scale(1.12);transition:transform .2s ease}
-@keyframes ptrSpin{to{transform:rotate(360deg)}}
-@keyframes ptrBreath{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
-@media (prefers-reduced-motion:reduce){.ptr.spin .ring,.ptr.spin #ptrLogo{animation-duration:2.4s}}
+.ptr.ready .pl{transform:scale(1.08);transition:transform .24s cubic-bezier(.3,1.7,.5,1)}
+.ptr.spin .pl{animation:ptrNod .62s cubic-bezier(.2,.7,.3,1) infinite}
+.ptr.spin .paint{animation:ptrPaint 1.24s ease-in-out infinite}
+.ptr.done .pl{animation:none;transform:scale(1.16);transition:transform .22s cubic-bezier(.3,1.6,.5,1)}
+.ptr.done .paint{animation:none;opacity:1;clip-path:inset(0 0 0 0);-webkit-clip-path:inset(0 0 0 0);transition:clip-path .2s ease}
+@keyframes ptrNod{0%{transform:scale(1)}14%{transform:scale(1.07) rotate(-2deg)}100%{transform:scale(1)}}
+@keyframes ptrPaint{0%{opacity:1;clip-path:inset(100% 0 0 0);-webkit-clip-path:inset(100% 0 0 0)}65%{opacity:1;clip-path:inset(0 0 0 0);-webkit-clip-path:inset(0 0 0 0)}82%{opacity:1;clip-path:inset(0 0 0 0);-webkit-clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 0 0 0);-webkit-clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){.ptr.spin .pl{animation:none}.ptr.spin .paint{animation-duration:2.4s}}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -873,7 +875,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </div>
 
 <nav class="tabs" aria-label="Основное меню"><div class="tabs-in" id="tabs"></div></nav>
-<div class="ptr" id="ptr" aria-hidden="true"><svg class="ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="46"/><circle class="arc" id="ptrArc" cx="60" cy="60" r="46" transform="rotate(-90 60 60)"/></svg><img id="ptrLogo" src="logo.png" alt="" decoding="async"></div>
+<div class="ptr" id="ptr" aria-hidden="true"><div class="pl" id="ptrLogo"><img class="ghost" src="logo.png" alt=""><img class="ink" id="ptrInk" src="logo.png" alt=""><img class="paint" src="icons/logo-paint.png" alt="" decoding="async"><i class="can" id="ptrCan"></i></div></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
@@ -2889,26 +2891,28 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
 
   // ===== pull down to refresh =====
-  // Pull: the logo comes down inside a thin ring that fills up; full ring = ready (small pop + vibration).
-  // Release: the ring turns into a spinning arc while the new version loads, the logo «breathes»; then the ring
-  // closes, the logo pops and the app reloads. Only transform/opacity/stroke move — smooth even on weak phones.
+  // Tied to the graffiti logo: pulling sprays it on left→right (spray dot leads, ghost shows the rest); full = ready
+  // (pop + vibration). Release: orange paint fills the letters from the bottom while the logo nods to a beat; when the
+  // new version is in, the logo goes fully orange, pops, and the app reloads. Only transform/opacity/clip-path move.
   (function pullToRefresh(){
-    const ptr = $('#ptr'), arc = $('#ptrArc');
-    const C = 2 * Math.PI * 46;
-    arc.style.strokeDasharray = C.toFixed(1); arc.style.strokeDashoffset = C.toFixed(1);
+    const ptr = $('#ptr'), pl = $('#ptrLogo'), ink = $('#ptrInk'), can = $('#ptrCan');
     let wasReady = false;
-    const LIMIT = 70;
+    const LIMIT = 70, LW = 96;
     let sy = 0, sx = 0, dy = 0, active = false, decided = false, scr = null, busy = false;
     const blocked = () => busy || document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
     const wait = ms => new Promise(r => setTimeout(r, ms));
+    const clip = (el, v) => { el.style.clipPath = v; el.style.webkitClipPath = v; };
 
     function paint(d){
       const k = Math.min(1, d / LIMIT), ready = d >= LIMIT;
       ptr.style.opacity = String(Math.min(1, k * 3));
       ptr.style.transform = 'translate3d(0,' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10).toFixed(1) + 'px,0)';
-      arc.style.transition = 'none'; arc.style.strokeDashoffset = (C * (1 - k)).toFixed(1);
-      if (!ready) $('#ptrLogo').style.transform = 'scale(' + (0.7 + 0.3 * k).toFixed(3) + ')'; else $('#ptrLogo').style.transform = '';
-      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(Math.max(0, 1 - k * 2)); // on the home screen the header logo itself 'lifts off'
+      clip(ink, 'inset(0 ' + ((1 - k) * 100).toFixed(1) + '% 0 0)');
+      // the spray dot rides the edge of the paint with a little up-down wobble, like a hand with a can
+      can.style.opacity = ready ? '0' : String(Math.min(1, k * 4));
+      can.style.transform = 'translate3d(' + (k * LW).toFixed(1) + 'px,' + (Math.sin(k * 14) * 14).toFixed(1) + 'px,0)';
+      pl.style.transform = ready ? '' : 'scale(' + (0.8 + 0.2 * k).toFixed(3) + ')';
+      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(Math.max(0, 1 - k * 4)); // the header logo makes way at once
       ptr.classList.toggle('ready', ready);
       if (ready && !wasReady && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
       wasReady = ready;
@@ -2917,17 +2921,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     function reset(){
       ptr.style.transition = 'transform .22s ease, opacity .2s ease';
       ptr.style.opacity = '0'; ptr.style.transform = 'translate3d(0,-70px,0)'; ptr.classList.remove('ready'); wasReady = false;
-      arc.style.transition = ''; arc.style.strokeDashoffset = C.toFixed(1);
+      can.style.opacity = '0';
       $('#homeLogo').style.transition = 'opacity .2s ease'; $('#homeLogo').style.opacity = '';
       if (scr) { const el = scr; el.style.transition = 'transform .22s ease'; el.style.transform = ''; setTimeout(() => { el.style.transition = ''; }, 240); }
-      setTimeout(() => { ptr.style.transition = ''; $('#ptrLogo').style.transform = ''; }, 240);
+      setTimeout(() => { ptr.style.transition = ''; pl.style.transform = ''; clip(ink, ''); }, 240);
     }
     async function refresh(){
       busy = true;
-      const logo = $('#ptrLogo');
-      logo.style.transform = '';
+      pl.style.transform = ''; can.style.opacity = '0'; clip(ink, 'inset(0 0 0 0)');
       ptr.classList.remove('ready'); ptr.classList.add('spin');
-      arc.style.transition = ''; arc.style.strokeDashoffset = (C * 0.72).toFixed(1); // a short arc that spins
       $('#homeLogo').style.opacity = '0';
       ptr.style.transition = 'transform .25s cubic-bezier(.3,.7,.3,1)'; ptr.style.opacity = '1'; ptr.style.transform = 'translate3d(0,30px,0)';
       if (scr) { scr.style.transition = 'transform .25s ease'; scr.style.transform = 'translate3d(0,40px,0)'; }
@@ -2935,9 +2937,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
       // refresh the cached copies first, so the reload really shows new lessons
       const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'i18n.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
-      await Promise.all([Promise.race([fresh, wait(4000)]), wait(700)]); // at least one calm turn, at most 4 s
-      ptr.classList.add('done'); arc.style.strokeDashoffset = '0'; // the ring closes
-      await wait(260);
+      await Promise.all([Promise.race([fresh, wait(4000)]), wait(820)]); // at least one paint fill, at most 4 s
+      ptr.classList.add('done'); // fully orange + pop
+      await wait(300);
       ptr.style.transition = 'opacity .16s ease'; ptr.style.opacity = '0';
       await wait(140);
       try { sessionStorage.setItem('fedoskin-refreshed', '1'); } catch (_) {}
@@ -2966,8 +2968,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     document.addEventListener('touchcancel', () => { if (!active) return; active = false; reset(); scr = null; });
     function hardReset(){
       busy = false; active = false; wasReady = false;
-      ptr.classList.remove('spin', 'done', 'ready'); ptr.style.cssText = ''; $('#ptrLogo').style.cssText = '';
-      arc.style.transition = 'none'; arc.style.strokeDashoffset = C.toFixed(1);
+      ptr.classList.remove('spin', 'done', 'ready'); ptr.style.cssText = ''; pl.style.cssText = ''; ink.style.cssText = ''; can.style.cssText = '';
       $('#homeLogo').style.cssText = '';
       [$('#homeLogo')].forEach(el => { try { el.getAnimations && el.getAnimations().forEach(x => x.cancel()); } catch (_) {} });
       document.querySelectorAll('.screen').forEach(x => { x.style.transform = ''; x.style.transition = ''; });
