@@ -2728,7 +2728,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     go('svc');
     $('#svc').scrollTop = 0;
   }
-  $('#tgLink').addEventListener('click', () => goal('review_tg', {service: curSvc.id}));
+  $('#tgLink').addEventListener('click', () => { goal('review_tg', {service: curSvc.id}); sendEv('tg', curSvc.id); });
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;
     try { navigator.clipboard.writeText(text).then(() => toast(T('Код скопирован')), () => toast(T('Выдели код и скопируй вручную'))); }
@@ -3229,6 +3229,30 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // whether the app was opened from the home-screen icon. A visit = the app opened after 30+ minutes away, so pull-to-refresh,
   // a language change or a quick switch to Instagram and back don't count twice. The owner's own browser (where the admin
   // is logged in) sets 'fedoskin-noping' and isn't counted.
+  // Where this phone first came from (owner 05.11.2026: «откуда приходят и кто потом пишет»): ?from=ig in the bio link,
+  // else the in-app browser (Instagram / Facebook / TikTok / Telegram), else the referring site, else «direct».
+  // Remembered on the first open (first touch) and sent with every visit and every «Написать в Telegram» tap.
+  const SRC = (function(){
+    const clean = v => (String(v || '').toLowerCase().match(/^[a-z0-9_-]{1,16}$/) || [])[0] || '';
+    let s = ''; try { s = clean(localStorage.getItem('fedoskin-src')); } catch (_) {}
+    if (s) return s;
+    try { s = clean(new URLSearchParams(location.search).get('from')); } catch (_) {}
+    if (!s) { const ua = navigator.userAgent || ''; s = /Instagram/i.test(ua) ? 'ig' : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua) ? 'fb' : /TikTok|musical_ly|Bytedance/i.test(ua) ? 'tt' : /Telegram/i.test(ua) ? 'tg' : ''; }
+    if (!s) { try { const h = document.referrer ? new URL(document.referrer).hostname : '';
+      s = /instagram/.test(h) ? 'ig' : /facebook|fb\.com|fb\.me/.test(h) ? 'fb' : /youtube|youtu\.be/.test(h) ? 'yt' : /t\.me|telegram/.test(h) ? 'tg' : /tiktok/.test(h) ? 'tt' : /vk\.com/.test(h) ? 'vk' : (h && h !== location.hostname) ? 'web' : ''; } catch (_) {} }
+    s = s || 'direct';
+    try { localStorage.setItem('fedoskin-src', s); } catch (_) {}
+    return s;
+  })();
+  // one counted action (e.g. 'tg' = tapped «Написать в Telegram»); same rules as the visit counter
+  function sendEv(e, v){
+    const U = String(CFG.pushUrl || '').replace(/\/+$/, '');
+    if (!U || location.protocol !== 'https:' || !prof.id) return;
+    try { if (localStorage.getItem('fedoskin-noping') === '1') return; } catch (_) {}
+    const body = JSON.stringify({ id: prof.id, e, s: SRC, v: v || '' });
+    try { if (navigator.sendBeacon && navigator.sendBeacon(U + '/ev', new Blob([body], { type: 'text/plain' }))) return; } catch (_) {}
+    fetch(U + '/ev', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
+  }
   (function visitCounter(){
     const URL_ = String(CFG.pushUrl || '').replace(/\/+$/, '');
     if (!URL_ || location.protocol !== 'https:') return;
@@ -3246,7 +3270,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const last = +get(KEY) || 0;
       touch();
       if (Date.now() - last < GAP || !prof.id) return;
-      const body = JSON.stringify({ id: prof.id, p: plat, a: isStandalone() ? 1 : 0 });
+      const body = JSON.stringify({ id: prof.id, p: plat, a: isStandalone() ? 1 : 0, s: SRC });
       try { if (navigator.sendBeacon && navigator.sendBeacon(URL_ + '/hit', new Blob([body], { type: 'text/plain' }))) return; } catch (_) {}
       fetch(URL_ + '/hit', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
     }

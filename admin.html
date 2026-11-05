@@ -137,6 +137,14 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .err{color:var(--bad);font-size:14px;margin-top:10px;line-height:1.4}
 .spin{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
+.srct{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.srct th{text-align:right;font-size:11px;font-weight:700;color:var(--muted);padding:4px 6px;white-space:nowrap}
+.srct th:first-child,.srct td:first-child{text-align:left;padding-left:0}
+.srct td{text-align:right;padding:7px 6px;border-top:1px solid var(--line, rgba(255,255,255,.08));white-space:nowrap}
+.srct td b{font-size:15px}
+.srct td:first-child b{font-size:14px}
+.srct .sub{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.srct tr.tot td{font-weight:700}
 </style>
 </head>
 <body>
@@ -296,6 +304,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <div class="vgrid" style="margin-top:12px">
           <div class="card"><h3 style="margin-top:0">Сегодня <span id="visDay" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visToday"></div></div>
           <div class="card"><h3 style="margin-top:0">За всё время <span id="visSince" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visAll"></div></div>
+        </div>
+        <h3>Откуда приходят люди</h3>
+        <div class="card" style="padding:12px 14px">
+          <div id="srcOld" class="hint" hidden>Чтобы видеть источники, обновите код сервера: <button class="btn btn-sm" id="srcCopy" style="margin:6px 0">Скопировать код сервера</button><br>Затем <b>Workers &amp; Pages → fedoskin-push → Edit code</b>: удалите всё, вставьте → <b>Deploy</b>. База и настройки остаются как есть.</div>
+          <div id="srcOn" hidden>
+            <div style="overflow-x:auto"><table class="srct" id="srcTable"></table></div>
+            <p class="hint" style="margin-top:8px">Новые — люди, впервые открывшие приложение. Написали — сколько разных людей нажали «Написать в Telegram» (в любой услуге); % — какая доля новых написала. Счёт идёт с 05.11.2026, кто пришёл раньше — в строке «До подсчёта».</p>
+          </div>
+          <details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:700">Ссылки с меткой для шапки профиля</summary>
+            <p class="hint" style="margin:6px 0">Поставьте в Instagram и Facebook свою ссылку — так приложение точно поймёт, откуда пришёл человек, даже если он потом откроет его в Safari или Chrome.</p>
+            <div id="srcLinks" class="stack" style="gap:6px"></div>
+          </details>
         </div>
         <h3>Последние 30 дней</h3>
         <div class="vchart" id="visChart"></div>
@@ -1257,7 +1277,42 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoToday').innerHTML = barsHtml(j.countriesToday, cc => flag(cc) + ccName(cc));
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
+    renderSources(j);
   }
+  // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
+  const SRC_NAME = { ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
+  function renderSources(j){
+    const sx = j.sources;
+    $('#srcOld').hidden = !!sx; $('#srcOn').hidden = !sx;
+    const appUrl = (remote.cfg.appUrl || (location.origin + location.pathname.replace(/[^/]*$/, ''))).replace(/\/?$/, '/');
+    $('#srcLinks').innerHTML = '';
+    [['ig', 'Instagram'], ['fb', 'Facebook'], ['yt', 'YouTube'], ['tg', 'Telegram'], ['tt', 'TikTok']].forEach(([k, n]) => {
+      const u = appUrl + '?from=' + k, row = document.createElement('div'); row.className = 'row'; row.style.gap = '8px';
+      row.innerHTML = '<span class="small" style="width:78px;flex:0 0 auto;font-weight:700"></span><code style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"></code><button class="btn btn-sm">Копировать</button>';
+      row.children[0].textContent = n; row.children[1].textContent = u;
+      row.children[2].addEventListener('click', () => { const ok = () => toast('Ссылка для ' + n + ' скопирована'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, () => fallbackCopy(u) ? ok() : toast('Не удалось скопировать', true)); else if (fallbackCopy(u)) ok(); });
+      $('#srcLinks').appendChild(row);
+    });
+    if (!sx) return;
+    const pick = (rows) => { const m = {}; rows.forEach(([src, kind, n]) => { (m[src] = m[src] || {})[kind] = (m[src][kind] || 0) + n; }); return m; };
+    const all = pick(sx.all), today = pick(sx.today);
+    const keys = Object.keys(all).sort((a, b) => ((all[b].new || 0) - (all[a].new || 0)) || ((all[b].visit || 0) - (all[a].visit || 0)));
+    // people who came before the counting started: everyone in the devices table minus the ones with a source
+    const counted = keys.reduce((t, k) => t + (all[k].new || 0), 0), before = Math.max(0, (j.all.uniq || 0) - counted);
+    const pct = (a, b) => b ? (Math.round(a / b * 1000) / 10).toString().replace('.', ',') + ' %' : '—';
+    const cell = (a, t) => '<b>' + nf(a || 0) + '</b>' + (t ? '<span class="sub">+' + nf(t) + ' сегодня</span>' : '');
+    const nameCell = (nm, a, cls) => '<td' + (cls ? ' class="' + cls + '"' : '') + '><b>' + nm + '</b><span class="sub">посещений ' + nf(a || 0) + '</span></td>';
+    let html = '<tr><th>Откуда</th><th>Новые</th><th>Написали</th><th>%</th></tr>';
+    keys.filter(k => k !== 'none').forEach(k => {
+      const a = all[k], t = today[k] || {};
+      html += '<tr>' + nameCell(SRC_NAME[k] || k, a.visit) + '<td>' + cell(a.new, t.new) + '</td><td>' + cell(a.tgu, t.tgu) + '</td><td>' + pct(a.tgu || 0, a.new || 0) + '</td></tr>';
+    });
+    const nn = all.none || {};
+    if (before || nn.visit) html += '<tr>' + nameCell(SRC_NAME.none, nn.visit, 'muted') + '<td>' + cell(before + (nn.new || 0)) + '</td><td>' + cell(nn.tgu) + '</td><td>—</td></tr>';
+    if (!keys.length && !before) html += '<tr><td colspan="4" class="muted">Пока пусто — цифры появятся с первых заходов.</td></tr>';
+    $('#srcTable').innerHTML = html;
+  }
+  $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#visRefresh').addEventListener('click', () => renderVisits());
   $('#visCheck').addEventListener('click', () => { $('#visErr').textContent = 'Проверяю…'; renderVisits().then(() => { if (!$('#visOff').hidden && $('#visErr').textContent === 'Проверяю…') $('#visErr').textContent = 'Пока не видно — проверьте шаги выше.'; }); });
   $('#visCopy').addEventListener('click', () => {

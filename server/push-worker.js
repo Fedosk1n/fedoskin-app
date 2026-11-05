@@ -12,6 +12,7 @@
 //   POST /lb           — {id, secret, nick, city, country, av, m, v, s} обновить свои минуты; {id, secret, hide:true} — убрать себя
 //   POST /hit          — {id, p, a} приложение открыли (счётчик посещений; нужна база D1 с именем DB)
 //   GET  /visits       — посещаемость: сегодня, за всё время, 30 дней, страны, устройства (только для админа)
+//   POST /ev           — {id, e, s, v} действие в приложении (e='tg' — нажали «Написать в Telegram»), s — откуда пришёл человек
 // Админ = тот, чей ключ GitHub может записывать в репозиторий приложения. Своих паролей у сервера нет.
 
 const REPO = 'Fedosk1n/fedoskin-app';
@@ -49,6 +50,7 @@ export default {
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
       if (path === '/lb') return await leaderboard(req, env, json);
       if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
+      if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
       if (req.method !== 'POST' && path !== '/stats' && path !== '/visits') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
@@ -255,6 +257,9 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS seen (day TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY (day, id)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, first TEXT, country TEXT, plat TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS geo (day TEXT NOT NULL, country TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, country)) WITHOUT ROWID'),
+    // sources (05.11.2026): per day × where people came from × what: visit / uniq / new / tg (taps) / tgu (people who tapped) / svc:<id>
+    db.prepare('CREATE TABLE IF NOT EXISTS src (day TEXT NOT NULL, src TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, src, kind)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS contacted (id TEXT PRIMARY KEY, first TEXT, src TEXT) WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
   return schemaReady;
 }
@@ -274,7 +279,11 @@ async function hit(req, env, json) {
     db.prepare('INSERT OR IGNORE INTO devices (id, first, country, plat) VALUES (?, ?, ?, ?)').bind(id, day, country, plat),
   ]);
   const newToday = s.meta.changes > 0 ? 1 : 0, newDevice = d.meta.changes > 0 ? 1 : 0;
+  const src = cleanSrc(b.s);
   const more = [db.prepare('INSERT INTO hits (day, visits, uniq, fresh, app) VALUES (?, 1, ?, ?, ?) ON CONFLICT(day) DO UPDATE SET visits = visits + 1, uniq = uniq + excluded.uniq, fresh = fresh + excluded.fresh, app = app + excluded.app').bind(day, newToday, newDevice, app)];
+  more.push(srcAdd(db, day, src, 'visit'));
+  if (newToday) more.push(srcAdd(db, day, src, 'uniq'));
+  if (newDevice) more.push(srcAdd(db, day, src, 'new'));
   if (newToday) {
     more.push(db.prepare('INSERT INTO geo (day, country, n) VALUES (?, ?, 1) ON CONFLICT(day, country) DO UPDATE SET n = n + 1').bind(day, country));
     // the list of who was here only matters for today: drop older days now and then
@@ -283,12 +292,30 @@ async function hit(req, env, json) {
   await db.batch(more);
   return json({ ok: true });
 }
+const cleanSrc = v => (String(v || '').toLowerCase().match(/^[a-z0-9_-]{1,16}$/) || [])[0] || 'none';
+const srcAdd = (db, day, src, kind) => db.prepare('INSERT INTO src (day, src, kind, n) VALUES (?, ?, ?, 1) ON CONFLICT(day, src, kind) DO UPDATE SET n = n + 1').bind(day, src, kind);
+async function ev(req, env, json) {
+  if (!env.DB) return json({ ok: false, nodb: true });
+  const b = JSON.parse((await req.text()) || '{}');
+  const raw = String(b.id || '').slice(0, 40);
+  if (!/^[\w-]{4,40}$/.test(raw) || b.e !== 'tg') return json({ error: 'bad event' }, 400);
+  const db = env.DB;
+  await schema(db);
+  const id = await hash('v1:' + raw), day = mskDay(), src = cleanSrc(b.s);
+  const [c] = await db.batch([db.prepare('INSERT OR IGNORE INTO contacted (id, first, src) VALUES (?, ?, ?)').bind(id, day, src)]);
+  const more = [srcAdd(db, day, src, 'tg')];
+  if (c.meta.changes > 0) more.push(srcAdd(db, day, src, 'tgu'));
+  const svc = /^[a-z]{1,12}$/.test(b.v || '') ? b.v : '';
+  if (svc) more.push(srcAdd(db, day, src, 'svc:' + svc));
+  await db.batch(more);
+  return json({ ok: true });
+}
 async function visits(env, json) {
   if (!env.DB) return json({ nodb: true });
   const db = env.DB;
   await schema(db);
   const day = mskDay();
-  const [today, all, devs, days, geoToday, geoAll, plat] = await db.batch([
+  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted] = await db.batch([
     db.prepare('SELECT visits, uniq, fresh, app FROM hits WHERE day = ?').bind(day),
     db.prepare('SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(app), 0) AS app, MIN(day) AS since FROM hits'),
     db.prepare('SELECT COUNT(*) AS n FROM devices'),
@@ -296,6 +323,9 @@ async function visits(env, json) {
     db.prepare('SELECT country, n FROM geo WHERE day = ? ORDER BY n DESC LIMIT 12').bind(day),
     db.prepare('SELECT country, COUNT(*) AS n FROM devices GROUP BY country ORDER BY n DESC LIMIT 12'),
     db.prepare('SELECT plat, COUNT(*) AS n FROM devices GROUP BY plat ORDER BY n DESC'),
+    db.prepare('SELECT src, kind, SUM(n) AS n FROM src GROUP BY src, kind'),
+    db.prepare('SELECT src, kind, n FROM src WHERE day = ?').bind(day),
+    db.prepare('SELECT COUNT(*) AS n FROM contacted'),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
   return json({
@@ -306,5 +336,6 @@ async function visits(env, json) {
     countriesToday: geoToday.results.map(r => [r.country, r.n]),
     countriesAll: geoAll.results.map(r => [r.country, r.n]),
     platforms: plat.results.map(r => [r.plat, r.n]),
+    sources: { all: srcAll.results.map(r => [r.src, r.kind, r.n]), today: srcToday.results.map(r => [r.src, r.kind, r.n]), contacted: (contacted.results[0] || {}).n || 0 },
   });
 }
