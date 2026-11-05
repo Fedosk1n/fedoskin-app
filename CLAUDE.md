@@ -233,10 +233,11 @@
   (owner 04.11: subtitles follow the app language; a choice made in another language is ignored); default = app language, off for ru. Glossary: гелик=windmill,
   флай=flare, твист=airflare, бочка/мачмил=munchmill, 99/наинтинайн=1990, спичак=handstand press (owner to confirm),
   промокашка=low windmill (to confirm). All 12 long Kinescope lessons done 03.11.
-- Pull to refresh (owner 05.11.2026 «тормозит, не лаконично»): the old canvas particle vortex is gone. `#ptr` = logo img
-  in a thin SVG ring on a solid dark disc; pull fills the ring (stroke-dashoffset), full = ready (pop + vibrate); release ⇒
-  `.spin` (CSS-rotated short arc + logo «breath»), ≥ 0.7 s and ≤ 4 s while caches refresh, then `.done` (ring closes,
-  logo pops, fade) ⇒ `reloadClean()`. Only transform/opacity/stroke animate. Header logo enters after reload (420 ms).
+- Pull to refresh (owner 05.11.2026: canvas particle vortex «тормозит», then a plain ring «хочу анимацию на лого»): `#ptr`
+  = logo layers: ghost (16 %), `#ptrInk` white logo revealed left→right by clip-path as you pull with a spray dot `#ptrCan`
+  riding the edge; full = ready (pop + vibrate). Release ⇒ `.spin`: `icons/logo-paint.png` (orange-filled logo, made with
+  PIL) rises through the letters from the bottom (clip-path loop 1.24 s) while the logo nods on a beat (0.62 s); ≥ 0.82 s,
+  ≤ 4 s; `.done` = fully orange + pop ⇒ `reloadClean()`. Only transform/opacity/clip-path animate (60 fps in tests).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
