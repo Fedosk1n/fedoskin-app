@@ -3305,9 +3305,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (get('fedoskin-noping') === '1') return;
     const GAP = 30 * 60e3;
     const plat = isIOS ? 'ios' : isAndroid ? 'android' : (navigator.maxTouchPoints > 0 && /Mobile|Tablet/i.test(UA)) ? 'other' : 'desktop';
-    const touch = () => set('fedoskin-seen', String(Date.now()));
+    // Own key. Until 05.11 this used 'fedoskin-seen' — the same key as the list of opened lessons, so every minute the
+    // timestamp overwrote that list and NEW badges came back the next day. Old timestamp there ⇒ move it here and free the key.
+    const KEY = 'fedoskin-active';
+    { const old = get('fedoskin-seen'); if (old && /^\d+$/.test(old)) { if (!get(KEY)) set(KEY, old); try { localStorage.removeItem('fedoskin-seen'); } catch (_) {} } }
+    const touch = () => set(KEY, String(Date.now()));
     function ping(){
-      const last = +get('fedoskin-seen') || 0;
+      const last = +get(KEY) || 0;
       touch();
       if (Date.now() - last < GAP || !prof.id) return;
       const body = JSON.stringify({ id: prof.id, p: plat, a: isStandalone() ? 1 : 0 });
