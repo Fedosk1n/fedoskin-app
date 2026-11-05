@@ -213,6 +213,14 @@
   country,plat), geo(day,country). Moscow days. GET `/visits` (admin) → today/all/30 days/countries/platforms. Admin
   «Статистика» → «Посещаемость»; old worker (404) or no DB ⇒ setup steps + «Скопировать код сервера» (fetches
   server/push-worker.js from Pages). Tested with node:sqlite as a D1 stand-in (sandbox can't install wrangler).
+- Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
+  `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
+  TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в
+  Telegram» → POST `/ev` (same gates as the counter). Worker: tables `src(day, src, kind, n)` — kinds visit/uniq/new/tg/tgu/
+  svc:<id> — and `contacted(id)` (first tap per device ⇒ tgu); `/visits` returns `sources {all, today, contacted}`. Admin
+  «Посещаемость» → «Откуда приходят люди»: per source new people (+today), people who wrote, % of new; «До подсчёта» =
+  devices from before 05.11; old worker ⇒ «обновите код сервера» + copy button; tagged bio links with copy buttons.
+  Tested: worker with node:sqlite on an old-schema DB, app UA/param detection, admin table on a phone.
 - Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
   orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
   translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the
