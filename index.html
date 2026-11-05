@@ -301,11 +301,24 @@ body.fsmode .bigplay{z-index:3}
 .nickbtn .d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nickbtn .ico{color:var(--muted);flex:0 0 auto}
 .screen{overscroll-behavior-y:contain}
-.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) - 73px);z-index:15;width:220px;height:220px;margin-left:-110px;opacity:0;transform:translateY(-70px);pointer-events:none}
-.ptr canvas{position:relative;width:220px;height:220px;display:block;will-change:transform}
-/* glow is a fixed picture behind the canvas (a CSS filter on a canvas that changes every frame is slow on phones) */
-.ptr::before{content:"";position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;background:radial-gradient(closest-side,rgba(226,97,26,.55),rgba(226,97,26,.18) 60%,rgba(226,97,26,0));opacity:0;transition:opacity .25s ease}
+/* pull to refresh: logo inside a thin orange ring. Only transform/opacity are animated (the phone's GPU does it,
+   nothing is redrawn per frame) — the old particle vortex redrew ~300 pieces on a canvas every frame and stuttered. */
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) - 23px);z-index:15;width:120px;height:120px;margin-left:-60px;opacity:0;transform:translate3d(0,-70px,0);pointer-events:none;will-change:transform,opacity}
+.ptr .ring{position:absolute;inset:0;width:120px;height:120px;overflow:visible}
+.ptr .ring circle{fill:none;stroke-width:3;stroke-linecap:round}
+.ptr .ring .bg{stroke:rgba(255,255,255,.10);fill:#0E0E10} /* solid disc: the header logo fading behind never shows through */
+.ptr .ring .arc{stroke:var(--accent);transition:stroke-dashoffset .3s cubic-bezier(.3,.7,.3,1)}
+.ptr #ptrLogo{position:absolute;left:50%;top:50%;width:70px;height:auto;margin:-26px 0 0 -35px;transform:scale(.7);transition:transform .16s ease;will-change:transform}
+.ptr::before{content:"";position:absolute;inset:14px;border-radius:50%;box-shadow:0 0 28px 6px rgba(226,97,26,.35);opacity:0;transition:opacity .25s ease}
 .ptr.ready::before,.ptr.spin::before{opacity:1}
+.ptr.ready #ptrLogo{transform:scale(1.06);transition:transform .22s cubic-bezier(.3,1.7,.5,1)}
+.ptr.spin .ring{animation:ptrSpin .85s linear infinite}
+.ptr.spin #ptrLogo{animation:ptrBreath 1.2s ease-in-out infinite}
+.ptr.done .ring{animation-play-state:paused}
+.ptr.done #ptrLogo{animation:none;transform:scale(1.12);transition:transform .2s ease}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+@keyframes ptrBreath{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
+@media (prefers-reduced-motion:reduce){.ptr.spin .ring,.ptr.spin #ptrLogo{animation-duration:2.4s}}
 .newpill{display:inline-flex;align-items:center;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:800;letter-spacing:1px;line-height:1;padding:4px 6px;border-radius:5px;background:var(--new);color:#0B0B0C}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
@@ -860,7 +873,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </div>
 
 <nav class="tabs" aria-label="Основное меню"><div class="tabs-in" id="tabs"></div></nav>
-<div class="ptr" id="ptr" aria-hidden="true"><canvas id="ptrCv" width="220" height="220"></canvas></div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg class="ring" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="46"/><circle class="arc" id="ptrArc" cx="60" cy="60" r="46" transform="rotate(-90 60 60)"/></svg><img id="ptrLogo" src="logo.png" alt="" decoding="async"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
@@ -2876,138 +2889,57 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
 
   // ===== pull down to refresh =====
-  // The logo breaks into pieces, the pieces swirl into a round vortex, then fly back and rebuild the logo.
+  // Pull: the logo comes down inside a thin ring that fills up; full ring = ready (small pop + vibration).
+  // Release: the ring turns into a spinning arc while the new version loads, the logo «breathes»; then the ring
+  // closes, the logo pops and the app reloads. Only transform/opacity/stroke move — smooth even on weak phones.
   (function pullToRefresh(){
-    const ptr = $('#ptr'), cv = $('#ptrCv'), ctx = cv.getContext('2d');
+    const ptr = $('#ptr'), arc = $('#ptrArc');
+    const C = 2 * Math.PI * 46;
+    arc.style.strokeDasharray = C.toFixed(1); arc.style.strokeDashoffset = C.toFixed(1);
     let wasReady = false;
     const LIMIT = 70;
     let sy = 0, sx = 0, dy = 0, active = false, decided = false, scr = null, busy = false;
     const blocked = () => busy || document.body.classList.contains('fsmode') || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden) || !$('#story').hidden;
-
-    // ---- particles ----
-    const SIZE = 220, CX = 110, CY = 110, LW = 84, TILE = 4;
-    // the header logo is already loaded and shown, so use that very picture (no waiting for a second copy)
-    const img = $('#homeLogo') || new Image(); if (!img.src) img.src = 'logo.png';
-    let LH = 62, tiles = null, raf = 0, dpr = 1, spr = null;
-    const ease = t => 1 - Math.pow(1 - t, 3), easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    const rnd = (a, b) => a + Math.random() * (b - a);
-    function setup(){
-      dpr = Math.min(3, window.devicePixelRatio || 1);
-      cv.width = cv.height = Math.round(SIZE * dpr);
-      if (tiles || !img.naturalWidth) return;
-      LH = LW * img.naturalHeight / img.naturalWidth;
-      // draw the big png once at screen size; every frame then copies small pieces 1:1 (cheap)
-      // padded to whole tiles: Safari skips pieces whose source rectangle sticks out of the picture
-      spr = document.createElement('canvas'); spr.width = Math.ceil(LW / TILE) * TILE * dpr; spr.height = Math.ceil(LH / TILE) * TILE * dpr;
-      spr.getContext('2d').drawImage(img, 0, 0, LW * dpr, LH * dpr);
-      const kx = dpr, cols = Math.ceil(LW / TILE), rows = Math.ceil(LH / TILE);
-      let alpha = null;
-      try { // skip empty corners of the png (works only when served over http)
-        const c = document.createElement('canvas'); c.width = cols; c.height = rows;
-        const g = c.getContext('2d'); g.drawImage(img, 0, 0, cols, rows); alpha = g.getImageData(0, 0, cols, rows).data;
-      } catch (_) { alpha = null; }
-      tiles = [];
-      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-        if (alpha && alpha[(y * cols + x) * 4 + 3] < 8) continue;
-        const hx = CX - LW / 2 + x * TILE + TILE / 2, hy = CY - LH / 2 + y * TILE + TILE / 2;
-        const ang = Math.atan2(hy - CY, hx - CX), rad = Math.hypot(hx - CX, hy - CY);
-        tiles.push({ x, y, hx, hy, ang, rad, sx: x * TILE * kx, sy: y * TILE * kx, sw: TILE * kx,
-          sA: ang + rnd(-.7, .7), sR: rad * 1.5 + rnd(18, 42), ringR: rnd(36, 52), spin: rnd(-9, 9), lag: rnd(0, .25) });
-      }
-    }
-    const onImg = () => { setup(); if (!busy) drawWhole(); };
-    img.decode ? img.decode().then(onImg, () => {}) : (img.onload = onImg);
-    function clear(){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); }
-    function drawWhole(jitter){
-      clear(); if (!img.naturalWidth) return;
-      if (!jitter || !tiles) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); if (spr) ctx.drawImage(spr, 0, 0, LW * dpr, LH * dpr, CX - LW / 2, CY - LH / 2, LW, LH); else ctx.drawImage(img, CX - LW / 2, CY - LH / 2, LW, LH); return; }
-      for (const t of tiles) {
-        ctx.setTransform(dpr, 0, 0, dpr, (t.hx + rnd(-jitter, jitter)) * dpr, (t.hy + rnd(-jitter, jitter)) * dpr);
-        ctx.drawImage(spr, t.sx, t.sy, t.sw, t.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
-      }
-    }
-    // timeline (ms): burst -> into the ring -> swirl (until the new version is loaded) -> rebuild
-    const T_BURST = 300, T_RING = 420, T_SWIRL = 380, T_BACK = 620, OMEGA = Math.PI * 2 / 650;
-    function frame(t, t0, backAt){
-      clear();
-      const e = t - t0;
-      for (const k of tiles) {
-        let A, R, amp;
-        const ringA = k.ang + OMEGA * Math.max(0, e - T_BURST);
-        if (e < T_BURST) { const u = ease(e / T_BURST); A = k.ang + (k.sA - k.ang) * u; R = k.rad + (k.sR - k.rad) * u; amp = u; }
-        else if (backAt == null || e < backAt) { const u = easeIO(Math.min(1, (e - T_BURST) / T_RING)); A = k.sA + (ringA - k.sA) * u; R = k.sR + (k.ringR + Math.sin(e / 90 + k.ang * 3) * 3 - k.sR) * u; amp = 1; }
-        else {
-          const raw = Math.min(1, Math.max(0, (e - backAt) / T_BACK - k.lag * (1 - (e - backAt) / T_BACK)));
-          const u = ease(raw);
-          const ra = k.ang + OMEGA * (backAt - T_BURST);
-          // land on the home angle after one more turn, so it keeps swirling while it rebuilds
-          let target = k.ang + Math.ceil((ra - k.ang) / (Math.PI * 2)) * Math.PI * 2 + Math.PI * 2;
-          A = ra + (target - ra) * u; R = k.ringR + (k.rad - k.ringR) * u; amp = 1 - u;
-        }
-        const px = CX + Math.cos(A) * R, py = CY + Math.sin(A) * R, rot = amp * k.spin * e / 1000;
-        const c = Math.cos(rot) * dpr, s = Math.sin(rot) * dpr;
-        ctx.setTransform(c, s, -s, c, px * dpr, py * dpr);
-        ctx.drawImage(spr, k.sx, k.sy, k.sw, k.sw, -TILE / 2, -TILE / 2, TILE + .4, TILE + .4);
-      }
-    }
-    async function vortex(loaded){
-      // right after a reload the logo picture may still be loading: wait for it instead of skipping the animation
-      if (!tiles) { try { await Promise.race([img.decode ? img.decode() : Promise.resolve(), new Promise(r => setTimeout(r, 1500))]); } catch (_) {} setup(); }
-      return new Promise(done => {
-        if (!tiles) { loaded.then(done); return; }
-        // own clock: if the phone hiccups, the animation waits a frame instead of jumping ahead
-        let clock = 0, last = 0, backAt = null, ok = false;
-        loaded.then(() => { ok = true; });
-        const step = t => {
-          if (last) clock += Math.min(Math.max(0, t - last), 34);
-          last = t;
-          const e = clock;
-          if (backAt == null && ok && e >= T_BURST + T_RING + T_SWIRL) backAt = e;
-          if (backAt != null && e >= backAt + T_BACK * 1.25) { drawWhole(); done(); return; }
-          frame(e, 0, backAt); raf = requestAnimationFrame(step);
-        };
-        raf = requestAnimationFrame(step);
-      });
-    }
-    let jitterRaf = 0;
-    function jitterLoop(){ drawWhole(.7); jitterRaf = requestAnimationFrame(jitterLoop); }
+    const wait = ms => new Promise(r => setTimeout(r, ms));
 
     function paint(d){
-      const k = Math.min(1, d / LIMIT);
-      if (!tiles) setup();
-      ptr.style.opacity = String(k);
-      ptr.style.transform = 'translateY(' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10) + 'px)';
-      const ready = d >= LIMIT;
-      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(1 - k); // on the home screen the header logo itself 'lifts off'
+      const k = Math.min(1, d / LIMIT), ready = d >= LIMIT;
+      ptr.style.opacity = String(Math.min(1, k * 3));
+      ptr.style.transform = 'translate3d(0,' + (Math.min(d, LIMIT * 1.4) * 0.6 - 10).toFixed(1) + 'px,0)';
+      arc.style.transition = 'none'; arc.style.strokeDashoffset = (C * (1 - k)).toFixed(1);
+      if (!ready) $('#ptrLogo').style.transform = 'scale(' + (0.7 + 0.3 * k).toFixed(3) + ')'; else $('#ptrLogo').style.transform = '';
+      if (!$('#home').hidden) $('#homeLogo').style.opacity = String(Math.max(0, 1 - k * 2)); // on the home screen the header logo itself 'lifts off'
       ptr.classList.toggle('ready', ready);
-      cv.style.transform = ready ? 'scale(1.08)' : 'rotate(' + ((k - 1) * 25).toFixed(1) + 'deg) scale(' + (0.55 + 0.45 * k).toFixed(3) + ')';
-      if (ready && !wasReady) { if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} } cancelAnimationFrame(jitterRaf); jitterLoop(); }
-      if (!ready && (wasReady || !jitterRaf)) { cancelAnimationFrame(jitterRaf); jitterRaf = 0; drawWhole(); jitterRaf = -1; }
+      if (ready && !wasReady && navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
       wasReady = ready;
-      if (scr) scr.style.transform = 'translateY(' + Math.min(d, LIMIT * 1.4) * 0.4 + 'px)';
+      if (scr) scr.style.transform = 'translate3d(0,' + (Math.min(d, LIMIT * 1.4) * 0.4).toFixed(1) + 'px,0)';
     }
     function reset(){
-      cancelAnimationFrame(jitterRaf); jitterRaf = 0;
-      ptr.style.transition = 'transform .2s ease, opacity .2s ease';
-      ptr.style.opacity = '0'; ptr.style.transform = 'translateY(-70px)'; ptr.classList.remove('ready'); wasReady = false;
+      ptr.style.transition = 'transform .22s ease, opacity .2s ease';
+      ptr.style.opacity = '0'; ptr.style.transform = 'translate3d(0,-70px,0)'; ptr.classList.remove('ready'); wasReady = false;
+      arc.style.transition = ''; arc.style.strokeDashoffset = C.toFixed(1);
       $('#homeLogo').style.transition = 'opacity .2s ease'; $('#homeLogo').style.opacity = '';
-      if (scr) { const el = scr; el.style.transition = 'transform .2s ease'; el.style.transform = ''; setTimeout(() => { el.style.transition = ''; }, 220); }
-      setTimeout(() => { ptr.style.transition = ''; }, 220);
+      if (scr) { const el = scr; el.style.transition = 'transform .22s ease'; el.style.transform = ''; setTimeout(() => { el.style.transition = ''; }, 240); }
+      setTimeout(() => { ptr.style.transition = ''; $('#ptrLogo').style.transform = ''; }, 240);
     }
     async function refresh(){
       busy = true;
-      cancelAnimationFrame(jitterRaf); jitterRaf = 0;
+      const logo = $('#ptrLogo');
+      logo.style.transform = '';
       ptr.classList.remove('ready'); ptr.classList.add('spin');
-      cv.style.transition = 'transform .25s ease'; cv.style.transform = 'scale(1)';
+      arc.style.transition = ''; arc.style.strokeDashoffset = (C * 0.72).toFixed(1); // a short arc that spins
       $('#homeLogo').style.opacity = '0';
-      ptr.style.transition = 'transform .25s ease'; ptr.style.opacity = '1'; ptr.style.transform = 'translateY(30px)';
-      if (scr) { scr.style.transition = 'transform .2s ease'; scr.style.transform = 'translateY(40px)'; }
+      ptr.style.transition = 'transform .25s cubic-bezier(.3,.7,.3,1)'; ptr.style.opacity = '1'; ptr.style.transform = 'translate3d(0,30px,0)';
+      if (scr) { scr.style.transition = 'transform .25s ease'; scr.style.transform = 'translate3d(0,40px,0)'; }
       saveStats && saveStats();
-      document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} }); // free the phone for the animation
+      document.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
       // refresh the cached copies first, so the reload really shows new lessons
       const fresh = Promise.all(['./', 'index.html', 'lessons.js', 'config.js', 'i18n.js', 'logo.png'].map(u => fetch(u, { cache: 'reload' }).catch(() => {}))).catch(() => {});
-      await vortex(Promise.race([fresh, new Promise(r => setTimeout(r, 4000))]));
-      await new Promise(r => setTimeout(r, 120));
+      await Promise.all([Promise.race([fresh, wait(4000)]), wait(700)]); // at least one calm turn, at most 4 s
+      ptr.classList.add('done'); arc.style.strokeDashoffset = '0'; // the ring closes
+      await wait(260);
+      ptr.style.transition = 'opacity .16s ease'; ptr.style.opacity = '0';
+      await wait(140);
       try { sessionStorage.setItem('fedoskin-refreshed', '1'); } catch (_) {}
       reloadClean();
     }
@@ -3034,9 +2966,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     document.addEventListener('touchcancel', () => { if (!active) return; active = false; reset(); scr = null; });
     function hardReset(){
       busy = false; active = false; wasReady = false;
-      cancelAnimationFrame(raf); cancelAnimationFrame(jitterRaf); jitterRaf = 0;
-      ptr.classList.remove('spin', 'more', 'ready'); ptr.style.cssText = ''; cv.style.cssText = '';
-      try { setup(); drawWhole(); } catch (_) {}
+      ptr.classList.remove('spin', 'done', 'ready'); ptr.style.cssText = ''; $('#ptrLogo').style.cssText = '';
+      arc.style.transition = 'none'; arc.style.strokeDashoffset = C.toFixed(1);
       $('#homeLogo').style.cssText = '';
       [$('#homeLogo')].forEach(el => { try { el.getAnimations && el.getAnimations().forEach(x => x.cancel()); } catch (_) {} });
       document.querySelectorAll('.screen').forEach(x => { x.style.transform = ''; x.style.transition = ''; });
@@ -3048,7 +2979,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try {
       if (sessionStorage.getItem('fedoskin-refreshed')) {
         sessionStorage.removeItem('fedoskin-refreshed');
-        const hl = $('#homeLogo'); hl.animate && hl.animate([{ opacity: 0, transform: 'rotate(-20deg) scale(.8)' }, { opacity: 1, transform: 'none' }], { duration: 350, easing: 'ease-out' });
+        const hl = $('#homeLogo'); hl.animate && hl.animate([{ opacity: 0, transform: 'translateY(-8px) scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
       }
     } catch (_) {}
   })();
