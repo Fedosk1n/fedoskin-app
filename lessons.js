@@ -4,6 +4,16 @@
 // added — дата добавления ГГГГ-ММ-ДД (значок NEW); hidden — скрыт из приложения; chapters — главы [{t: сек, title}]
 window.LESSONS_DATA = [
  {
+  "id": "tr-indian-step",
+  "sec": "Toprock",
+  "name": "Indian step",
+  "dur": 40,
+  "ru": "Indian step Индиан степ",
+  "added": "2026-11-04",
+  "pv": true,
+  "vertical": true
+ },
+ {
   "id": "tr-cross",
   "sec": "Toprock",
   "name": "Cross step",
@@ -19,16 +29,6 @@ window.LESSONS_DATA = [
   "dur": 70,
   "ru": "кикстеп kick step",
   "added": "2026-11-02",
-  "pv": true,
-  "vertical": true
- },
- {
-  "id": "tr-indian-step",
-  "sec": "Toprock",
-  "name": "Indian step",
-  "dur": 40,
-  "ru": "Indian step Индиан степ",
-  "added": "2026-11-04",
   "pv": true,
   "vertical": true
  },
