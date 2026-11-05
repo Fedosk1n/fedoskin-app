@@ -315,6 +315,14 @@ t('Уведомления выключены', 'Notifications turned off', 'Avis
 t('Этот браузер не умеет показывать уведомления', 'This browser can’t show notifications', 'Este navegador no puede mostrar notificaciones', 'Este navegador não mostra notificações', 'Ce navigateur ne peut pas afficher de notifications', 'Dieser Browser kann keine Benachrichtigungen anzeigen', 'このブラウザは通知に対応していません', '이 브라우저는 알림을 지원하지 않아요', '此浏览器无法显示通知')
 t('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить', 'The new lesson will appear in a couple of minutes — pull down to refresh', 'La lección nueva aparecerá en un par de minutos — desliza hacia abajo para actualizar', 'A aula nova aparece em alguns minutos — puxe a tela para baixo para atualizar', 'La nouvelle leçon arrive dans quelques minutes — tire l’écran vers le bas pour actualiser', 'Die neue Lektion erscheint in ein paar Minuten — zum Aktualisieren nach unten ziehen', '新しいレッスンは数分で表示されます。下に引っぱって更新してください', '새 레슨은 몇 분 뒤에 나타나요. 아래로 당겨 새로고침하세요', '新课程几分钟后出现 — 下拉刷新')
 
+# ---- share with a friend (05.11.2026) ----
+t('Поделиться приложением', 'Share the app', 'Compartir la app', 'Compartilhar o app', "Partager l'app", 'App teilen', 'アプリをシェア', '앱 공유하기', '分享应用')
+t('с другом', 'with a friend', 'con un amigo', 'com um amigo', 'avec un ami', 'mit Freunden', '友達に', '친구에게', '给朋友')
+t('Поделиться уроком', 'Share this lesson', 'Compartir la lección', 'Compartilhar a aula', 'Partager la leçon', 'Lektion teilen', 'レッスンをシェア', '레슨 공유하기', '分享课程')
+t('Ссылка скопирована', 'Link copied', 'Enlace copiado', 'Link copiado', 'Lien copié', 'Link kopiert', 'リンクをコピーしました', '링크가 복사되었어요', '链接已复制')
+t('Уроки брейкинга от Федоскина: замедление, зеркало и повтор. Попробуй!', 'Breaking lessons by Fedoskin — slow motion, mirror and loop. Check it out!', 'Lecciones de breaking de Fedoskin: cámara lenta, espejo y repetición. ¡Pruébalo!', 'Aulas de breaking do Fedoskin: câmera lenta, espelho e repetição. Experimenta!', 'Des leçons de breaking par Fedoskin : ralenti, miroir et boucle. Essaie !', 'Breaking-Lektionen von Fedoskin: Zeitlupe, Spiegel und Wiederholung. Probier’s aus!', 'Fedoskinのブレイキンレッスン。スロー再生・ミラー・リピート付き。試してみて！', 'Fedoskin의 브레이킹 레슨 — 슬로모션, 미러, 반복 재생. 한번 써 봐!', 'Fedoskin 的霹雳舞课程：慢放、镜像、循环播放。来试试！')
+t('Смотри урок «{name}» в приложении Fedoskin team', 'Check out the “{name}” lesson in the Fedoskin team app', 'Mira la lección «{name}» en la app Fedoskin team', 'Veja a aula “{name}” no app Fedoskin team', 'Regarde la leçon « {name} » dans l’app Fedoskin team', 'Schau dir die Lektion „{name}“ in der Fedoskin-team-App an', 'Fedoskin teamアプリで「{name}」のレッスンを見てみて', 'Fedoskin team 앱에서 ‘{name}’ 레슨을 확인해 봐', '在 Fedoskin team 应用里看看“{name}”这一课')
+
 # ---- online services tab (long texts live in their own file) ----
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))

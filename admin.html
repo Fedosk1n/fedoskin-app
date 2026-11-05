@@ -1280,7 +1280,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     renderSources(j);
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
-  const SRC_NAME = { ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
+  const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
   function renderSources(j){
     const sx = j.sources;
     $('#srcOld').hidden = !!sx; $('#srcOn').hidden = !sx;

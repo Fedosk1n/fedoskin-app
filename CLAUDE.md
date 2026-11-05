@@ -31,7 +31,7 @@
 - Alpha mode: `alpha: true` in config.js — all lessons free, "Free" tags hidden; review (Разбор) is paid via Telegram
   link `t.me/Fe_DoSk1n?text=...` (`tg` in config.js).
 - Hidden for later (do not delete): courses, articles, promo tab, "my reviews", the lesson header's «Проверить на своём видео»
-  upload button (owner 31.10 «убери её»; `data-later="own-video"`, a 44px spacer keeps the title centred). Elements carry `hidden data-later="..."`
+  upload button (owner 31.10 «убери её»; `data-later="own-video"`; its place on the right is now the share button `#lessonShare`). Elements carry `hidden data-later="..."`
   or are commented out in TABS.
 - Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
   preview `<id>-p3.mp4` = first 3s, crop 720:960 → 360x480, 30fps, no audio; add a row to `lessons.js` with `added` date.
@@ -221,6 +221,9 @@
   «Посещаемость» → «Откуда приходят люди»: per source new people (+today), people who wrote, % of new; «До подсчёта» =
   devices from before 05.11; old worker ⇒ «обновите код сервера» + copy button; tagged bio links with copy buttons.
   Tested: worker with node:sqlite on an old-schema DB, app UA/param detection, admin table on a phone.
+- Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
+  and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
+  `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.
 - Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
   orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
   translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the

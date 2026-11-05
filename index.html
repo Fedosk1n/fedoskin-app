@@ -503,7 +503,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div class="row" style="justify-content:space-between;gap:12px">
     <button class="back" id="lessonBack" aria-label="Назад к разделу"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
     <span class="label" id="lessonCrumb" style="flex:1;text-align:center">Toprock</span>
-    <span style="width:44px;flex:none" aria-hidden="true"></span><!-- keeps the title centred while the button below is hidden -->
+    <button class="back" id="lessonShare" aria-label="Поделиться уроком" title="Поделиться уроком"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button><!-- share with a friend (owner 05.11); also keeps the title centred -->
     <label class="back" for="ownVideo" hidden data-later="own-video" title="Проверить на своём видео" aria-label="Проверить на своём видео" style="cursor:pointer"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg></label>
     <input type="file" id="ownVideo" accept="video/*" hidden>
   </div>
@@ -739,6 +739,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 
   <div class="sec stack">
+    <button class="list-item" id="shareApp"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span style="flex:1;font-weight:600">Поделиться приложением</span><span class="muted" style="font-size:13px">с другом</span></button>
     <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
@@ -2529,6 +2530,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // «История». A web page can't put a link sticker into the story itself, so the app's link is printed on the picture
   // and copied — in Instagram it goes into the «Ссылка» sticker with one paste.
   const APP_LINK = (CFG.appUrl || (location.origin + location.pathname.replace(/index\.html$/, ''))).replace(/\/$/, '');
+  // «Поделиться» (owner 05.11.2026): the phone's own share menu (WhatsApp, Telegram, Instagram…) or, where there is
+  // none, the link is copied. Links carry ?from=share, so friends show up as their own row in admin «Откуда приходят».
+  function shareLink(url, text){
+    const data = { title: 'Fedoskin team', text, url };
+    if (navigator.share) { navigator.share(data).catch(e => { if (e && e.name !== 'AbortError') copyLink(url); }); return; }
+    copyLink(url);
+  }
+  function copyLink(url){
+    const ok = () => toast(T('Ссылка скопирована'));
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => toast(url));
+    else toast(url);
+  }
+  $('#shareApp').addEventListener('click', () => shareLink(APP_LINK + '/?from=share', T('Уроки брейкинга от Федоскина: замедление, зеркало и повтор. Попробуй!')));
+  $('#lessonShare').addEventListener('click', () => { if (curLesson) shareLink(APP_LINK + '/?lesson=' + encodeURIComponent(curLesson.id) + '&from=share', T('Смотри урок «{name}» в приложении Fedoskin team', { name: curLesson.name })); });
   let storyFile = null, storyPrep = null;
   const loadImg = src => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = src; });
   async function storyImage(){
