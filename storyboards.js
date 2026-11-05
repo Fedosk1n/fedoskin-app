@@ -9,6 +9,15 @@ window.LESSON_SB = {
   "h": 320,
   "cols": 10
  },
+ "tr-kick-step": {
+  "src": "gh",
+  "every": 1,
+  "n": 70,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "fw-6step": {
   "src": "gh",
   "every": 0.5,
@@ -235,10 +244,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "tr-kick-step": {
+ "tr-indian-step": {
   "src": "gh",
-  "every": 1,
-  "n": 70,
+  "every": 0.5,
+  "n": 81,
   "w": 180,
   "h": 320,
   "cols": 10,
