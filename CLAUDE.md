@@ -227,6 +227,10 @@
 - Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
   and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
   `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.
+- Admin bottom bar on iPhone (owner 07.11.2026 screenshot: «Всё опубликовано» bar hung mid-screen over statistics —
+  Safari keeps fixed elements shifted, e.g. after the keyboard): `stickBar()` (last script in admin.html) compares the
+  bar's bottom with visualViewport bottom and translateY's it back only when they differ (> 2 px); hides it (`.kb`) while
+  the keyboard is open. Checked on vv resize/scroll, scroll/scrollend, focusout and every 1 s. Admin «версия 9».
 - Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
   orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
   translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the
