@@ -214,6 +214,8 @@
   country,plat), geo(day,country). Moscow days. GET `/visits` (admin) → today/all/30 days/countries/platforms. Admin
   «Статистика» → «Посещаемость»; old worker (404) or no DB ⇒ setup steps + «Скопировать код сервера» (fetches
   server/push-worker.js from Pages). Tested with node:sqlite as a D1 stand-in (sandbox can't install wrangler).
+  «Обновить» (owner 06.11.2026 «чтобы было видно, что нажал»): icon spins + «Обновляю…», data dims (≥ 0.65 s), then
+  «Обновлено ✓» green + toast with how many numbers changed (changed KPI numbers flash orange) + «Обновлено в HH:MM:SS».
 - Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
   `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
   TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в
