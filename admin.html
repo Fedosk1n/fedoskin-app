@@ -137,6 +137,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .err{color:var(--bad);font-size:14px;margin-top:10px;line-height:1.4}
 .spin{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* «Обновить» in statistics (owner 06.11.2026: должно быть видно, что нажал): spinning icon + «Обновляю…», the data dims,
+   then «Обновлено ✓» in green, the time of the update, and numbers that changed flash orange */
+.rbtn{display:inline-flex;align-items:center;gap:6px;transition:color .2s,border-color .2s,background .2s}
+.rbtn svg{flex:none}
+.rbtn.busy svg{animation:sp .7s linear infinite}
+.rbtn.busy{opacity:.85;pointer-events:none}
+.rbtn.ok{color:#3BD16F;border-color:#3BD16F}
+.rbtn.bad{color:#ff6b5b;border-color:#ff6b5b}
+#visOn{transition:opacity .2s ease}
+#visOn.dim{opacity:.35;pointer-events:none}
+.kpi b.bump{animation:bump 1.4s ease}
+@keyframes bump{0%{color:var(--accent);transform:scale(1.18)}25%{color:var(--accent);transform:scale(1)}100%{color:inherit}}
+#visUpd.fresh{color:#3BD16F}
 .srct{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .srct th{text-align:right;font-size:11px;font-weight:700;color:var(--muted);padding:4px 6px;white-space:nowrap}
 .srct th:first-child,.srct td:first-child{text-align:left;padding-left:0}
@@ -151,7 +164,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 7</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 8</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -288,7 +301,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </div>
 
     <div data-pane="stats" hidden>
-      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm" id="visRefresh" hidden>Обновить</button></div>
+      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></div>
+      <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
       <div id="visOff" class="card" style="margin-top:12px" hidden>
         <b id="visOffTitle">Подключите счётчик посещений — один раз, минут 5, бесплатно</b>
         <p class="soft small" style="margin:6px 0 12px">Счётчик работает на том же сервере Cloudflare, что уведомления и рейтинг. Нужно добавить к нему бесплатную базу данных и обновить код сервера.</p>
@@ -1261,6 +1275,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     }
     if (j.nodb) return visOff('Код сервера обновлён — осталось добавить базу (шаги 1 и 3)');
     $('#visOff').hidden = true; $('#visOn').hidden = false; $('#visRefresh').hidden = false;
+    { const u = $('#visUpd'), d = new Date(); u.textContent = 'Обновлено в ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); u.classList.remove('fresh'); void u.offsetWidth; u.classList.add('fresh'); clearTimeout(u._t); u._t = setTimeout(() => u.classList.remove('fresh'), 2500); }
     const t = j.today, a = j.all;
     $('#visDay').textContent = '· ' + fmtDay(j.day);
     $('#visSince').textContent = '· с ' + fmtDay(a.since);
@@ -1313,7 +1328,27 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#srcTable').innerHTML = html;
   }
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
-  $('#visRefresh').addEventListener('click', () => renderVisits());
+  $('#visRefresh').addEventListener('click', async () => {
+    const btn = $('#visRefresh'), lbl = btn.querySelector('span');
+    if (btn.classList.contains('busy')) return;
+    const before = {};
+    document.querySelectorAll('#visToday .kpi, #visAll .kpi').forEach((k, i) => { before[i] = k.querySelector('b') && k.querySelector('b').textContent; });
+    clearTimeout(btn._t);
+    btn.classList.remove('ok', 'bad'); btn.classList.add('busy'); lbl.textContent = 'Обновляю…';
+    $('#visOn').classList.add('dim');
+    const t0 = Date.now(); let ok = true;
+    try { await renderVisits(true); } catch (_) { ok = false; }
+    await new Promise(r => setTimeout(r, Math.max(0, 650 - (Date.now() - t0)))); // long enough to see that something happened
+    if ($('#visOn').hidden) ok = false;
+    $('#visOn').classList.remove('dim'); btn.classList.remove('busy');
+    if (ok) {
+      let changed = 0;
+      document.querySelectorAll('#visToday .kpi, #visAll .kpi').forEach((k, i) => { const b = k.querySelector('b'); if (b && before[i] != null && b.textContent !== before[i]) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); changed++; } });
+      btn.classList.add('ok'); lbl.textContent = 'Обновлено ✓';
+      toast(changed ? 'Статистика обновлена — изменилось чисел: ' + changed : 'Статистика обновлена — новых заходов пока нет');
+    } else { btn.classList.add('bad'); lbl.textContent = 'Ошибка'; }
+    btn._t = setTimeout(() => { btn.classList.remove('ok', 'bad'); lbl.textContent = 'Обновить'; }, 2200);
+  });
   $('#visCheck').addEventListener('click', () => { $('#visErr').textContent = 'Проверяю…'; renderVisits().then(() => { if (!$('#visOff').hidden && $('#visErr').textContent === 'Проверяю…') $('#visErr').textContent = 'Пока не видно — проверьте шаги выше.'; }); });
   $('#visCopy').addEventListener('click', () => {
     if (!workerCode) { toast('Код ещё загружается — нажмите через секунду', true); return; }
