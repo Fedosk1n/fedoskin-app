@@ -84,7 +84,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
 .arrows{display:flex;flex-direction:column;gap:4px}
 .arrows .btn{width:36px;height:30px;min-height:30px;padding:0;border-radius:8px}
-.savebar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
+.savebar{position:fixed;left:0;right:0;bottom:0;transition:opacity .15s ease;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
+.savebar.kb{opacity:0;pointer-events:none}
 .savebar .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .savebar .msg{flex:1;font-size:14px;line-height:1.35;min-width:0}
 .savebar .msg .list{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -164,7 +165,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 8</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 9</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1738,5 +1739,41 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   start();
 })();
 </script>
+<script>
+// Bottom bar «Опубликовать» on iPhone (owner 07.11.2026, screenshot: the bar hung in the middle of the screen over the
+// statistics). Safari sometimes keeps fixed elements shifted after the keyboard closes or while its toolbar slides.
+// Fix: hide the bar while the keyboard is open, and whenever its bottom edge does not sit on the visible screen's
+// bottom, move it back there (only then — normally nothing is touched).
+(function stickBar(){
+  const bar = document.getElementById('savebar'), vv = window.visualViewport;
+  if (!bar || !vv) return;
+  let shift = 0, raf = 0;
+  function fix(){
+    raf = 0;
+    if (bar.hidden) return;
+    const visBottom = vv.offsetTop + vv.height;
+    const kb = window.innerHeight - vv.height > 150 && /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+    bar.classList.toggle('kb', kb);
+    if (kb) return;
+    const r = bar.getBoundingClientRect();
+    const miss = visBottom - r.bottom;
+    if (Math.abs(miss) > 2) { shift += miss; bar.style.transform = shift ? 'translateY(' + shift.toFixed(1) + 'px)' : ''; }
+    else if (shift && Math.abs(window.innerHeight - visBottom) < 2) { // back to normal: let CSS place it again
+      bar.style.transform = ''; shift = 0;
+      const r2 = bar.getBoundingClientRect(), m2 = visBottom - r2.bottom;
+      if (Math.abs(m2) > 2) { shift = m2; bar.style.transform = 'translateY(' + m2.toFixed(1) + 'px)'; }
+    }
+  }
+  const later = () => { if (!raf) raf = requestAnimationFrame(fix); };
+  vv.addEventListener('resize', later); vv.addEventListener('scroll', later);
+  window.addEventListener('scroll', later, { passive: true }); window.addEventListener('resize', later);
+  document.addEventListener('focusin', later);
+  document.addEventListener('focusout', () => { setTimeout(later, 60); setTimeout(later, 350); });
+  window.addEventListener('scrollend', later);
+  new MutationObserver(later).observe(bar, { attributes: true, attributeFilter: ['hidden'] });
+  setInterval(() => { if (!document.hidden) later(); }, 1000); // a slow safety net
+})();
+</script>
+
 </body>
 </html>
