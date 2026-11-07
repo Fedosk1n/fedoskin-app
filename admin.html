@@ -80,6 +80,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pill.hid{background:#2E2E32;color:var(--soft)}
 .pill.up{background:var(--accent);color:#0B0B0C}
 .pill.ks{background:#1E3A5F;color:#BFD8FF}
+.pt-card{margin-top:12px;padding:0}
+.pt-card>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+.pt-card>summary::-webkit-details-marker{display:none}
+.pt-card>summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
+.pt-card[open]>summary::after{transform:rotate(-135deg)}
+.pt-body{padding:0 16px 16px}
+.pt-group{margin-top:16px}
+.pt-group>b{display:block;font-size:14px}
+.pt-group>.hint{margin:2px 0 0}
+.pt-item{margin-top:8px;border:1px solid var(--line);border-radius:12px;background:#131315;padding:8px 10px 10px}
+.pt-item .pt-k{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+.pt-item .pt-k i{font-style:normal;color:var(--accent)}
+.pt-item textarea{margin-top:6px;min-height:0;field-sizing:content;border:none;background:none;padding:0;border-radius:0;font-size:15px;line-height:1.45;resize:none;overflow:hidden}
+.pt-item .row{gap:8px;margin-top:8px}
+.pt-reset{background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
 .seg{display:flex;gap:6px;margin-top:14px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);color:#0B0B0C;border-color:var(--accent)}
 .ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
 .arrows{display:flex;flex-direction:column;gap:4px}
@@ -178,7 +193,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 13</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 14</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -349,6 +364,14 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </div>
 
     <div data-pane="stats" hidden>
+      <details class="card pt-card" id="ptCard">
+        <summary>✍️ Готовые тексты для рилсов и постов</summary>
+        <div class="pt-body">
+          <p class="hint" style="margin:0">Нажмите «Копировать» и вставьте в Facebook или Instagram. Ссылка с меткой уже внутри — в «Откуда приходят люди» будет видно, сколько людей пришло. Текст можно поправить прямо здесь — исправление запомнится на этом устройстве.</p>
+          <div class="seg" role="group" aria-label="Соцсеть"><button class="btn btn-sm" type="button" data-pt="fb" aria-pressed="true">Facebook</button><button class="btn btn-sm" type="button" data-pt="ig" aria-pressed="false">Instagram</button></div>
+          <div id="ptList"></div>
+        </div>
+      </details>
       <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></div>
       <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
       <div id="visOff" class="card" style="margin-top:12px" hidden>
@@ -716,7 +739,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function showTab(name){
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
-    if (name === 'stats') renderStats();
+    if (name === 'stats') { renderStats(); try { renderPosts(); } catch (_) {} }
     store.set('fedoskin-admin-tab', name);
   }
 
@@ -1364,6 +1387,69 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#pushCount').textContent = '…';
     pushApi('/stats').then(j => { $('#pushCount').textContent = j.subscribers; }).catch(e => { $('#pushCount').textContent = '—'; $('#pushResult').textContent = 'Сервер не отвечает: ' + e.message; });
   }
+  // ---------- ready texts for reels and posts (owner 07.11.2026: «чтобы каждый раз не печатал») ----------
+  // English (the audience is mostly abroad), each in a simple version and a slang version (owner's standing wish).
+  // Facebook: the link is clickable in captions and comments ⇒ the tagged link goes inside. Instagram: links in captions
+  // don't work ⇒ «link in bio» (the bio link with ?from=ig is in «Ссылки с меткой» below). Own edits: `fedoskin-admin-posts`.
+  const PT = {
+    fb: [
+      ['Подпись к рилсу', 'Под видео, в описании.', 'Watch the full lesson for free in my app 👇\n{link}', 'Full breakdown\'s in the app — free 🔥\n{link}'],
+      ['Закреплённый комментарий', 'Оставьте комментарий под своим рилсом и закрепите его (⋯ → «Закрепить»).', 'Free full lessons in my app: {link}', 'Wanna learn this move? Full lesson\'s free in the app 👉 {link}'],
+      ['Текст в конце рилса', 'Надпись на экране в последние 2–3 секунды видео (в CapCut).', 'Full lesson — free in the app', 'Full breakdown in the app 👇'],
+      ['Шапка профиля', 'В разделе «Сведения» / «Био» + ссылка на сайт.', 'Free breaking lessons in my app 👇\n{link}', 'Learn power moves for free 👇\n{link}']
+    ],
+    ig: [
+      ['Подпись к рилсу', 'Ссылки в подписях Instagram не работают — поэтому «ссылка в профиле».', 'Watch the full lesson for free in my app — the link is in my profile', 'Full breakdown\'s in the app — link in bio 🔥'],
+      ['Закреплённый комментарий', 'Оставьте комментарий под своим рилсом и закрепите его.', 'The full lesson is free in my app. The link is in my profile 👆', 'Full lesson\'s free in the app, link in bio 👆'],
+      ['Текст в конце рилса', 'Надпись на экране в последние 2–3 секунды видео (в CapCut).', 'Full lesson — free in the app (link in profile)', 'Full breakdown in the app — link in bio'],
+      ['Шапка профиля', 'Текст био; ссылку поставьте в поле «Ссылки».', 'Free breaking lessons in my app 👇', 'Learn power moves for free 👇'],
+      ['Ссылка для поля «Ссылки» в профиле', 'Вставьте в Instagram → «Редактировать профиль» → «Ссылки».', '{link}', '']
+    ]
+  };
+  let ptNet = store.get('fedoskin-admin-pt') === 'ig' ? 'ig' : 'fb';
+  const ptEdits = (() => { try { return JSON.parse(store.get('fedoskin-admin-posts') || '{}'); } catch (_) { return {}; } })();
+  const ptSave = () => store.set('fedoskin-admin-posts', JSON.stringify(ptEdits));
+  function ptLink(net){
+    const base = ((remote && remote.cfg && remote.cfg.appUrl) || (location.origin + location.pathname.replace(/[^/]*$/, ''))).replace(/\/?$/, '/');
+    return base + '?from=' + net;
+  }
+  function ptCopy(text, what){
+    const ok = () => toast(what + ' — скопировано, вставьте в ' + (ptNet === 'fb' ? 'Facebook' : 'Instagram'));
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, () => fallbackCopy(text) ? ok() : toast('Не удалось скопировать', true));
+    else if (fallbackCopy(text)) ok(); else toast('Не удалось скопировать', true);
+  }
+  const ptFit = ta => { // a hidden tab measures 0 ⇒ fall back to a row count, re-fitted when the card is shown
+    if (!ta.offsetParent || !ta.scrollHeight) { ta.style.height = ''; ta.rows = Math.max(1, ta.value.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 34)), 0)); return; }
+    ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+  };
+  function renderPosts(){
+    document.querySelectorAll('#ptCard [data-pt]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pt === ptNet)));
+    const box = $('#ptList'); box.innerHTML = '';
+    const link = ptLink(ptNet);
+    PT[ptNet].forEach(([title, hint, simple, slang], gi) => {
+      const g = document.createElement('div'); g.className = 'pt-group';
+      g.innerHTML = '<b></b><p class="hint"></p>'; g.children[0].textContent = title; g.children[1].textContent = hint;
+      [['Простой', simple], ['Сленг', slang]].forEach(([kind, tpl], vi) => {
+        if (!tpl) return;
+        const key = ptNet + gi + vi, orig = tpl.replace(/\{link\}/g, link);
+        const it = document.createElement('div'); it.className = 'pt-item';
+        it.innerHTML = '<div class="pt-k"><i></i></div><textarea rows="1" spellcheck="false"></textarea><div class="row"><button class="btn btn-sm btn-accent" type="button">Копировать</button><button class="pt-reset" type="button" hidden>Вернуть как было</button></div>';
+        it.querySelector('i').textContent = slang ? (vi ? 'Сленг' : 'Простой — поймёт любой') : 'Ссылка';
+        const ta = it.querySelector('textarea'), rs = it.querySelector('.pt-reset');
+        ta.value = ptEdits[key] != null ? ptEdits[key] : orig; rs.hidden = ptEdits[key] == null;
+        ta.addEventListener('input', () => { ptFit(ta); if (ta.value === orig) delete ptEdits[key]; else ptEdits[key] = ta.value; rs.hidden = ptEdits[key] == null; ptSave(); });
+        rs.addEventListener('click', () => { delete ptEdits[key]; ptSave(); ta.value = orig; rs.hidden = true; ptFit(ta); });
+        it.querySelector('.btn').addEventListener('click', () => ptCopy(ta.value, title + (slang ? ' (' + kind.toLowerCase() + ')' : '')));
+        g.appendChild(it); requestAnimationFrame(() => ptFit(ta));
+      });
+      box.appendChild(g);
+    });
+  }
+  document.querySelectorAll('#ptCard [data-pt]').forEach(b => b.addEventListener('click', () => { ptNet = b.dataset.pt; store.set('fedoskin-admin-pt', ptNet); renderPosts(); }));
+  $('#ptCard').open = store.get('fedoskin-admin-pt-open') !== '0';
+  $('#ptCard').addEventListener('toggle', () => { store.set('fedoskin-admin-pt-open', $('#ptCard').open ? '1' : '0'); if ($('#ptCard').open) renderPosts(); });
+  renderPosts();
+
   // ---------- visits (server /visits; the app pings /hit) ----------
   // the owner's own visits from this browser don't count: the app (same site) reads this mark
   if (store.get('fedoskin-noping') === null) store.set('fedoskin-noping', '1');
