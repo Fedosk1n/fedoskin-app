@@ -159,13 +159,26 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .srct td:first-child b{font-size:14px}
 .srct .sub{display:block;font-size:11px;color:var(--muted);font-weight:500}
 .srct tr.tot td{font-weight:700}
+.crcard{margin-top:12px}
+.crstate{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:#2E2E32;color:var(--muted)}
+.crstate.on{background:rgba(59,209,111,.15);color:var(--new)}
+.crmsg{font-size:13px;line-height:1.45;margin:2px 0 4px;min-height:18px}
+.crmsg.ok{color:var(--new)} .crmsg.bad{color:#ff6b5b;font-weight:600} .crmsg.warn{color:#f0b24a}
+.crprev{display:flex;gap:12px;align-items:center;background:var(--surface-2);border-radius:14px;padding:10px}
+.crqr{width:112px;height:112px;flex:none;border-radius:10px;overflow:hidden;background:#fff}
+.crqr svg{width:100%;height:100%;display:block}
+.crprev code{font:600 13px/1.4 ui-monospace,Menlo,monospace;word-break:break-all}
+.crsteps{margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.5}
+.crsteps li+li{margin-top:4px}
+.crwarn{margin-top:10px;border-radius:12px;padding:10px 12px;background:rgba(226,97,26,.10);border:1px solid rgba(226,97,26,.45);font-size:13px;line-height:1.45}
+.crwarn b:first-child{color:var(--accent)} .crwarn ul{margin:6px 0 0;padding-left:18px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 11</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 12</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -281,9 +294,37 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>WhatsApp (номер с кодом страны, только цифры)</span><input type="text" id="sWa" inputmode="tel" spellcheck="false" placeholder="79215373077"></label>
       <label class="f"><span>Instagram (без @)</span><input type="text" id="sIg" spellcheck="false" placeholder="fedosk1n"></label>
       <label class="f"><span>Facebook Messenger (имя пользователя Facebook, без @; пусто — кнопки нет)</span><input type="text" id="sFb" spellcheck="false"></label>
-      <label class="f"><span>Кошелёк USDT · TRON (TRC-20) для оплаты криптой (пусто — кнопки нет)</span><input type="text" id="sUsdt" spellcheck="false" autocomplete="off" placeholder="T…"></label>
-      <p class="hint" id="sUsdtHint" style="margin:-4px 0 8px"></p>
       <p class="hint" style="margin:-4px 0 8px">В приложении кнопка «Написать тренеру» предлагает выбрать мессенджер. Пустое поле — этого мессенджера в списке нет.</p>
+      <div class="card crcard" id="cryptoCard">
+        <div class="row" style="justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Оплата криптой</h3><span class="crstate" id="crState"></span></div>
+        <p class="hint" style="margin:6px 0 10px">Иностранцы видят на странице услуги кнопку «Оплатить криптой (USDT)»: сумма, QR-код и адрес твоего кошелька. В русской версии кнопки нет.</p>
+        <label class="f"><span>Адрес кошелька USDT · сеть TRON (TRC-20)</span><input type="text" id="sUsdt" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="T… (34 символа)"></label>
+        <div class="crmsg" id="sUsdtHint"></div>
+        <div id="crPreview" hidden>
+          <p class="small" style="font-weight:700;margin:12px 0 6px">Так увидят клиенты</p>
+          <div class="crprev"><div id="crQr" class="crqr"></div><code id="crAddr"></code></div>
+          <p class="hint" style="margin:6px 0 0">Проверь: отсканируй этот QR-код камерой или кошельком — адрес должен совпасть с твоим. Сверь первые и последние 4 символа: <b id="crEnds"></b></p>
+        </div>
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-sm" id="crPaste" type="button">Вставить из буфера</button>
+          <button class="btn btn-sm" id="crOff" type="button">Выключить оплату криптой</button>
+        </div>
+        <details style="margin-top:12px"><summary class="small" style="cursor:pointer;font-weight:700">Как поменять кошелёк — пошагово</summary>
+          <ol class="crsteps">
+            <li>Открой кошелёк (Trust Wallet, Tonkeeper, биржа…) → <b>USDT</b> → <b>«Получить»</b> / «Пополнить».</li>
+            <li>Выбери сеть <b>TRON (TRC-20)</b>. Не ERC-20, не BEP-20, не TON — у них другие адреса.</li>
+            <li>Скопируй адрес (начинается с <b>T</b>, 34 символа) и вставь в поле выше — кнопкой «Вставить из буфера» или вручную.</li>
+            <li>Дождись зелёной галочки и сверь первые и последние 4 символа с кошельком. Отсканируй QR в превью.</li>
+            <li>Нажми <b>«Опубликовать»</b> внизу экрана. Через 1–2 минуты у клиентов будет новый адрес.</li>
+            <li>Сделай тестовый перевод 1–2 USDT на новый адрес, чтобы убедиться, что деньги доходят.</li>
+          </ol>
+          <div class="crwarn"><b>Безопасность</b><ul>
+            <li>Нужен только <b>адрес</b>. Никогда никуда не вставляй секретную фразу (12 или 24 слова) и приватный ключ — с ними кошелёк могут украсть. Админка такие фразы не примет.</li>
+            <li>Переводы, отправленные клиентами раньше, остаются на старом адресе — не удаляй старый кошелёк, пока не выведешь деньги.</li>
+            <li>Если берёшь адрес на бирже, проверь, что биржа принимает USDT именно в сети TRON и не меняет адрес со временем.</li>
+          </ul></div>
+        </details>
+      </div>
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится выбранная услуга, например «Услуга: Онлайн-ведение». На других языках сообщение переводится, только если оно не менялось.</span></label>
       <h3>Kinescope (видео уроков)</h3>
       <p class="hint" style="margin:6px 0 0">Ключ и проект хранятся только в этом браузере и в приложение не публикуются. Кнопка «Опубликовать» для них не нужна.</p>
@@ -427,6 +468,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   </div>
 </div>
 
+<script src="vendor/qr.js"></script>
 <script>
 (function(){
   'use strict';
@@ -434,7 +476,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', usdtQr:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
+  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -960,15 +1002,54 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const h1 = await crypto.subtle.digest('SHA-256', b.slice(0, 21)), h2 = new Uint8Array(await crypto.subtle.digest('SHA-256', h1));
     return h2[0] === b[21] && h2[1] === b[22] && h2[2] === b[23] && h2[3] === b[24];
   }
-  function paintUsdtHint(v){
-    const h = $('#sUsdtHint'); if (!h) return;
-    if (!v) { h.textContent = 'Пусто — кнопки «Оплатить криптой» в приложении нет.'; h.style.color = ''; return; }
+  // what kind of address / text is this? (so a wrong network or a secret phrase is caught before publishing)
+  function addrKind(v){
+    if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(v)) return 'tron';
+    if (v.trim().split(/\s+/).length >= 10) return 'seed';
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(v)) return 'key';
+    if (/^0x[0-9a-fA-F]{40}$/.test(v)) return 'evm';
+    if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(v)) return 'btc';
+    if (/^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(v)) return 'ton';
+    return 'other';
+  }
+  function paintUsdtHint(v, edit){
+    const keep = val => { if (!edit) return; const prevV = cfg.usdtTrc20 || ''; cfg.usdtTrc20 = val; if (prevV !== val) paintSaveBar(); };
+    const h = $('#sUsdtHint'), st = $('#crState'), prev = $('#crPreview');
+    if (!h) return;
+    const set = (cls, text) => { h.className = 'crmsg ' + cls; h.textContent = text; };
+    const live = !!(remote && remote.cfg.usdtTrc20);
+    st.textContent = live ? 'Включена' : 'Выключена'; st.classList.toggle('on', live);
+    prev.hidden = true;
+    if (!v) { keep(''); set('', remote && remote.cfg.usdtTrc20 ? 'Поле пустое — после «Опубликовать» кнопка «Оплатить криптой» пропадёт у клиентов.' : 'Поле пустое — кнопки «Оплатить криптой» в приложении нет.'); return; }
+    const k = addrKind(v);
+    if (k !== 'tron') {
+      keep(remote ? remote.cfg.usdtTrc20 || '' : '');
+      set(k === 'seed' || k === 'key' ? 'bad' : 'warn', {
+        evm: '✗ Это адрес сети Ethereum / BNB (начинается с 0x). Клиенты будут платить в сети TRON — нужен адрес, который начинается с T.',
+        btc: '✗ Это адрес биткоина. Нужен адрес USDT в сети TRON (начинается с T).',
+        ton: '✗ Это адрес сети TON. Нужен адрес USDT в сети TRON (начинается с T).',
+        other: '✗ Это не похоже на адрес TRON: он начинается с T и состоит из 34 символов. Проверь, что скопировал целиком.',
+      }[k] || '');
+      return;
+    }
     tronOk(v).then(ok => {
-      h.style.color = ok ? 'var(--new)' : '#ff6b5b';
-      h.textContent = ok ? (v === (cfg.usdtQr || '') ? '✓ Адрес правильный, QR-код в приложении совпадает.' : '✓ Адрес правильный. QR-код для нового адреса сделает Claude — пока в приложении будет только адрес с кнопкой «Копировать».')
-                         : '✗ Это не похоже на адрес TRON (TRC-20): проверьте, нет ли опечатки. С таким адресом деньги клиентов потеряются.';
+      if ($('#sUsdt').value.trim() !== v) return;
+      if (!ok) { keep(remote ? remote.cfg.usdtTrc20 || '' : ''); set('bad', '✗ В адресе опечатка: контрольная сумма не сходится. Скопируй адрес из кошелька ещё раз, не набирай вручную. Пока адрес не исправлен, в приложении остаётся прежний.'); return; }
+      keep(v);
+      set('ok', remote && v === (remote.cfg.usdtTrc20 || '') ? '✓ Адрес правильный и уже работает в приложении.' : '✓ Адрес правильный. Сверь превью и нажми «Опубликовать» внизу.');
+      try { $('#crQr').innerHTML = QR.svg(v, { pad: 2 }); } catch (_) { $('#crQr').textContent = ''; }
+      $('#crAddr').textContent = v; $('#crEnds').textContent = v.slice(0, 4) + ' … ' + v.slice(-4);
+      prev.hidden = false;
     });
   }
+  $('#crPaste').addEventListener('click', async () => {
+    try { const t = (await navigator.clipboard.readText()).trim(); const el = $('#sUsdt'); el.value = t; el.dispatchEvent(new Event('input')); }
+    catch (_) { toast('Не получилось прочитать буфер — вставь адрес в поле вручную (долгое нажатие → «Вставить»)', true); }
+  });
+  $('#crOff').addEventListener('click', () => {
+    if (!confirm('Выключить оплату криптой? Кнопка пропадёт у клиентов после «Опубликовать».')) return;
+    const el = $('#sUsdt'); el.value = ''; el.dispatchEvent(new Event('input'));
+  });
   function renderSettings(){
     Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
     paintUsdtHint(cfg.usdtTrc20 || '');
@@ -979,7 +1060,16 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       let v = el.type === 'checkbox' ? el.checked : el.value;
       if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, /Usd$/.test(k) && k !== 'reviewUsd' ? Math.round(+v * 100) / 100 : Math.round(+v));
       if (k === 'tg') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
-      if (k === 'usdtTrc20') { v = String(v).trim(); paintUsdtHint(v); }
+      if (k === 'usdtTrc20') {
+        v = String(v).trim();
+        if (/\s/.test(v) && v.split(/\s+/).length >= 10 || /^(0x)?[0-9a-fA-F]{64}$/.test(v)) { // a secret phrase / private key: never keep it
+          el.value = ''; cfg[k] = remote.cfg.usdtTrc20 || ''; paintSaveBar();
+          const h = $('#sUsdtHint'); h.className = 'crmsg bad'; h.textContent = '⚠ Это похоже на секретную фразу или приватный ключ! Я её стёр и никуда не сохранил. Никогда не вставляй её на сайты — нужен только адрес кошелька (начинается с T). Если ты уже кому-то её показывал — лучше заведи новый кошелёк.';
+          return;
+        }
+        paintUsdtHint(v, true); // the setting changes only when the address is valid (or empty) — a typo can't be published
+        return;
+      }
       if (k === 'wa') v = String(v).replace(/\D/g, '');
       if (k === 'ig') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/[/?#].*$/, '');
       if (k === 'fb') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/(www\.|m\.)?(facebook\.com|fb\.com|m\.me)\//, '').replace(/[/?#].*$/, '');

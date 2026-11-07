@@ -7,7 +7,6 @@ window.APP_CONFIG = {
  "ig": "fedosk1n",
  "fb": "",
  "usdtTrc20": "TAiZXgpruhXQTKcwshqo9mFLADgUNJXv3z",
- "usdtQr": "TAiZXgpruhXQTKcwshqo9mFLADgUNJXv3z",
  "tgMessage": "Привет! Пришёл на онлайн-услуги по брейкингу",
  "reviewRub": 2000,
  "reviewUsd": 30,
