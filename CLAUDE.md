@@ -242,6 +242,13 @@
   or private key is wiped and never stored), the setting changes ONLY for a valid address or empty (typo ⇒ old address
   stays), preview QR + first/last 4 chars, «Вставить из буфера», «Выключить», step-by-step + safety tips. Worker `/ev`
   e='cr' (opened) / 'crp' (tapped «Я оплатил») → admin sources card line «Оплата криптой».
+  First-timer guide (owner 07.11 «понятны ли шаги, если ни разу не делали так»): the sheet is 5 numbered steps (app →
+  network TRON «TRX/Tron» → address + copy → check «Receive amount» = price, exchanges deduct ~1 USDT → send + screenshot),
+  `<details>` «Ни разу не платил криптой?» (exchange + ID check; buy USDT by card; Coinbase/PayPal/Cash App can't send
+  TRC-20 — verified 07.11; own wallets need TRX for the fee) + «Задать вопрос тренеру». QR only behind a button on touch
+  (useless on the same phone), shown at once on desktop. Open sheet remembered in `fedoskin-crypto` (1 h) and reopened
+  on start — iPhone often reloads the app while the client is in his exchange app; closing it on purpose forgets it.
+  Prefilled message asks to attach the transfer screenshot.
 - Admin bottom bar on iPhone (owner 07.11.2026 screenshot: «Всё опубликовано» bar hung mid-screen over statistics —
   Safari keeps fixed elements shifted, e.g. after the keyboard): `stickBar()` (last script in admin.html) compares the
   bar's bottom with visualViewport bottom and translateY's it back only when they differ (> 2 px); hides it (`.kb`) while
