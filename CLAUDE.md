@@ -216,6 +216,13 @@
   server/push-worker.js from Pages). Tested with node:sqlite as a D1 stand-in (sandbox can't install wrangler).
   «Обновить» (owner 06.11.2026 «чтобы было видно, что нажал»): icon spins + «Обновляю…», data dims (≥ 0.65 s), then
   «Обновлено ✓» green + toast with how many numbers changed (changed KPI numbers flash orange) + «Обновлено в HH:MM:SS».
+- Admin chart «По дням» (owner 07.11.2026 «подробнее и анимированную при наведении курсора»): `drawChart()` (data kept in
+  `lastVis`), period 7/14/30 (`fedoskin-admin-per`, default = smallest covering the data), tiles `#visSum` (average people/day
+  over full days vs the previous period, best day, new + visits), bars per day: visits grey behind, people = new (accent) +
+  returned (half accent), count on top (≤14 days), dashed y grid with nice steps, x labels with weekday (weekend tinted,
+  today «сег.» hatched), 3-day average line (SVG in real pixels — a stretched viewBox broke the dash animation; redrawn
+  on resize), grow-in animation (staggered scaleY) + line drawing, hover tooltip (date, weekday, people/new/returned/
+  visits, visits per person, % vs the day before) with other columns dimmed; touch = tap. Admin «версия 16».
 - Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
   `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
   TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в
