@@ -13,5 +13,6 @@ window.LESSON_INTROS = {
  "tn-flare-to-airflare-to-flare": "262fa2a3-9675-40ac-8b20-5092475a3192:480",
  "pw-flare-wm": "fcbcbb79-43ca-482d-b0f2-01472155230a:480",
  "pw-flare-1990": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f:480",
- "pw-swipes-flare": "6faac4e1-de8a-4952-8d09-6134e13ee34a:480"
+ "pw-swipes-flare": "6faac4e1-de8a-4952-8d09-6134e13ee34a:480",
+ "fw-baby-love": "9365fefb-f0d4-49a7-8a55-34dd56a9a68e:480"
 };
