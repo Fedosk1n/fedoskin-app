@@ -12,7 +12,8 @@
 //   POST /lb           — {id, secret, nick, city, country, av, m, v, s} обновить свои минуты; {id, secret, hide:true} — убрать себя
 //   POST /hit          — {id, p, a} приложение открыли (счётчик посещений; нужна база D1 с именем DB)
 //   GET  /visits       — посещаемость: сегодня, за всё время, 30 дней, страны, устройства (только для админа)
-//   POST /ev           — {id, e, s, v} действие в приложении (e='tg' — нажали «Написать в Telegram»), s — откуда пришёл человек
+//   POST /ev           — {id, e, s, v, m} действие в приложении: e='tg' — нажали «Написать тренеру» (m — мессенджер),
+//                        e='cr' — открыли оплату криптой, e='crp' — нажали «Я оплатил»; s — откуда пришёл человек
 // Админ = тот, чей ключ GitHub может записывать в репозиторий приложения. Своих паролей у сервера нет.
 
 const REPO = 'Fedosk1n/fedoskin-app';
@@ -298,10 +299,14 @@ async function ev(req, env, json) {
   if (!env.DB) return json({ ok: false, nodb: true });
   const b = JSON.parse((await req.text()) || '{}');
   const raw = String(b.id || '').slice(0, 40);
-  if (!/^[\w-]{4,40}$/.test(raw) || b.e !== 'tg') return json({ error: 'bad event' }, 400);
+  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
   const db = env.DB;
   await schema(db);
   const id = await hash('v1:' + raw), day = mskDay(), src = cleanSrc(b.s);
+  if (b.e !== 'tg') { // crypto payment: cr = opened the «Оплата криптой» window, crp = tapped «Я оплатил» (07.11.2026)
+    await db.batch([srcAdd(db, day, src, b.e)]);
+    return json({ ok: true });
+  }
   const [c] = await db.batch([db.prepare('INSERT OR IGNORE INTO contacted (id, first, src) VALUES (?, ?, ?)').bind(id, day, src)]);
   const more = [srcAdd(db, day, src, 'tg')];
   if (c.meta.changes > 0) more.push(srcAdd(db, day, src, 'tgu'));

@@ -165,7 +165,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 10</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 11</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -281,6 +281,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>WhatsApp (номер с кодом страны, только цифры)</span><input type="text" id="sWa" inputmode="tel" spellcheck="false" placeholder="79215373077"></label>
       <label class="f"><span>Instagram (без @)</span><input type="text" id="sIg" spellcheck="false" placeholder="fedosk1n"></label>
       <label class="f"><span>Facebook Messenger (имя пользователя Facebook, без @; пусто — кнопки нет)</span><input type="text" id="sFb" spellcheck="false"></label>
+      <label class="f"><span>Кошелёк USDT · TRON (TRC-20) для оплаты криптой (пусто — кнопки нет)</span><input type="text" id="sUsdt" spellcheck="false" autocomplete="off" placeholder="T…"></label>
+      <p class="hint" id="sUsdtHint" style="margin:-4px 0 8px"></p>
       <p class="hint" style="margin:-4px 0 8px">В приложении кнопка «Написать тренеру» предлагает выбрать мессенджер. Пустое поле — этого мессенджера в списке нет.</p>
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится выбранная услуга, например «Услуга: Онлайн-ведение». На других языках сообщение переводится, только если оно не менялось.</span></label>
       <h3>Kinescope (видео уроков)</h3>
@@ -432,7 +434,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
+  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', usdtQr:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -947,9 +949,29 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- settings ----------
-  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sOnlineRub:'onlineRub', sOnlineUsd:'onlineUsd', sCoachRub:'coachRub', sConsultUsd:'consultUsd', sFullRub:'fullRub', sFullUsd:'fullUsd', sHours:'reviewHours', sTg:'tg', sWa:'wa', sIg:'ig', sFb:'fb', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd', sPush:'pushUrl'};
+  const S = {sAlpha:'alpha', sBanner:'alphaBanner', sRub:'reviewRub', sOnlineRub:'onlineRub', sOnlineUsd:'onlineUsd', sCoachRub:'coachRub', sConsultUsd:'consultUsd', sFullRub:'fullRub', sFullUsd:'fullUsd', sHours:'reviewHours', sTg:'tg', sWa:'wa', sIg:'ig', sFb:'fb', sUsdt:'usdtTrc20', sMsg:'tgMessage', sNewDays:'newDays', sMetrika:'metrikaId', sSubRub:'subRub', sSubYearRub:'subYearRub', sSubUsd:'subUsd', sSubYearUsd:'subYearUsd', sPush:'pushUrl'};
+  // TRON address check (base58check, version byte 0x41) — a typo in a wallet address would lose clients' money
+  async function tronOk(a){
+    const A = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(a)) return false;
+    let n = 0n; for (const ch of a) n = n * 58n + BigInt(A.indexOf(ch));
+    const b = new Uint8Array(25); for (let i = 24; i >= 0; i--) { b[i] = Number(n & 255n); n >>= 8n; }
+    if (b[0] !== 0x41) return false;
+    const h1 = await crypto.subtle.digest('SHA-256', b.slice(0, 21)), h2 = new Uint8Array(await crypto.subtle.digest('SHA-256', h1));
+    return h2[0] === b[21] && h2[1] === b[22] && h2[2] === b[23] && h2[3] === b[24];
+  }
+  function paintUsdtHint(v){
+    const h = $('#sUsdtHint'); if (!h) return;
+    if (!v) { h.textContent = 'Пусто — кнопки «Оплатить криптой» в приложении нет.'; h.style.color = ''; return; }
+    tronOk(v).then(ok => {
+      h.style.color = ok ? 'var(--new)' : '#ff6b5b';
+      h.textContent = ok ? (v === (cfg.usdtQr || '') ? '✓ Адрес правильный, QR-код в приложении совпадает.' : '✓ Адрес правильный. QR-код для нового адреса сделает Claude — пока в приложении будет только адрес с кнопкой «Копировать».')
+                         : '✗ Это не похоже на адрес TRON (TRC-20): проверьте, нет ли опечатки. С таким адресом деньги клиентов потеряются.';
+    });
+  }
   function renderSettings(){
     Object.entries(S).forEach(([id, k]) => { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k] ?? ''; });
+    paintUsdtHint(cfg.usdtTrc20 || '');
   }
   Object.entries(S).forEach(([id, k]) => {
     const el = $('#' + id);
@@ -957,6 +979,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       let v = el.type === 'checkbox' ? el.checked : el.value;
       if (el.type === 'number') v = v === '' ? CFG_DEFAULT[k] : Math.max(0, /Usd$/.test(k) && k !== 'reviewUsd' ? Math.round(+v * 100) / 100 : Math.round(+v));
       if (k === 'tg') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
+      if (k === 'usdtTrc20') { v = String(v).trim(); paintUsdtHint(v); }
       if (k === 'wa') v = String(v).replace(/\D/g, '');
       if (k === 'ig') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/[/?#].*$/, '');
       if (k === 'fb') v = String(v).trim().replace(/^@/, '').replace(/^https?:\/\/(www\.|m\.)?(facebook\.com|fb\.com|m\.me)\//, '').replace(/[/?#].*$/, '');
@@ -1339,7 +1362,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const via = {}; sx.all.forEach(([src, kind, n]) => { if (/^via:/.test(kind)) via[kind.slice(4)] = (via[kind.slice(4)] || 0) + n; });
     const VN = { ig: 'Instagram', wa: 'WhatsApp', tg: 'Telegram', fb: 'Messenger' };
     const vr = Object.entries(via).sort((a, b) => b[1] - a[1]);
-    $('#srcVia').innerHTML = vr.length ? '<p class="small" style="font-weight:700;margin:12px 0 4px">Какой мессенджер выбирают</p><div class="bars">' + barsHtml(vr, k => VN[k] || k) + '</div>' : '';
+    const crTot = { cr: 0, crp: 0 }; sx.all.forEach(([src, kind, n]) => { if (kind in crTot) crTot[kind] += n; });
+    const crHtml = (crTot.cr || crTot.crp) ? '<p class="small" style="margin:10px 0 0"><b>Оплата криптой:</b> открыли окно — ' + nf(crTot.cr) + ', нажали «Я оплатил» — ' + nf(crTot.crp) + '</p>' : '';
+    $('#srcVia').innerHTML = crHtml + (vr.length ? '<p class="small" style="font-weight:700;margin:12px 0 4px">Какой мессенджер выбирают</p><div class="bars">' + barsHtml(vr, k => VN[k] || k) + '</div>' : '');
   }
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#visRefresh').addEventListener('click', async () => {

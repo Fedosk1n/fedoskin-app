@@ -442,6 +442,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .msgr .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff}
 .msgr .mi svg{width:20px;height:20px}
 .msgr .sub{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted)}
+.cr-box{margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:4px 14px;background:var(--surface)}
+.cr-row{display:flex;align-items:center;gap:10px;min-height:48px}
+.cr-row+.cr-row{border-top:1px solid var(--line)}
+.cr-row>.muted{width:58px;flex:none;font-size:13px}
+.cr-net{color:#26A17B;font-size:14px}
+.cr-copy{margin-left:auto;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font:600 12px var(--body,inherit);cursor:pointer;flex:none}
+.cr-qr{display:block;width:200px;height:200px;margin:16px auto 0;border-radius:14px;background:#fff;image-rendering:pixelated}
+.cr-addr{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.cr-addr code{display:block;word-break:break-all;font:600 15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;letter-spacing:.02em}
+.cr-addr .cr-copy{margin:0;padding:11px;font-size:14px}
+.cr-warn{margin-top:14px;border-radius:14px;padding:12px 14px;background:rgba(226,97,26,.10);border:1px solid rgba(226,97,26,.45);font-size:13px;line-height:1.45}
+.cr-warn b{color:var(--accent)}
+.cr-warn ul{margin:6px 0 0;padding-left:18px}
+.cr-warn li+li{margin-top:4px}
 </style>
 </head>
 <body>
@@ -672,6 +686,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div class="row" style="gap:8px;align-items:baseline;margin-top:10px"><span class="d" id="svcPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" id="svcPer" style="font-size:14px"></span></div>
   <div id="svcBody"></div>
   <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
+  <button class="btn" id="cryptoBtn" hidden style="margin-top:10px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
 </section>
 
@@ -832,6 +847,28 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </div>
 
+<div class="sheet-bg" id="cryptoSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cryptoTitle" style="max-height:92vh;overflow:auto">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="cryptoTitle" style="font-size:24px">Оплата криптой</h2>
+    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4" id="cryptoFor"></p>
+    <div class="cr-box">
+      <div class="cr-row"><span class="muted">Сумма</span><b id="cryptoAmt" style="font-size:22px"></b><button class="cr-copy" id="cryptoCopyAmt">Копировать</button></div>
+      <div class="cr-row"><span class="muted">Сеть</span><b class="cr-net">USDT · TRON (TRC-20)</b></div>
+    </div>
+    <img id="cryptoQr" class="cr-qr" alt="QR" width="200" height="200" hidden>
+    <div class="cr-addr"><code id="cryptoAddr"></code><button class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button></div>
+    <div class="cr-warn">
+      <b>Важно</b>
+      <ul>
+        <li>Отправляй только USDT в сети TRON (TRC-20). Другая монета или сеть — деньги не дойдут и вернуть их нельзя.</li>
+        <li>Сумма к зачислению — ровно столько, сколько указано. Комиссию сети платит отправитель.</li>
+        <li>После перевода нажми «Я оплатил» и пришли мне сообщение — начнём, как только увижу перевод.</li>
+      </ul>
+    </div>
+    <button class="btn btn-accent" id="cryptoPaid" style="margin-top:14px;min-height:54px;font-size:16px;border-radius:16px;width:100%">Я оплатил — написать тренеру</button>
+  </div>
+</div>
 <div class="sheet-bg" id="contactSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -956,7 +993,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', usdtQr:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -2751,6 +2788,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (kind === 'link') { el = document.createElement('p'); const l = document.createElement('a'); l.href = b; l.target = '_blank'; l.rel = 'noopener'; l.textContent = T(a) + ' ↗'; el.appendChild(l); }
       if (el) body.appendChild(el);
     });
+    paintCryptoBtn();
     go('svc');
     $('#svc').scrollTop = 0;
   }
@@ -2766,8 +2804,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     fb: { name: 'Messenger', bg: 'linear-gradient(45deg,#0099FF,#A033FF 60%,#FF5280)', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 3C7 3 3 6.7 3 11.3c0 2.6 1.3 4.9 3.3 6.4V21l3-1.7c.9.3 1.8.4 2.7.4 5 0 9-3.7 9-8.4S17 3 12 3z"/><path d="m7 13 3-3 2.5 2L16 9l-3 4-2.5-2z" fill="#fff"/></svg>',
       href: t => 'https://m.me/' + encodeURIComponent(String(CFG.fb).replace(/^@/, '')) + '?text=' + encodeURIComponent(t) },
   };
-  function msgText(){ return T(CFG.tgMessage) + '\n' + T('Услуга:') + ' ' + T(curSvc.name); }
-  function openContact(){
+  let msgOverride = '';
+  function msgText(){ return msgOverride || (T(CFG.tgMessage) + '\n' + T('Услуга:') + ' ' + T(curSvc.name)); }
+  function openContact(text){
+    msgOverride = typeof text === 'string' ? text : '';
     const order = SRC === 'ig' ? ['ig', 'wa', 'tg', 'fb'] : LANG === 'ru' ? ['tg', 'wa', 'ig', 'fb'] : SRC === 'fb' ? ['fb', 'wa', 'ig', 'tg'] : ['ig', 'wa', 'tg', 'fb'];
     const list = $('#contactList'); list.innerHTML = '';
     order.filter(k => k === 'tg' ? TG_USERNAME : String(CFG[k] || '').trim()).forEach(k => {
@@ -2785,7 +2825,32 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     });
     $('#contactSheet').hidden = false;
   }
-  $('#tgLink').addEventListener('click', openContact);
+  $('#tgLink').addEventListener('click', () => openContact());
+  // «Оплатить криптой» (owner 07.11.2026): own USDT TRC-20 wallet, no middleman. Not in the Russian UI (rubles there; RU law
+  // 259-FZ). QR = icons/crypto-trc20.png, made for the address in `usdtQr` — shown only while it equals `usdtTrc20`.
+  const USDT = String(CFG.usdtTrc20 || '').trim();
+  function paintCryptoBtn(){ $('#cryptoBtn').hidden = !(USDT && LANG !== 'ru' && curSvc && +curSvc.usd > 0); }
+  function cryptoCopy(text, msg){
+    const ok = () => toast(msg);
+    try { navigator.clipboard.writeText(text).then(ok, () => toast(text)); } catch (_) { toast(text); }
+  }
+  $('#cryptoBtn').addEventListener('click', () => {
+    const amt = String(+curSvc.usd);
+    $('#cryptoFor').textContent = T(curSvc.name) + ' · $' + amt;
+    $('#cryptoAmt').textContent = amt + ' USDT';
+    $('#cryptoAddr').textContent = USDT;
+    const qr = $('#cryptoQr'); qr.hidden = CFG.usdtQr !== USDT; if (!qr.hidden) qr.src = 'icons/crypto-trc20.png';
+    $('#cryptoSheet').hidden = false;
+    sendEv('cr', curSvc.id);
+  });
+  $('#cryptoCopyAmt').addEventListener('click', () => cryptoCopy(String(+curSvc.usd), T('Сумма скопирована')));
+  $('#cryptoCopyAddr').addEventListener('click', () => cryptoCopy(USDT, T('Адрес скопирован')));
+  $('#cryptoPaid').addEventListener('click', () => {
+    sendEv('crp', curSvc.id);
+    $('#cryptoSheet').hidden = true;
+    setTimeout(() => openContact(T('Оплатил {amt} USDT (TRC-20) за: {svc}', { amt: String(+curSvc.usd), svc: T(curSvc.name) })), 250);
+  });
+  $('#cryptoSheet').addEventListener('click', e => { if (e.target.id === 'cryptoSheet') $('#cryptoSheet').hidden = true; });
   $('#contactSheet').addEventListener('click', e => { if (e.target.id === 'contactSheet') $('#contactSheet').hidden = true; });
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;

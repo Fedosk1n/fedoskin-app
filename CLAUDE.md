@@ -232,6 +232,13 @@
   Telegram, Messenger (`m.me/<fb>?text=`, only if `fb` set). Config keys `wa` (digits), `ig`, `fb` (admin «Настройки»;
   empty = not shown). Order: SRC ig ⇒ IG first; ru ⇒ TG first; SRC fb ⇒ Messenger first; else IG, WA, TG. `sendEv('tg', svc,
   m)` ⇒ worker kind `via:<m>`; admin sources card shows «Какой мессенджер выбирают». Service texts no longer say «в Telegram».
+- Crypto payment (owner 07.11.2026, option 1 «свой кошелёк»): service page `#cryptoBtn` «Оплатить криптой (USDT)» — only
+  non-ru UI (rubles there; RU law 259-FZ) and services with a $ price → `#cryptoSheet`: amount = service USD in USDT
+  (copy), network USDT · TRON (TRC-20), QR `icons/crypto-trc20.png` (made in the sandbox with cv2.QRCodeEncoder, verified by
+  decoding) shown only while config `usdtQr` == `usdtTrc20`, address + copy, warnings, «Я оплатил» → contact sheet with
+  `openContact(text)` prefilled «Оплатил N USDT (TRC-20) за: …». Owner's wallet TAiZXgpruhXQTKcwshqo9mFLADgUNJXv3z (QR from
+  his screenshot decoded + base58check OK). Admin field `sUsdt` checks the TRON checksum. Worker `/ev` e='cr' (opened) /
+  'crp' (tapped «Я оплатил») → admin sources card line «Оплата криптой». A new address ⇒ regenerate the QR + set `usdtQr`.
 - Admin bottom bar on iPhone (owner 07.11.2026 screenshot: «Всё опубликовано» bar hung mid-screen over statistics —
   Safari keeps fixed elements shifted, e.g. after the keyboard): `stickBar()` (last script in admin.html) compares the
   bar's bottom with visualViewport bottom and translateY's it back only when they differ (> 2 px); hides it (`.kb`) while
