@@ -438,6 +438,10 @@ body.fsmode .bigplay{z-index:3}
 }
 /* vertical full screen: the corner buttons sit at the video's edge, not at the screen's (wide screens) */
 body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
+.msgr{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--fg);font-size:16px;font-weight:700;text-decoration:none}
+.msgr .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff}
+.msgr .mi svg{width:20px;height:20px}
+.msgr .sub{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -657,7 +661,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <!-- ОНЛАЙН УСЛУГИ (вкладка id="review"; тексты услуг — в SERVICES в скрипте) -->
 <section class="screen" id="review" aria-label="Онлайн услуги" hidden>
   <h1>Онлайн услуги</h1>
-  <p class="soft" style="margin-top:10px;line-height:1.45">Тренировки лично с Федоскиным — создателем приложения. Всё общение и видео — в Telegram.</p>
+  <p class="soft" style="margin-top:10px;line-height:1.45">Тренировки лично с Федоскиным — создателем приложения. Всё общение и видео — в удобном тебе мессенджере.</p>
   <div class="stack" id="svcList" style="gap:12px;margin-top:20px"></div>
 </section>
 
@@ -667,7 +671,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <h1 id="svcTitle" style="margin-top:16px;font-size:34px"></h1>
   <div class="row" style="gap:8px;align-items:baseline;margin-top:10px"><span class="d" id="svcPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" id="svcPer" style="font-size:14px"></span></div>
   <div id="svcBody"></div>
-  <a class="btn btn-accent" id="tgLink" href="#" target="_blank" rel="noopener" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px;background:#229ED9;color:#fff"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>Написать в Telegram</a>
+  <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
 </section>
 
@@ -828,6 +832,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </div>
 
+<div class="sheet-bg" id="contactSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="contactTitle" style="font-size:24px">Где тебе удобнее написать?</h2>
+    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4">Отвечаю лично. Выбери приложение, которым пользуешься.</p>
+    <div class="stack" id="contactList" style="gap:8px;margin-top:14px"></div>
+  </div>
+</div>
 <div class="sheet-bg" id="subsSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="subsTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -944,7 +956,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -2670,9 +2682,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['note', 'После разбора можно перейти на онлайн-ведение и прийти к результату ещё быстрее.']
       ] },
     { id: 'consult', only: 'intl', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 вопрос',
-      short: 'Отвечу на твой вопрос о брейкинге текстом в Telegram.',
+      short: 'Отвечу на твой вопрос о брейкинге текстом в мессенджере.',
       body: [
-        ['p', 'Задай любой вопрос о брейкинге — я лично отвечу текстом в Telegram.'],
+        ['p', 'Задай любой вопрос о брейкинге — я лично отвечу текстом в мессенджере.'],
         ['note', 'Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.']
       ] },
     { id: 'online', name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
@@ -2682,7 +2694,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['h', 'Как проходит обучение'],
         ['ol', ['Уточняем, что ты умеешь сейчас.', 'Я даю задание. Ты выполняешь его и снимаешь каждый пункт отдельным видео.', 'После каждого задания — консультация: техника, тренировочный процесс и не только.', 'Следующее задание — только после проверки предыдущего.']],
         ['h', 'Правила'],
-        ['ul', ['Всё обучение проходит в Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с 11:00 до 14:00 по Москве. Иногда отвечаю и в другое время.']]
+        ['ul', ['Всё обучение проходит в мессенджере: Instagram, WhatsApp или Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с 11:00 до 14:00 по Москве. Иногда отвечаю и в другое время.']]
       ] },
     { id: 'coach', only: 'ru', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
       short: 'Для тренеров, которые уже ведут учеников: методики, работа с группой, свежий взгляд.',
@@ -2691,7 +2703,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['ul', ['не хватает методик для разных возрастов и уровней;', 'сложно строить занятия или мотивировать группу;', 'есть сомнения в педагогических решениях;', 'выгорание или не хватает свежего взгляда со стороны.']],
         ['p', 'Помогу не просто справляться, а работать уверенно, осмысленно и с удовольствием.'],
         ['h', 'Что входит'],
-        ['ul', ['Стартовый созвон 60–90 минут в первый день: разбираем цели, трудности, твой стиль преподавания и строим план развития.', 'Разбор раз в неделю, 30–45 минут: реальные случаи за неделю — конфликты в группе, неудачное занятие, прогресс учеников, адаптация программ.', 'Поддержка в Telegram в приоритете: отвечаю в течение дня на любые вопросы — «что делать, если ребёнок не слушается?», «как изменить тренировку при травме?».']],
+        ['ul', ['Стартовый созвон 60–90 минут в первый день: разбираем цели, трудности, твой стиль преподавания и строим план развития.', 'Разбор раз в неделю, 30–45 минут: реальные случаи за неделю — конфликты в группе, неудачное занятие, прогресс учеников, адаптация программ.', 'Поддержка в мессенджере в приоритете: отвечаю в течение дня на любые вопросы — «что делать, если ребёнок не слушается?», «как изменить тренировку при травме?».']],
         ['note', 'Это не лекции и не шаблоны, а живая работа с твоей реальной практикой — от коллеги, который прошёл этот путь и знает, где подводные камни.']
       ] },
     { id: 'full', name: 'Полное ведение', rub: CFG.fullRub, usd: CFG.fullUsd, per: 'в месяц',
@@ -2739,11 +2751,42 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (kind === 'link') { el = document.createElement('p'); const l = document.createElement('a'); l.href = b; l.target = '_blank'; l.rel = 'noopener'; l.textContent = T(a) + ' ↗'; el.appendChild(l); }
       if (el) body.appendChild(el);
     });
-    $('#tgLink').href = tgHref();
     go('svc');
     $('#svc').scrollTop = 0;
   }
-  $('#tgLink').addEventListener('click', () => { goal('review_tg', {service: curSvc.id}); sendEv('tg', curSvc.id); });
+  // «Написать тренеру» (owner 07.11.2026: in the US few people use Telegram) → choose a messenger. Order: came from
+  // Instagram ⇒ Instagram first; Russian ⇒ Telegram first; others ⇒ Instagram, WhatsApp. Empty setting = not shown.
+  const MSGR = {
+    ig: { name: 'Instagram', bg: 'linear-gradient(45deg,#F58529,#DD2A7B 55%,#8134AF)', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg>',
+      href: t => 'https://ig.me/m/' + encodeURIComponent(String(CFG.ig).replace(/^@/, '')), copy: true },
+    wa: { name: 'WhatsApp', bg: '#25D366', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 12a9 9 0 0 1-13.4 7.9L3 21l1.2-4.4A9 9 0 1 1 21 12z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.2-1.4 2 .8-.4 1.8c-4 .5-9.3-4.8-8.8-8.8L9.8 7l.8 2z" fill="#fff" stroke="none"/></svg>',
+      href: t => 'https://wa.me/' + String(CFG.wa).replace(/\D/g, '') + '?text=' + encodeURIComponent(t) },
+    tg: { name: 'Telegram', bg: '#229ED9', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg>',
+      href: t => 'https://t.me/' + TG_USERNAME + '?text=' + encodeURIComponent(t) },
+    fb: { name: 'Messenger', bg: 'linear-gradient(45deg,#0099FF,#A033FF 60%,#FF5280)', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 3C7 3 3 6.7 3 11.3c0 2.6 1.3 4.9 3.3 6.4V21l3-1.7c.9.3 1.8.4 2.7.4 5 0 9-3.7 9-8.4S17 3 12 3z"/><path d="m7 13 3-3 2.5 2L16 9l-3 4-2.5-2z" fill="#fff"/></svg>',
+      href: t => 'https://m.me/' + encodeURIComponent(String(CFG.fb).replace(/^@/, '')) + '?text=' + encodeURIComponent(t) },
+  };
+  function msgText(){ return T(CFG.tgMessage) + '\n' + T('Услуга:') + ' ' + T(curSvc.name); }
+  function openContact(){
+    const order = SRC === 'ig' ? ['ig', 'wa', 'tg', 'fb'] : LANG === 'ru' ? ['tg', 'wa', 'ig', 'fb'] : SRC === 'fb' ? ['fb', 'wa', 'ig', 'tg'] : ['ig', 'wa', 'tg', 'fb'];
+    const list = $('#contactList'); list.innerHTML = '';
+    order.filter(k => k === 'tg' ? TG_USERNAME : String(CFG[k] || '').trim()).forEach(k => {
+      const m = MSGR[k], text = msgText(), a = document.createElement('a');
+      a.className = 'msgr'; a.href = m.href(text); a.target = '_blank'; a.rel = 'noopener';
+      a.innerHTML = '<span class="mi" style="background:' + m.bg + '">' + m.ico + '</span><span></span><span class="sub"></span>';
+      a.children[1].textContent = m.name;
+      a.children[2].textContent = m.copy ? T('текст скопируется') : '';
+      a.addEventListener('click', () => {
+        if (m.copy) { try { navigator.clipboard && navigator.clipboard.writeText(text).catch(() => {}); } catch (_) {} setTimeout(() => toast(T('Текст скопирован — вставь его в сообщение')), 150); }
+        goal('review_tg', {service: curSvc.id, via: k}); sendEv('tg', curSvc.id, k);
+        setTimeout(() => { $('#contactSheet').hidden = true; }, 300);
+      });
+      list.appendChild(a);
+    });
+    $('#contactSheet').hidden = false;
+  }
+  $('#tgLink').addEventListener('click', openContact);
+  $('#contactSheet').addEventListener('click', e => { if (e.target.id === 'contactSheet') $('#contactSheet').hidden = true; });
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;
     try { navigator.clipboard.writeText(text).then(() => toast(T('Код скопирован')), () => toast(T('Выдели код и скопируй вручную'))); }
@@ -3260,11 +3303,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     return s;
   })();
   // one counted action (e.g. 'tg' = tapped «Написать в Telegram»); same rules as the visit counter
-  function sendEv(e, v){
+  function sendEv(e, v, m){
     const U = String(CFG.pushUrl || '').replace(/\/+$/, '');
     if (!U || location.protocol !== 'https:' || !prof.id) return;
     try { if (localStorage.getItem('fedoskin-noping') === '1') return; } catch (_) {}
-    const body = JSON.stringify({ id: prof.id, e, s: SRC, v: v || '' });
+    const body = JSON.stringify({ id: prof.id, e, s: SRC, v: v || '', m: m || '' });
     try { if (navigator.sendBeacon && navigator.sendBeacon(U + '/ev', new Blob([body], { type: 'text/plain' }))) return; } catch (_) {}
     fetch(U + '/ev', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
   }

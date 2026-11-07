@@ -307,6 +307,8 @@ async function ev(req, env, json) {
   if (c.meta.changes > 0) more.push(srcAdd(db, day, src, 'tgu'));
   const svc = /^[a-z]{1,12}$/.test(b.v || '') ? b.v : '';
   if (svc) more.push(srcAdd(db, day, src, 'svc:' + svc));
+  const via = /^(tg|wa|ig|fb)$/.test(b.m || '') ? b.m : '';
+  if (via) more.push(srcAdd(db, day, src, 'via:' + via)); // which messenger was chosen (07.11.2026)
   await db.batch(more);
   return json({ ok: true });
 }
