@@ -323,6 +323,13 @@ t('Ссылка скопирована', 'Link copied', 'Enlace copiado', 'Link 
 t('Уроки брейкинга от Федоскина: замедление, зеркало и повтор. Попробуй!', 'Breaking lessons by Fedoskin — slow motion, mirror and loop. Check it out!', 'Lecciones de breaking de Fedoskin: cámara lenta, espejo y repetición. ¡Pruébalo!', 'Aulas de breaking do Fedoskin: câmera lenta, espelho e repetição. Experimenta!', 'Des leçons de breaking par Fedoskin : ralenti, miroir et boucle. Essaie !', 'Breaking-Lektionen von Fedoskin: Zeitlupe, Spiegel und Wiederholung. Probier’s aus!', 'Fedoskinのブレイキンレッスン。スロー再生・ミラー・リピート付き。試してみて！', 'Fedoskin의 브레이킹 레슨 — 슬로모션, 미러, 반복 재생. 한번 써 봐!', 'Fedoskin 的霹雳舞课程：慢放、镜像、循环播放。来试试！')
 t('Смотри урок «{name}» в приложении Fedoskin team', 'Check out the “{name}” lesson in the Fedoskin team app', 'Mira la lección «{name}» en la app Fedoskin team', 'Veja a aula “{name}” no app Fedoskin team', 'Regarde la leçon « {name} » dans l’app Fedoskin team', 'Schau dir die Lektion „{name}“ in der Fedoskin-team-App an', 'Fedoskin teamアプリで「{name}」のレッスンを見てみて', 'Fedoskin team 앱에서 ‘{name}’ 레슨을 확인해 봐', '在 Fedoskin team 应用里看看“{name}”这一课')
 
+# ---- messenger choice (07.11.2026) ----
+t('Написать тренеру', 'Message the coach', 'Escribir al coach', 'Falar com o coach', 'Écrire au coach', 'Dem Coach schreiben', 'コーチにメッセージ', '코치에게 메시지 보내기', '联系教练')
+t('Где тебе удобнее написать?', 'Where do you want to message?', '¿Dónde prefieres escribir?', 'Onde você prefere conversar?', 'Où préfères-tu écrire ?', 'Wo möchtest du schreiben?', 'どこでメッセージしますか？', '어디로 메시지를 보낼까?', '你想用哪个应用联系？')
+t('Отвечаю лично. Выбери приложение, которым пользуешься.', 'I answer personally. Pick the app you use.', 'Respondo personalmente. Elige la app que usas.', 'Respondo pessoalmente. Escolha o app que você usa.', 'Je réponds personnellement. Choisis l’app que tu utilises.', 'Ich antworte persönlich. Wähl die App, die du nutzt.', '私が直接返信します。使っているアプリを選んでください。', '내가 직접 답장해. 쓰는 앱을 골라 줘.', '我会亲自回复。选择你常用的应用。')
+t('текст скопируется', 'text will be copied', 'se copiará el texto', 'o texto será copiado', 'le texte sera copié', 'Text wird kopiert', 'テキストをコピーします', '텍스트가 복사돼요', '会复制文字')
+t('Текст скопирован — вставь его в сообщение', 'Text copied — paste it into the message', 'Texto copiado: pégalo en el mensaje', 'Texto copiado — cole na mensagem', 'Texte copié — colle-le dans le message', 'Text kopiert — füg ihn in die Nachricht ein', 'テキストをコピーしました。メッセージに貼り付けてください', '텍스트가 복사됐어 — 메시지에 붙여 넣어 줘', '文字已复制——粘贴到消息里')
+
 # ---- online services tab (long texts live in their own file) ----
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
