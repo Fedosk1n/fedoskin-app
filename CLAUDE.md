@@ -234,15 +234,18 @@
   m)` ⇒ worker kind `via:<m>`; admin sources card shows «Какой мессенджер выбирают». Service texts no longer say «в Telegram».
 - Crypto payment (owner 07.11.2026, option 1 «свой кошелёк»): service page `#cryptoBtn` «Оплатить криптой (USDT)» — only
   non-ru UI (rubles there; RU law 259-FZ) and services with a $ price → `#cryptoSheet`: amount = service USD in USDT
-  (copy), network USDT · TRON (TRC-20), QR `icons/crypto-trc20.png` (made in the sandbox with cv2.QRCodeEncoder, verified by
-  decoding) shown only while config `usdtQr` == `usdtTrc20`, address + copy, warnings, «Я оплатил» → contact sheet with
-  `openContact(text)` prefilled «Оплатил N USDT (TRC-20) за: …». Owner's wallet TAiZXgpruhXQTKcwshqo9mFLADgUNJXv3z (QR from
-  his screenshot decoded + base58check OK). Admin field `sUsdt` checks the TRON checksum. Worker `/ev` e='cr' (opened) /
-  'crp' (tapped «Я оплатил») → admin sources card line «Оплата криптой». A new address ⇒ regenerate the QR + set `usdtQr`.
+  (copy), network USDT · TRON (TRC-20), QR drawn from the address by `vendor/qr.js` (own encoder: byte mode, ECC M, v1–10;
+  verified 215/215 codes with OpenCV decoders), address + copy, warnings, «Я оплатил» → contact sheet with
+  `openContact(text)` prefilled «Оплатил N USDT (TRC-20) за: …». Config key `usdtTrc20` (empty = off). Owner's wallet
+  TAiZXgpruhXQTKcwshqo9mFLADgUNJXv3z. Admin «Настройки» → card «Оплата криптой» (owner «менять кошелёк самому, с
+  подсказками»): state badge, field `#sUsdt` with live checks (base58check; recognises 0x/BTC/TON addresses; a seed phrase
+  or private key is wiped and never stored), the setting changes ONLY for a valid address or empty (typo ⇒ old address
+  stays), preview QR + first/last 4 chars, «Вставить из буфера», «Выключить», step-by-step + safety tips. Worker `/ev`
+  e='cr' (opened) / 'crp' (tapped «Я оплатил») → admin sources card line «Оплата криптой».
 - Admin bottom bar on iPhone (owner 07.11.2026 screenshot: «Всё опубликовано» bar hung mid-screen over statistics —
   Safari keeps fixed elements shifted, e.g. after the keyboard): `stickBar()` (last script in admin.html) compares the
   bar's bottom with visualViewport bottom and translateY's it back only when they differ (> 2 px); hides it (`.kb`) while
-  the keyboard is open. Checked on vv resize/scroll, scroll/scrollend, focusout and every 1 s. Admin «версия 9» (10 since the messenger fields).
+  the keyboard is open. Checked on vv resize/scroll, scroll/scrollend, focusout and every 1 s. Admin «версия 9» (12 since the crypto wallet card).
 - Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
   orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
   translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the

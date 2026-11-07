@@ -448,7 +448,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-row>.muted{width:58px;flex:none;font-size:13px}
 .cr-net{color:#26A17B;font-size:14px}
 .cr-copy{margin-left:auto;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font:600 12px var(--body,inherit);cursor:pointer;flex:none}
-.cr-qr{display:block;width:200px;height:200px;margin:16px auto 0;border-radius:14px;background:#fff;image-rendering:pixelated}
+.cr-qr{width:200px;height:200px;margin:16px auto 0;border-radius:14px;background:#fff;overflow:hidden}
+.cr-qr[hidden]{display:none}
+.cr-qr svg{display:block;width:100%;height:100%}
 .cr-addr{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
 .cr-addr code{display:block;word-break:break-all;font:600 15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;letter-spacing:.02em}
 .cr-addr .cr-copy{margin:0;padding:11px;font-size:14px}
@@ -856,7 +858,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="cr-row"><span class="muted">Сумма</span><b id="cryptoAmt" style="font-size:22px"></b><button class="cr-copy" id="cryptoCopyAmt">Копировать</button></div>
       <div class="cr-row"><span class="muted">Сеть</span><b class="cr-net">USDT · TRON (TRC-20)</b></div>
     </div>
-    <img id="cryptoQr" class="cr-qr" alt="QR" width="200" height="200" hidden>
+    <div id="cryptoQr" class="cr-qr" role="img" aria-label="QR" hidden></div>
     <div class="cr-addr"><code id="cryptoAddr"></code><button class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button></div>
     <div class="cr-warn">
       <b>Важно</b>
@@ -934,6 +936,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
+<script src="vendor/qr.js"></script>
 <script>
 (function(){
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
@@ -993,7 +996,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   translateDom(document.body);
 
   // ===== real lessons (alpha) =====
-  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', usdtQr:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
+  const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
@@ -2827,7 +2830,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#tgLink').addEventListener('click', () => openContact());
   // «Оплатить криптой» (owner 07.11.2026): own USDT TRC-20 wallet, no middleman. Not in the Russian UI (rubles there; RU law
-  // 259-FZ). QR = icons/crypto-trc20.png, made for the address in `usdtQr` — shown only while it equals `usdtTrc20`.
+  // 259-FZ). The QR is drawn from the address by vendor/qr.js, so changing the wallet in the admin is all it takes.
   const USDT = String(CFG.usdtTrc20 || '').trim();
   function paintCryptoBtn(){ $('#cryptoBtn').hidden = !(USDT && LANG !== 'ru' && curSvc && +curSvc.usd > 0); }
   function cryptoCopy(text, msg){
@@ -2839,7 +2842,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#cryptoFor').textContent = T(curSvc.name) + ' · $' + amt;
     $('#cryptoAmt').textContent = amt + ' USDT';
     $('#cryptoAddr').textContent = USDT;
-    const qr = $('#cryptoQr'); qr.hidden = CFG.usdtQr !== USDT; if (!qr.hidden) qr.src = 'icons/crypto-trc20.png';
+    const qr = $('#cryptoQr'); try { qr.innerHTML = QR.svg(USDT, { pad: 3 }); qr.hidden = false; } catch (_) { qr.hidden = true; } // drawn from the address itself
     $('#cryptoSheet').hidden = false;
     sendEv('cr', curSvc.id);
   });
