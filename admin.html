@@ -178,7 +178,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 12</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 13</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1370,6 +1370,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#visMe').checked = store.get('fedoskin-noping') === '1';
   $('#visMe').addEventListener('change', () => store.set('fedoskin-noping', $('#visMe').checked ? '1' : '0'));
   let workerCode = '';
+  setTimeout(() => { if (!workerCode) fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : '').then(t => { if (t) workerCode = t; }).catch(() => {}); }, 1500);
   const nf = n => Number(n || 0).toLocaleString('ru-RU');
   const ccName = (() => { let dn = null; try { dn = new Intl.DisplayNames(['ru'], { type: 'region' }); } catch (_) {} const SHORT = { US: 'США', GB: 'Великобритания', AE: 'ОАЭ', KR: 'Южная Корея', CZ: 'Чехия' }; return cc => cc === 'XX' ? 'Неизвестно' : (SHORT[cc] || (dn && dn.of(cc)) || cc); })();
   const flag = cc => /^[A-Z]{2}$/.test(cc) && cc !== 'XX' ? String.fromCodePoint(...[...cc].map(c => 127397 + c.charCodeAt(0))) + ' ' : '';
@@ -1480,8 +1481,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
   $('#visCheck').addEventListener('click', () => { $('#visErr').textContent = 'Проверяю…'; renderVisits().then(() => { if (!$('#visOff').hidden && $('#visErr').textContent === 'Проверяю…') $('#visErr').textContent = 'Пока не видно — проверьте шаги выше.'; }); });
   $('#visCopy').addEventListener('click', () => {
-    if (!workerCode) { toast('Код ещё загружается — нажмите через секунду', true); return; }
     const ok = () => toast('Код сервера скопирован — вставьте его в Cloudflare');
+    if (!workerCode) { // not loaded yet: fetch now and copy in the same tap (ClipboardItem keeps Safari's tap permission)
+      const get = () => fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : Promise.reject()).then(t => { workerCode = t; return t; });
+      const bad = () => toast('Не удалось скопировать — проверьте интернет и нажмите ещё раз', true);
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+        navigator.clipboard.write([new ClipboardItem({ 'text/plain': get().then(t => new Blob([t], { type: 'text/plain' })) })]).then(ok, () => workerCode ? toast('Код загружен — нажмите ещё раз', true) : bad());
+      } else get().then(t => navigator.clipboard.writeText(t)).then(ok, () => workerCode ? toast('Код загружен — нажмите ещё раз', true) : bad());
+      return;
+    }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(workerCode).then(ok, () => fallbackCopy(workerCode) ? ok() : toast('Не удалось скопировать', true));
     else if (fallbackCopy(workerCode)) ok(); else toast('Не удалось скопировать', true);
   });
