@@ -223,6 +223,9 @@
   today «сег.» hatched), 3-day average line (SVG in real pixels — a stretched viewBox broke the dash animation; redrawn
   on resize), grow-in animation (staggered scaleY) + line drawing, hover tooltip (date, weekday, people/new/returned/
   visits, visits per person, % vs the day before) with other columns dimmed; touch = tap. Admin «версия 16».
+- Kinescope token on the phone (owner 07.11 «Токен вставлен, что не так?» — 401 on upload): `ksClean()` strips «Bearer », quotes,
+  spaces/newlines from the pasted token; `#ksTokHint` shows the saved token as first4…last4 + length (password field — he
+  can't see it); the 401 text says how to make a new token. iPhone home-screen admin has its own storage. Admin «версия 17».
 - Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
   `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
   TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в

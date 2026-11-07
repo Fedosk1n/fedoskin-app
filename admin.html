@@ -224,7 +224,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 16</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 17</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -375,7 +375,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <label class="f"><span>Готовое сообщение в Telegram</span><textarea id="sMsg"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Ниже автоматически добавится выбранная услуга, например «Услуга: Онлайн-ведение». На других языках сообщение переводится, только если оно не менялось.</span></label>
       <h3>Kinescope (видео уроков)</h3>
       <p class="hint" style="margin:6px 0 0">Ключ и проект хранятся только в этом браузере и в приложение не публикуются. Кнопка «Опубликовать» для них не нужна.</p>
-      <label class="f"><span>API-токен Kinescope</span><input type="password" id="ksToken" placeholder="вставьте токен «Админка Fedoskin»" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Kinescope → Настройки → API-токены. Нужны права «Загружать файлы».</span></label>
+      <label class="f"><span>API-токен Kinescope</span><input type="password" id="ksToken" placeholder="вставьте токен «Админка Fedoskin»" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Kinescope → Настройки → API-токены. Нужны права «Загружать файлы».</span><span class="hint" id="ksTokHint" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--soft)"></span></label>
       <label class="f"><span>ID проекта или ссылка на проект</span><input type="text" id="ksProject" placeholder="Fedoskin lessons — по умолчанию" spellcheck="false" autocomplete="off"><span class="hint" id="ksProjectHint" style="text-transform:none;letter-spacing:0;font-weight:400">Откройте проект в Kinescope и скопируйте адрес страницы — ID найдётся сам.</span></label>
       <h3>Уведомления о новых уроках</h3>
       <label class="f"><span>Адрес сервера уведомлений</span><input type="text" id="sPush" placeholder="https://fedoskin-push.….workers.dev" spellcheck="false" autocomplete="off"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика» → «Уведомления». Пусто = уведомлений нет.</span></label>
@@ -594,7 +594,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // https://kinescope.io/<id>/master.m3u8 and the admin only stores the video id in lessons.js (field `ks`).
   const KS_TOKEN = 'fedoskin-ks-token', KS_PROJECT = 'fedoskin-ks-project';
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-  const ksToken = () => (store.get(KS_TOKEN) || '').trim();
+  const ksClean = v => String(v || '').replace(/^\s*bearer\s+/i, '').replace(/[\s"'«»`]/g, '');
+  const ksToken = () => ksClean(store.get(KS_TOKEN));
   // project «Fedoskin lessons» in the owner's Kinescope (not a secret); can be overridden in «Тексты и настройки»
   const KS_PROJECT_DEFAULT = 'fcaf2ef0-7110-4690-a892-72163db7283c';
   const ksProject = () => (store.get(KS_PROJECT) || KS_PROJECT_DEFAULT).trim();
@@ -611,7 +612,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
   function ksErr(status, j){
     const m = j && j.error && j.error.message ? String(j.error.message) : '';
-    if (status === 401) return 'Kinescope не принял токен. Проверьте его во вкладке «Тексты и настройки»';
+    if (status === 401) return 'Kinescope не принял токен' + (m ? ' («' + m + '»)' : '') + '. Скорее всего, токен вставлен не полностью или его удалили в Kinescope. Создайте новый: Kinescope → Настройки → API-токены → «Создать», права «Загружать файлы», — и вставьте его во вкладке «Тексты и настройки» на этом же устройстве';
     if (status === 403) return 'у токена Kinescope нет права «Загружать файлы»';
     if (status === 404 || /parent|project|folder/i.test(m)) return 'Kinescope не нашёл проект. Проверьте ID проекта во вкладке «Тексты и настройки»';
     if (status === 402 || /limit|quota|tariff|plan/i.test(m)) return 'Kinescope: закончилось место на тарифе (' + (m || 'лимит') + ')';
@@ -1146,7 +1147,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#ksToken').value = ksToken();
   $('#ksProject').value = store.get(KS_PROJECT) || '';
   paintKsProject();
-  $('#ksToken').addEventListener('input', () => { const v = $('#ksToken').value.trim(); if (v) store.set(KS_TOKEN, v); else store.del(KS_TOKEN); paintDest(); });
+  // show which token is saved (the field is a password field — the owner can't see what was pasted on the phone)
+  function paintKsTok(){ const t = ksToken(), h = $('#ksTokHint'); if (!h) return;
+    h.textContent = !t ? 'Токен не вставлен на этом устройстве.' : 'Сохранён токен: ' + t.slice(0, 4) + '…' + t.slice(-4) + ' (' + t.length + ' символов). Сверьте первые и последние символы с токеном в Kinescope.'; }
+  $('#ksToken').addEventListener('input', () => { const v = ksClean($('#ksToken').value); if (v) store.set(KS_TOKEN, v); else store.del(KS_TOKEN); paintDest(); paintKsTok(); });
+  paintKsTok();
   $('#ksProject').addEventListener('input', () => {
     const m = $('#ksProject').value.match(UUID_RE);
     if (m) store.set(KS_PROJECT, m[0].toLowerCase()); else store.del(KS_PROJECT);
