@@ -272,6 +272,9 @@
   «Написать тренеру» (+ crypto opened / «Я оплатил»), % of tab openers, % of all visitors; per-service table (opened /
   wrote / %); 14-day bars of people opening the tab. Old worker ⇒ «обновите код сервера». Tested: worker on node:sqlite,
   app events over a local https server, admin card on phone/desktop. Admin «версия 21».
+  Owner couldn't find the copy button (07.11): stats now show a big orange banner `#wkNew` with its own «Скопировать код
+  сервера» (`#wkCopy`) + steps whenever `/visits` lacks `sources` or `svc` (worker older than the admin); `#svCopy` in the
+  services card too. Admin «версия 22».
 - Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
   and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
   `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.
