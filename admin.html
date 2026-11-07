@@ -91,8 +91,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pt-reset{background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
 .seg{display:flex;gap:6px;margin-top:14px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);color:#0B0B0C;border-color:var(--accent)}
 .ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
-.arrows{display:flex;flex-direction:column;gap:4px}
-.arrows .btn{width:36px;height:30px;min-height:30px;padding:0;border-radius:8px}
+.grip{flex:0 0 auto;width:40px;height:52px;margin:-6px -4px -6px 0;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.grip:hover{background:var(--surface-2);color:var(--fg)}
+.grip:focus-visible{outline:2px solid var(--accent)}
+.grip svg{width:18px;height:22px}
+.grip[disabled]{opacity:.25;cursor:default}
+.lrow{transition:transform .18s ease}
+.lrow.drag{position:relative;z-index:5;transition:none;background:#1F1F23;border-color:var(--accent);box-shadow:0 14px 34px rgba(0,0,0,.6);scale:1.02}
+.lrow.drag .grip{cursor:grabbing;color:var(--accent)}
+body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.dragging .lrow:not(.drag) .tx{pointer-events:none}
 .savebar{position:fixed;left:0;right:0;bottom:0;transition:opacity .15s ease;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
 .savebar.kb{opacity:0;pointer-events:none}
 .savebar .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px}
@@ -224,7 +232,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 18</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 19</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -277,7 +285,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <button class="btn btn-sm" id="moveGo" type="button" hidden>Перенести</button>
         </div>
       </div>
-      <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Стрелки — порядок внутри раздела. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
+      <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Порядок внутри раздела — потяните урок за точки ⠿ справа вверх или вниз. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
       <div style="margin-top:12px"><input type="text" id="lFilter" placeholder="Найти урок…"></div>
       <div id="lessonList"></div>
     </div>
@@ -879,15 +887,16 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         tx.append(nm, mt);
         tx.addEventListener('click', () => openEdit(l.id));
         tx.addEventListener('keydown', e => { if (e.key === 'Enter') openEdit(l.id); });
-        const ar = document.createElement('div'); ar.className = 'arrows';
-        const idx = list.indexOf(l);
-        [['↑', -1, 'Выше'], ['↓', 1, 'Ниже']].forEach(([t, d, lbl]) => {
-          const b = document.createElement('button'); b.className = 'btn'; b.textContent = t; b.setAttribute('aria-label', lbl + ': ' + l.name);
-          b.disabled = q !== '' || (d < 0 ? idx === 0 : idx === list.length - 1);
-          b.addEventListener('click', () => move(l, d));
-          ar.appendChild(b);
-        });
-        r.append(img, tx, ar); box.appendChild(r);
+        // drag handle (owner 07.11.2026: arrows are awkward with many lessons) — drag to reorder; arrow keys still work
+        const gr = document.createElement('button'); gr.className = 'grip'; gr.type = 'button';
+        gr.innerHTML = '<svg viewBox="0 0 18 22" fill="currentColor" aria-hidden="true"><circle cx="5" cy="4" r="1.9"/><circle cx="13" cy="4" r="1.9"/><circle cx="5" cy="11" r="1.9"/><circle cx="13" cy="11" r="1.9"/><circle cx="5" cy="18" r="1.9"/><circle cx="13" cy="18" r="1.9"/></svg>';
+        gr.setAttribute('aria-label', 'Перетащить «' + l.name + '» (или стрелки ↑ ↓ на клавиатуре)');
+        gr.disabled = q !== '' || list.length < 2;
+        if (q) gr.title = 'Очистите поиск, чтобы менять порядок';
+        gr.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); move(l, e.key === 'ArrowUp' ? -1 : 1); const g = document.querySelector('.lrow[data-id="' + l.id + '"] .grip'); if (g) g.focus(); } });
+        gr.addEventListener('pointerdown', e => dragStart(e, r, l));
+        r.dataset.id = l.id; r.dataset.sec = sec;
+        r.append(img, tx, gr); box.appendChild(r);
       });
     });
   }
@@ -898,6 +907,61 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const i = lessons.indexOf(l), j = lessons.indexOf(other);
     lessons[i] = other; lessons[j] = l;
     renderLessons(); paintSaveBar();
+  }
+
+  // ---------- drag to reorder (owner 07.11.2026) ----------
+  // Only the dragged row moves with the finger; the others in its section slide by one row to show the drop place.
+  // Near the top/bottom of the screen the page scrolls by itself. Drop ⇒ lessons array reordered within the section.
+  let drag = null;
+  function dragStart(e, row, l){
+    if (e.button > 0 || row.querySelector('.grip').disabled) return;
+    e.preventDefault();
+    const rows = [...document.querySelectorAll('.lrow[data-sec="' + CSS.escape(l.sec) + '"]')];
+    const from = rows.indexOf(row);
+    const tops = rows.map(r => r.getBoundingClientRect().top + scrollY);
+    const step = rows.length > 1 ? (tops[rows.length - 1] - tops[0]) / (rows.length - 1) : row.offsetHeight + 8;
+    drag = { row, l, rows, from, to: from, tops, step, y0: e.clientY + scrollY, y: e.clientY, id: e.pointerId, raf: 0 };
+    try { row.querySelector('.grip').setPointerCapture(e.pointerId); } catch (_) {}
+    row.classList.add('drag'); document.body.classList.add('dragging');
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {}
+    addEventListener('pointermove', dragMove, { passive: false }); addEventListener('pointerup', dragEnd); addEventListener('pointercancel', dragEnd);
+    drag.raf = requestAnimationFrame(dragTick);
+  }
+  function dragLay(){
+    const d = drag, dy = d.y + scrollY - d.y0;
+    d.row.style.transform = 'translateY(' + dy + 'px)';
+    const to = Math.max(0, Math.min(d.rows.length - 1, d.from + Math.round(dy / d.step)));
+    if (to !== d.to && navigator.vibrate) try { navigator.vibrate(4); } catch (_) {}
+    d.to = to;
+    d.rows.forEach((r, i) => { if (r === d.row) return;
+      const shift = d.from < to && i > d.from && i <= to ? -d.step : d.from > to && i >= to && i < d.from ? d.step : 0;
+      r.style.transform = shift ? 'translateY(' + shift + 'px)' : ''; });
+  }
+  function dragMove(e){ if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); drag.y = e.clientY; dragLay(); }
+  function dragTick(){ // auto-scroll near the edges (bottom: above the save bar)
+    if (!drag) return;
+    const edgeTop = 90, edgeBot = innerHeight - 130, y = drag.y;
+    const v = y < edgeTop ? -Math.min(18, (edgeTop - y) / 4) : y > edgeBot ? Math.min(18, (y - edgeBot) / 4) : 0;
+    if (v) { const before = scrollY; scrollBy(0, v); if (scrollY !== before) dragLay(); }
+    drag.raf = requestAnimationFrame(dragTick);
+  }
+  function dragEnd(e){
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const d = drag; drag = null; cancelAnimationFrame(d.raf);
+    removeEventListener('pointermove', dragMove); removeEventListener('pointerup', dragEnd); removeEventListener('pointercancel', dragEnd);
+    document.body.classList.remove('dragging');
+    if (d.to === d.from) { d.row.classList.remove('drag'); d.rows.forEach(r => { r.style.transform = ''; }); return; }
+    // settle the dragged row into its slot, then reorder the data and redraw
+    d.row.style.transition = 'transform .15s ease'; d.row.style.transform = 'translateY(' + (d.tops[d.to] - d.tops[d.from]) + 'px)';
+    setTimeout(() => {
+      const list = lessons.filter(x => x.sec === d.l.sec), slots = list.map(x => lessons.indexOf(x));
+      list.splice(d.from, 1); list.splice(d.to, 0, d.l);
+      slots.forEach((pos, k) => { lessons[pos] = list[k]; });
+      renderLessons(); paintSaveBar();
+      const nr = document.querySelector('.lrow[data-id="' + d.l.id + '"]');
+      if (nr) { nr.animate([{ background: 'rgba(226,97,26,.25)' }, { background: '' }], { duration: 700 }); }
+      toast('«' + d.l.name + '» — теперь ' + (d.to + 1) + '-й в разделе ' + d.l.sec + '. Не забудьте «Опубликовать»');
+    }, 150);
   }
 
   // ---------- edit sheet ----------

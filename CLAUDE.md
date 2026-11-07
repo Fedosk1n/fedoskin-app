@@ -228,6 +228,12 @@
   can't see it); the 401 text says how to make a new token. iPhone home-screen admin has its own storage. Admin «версия 17».
 - «Добавить видео»: the lesson name is NOT taken from the file name any more (owner 07.11 «оставь пустым, введу вручную»);
   the file-name field (id) still fills itself from the typed name. Admin «версия 18».
+- Lesson order by drag (owner 07.11.2026 «стрелками неудобно, если роликов много»): admin «Уроки» rows have a grip `.grip`
+  (6 dots, right side) instead of ↑/↓: pointer events from the grip (touch-action:none, pointer capture), the row follows
+  the finger, other rows of the section slide by one step, auto-scroll near the top/bottom edge (bottom zone above the
+  save bar), drop ⇒ the section's lessons are reordered in place (`dragStart/dragLay/dragTick/dragEnd`), row flashes +
+  toast. Arrow keys on the focused grip still move by one (`move()`). Disabled while the search filter is used.
+  Tested with mouse and CDP touch. Admin «версия 19».
 - Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
   `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
   TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в
