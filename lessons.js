@@ -98,6 +98,17 @@ window.LESSONS_DATA = [
   "vertical": true
  },
  {
+  "id": "fw-baby-love",
+  "sec": "Footwork",
+  "name": "Baby love",
+  "dur": 46,
+  "ru": "Baby love",
+  "added": "2026-11-07",
+  "pv": true,
+  "vertical": true,
+  "ks": "9365fefb-f0d4-49a7-8a55-34dd56a9a68e"
+ },
+ {
   "id": "gd-underknee",
   "sec": "Godowns",
   "name": "Underknee",
