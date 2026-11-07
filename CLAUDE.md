@@ -234,6 +234,13 @@
   save bar), drop ⇒ the section's lessons are reordered in place (`dragStart/dragLay/dragTick/dragEnd`), row flashes +
   toast. Arrow keys on the focused grip still move by one (`move()`). Disabled while the search filter is used.
   Tested with mouse and CDP touch. Admin «версия 19».
+- Squashed cover animations (owner 07.11.2026 «анимированная обложка … сплюснутая»): Baby love and Indian step were added
+  from the iPhone; Safari ignored mediabunny's built-in `crop` (drawImage of a VideoFrame with a source rect) ⇒ the whole 9:16
+  frame was squeezed into 360x480. admin `convert()` now does crop+scale itself when `video.crop` + width/height are given:
+  mediabunny `process` callback (frames arrive already upright) → createImageBitmap → drawImage(crop) on a canvas,
+  `processedWidth/Height`. Verified in Chromium on a normal and a rotation-metadata (iPhone-style) source: matches the
+  <video> picture. Both previews re-cut with ffmpeg (Baby love from its 480p intro). Check: compare a -p3 frame with the
+  source's centre 3:4 crop vs the whole frame squeezed. Admin «версия 20».
 - Traffic sources (owner 05.11.2026: funnel = Instagram + Facebook, «400 подписок за день» — where do they go?): app
   `SRC` = first touch, saved in `fedoskin-src`: `?from=` (bio links ig/fb/yt/tg/tt) > in-app browser UA (Instagram, FBAN/FBAV,
   TikTok, Telegram) > referrer host > `direct`. Sent as `s` with every `/hit`; `sendEv('tg', svcId)` on «Написать в

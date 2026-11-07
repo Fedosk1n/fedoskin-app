@@ -232,7 +232,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 19</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 20</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1350,6 +1350,21 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const input = new M.Input({source: new M.BlobSource(src), formats: M.ALL_FORMATS});
     const output = new M.Output({format: new M.Mp4OutputFormat({fastStart: 'in-memory'}), target: new M.BufferTarget()});
     const vq = opts.bitrate ? new M.Quality({bitrate: opts.bitrate}) : undefined;
+    // 3:4 cover animation: crop + scale OURSELVES on a canvas (owner 07.11.2026: «Baby love» animation came out squashed —
+    // uploaded from an iPhone, Safari ignored mediabunny's built-in crop and squeezed the whole 9:16 frame into 3:4).
+    // Frames reach `process` already turned upright, so the crop is in display pixels, same as makeCover().
+    if (opts.video && opts.video.crop && opts.video.width && opts.video.height) {
+      const {crop: c, width: W, height: H} = opts.video, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const g = cv.getContext('2d');
+      const rest = Object.assign({}, opts.video); delete rest.crop; delete rest.width; delete rest.height; delete rest.fit;
+      opts = Object.assign({}, opts, {video: Object.assign(rest, {processedWidth: W, processedHeight: H, process: async smp => {
+        const src = smp.toCanvasImageSource(); let img = src;
+        try { img = await createImageBitmap(src); } catch (_) {} // a bitmap: Safari's drawImage(VideoFrame, crop…) ignores the crop
+        g.drawImage(img, c.left, c.top, c.width, c.height, 0, 0, W, H);
+        if (img !== src && img.close) img.close();
+        return cv;
+      }})});
+    }
     const conv = await M.Conversion.init({
       input, output, showWarnings: false,
       trim: opts.trim,
