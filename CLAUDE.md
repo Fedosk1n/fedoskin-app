@@ -224,12 +224,13 @@
   «Посещаемость» → «Откуда приходят люди»: per source new people (+today), people who wrote, % of new; «До подсчёта» =
   devices from before 05.11; old worker ⇒ «обновите код сервера» + copy button; tagged bio links with copy buttons.
   Tested: worker with node:sqlite on an old-schema DB, app UA/param detection, admin table on a phone.
-- Ready texts for reels (owner 07.11.2026 «чтобы каждый раз не печатал»): admin «Статистика» top card `#ptCard`
-  «Готовые тексты для рилсов и постов» (details, open state `fedoskin-admin-pt-open`): switch Facebook / Instagram
+- Ready texts for reels (owner 07.11.2026 «чтобы каждый раз не печатал»; then «в отдельную вкладку, не в статистике»):
+  admin tab «Соцсети» (`data-pane="social"`): card `#ptCard` «Тексты для рилсов и постов» + card «Ссылки с меткой»
+  (`#srcLinks`, `renderLinks()`, moved out of the sources card). Texts: switch Facebook / Instagram
   (`fedoskin-admin-pt`), groups (caption, pinned comment, end-of-reel on-screen text, bio, IG bio link), each English text
   in a simple + a slang version (owner's standing wish) with «Копировать». FB texts carry the tagged link `?from=fb`
   (clickable there); IG says «link in bio». Texts are editable in place, edits per device in `fedoskin-admin-posts`
-  («Вернуть как было»). Templates = `PT` in admin.html. Admin «версия 14».
+  («Вернуть как было»). Templates = `PT` in admin.html. Admin «версия 15».
 - Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
   and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
   `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.

@@ -80,12 +80,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pill.hid{background:#2E2E32;color:var(--soft)}
 .pill.up{background:var(--accent);color:#0B0B0C}
 .pill.ks{background:#1E3A5F;color:#BFD8FF}
-.pt-card{margin-top:12px;padding:0}
-.pt-card>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
-.pt-card>summary::-webkit-details-marker{display:none}
-.pt-card>summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
-.pt-card[open]>summary::after{transform:rotate(-135deg)}
-.pt-body{padding:0 16px 16px}
 .pt-group{margin-top:16px}
 .pt-group>b{display:block;font-size:14px}
 .pt-group>.hint{margin:2px 0 0}
@@ -193,7 +187,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 14</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 15</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -224,6 +218,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <button class="tab" role="tab" data-tab="add">Добавить видео</button>
       <button class="tab" role="tab" data-tab="settings">Тексты и настройки</button>
       <button class="tab" role="tab" data-tab="stats">Статистика</button>
+      <button class="tab" role="tab" data-tab="social">Соцсети</button>
     </nav>
 
     <div data-pane="lessons">
@@ -363,15 +358,20 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <div class="row" style="margin-top:28px"><button class="btn btn-sm" id="logoutBtn">Выйти из админки на этом устройстве</button></div>
     </div>
 
+    <div data-pane="social" hidden>
+      <div class="card" style="margin-top:12px" id="ptCard">
+        <h2 style="margin:0">Тексты для рилсов и постов</h2>
+        <p class="hint" style="margin:6px 0 0">Нажмите «Копировать» и вставьте в Facebook или Instagram. Ссылка с меткой уже внутри — в «Статистике» → «Откуда приходят люди» будет видно, сколько людей пришло. Текст можно поправить прямо здесь — исправление запомнится на этом устройстве.</p>
+        <div class="seg" role="group" aria-label="Соцсеть"><button class="btn btn-sm" type="button" data-pt="fb" aria-pressed="true">Facebook</button><button class="btn btn-sm" type="button" data-pt="ig" aria-pressed="false">Instagram</button></div>
+        <div id="ptList"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Ссылки с меткой</h2>
+        <p class="hint" style="margin:6px 0 10px">Ставьте в шапку профиля и в посты ссылку своей соцсети — так приложение точно поймёт, откуда пришёл человек, даже если он потом откроет его в Safari или Chrome.</p>
+        <div id="srcLinks" class="stack" style="gap:6px"></div>
+      </div>
+    </div>
     <div data-pane="stats" hidden>
-      <details class="card pt-card" id="ptCard">
-        <summary>✍️ Готовые тексты для рилсов и постов</summary>
-        <div class="pt-body">
-          <p class="hint" style="margin:0">Нажмите «Копировать» и вставьте в Facebook или Instagram. Ссылка с меткой уже внутри — в «Откуда приходят люди» будет видно, сколько людей пришло. Текст можно поправить прямо здесь — исправление запомнится на этом устройстве.</p>
-          <div class="seg" role="group" aria-label="Соцсеть"><button class="btn btn-sm" type="button" data-pt="fb" aria-pressed="true">Facebook</button><button class="btn btn-sm" type="button" data-pt="ig" aria-pressed="false">Instagram</button></div>
-          <div id="ptList"></div>
-        </div>
-      </details>
       <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></div>
       <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
       <div id="visOff" class="card" style="margin-top:12px" hidden>
@@ -398,10 +398,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
             <div id="srcVia"></div>
             <p class="hint" style="margin-top:8px">Новые — люди, впервые открывшие приложение. Написали — сколько разных людей нажали «Написать в Telegram» (в любой услуге); % — какая доля новых написала. Счёт идёт с 05.11.2026, кто пришёл раньше — в строке «До подсчёта».</p>
           </div>
-          <details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:700">Ссылки с меткой для шапки профиля</summary>
-            <p class="hint" style="margin:6px 0">Поставьте в Instagram и Facebook свою ссылку — так приложение точно поймёт, откуда пришёл человек, даже если он потом откроет его в Safari или Chrome.</p>
-            <div id="srcLinks" class="stack" style="gap:6px"></div>
-          </details>
+          <p class="hint" style="margin-top:10px">Ссылки с меткой и готовые тексты для постов — во вкладке «Соцсети».</p>
         </div>
         <h3>Последние 30 дней</h3>
         <div class="vchart" id="visChart"></div>
@@ -739,7 +736,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function showTab(name){
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
-    if (name === 'stats') { renderStats(); try { renderPosts(); } catch (_) {} }
+    if (name === 'stats') renderStats();
+    if (name === 'social') { try { renderPosts(); renderLinks(); } catch (_) {} }
     store.set('fedoskin-admin-tab', name);
   }
 
@@ -1422,6 +1420,17 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!ta.offsetParent || !ta.scrollHeight) { ta.style.height = ''; ta.rows = Math.max(1, ta.value.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 34)), 0)); return; }
     ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
   };
+  function renderLinks(){
+    const appUrl = ((remote && remote.cfg && remote.cfg.appUrl) || (location.origin + location.pathname.replace(/[^/]*$/, ''))).replace(/\/?$/, '/');
+    $('#srcLinks').innerHTML = '';
+    [['ig', 'Instagram'], ['fb', 'Facebook'], ['yt', 'YouTube'], ['tg', 'Telegram'], ['tt', 'TikTok']].forEach(([k, n]) => {
+      const u = appUrl + '?from=' + k, row = document.createElement('div'); row.className = 'row'; row.style.gap = '8px';
+      row.innerHTML = '<span class="small" style="width:78px;flex:0 0 auto;font-weight:700"></span><code style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"></code><button class="btn btn-sm">Копировать</button>';
+      row.children[0].textContent = n; row.children[1].textContent = u;
+      row.children[2].addEventListener('click', () => { const ok = () => toast('Ссылка для ' + n + ' скопирована'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, () => fallbackCopy(u) ? ok() : toast('Не удалось скопировать', true)); else if (fallbackCopy(u)) ok(); });
+      $('#srcLinks').appendChild(row);
+    });
+  }
   function renderPosts(){
     document.querySelectorAll('#ptCard [data-pt]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pt === ptNet)));
     const box = $('#ptList'); box.innerHTML = '';
@@ -1446,9 +1455,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     });
   }
   document.querySelectorAll('#ptCard [data-pt]').forEach(b => b.addEventListener('click', () => { ptNet = b.dataset.pt; store.set('fedoskin-admin-pt', ptNet); renderPosts(); }));
-  $('#ptCard').open = store.get('fedoskin-admin-pt-open') !== '0';
-  $('#ptCard').addEventListener('toggle', () => { store.set('fedoskin-admin-pt-open', $('#ptCard').open ? '1' : '0'); if ($('#ptCard').open) renderPosts(); });
-  renderPosts();
+  renderPosts(); renderLinks();
 
   // ---------- visits (server /visits; the app pings /hit) ----------
   // the owner's own visits from this browser don't count: the app (same site) reads this mark
@@ -1508,15 +1515,6 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function renderSources(j){
     const sx = j.sources;
     $('#srcOld').hidden = !!sx; $('#srcOn').hidden = !sx;
-    const appUrl = (remote.cfg.appUrl || (location.origin + location.pathname.replace(/[^/]*$/, ''))).replace(/\/?$/, '/');
-    $('#srcLinks').innerHTML = '';
-    [['ig', 'Instagram'], ['fb', 'Facebook'], ['yt', 'YouTube'], ['tg', 'Telegram'], ['tt', 'TikTok']].forEach(([k, n]) => {
-      const u = appUrl + '?from=' + k, row = document.createElement('div'); row.className = 'row'; row.style.gap = '8px';
-      row.innerHTML = '<span class="small" style="width:78px;flex:0 0 auto;font-weight:700"></span><code style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"></code><button class="btn btn-sm">Копировать</button>';
-      row.children[0].textContent = n; row.children[1].textContent = u;
-      row.children[2].addEventListener('click', () => { const ok = () => toast('Ссылка для ' + n + ' скопирована'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(ok, () => fallbackCopy(u) ? ok() : toast('Не удалось скопировать', true)); else if (fallbackCopy(u)) ok(); });
-      $('#srcLinks').appendChild(row);
-    });
     if (!sx) return;
     const pick = (rows) => { const m = {}; rows.forEach(([src, kind, n]) => { (m[src] = m[src] || {})[kind] = (m[src][kind] || 0) + n; }); return m; };
     const all = pick(sx.all), today = pick(sx.today);
