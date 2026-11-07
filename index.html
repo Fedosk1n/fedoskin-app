@@ -458,6 +458,26 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-warn b{color:var(--accent)}
 .cr-warn ul{margin:6px 0 0;padding-left:18px}
 .cr-warn li+li{margin-top:4px}
+.cr-h{display:block;margin-top:18px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cr-steps{list-style:none;margin:10px 0 0;padding:0;counter-reset:crs}
+.cr-steps>li{position:relative;padding:0 0 14px 40px;counter-increment:crs}
+.cr-steps>li::before{content:counter(crs);position:absolute;left:0;top:-1px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#0B0B0C;font:800 14px/26px var(--body,inherit);text-align:center}
+.cr-steps>li:not(:last-child)::after{content:"";position:absolute;left:12.5px;top:30px;bottom:4px;width:1px;background:var(--line)}
+.cr-steps>li>b{display:block;font-size:15px;line-height:1.3}
+.cr-steps>li>span{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--soft,#B9B9BE)}
+.cr-steps .cr-addr{margin-top:8px}
+.cr-steps .cr-addr code{font-size:clamp(11px,3.55vw,15px);letter-spacing:0;padding:10px 8px}
+.cr-qrbtn{margin-top:8px;width:100%;background:none;border:1px dashed var(--line);border-radius:10px;color:var(--muted);padding:9px;font:600 12px var(--body,inherit);cursor:pointer}
+.cr-steps .cr-qr{width:170px;height:170px;margin-top:10px}
+.cr-help{margin-top:4px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-size:13px;line-height:1.45}
+.cr-help summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.cr-help summary::-webkit-details-marker{display:none}
+.cr-help summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
+.cr-help[open] summary::after{transform:rotate(-135deg)}
+.cr-help ul{margin:0;padding:0 14px 4px 32px}
+.cr-help li+li{margin-top:6px}
+.cr-help p{margin:10px 14px 0}
+.cr-ask{display:block;width:calc(100% - 28px);margin:10px 14px 14px;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:11px;font:600 14px var(--body,inherit);cursor:pointer}
 </style>
 </head>
 <body>
@@ -688,8 +708,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div class="row" style="gap:8px;align-items:baseline;margin-top:10px"><span class="d" id="svcPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" id="svcPer" style="font-size:14px"></span></div>
   <div id="svcBody"></div>
   <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
-  <button class="btn" id="cryptoBtn" hidden style="margin-top:10px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
+  <button class="btn" id="cryptoBtn" hidden style="margin-top:16px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
 </section>
 
 <!-- ПРОФИЛЬ -->
@@ -858,17 +878,31 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="cr-row"><span class="muted">Сумма</span><b id="cryptoAmt" style="font-size:22px"></b><button class="cr-copy" id="cryptoCopyAmt">Копировать</button></div>
       <div class="cr-row"><span class="muted">Сеть</span><b class="cr-net">USDT · TRON (TRC-20)</b></div>
     </div>
-    <div id="cryptoQr" class="cr-qr" role="img" aria-label="QR" hidden></div>
-    <div class="cr-addr"><code id="cryptoAddr"></code><button class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button></div>
-    <div class="cr-warn">
-      <b>Важно</b>
+    <span class="cr-h">Как оплатить</span>
+    <ol class="cr-steps">
+      <li><b>Открой приложение, где есть USDT</b><span>Биржа (Binance, Bybit, OKX, Kraken) или кошелёк → «Вывод» или «Отправить» → USDT.</span></li>
+      <li><b>Выбери сеть TRON (TRC-20)</b><span>В приложении она может называться «TRX» или «Tron». Другая сеть — деньги не дойдут.</span></li>
+      <li><b>Вставь адрес</b>
+        <div class="cr-addr"><code id="cryptoAddr"></code><button class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button></div>
+        <button class="cr-qrbtn" id="cryptoQrBtn" hidden>Показать QR-код (если кошелёк на другом устройстве)</button>
+        <div id="cryptoQr" class="cr-qr" role="img" aria-label="QR" hidden></div>
+      </li>
+      <li><b>Проверь сумму</b><span id="cryptoCheck"></span></li>
+      <li><b>Отправь и сделай скриншот</b><span>Перевод приходит за 1–3 минуты. Вернись сюда и нажми кнопку ниже — пришли скриншот тренеру.</span></li>
+    </ol>
+    <details class="cr-help" id="cryptoHelp">
+      <summary>Ни разу не платил криптой?</summary>
       <ul>
-        <li>Отправляй только USDT в сети TRON (TRC-20). Другая монета или сеть — деньги не дойдут и вернуть их нельзя.</li>
-        <li>Сумма к зачислению — ровно столько, сколько указано. Комиссию сети платит отправитель.</li>
-        <li>После перевода нажми «Я оплатил» и пришли мне сообщение — начнём, как только увижу перевод.</li>
+        <li>Проще всего — через криптобиржу: Binance, Bybit, OKX, из США — Kraken. Нужна регистрация и проверка личности: обычно от 10 минут до суток.</li>
+        <li>USDT покупается там же банковской картой — раздел «Купить крипту» (Buy crypto).</li>
+        <li>Coinbase, PayPal и Cash App не отправляют USDT в сети TRON — через них не получится.</li>
+        <li>Свой кошелёк (Trust Wallet, TronLink): кроме USDT нужно немного TRX — им платится комиссия сети. Без TRX перевод не пройдёт.</li>
       </ul>
-    </div>
-    <button class="btn btn-accent" id="cryptoPaid" style="margin-top:14px;min-height:54px;font-size:16px;border-radius:16px;width:100%">Я оплатил — написать тренеру</button>
+      <p class="muted">Что-то непонятно? Напиши тренеру — помогу разобраться.</p>
+      <button class="cr-ask" id="cryptoAsk">Задать вопрос тренеру</button>
+    </details>
+    <div class="cr-warn"><b>Важно:</b> Только USDT и только сеть TRON (TRC-20). С другой монетой или сетью деньги не дойдут, и вернуть их нельзя.</div>
+    <button class="btn btn-accent" id="cryptoPaid" style="margin-top:14px;min-height:54px;font-size:16px;border-radius:16px;width:100%">Я оплатил — отправить скриншот</button>
   </div>
 </div>
 <div class="sheet-bg" id="contactSheet" hidden>
@@ -2837,22 +2871,55 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const ok = () => toast(msg);
     try { navigator.clipboard.writeText(text).then(ok, () => toast(text)); } catch (_) { toast(text); }
   }
-  $('#cryptoBtn').addEventListener('click', () => {
+  // Guide for first-timers (owner 07.11.2026 «понятны ли шаги, если ни разу не делали так»): numbered steps, «check the
+  // Receive amount» (exchanges deduct ~1 USDT), a «never paid with crypto?» block (Coinbase/PayPal/Cash App can't send
+  // TRC-20; own wallets need TRX for the fee). On phones the QR (useless on the same phone) sits behind a button.
+  // The open sheet is remembered (`fedoskin-crypto`, 1 h): iPhone often reloads the app while the client is in his
+  // exchange app — back here he lands on the same sheet with the «I've paid» button.
+  const CR_KEY = 'fedoskin-crypto', COARSE = matchMedia('(pointer: coarse)').matches;
+  let crPaid = false;
+  function openCrypto(restored){
     const amt = String(+curSvc.usd);
     $('#cryptoFor').textContent = T(curSvc.name) + ' · $' + amt;
     $('#cryptoAmt').textContent = amt + ' USDT';
     $('#cryptoAddr').textContent = USDT;
-    const qr = $('#cryptoQr'); try { qr.innerHTML = QR.svg(USDT, { pad: 3 }); qr.hidden = false; } catch (_) { qr.hidden = true; } // drawn from the address itself
+    $('#cryptoCheck').textContent = T('Перед отправкой посмотри строку «Получите» (Receive amount): там должно быть {amt} USDT. Если меньше — прибавь комиссию биржи (обычно около 1 USDT).', { amt });
+    const qr = $('#cryptoQr'), qb = $('#cryptoQrBtn');
+    let ok = true; try { qr.innerHTML = QR.svg(USDT, { pad: 3 }); } catch (_) { ok = false; } // drawn from the address itself
+    qr.hidden = !ok || COARSE; qb.hidden = !ok || !COARSE; qb.textContent = T('Показать QR-код (если кошелёк на другом устройстве)');
+    $('#cryptoHelp').open = false; crPaid = false;
     $('#cryptoSheet').hidden = false;
-    sendEv('cr', curSvc.id);
+    $('#cryptoSheet .sheet').scrollTop = 0;
+    try { localStorage.setItem(CR_KEY, JSON.stringify({ id: curSvc.id, t: Date.now() })); } catch (_) {}
+    if (!restored) sendEv('cr', curSvc.id);
+  }
+  $('#cryptoBtn').addEventListener('click', () => openCrypto(false));
+  $('#cryptoQrBtn').addEventListener('click', () => {
+    const qr = $('#cryptoQr'), on = qr.hidden; qr.hidden = !on;
+    $('#cryptoQrBtn').textContent = on ? T('Скрыть QR-код') : T('Показать QR-код (если кошелёк на другом устройстве)');
   });
   $('#cryptoCopyAmt').addEventListener('click', () => cryptoCopy(String(+curSvc.usd), T('Сумма скопирована')));
   $('#cryptoCopyAddr').addEventListener('click', () => cryptoCopy(USDT, T('Адрес скопирован')));
   $('#cryptoPaid').addEventListener('click', () => {
-    sendEv('crp', curSvc.id);
+    sendEv('crp', curSvc.id); crPaid = true;
     $('#cryptoSheet').hidden = true;
-    setTimeout(() => openContact(T('Оплатил {amt} USDT (TRC-20) за: {svc}', { amt: String(+curSvc.usd), svc: T(curSvc.name) })), 250);
+    setTimeout(() => openContact(T('Оплатил {amt} USDT (TRC-20) за: {svc}. Прикрепляю скриншот перевода.', { amt: String(+curSvc.usd), svc: T(curSvc.name) })), 250);
   });
+  $('#cryptoAsk').addEventListener('click', () => {
+    $('#cryptoSheet').hidden = true;
+    setTimeout(() => openContact(T('Хочу оплатить криптой «{svc}», но есть вопрос:', { svc: T(curSvc.name) })), 250);
+  });
+  // closed on purpose (tap outside, back, «I've paid», question) ⇒ forget; a reload of the page does not hide it
+  new MutationObserver(() => { if ($('#cryptoSheet').hidden) { try { localStorage.removeItem(CR_KEY); } catch (_) {} } })
+    .observe($('#cryptoSheet'), { attributes: true, attributeFilter: ['hidden'] });
+  function restoreCrypto(){
+    try {
+      const r = JSON.parse(localStorage.getItem(CR_KEY) || 'null'); if (!r) return;
+      const s = SERVICES.find(x => x.id === r.id);
+      if (!s || Date.now() - r.t > 3600e3 || !USDT || LANG === 'ru' || !(+s.usd > 0)) { localStorage.removeItem(CR_KEY); return; }
+      openService(s); setTimeout(() => openCrypto(true), 120);
+    } catch (_) {}
+  }
   $('#cryptoSheet').addEventListener('click', e => { if (e.target.id === 'cryptoSheet') $('#cryptoSheet').hidden = true; });
   $('#contactSheet').addEventListener('click', e => { if (e.target.id === 'contactSheet') $('#contactSheet').hidden = true; });
   $('#copyBtn').addEventListener('click', () => {
@@ -3521,6 +3588,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else if (startState.s === 'section' && startState.sec) openSection(startState.sec);
     else if (document.getElementById(startState.s)) go(startState.s);
   }
+  if (!startState || !startState.s || /^(home|review|svc)$/.test(startState.s)) restoreCrypto(); // came back from the exchange app after a reload
   try {
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
