@@ -1,6 +1,15 @@
 // Ленты кадров для плавной перемотки ползунком. Их делает админка (admin.html) — формат JSON.
 // урок → {src: id видео Kinescope или "gh", every: сек между кадрами, n: кадров, w/h: размер кадра, cols: кадров в ряду}; картинка v/<урок>-sb.jpg
 window.LESSON_SB = {
+ "tr-indian-step": {
+  "src": "gh",
+  "every": 0.5,
+  "n": 81,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "tr-cross": {
   "src": "gh",
   "every": 0.5,
@@ -244,10 +253,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "tr-indian-step": {
-  "src": "gh",
+ "fw-baby-love": {
+  "src": "9365fefb-f0d4-49a7-8a55-34dd56a9a68e",
   "every": 0.5,
-  "n": 81,
+  "n": 92,
   "w": 180,
   "h": 320,
   "cols": 10,
