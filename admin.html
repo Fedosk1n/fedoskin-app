@@ -141,6 +141,22 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .vgrid .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 .vgrid .kpi{background:var(--surface-2);border-color:transparent}
 .kpi small{display:block;font-size:11px;color:var(--soft);margin-top:4px}
+.svf{display:flex;flex-direction:column;gap:8px}
+.svf .st{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:end}
+.svf .st b{font-size:13.5px;font-weight:700}
+.svf .st span{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.svf .st span em{font-style:normal;font:400 20px/1 Anton,Impact,sans-serif;color:var(--fg);margin-right:4px}
+.svf .bar{grid-column:1/-1;height:10px;border-radius:5px;background:#26262A;overflow:hidden}
+.svf .bar i{display:block;height:100%;border-radius:5px;background:var(--accent);width:0;transition:width .8s cubic-bezier(.2,.9,.25,1)}
+.svf .st.sub b{font-weight:500;color:var(--soft,#B9B9BE);padding-left:14px}
+.svf .st.sub .bar i{background:rgba(226,97,26,.55)}
+.svf .conv{font-size:11.5px;color:var(--muted);margin:-2px 0 2px 2px}
+.svf .conv b{color:var(--new)}
+.svspark{display:flex;align-items:flex-end;gap:3px;height:56px;margin-top:6px}
+.svspark i{flex:1 1 0;min-width:0;background:var(--accent);border-radius:3px 3px 0 0;opacity:.85;position:relative;min-height:2px}
+.svspark i:hover{opacity:1}
+.svspark i.z{background:#26262A}
+.svx{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:3px}
 .vsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .vsum div{background:var(--surface);border:1px solid #222225;border-radius:12px;padding:10px 12px;min-width:0}
 .vsum b{display:block;font:400 24px/1.05 Anton,Impact,sans-serif;letter-spacing:.01em}
@@ -232,7 +248,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 20</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 21</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -434,6 +450,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <div class="vgrid" style="margin-top:12px">
           <div class="card"><h3 style="margin-top:0">Сегодня <span id="visDay" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visToday"></div></div>
           <div class="card"><h3 style="margin-top:0">За всё время <span id="visSince" style="text-transform:none;letter-spacing:0"></span></h3><div class="kpis" id="visAll"></div></div>
+        </div>
+        <div class="row" style="justify-content:space-between;align-items:center;margin:22px 0 8px;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Интерес к онлайн-услугам</h3><div class="vper" id="svPer"><button class="btn btn-sm" type="button" data-p="today">Сегодня</button><button class="btn btn-sm" type="button" data-p="d7">7 дней</button><button class="btn btn-sm" type="button" data-p="all">Всё время</button></div></div>
+        <div class="card" style="padding:14px" id="svCard">
+          <div id="svOld" class="hint" hidden>Чтобы видеть интерес к услугам, обновите код сервера: «Скопировать код сервера» выше (или в «Откуда приходят люди») → Cloudflare → <b>Workers &amp; Pages → fedoskin-push → Edit code</b> → удалить всё, вставить → <b>Deploy</b>. Счёт начнётся с этого момента.</div>
+          <div id="svOn" hidden>
+            <div class="svf" id="svFunnel"></div>
+            <h3 style="margin:16px 0 4px">По услугам</h3>
+            <div style="overflow-x:auto"><table class="srct" id="svTable"></table></div>
+            <h3 style="margin:16px 0 0">Открыли вкладку по дням (людей)</h3>
+            <div class="svspark" id="svSpark"></div><div class="svx"><span id="svX0"></span><span>сегодня</span></div>
+            <p class="hint" style="margin-top:10px" id="svNote"></p>
+          </div>
         </div>
         <h3>Откуда приходят люди</h3>
         <div class="card" style="padding:12px 14px">
@@ -1709,10 +1737,57 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoToday').innerHTML = barsHtml(j.countriesToday, cc => flag(cc) + ccName(cc));
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
-    renderSources(j);
+    renderSources(j); renderServices(j);
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
+  // ---------- interest in online services (owner 07.11.2026 «хочу видеть, сколько ей интересовались») ----------
+  // worker `svc`: taps per day/kind (30 days) + all time, distinct people per kind today / 7 days / all.
+  // kinds: sv = «Онлайн услуги» tab opened, so:<id> = a service page opened, tg / svc:<id> = «Написать тренеру», cr / crp = crypto.
+  const escS = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const SVC_NAMES = {review: 'Разбор элемента или перехода', consult: 'Консультация', online: 'Онлайн-ведение', coach: 'Тренер для тренера', full: 'Полное ведение'};
+  let svPer = store.get('fedoskin-admin-svper') || 'd7', lastSv = null;
+  function renderServices(j){
+    if (j) lastSv = j; j = lastSv; if (!j) return;
+    const on = !!j.svc; $('#svOld').hidden = on; $('#svOn').hidden = !on;
+    document.querySelectorAll('#svPer button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === svPer)));
+    if (!on) return;
+    const S = j.svc, from = svPer === 'today' ? j.day : svPer === 'd7' ? new Date(new Date(j.day + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10) : '';
+    const taps = {}; (svPer === 'all' ? S.all.map(([k, n]) => [null, k, n]) : S.days).forEach(([d, k, n]) => { if (svPer !== 'all' && d < from) return; taps[k] = (taps[k] || 0) + n; });
+    const ppl = {}; (S.people[svPer] || []).forEach(([k, n]) => { ppl[k] = n; });
+    const visitors = svPer === 'today' ? (j.today || {}).uniq || 0 : svPer === 'all' ? (j.all || {}).uniq || 0 : 0;
+    const ids = [...new Set([...Object.keys(taps), ...Object.keys(ppl)].filter(k => /^(so|svc|tg):/.test(k)).map(k => k.split(':')[1]))];
+    const soP = ppl.so != null ? ppl.so : ids.reduce((t, id) => t + (ppl['so:' + id] || 0), 0), soT = taps.so != null ? taps.so : ids.reduce((t, id) => t + (taps['so:' + id] || 0), 0);
+    const pct = (a, b) => b ? Math.round(a / b * 100) + ' %' : '—';
+    const rows = [
+      ['Открыли вкладку «Онлайн услуги»', ppl.sv || 0, taps.sv || 0, false],
+      ['Открыли страницу услуги', soP, soT, false],
+      ['Нажали «Написать тренеру»', ppl.tg || 0, taps.tg || 0, false],
+    ];
+    if (taps.cr || taps.crp) { rows.push(['Открыли «Оплатить криптой»', null, taps.cr || 0, true]); rows.push(['Нажали «Я оплатил»', null, taps.crp || 0, true]); }
+    const top = Math.max(1, ...rows.map(r => r[1] == null ? r[2] : r[1]));
+    $('#svFunnel').innerHTML = rows.map(([t, p, n, sub], i) => {
+      const v = p == null ? n : p;
+      const conv = i === 1 && rows[0][1] ? '<div class="conv">из открывших вкладку — <b>' + pct(p, rows[0][1]) + '</b></div>' : i === 2 && rows[0][1] ? '<div class="conv">из открывших вкладку написали — <b>' + pct(p, rows[0][1]) + '</b></div>' : '';
+      return '<div class="st' + (sub ? ' sub' : '') + '"><b>' + escS(t) + '</b><span>' + (p == null ? '<em>' + nf(n) + '</em>раз' : '<em>' + nf(p) + '</em>чел. · ' + nf(n) + ' раз') + '</span><div class="bar"><i data-w="' + (v / top * 100).toFixed(1) + '"></i></div></div>' + conv;
+    }).join('') + (visitors && rows[0][1] ? '<div class="conv" style="margin-top:4px">Вкладку открыли <b>' + pct(rows[0][1], visitors) + '</b> всех, кто заходил в приложение ' + (svPer === 'today' ? 'сегодня' : 'за всё время') + '.</div>' : '');
+    requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll('#svFunnel .bar i').forEach(i => { i.style.width = i.dataset.w + '%'; })));
+    // per service
+    const list = ids.map(id => ({ id, name: SVC_NAMES[id] || id, op: ppl['so:' + id] || 0, ot: taps['so:' + id] || 0, wp: ppl['tg:' + id] || 0, wt: taps['svc:' + id] || 0 }))
+      .sort((a, b) => b.op - a.op || b.wp - a.wp);
+    $('#svTable').innerHTML = list.length ? '<tr><th>Услуга</th><th>Открыли</th><th>Написали</th><th>%</th></tr>' + list.map(r =>
+      '<tr><td>' + escS(r.name) + '</td><td><b>' + nf(r.op) + '</b> <span class="hint">чел.</span><div class="hint">' + nf(r.ot) + ' раз</div></td><td><b>' + nf(r.wp) + '</b> <span class="hint">чел.</span></td><td>' + pct(r.wp, r.op) + '</td></tr>').join('')
+      : '<tr><td class="hint">Пока никто не открывал услуги за этот период.</td></tr>';
+    // 14 days of people who opened the tab
+    const byDay = {}; S.days.forEach(([d, k, n]) => { if (k === 'u:sv') byDay[d] = n; });
+    const end = new Date(j.day + 'T12:00:00Z'), days = []; for (let i = 13; i >= 0; i--) days.push(new Date(end - i * 864e5).toISOString().slice(0, 10));
+    const mx = Math.max(1, ...days.map(d => byDay[d] || 0));
+    $('#svSpark').innerHTML = days.map(d => { const n = byDay[d] || 0; return '<i class="' + (n ? '' : 'z') + '" style="height:' + Math.max(4, n / mx * 100) + '%" title="' + fmtDay(d) + ': ' + n + ' чел."></i>'; }).join('');
+    $('#svX0').textContent = fmtDay(days[0]);
+    $('#svNote').textContent = 'Люди — сколько разных человек (один человек считается один раз за выбранный период). Раз — сколько всего нажатий. Счёт с ' + (S.since ? fmtDay(S.since) : 'сегодняшнего дня') + '; «Написать тренеру» по людям — тоже с этой даты.';
+  }
+  document.querySelectorAll('#svPer button').forEach(b => b.addEventListener('click', () => { svPer = b.dataset.p; store.set('fedoskin-admin-svper', svPer); renderServices(); }));
+
   function renderSources(j){
     const sx = j.sources;
     $('#srcOld').hidden = !!sx; $('#srcOn').hidden = !sx;

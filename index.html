@@ -2725,6 +2725,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
 
   function go(id){
+    // interest in online services (07.11.2026): the tab opened by the person — not the start-up restore, not «back» from a service
+    if (id === 'review' && performance.now() > 2500) {
+      const cur = [...document.querySelectorAll('.screen')].find(x => !x.hidden);
+      if (!cur || (cur.id !== 'review' && cur.id !== 'svc')) { try { sendEv('sv'); } catch (_) {} }
+    }
     if (id !== 'lesson' && typeof P !== 'undefined' && P.playing) setPlaying(false);
     if (id !== 'lesson' && document.body.classList.contains('fsmode')) exitFs();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; });
@@ -2810,8 +2815,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       box.appendChild(b);
     });
   })();
-  function openService(s){
+  function openService(s, quiet){
     curSvc = s;
+    if (!quiet) { try { sendEv('so', s.id); } catch (_) {} } // which service was opened (07.11.2026)
     $('#svcTitle').textContent = T(s.name);
     $('#svcPrice').textContent = money(s.rub, s.usd);
     $('#svcPer').textContent = T(s.per);
@@ -2917,7 +2923,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const r = JSON.parse(localStorage.getItem(CR_KEY) || 'null'); if (!r) return;
       const s = SERVICES.find(x => x.id === r.id);
       if (!s || Date.now() - r.t > 3600e3 || !USDT || LANG === 'ru' || !(+s.usd > 0)) { localStorage.removeItem(CR_KEY); return; }
-      openService(s); setTimeout(() => openCrypto(true), 120);
+      openService(s, true); setTimeout(() => openCrypto(true), 120);
     } catch (_) {}
   }
   $('#cryptoSheet').addEventListener('click', e => { if (e.target.id === 'cryptoSheet') $('#cryptoSheet').hidden = true; });

@@ -256,6 +256,16 @@
   in a simple + a slang version (owner's standing wish) with «Копировать». FB texts carry the tagged link `?from=fb`
   (clickable there); IG says «link in bio». Texts are editable in place, edits per device in `fedoskin-admin-posts`
   («Вернуть как было»). Templates = `PT` in admin.html. Admin «версия 15».
+- Interest in online services (owner 07.11.2026 «отдельную статистику… сколько ей интересовались»): app `go('review')`
+  sends `sendEv('sv')` when the person comes to the «Онлайн услуги» tab from another screen (not «back» from a service, not
+  in the first 2.5 s = start-up restore); `openService(s)` sends `sendEv('so', s.id)` (`openService(s, true)` = quiet, used by
+  the crypto restore). Worker `/ev` e=sv|so: table `evu(e, id, day)` (who did what which day) + `src` kinds sv / so /
+  so:<id> and u:<kind> for the first time that day; tg also goes to evu as tg and tg:<svc>. `/visits` → `svc {days (30 d,
+  [day, kind, n]), all, people {today, d7, all} = distinct ids per kind, since}`. Admin «Статистика» → «Интерес к
+  онлайн-услугам» (`renderServices`, period today/7 days/all `fedoskin-admin-svper`): funnel tab → service page →
+  «Написать тренеру» (+ crypto opened / «Я оплатил»), % of tab openers, % of all visitors; per-service table (opened /
+  wrote / %); 14-day bars of people opening the tab. Old worker ⇒ «обновите код сервера». Tested: worker on node:sqlite,
+  app events over a local https server, admin card on phone/desktop. Admin «версия 21».
 - Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
   and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
   `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.

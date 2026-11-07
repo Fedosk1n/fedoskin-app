@@ -251,6 +251,7 @@ async function leaderboard(req, env, json) {
 // device and whether it was opened from the home-screen icon; the country comes from Cloudflare. IP addresses are not
 // kept. Days are Moscow days. A "visit" = the app opened after 30+ minutes away (the app decides that).
 const mskDay = (t = Date.now()) => new Date(t + 3 * 3600e3).toISOString().slice(0, 10);
+const dayAgo = n => mskDay(Date.now() - n * 864e5);
 let schemaReady = null;
 function schema(db) {
   if (!schemaReady) schemaReady = db.batch([
@@ -261,6 +262,8 @@ function schema(db) {
     // sources (05.11.2026): per day × where people came from × what: visit / uniq / new / tg (taps) / tgu (people who tapped) / svc:<id>
     db.prepare('CREATE TABLE IF NOT EXISTS src (day TEXT NOT NULL, src TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, src, kind)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS contacted (id TEXT PRIMARY KEY, first TEXT, src TEXT) WITHOUT ROWID'),
+    // who did what on which day (online services interest, 07.11.2026): e = sv | so:<svc> | tg | tg:<svc>
+    db.prepare('CREATE TABLE IF NOT EXISTS evu (e TEXT NOT NULL, id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (e, id, day)) WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
   return schemaReady;
 }
@@ -299,10 +302,21 @@ async function ev(req, env, json) {
   if (!env.DB) return json({ ok: false, nodb: true });
   const b = JSON.parse((await req.text()) || '{}');
   const raw = String(b.id || '').slice(0, 40);
-  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
+  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp|sv|so)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
   const db = env.DB;
   await schema(db);
   const id = await hash('v1:' + raw), day = mskDay(), src = cleanSrc(b.s);
+  const svc = /^[a-z]{1,12}$/.test(b.v || '') ? b.v : '';
+  // a person counted once per day per kind: taps go to `src` as <kind>, the first one that day also as u:<kind>
+  const seen = async kinds => {
+    const r = await db.batch(kinds.map(k => db.prepare('INSERT OR IGNORE INTO evu (e, id, day) VALUES (?, ?, ?)').bind(k, id, day)));
+    return kinds.flatMap((k, i) => [srcAdd(db, day, src, k)].concat(r[i].meta.changes > 0 ? [srcAdd(db, day, src, 'u:' + k)] : []));
+  };
+  if (b.e === 'sv' || b.e === 'so') { // sv = opened the «Онлайн услуги» tab, so = opened one service (07.11.2026)
+    if (b.e === 'so' && !svc) return json({ error: 'bad event' }, 400);
+    await db.batch(await seen(b.e === 'sv' ? ['sv'] : ['so', 'so:' + svc])); // so = any service, so:<id> = this one
+    return json({ ok: true });
+  }
   if (b.e !== 'tg') { // crypto payment: cr = opened the «Оплата криптой» window, crp = tapped «Я оплатил» (07.11.2026)
     await db.batch([srcAdd(db, day, src, b.e)]);
     return json({ ok: true });
@@ -310,10 +324,11 @@ async function ev(req, env, json) {
   const [c] = await db.batch([db.prepare('INSERT OR IGNORE INTO contacted (id, first, src) VALUES (?, ?, ?)').bind(id, day, src)]);
   const more = [srcAdd(db, day, src, 'tg')];
   if (c.meta.changes > 0) more.push(srcAdd(db, day, src, 'tgu'));
-  const svc = /^[a-z]{1,12}$/.test(b.v || '') ? b.v : '';
   if (svc) more.push(srcAdd(db, day, src, 'svc:' + svc));
   const via = /^(tg|wa|ig|fb)$/.test(b.m || '') ? b.m : '';
   if (via) more.push(srcAdd(db, day, src, 'via:' + via)); // which messenger was chosen (07.11.2026)
+  const ins = ['tg'].concat(svc ? ['tg:' + svc] : []);
+  await db.batch(ins.map(k => db.prepare('INSERT OR IGNORE INTO evu (e, id, day) VALUES (?, ?, ?)').bind(k, id, day)));
   await db.batch(more);
   return json({ ok: true });
 }
@@ -322,7 +337,7 @@ async function visits(env, json) {
   const db = env.DB;
   await schema(db);
   const day = mskDay();
-  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted] = await db.batch([
+  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted, svDays, svAll, pT, p7, pA, svSince] = await db.batch([
     db.prepare('SELECT visits, uniq, fresh, app FROM hits WHERE day = ?').bind(day),
     db.prepare('SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(app), 0) AS app, MIN(day) AS since FROM hits'),
     db.prepare('SELECT COUNT(*) AS n FROM devices'),
@@ -333,6 +348,12 @@ async function visits(env, json) {
     db.prepare('SELECT src, kind, SUM(n) AS n FROM src GROUP BY src, kind'),
     db.prepare('SELECT src, kind, n FROM src WHERE day = ?').bind(day),
     db.prepare('SELECT COUNT(*) AS n FROM contacted'),
+    db.prepare("SELECT day, kind, SUM(n) AS n FROM src WHERE day >= ? AND (kind IN ('sv','u:sv','so','u:so','tg','cr','crp') OR kind LIKE 'so:%' OR kind LIKE 'u:so:%' OR kind LIKE 'svc:%') GROUP BY day, kind").bind(dayAgo(29)),
+    db.prepare("SELECT kind, SUM(n) AS n FROM src WHERE kind IN ('sv','so','tg','cr','crp') OR kind LIKE 'so:%' OR kind LIKE 'svc:%' GROUP BY kind"),
+    db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu WHERE day = ? GROUP BY e').bind(day),
+    db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu WHERE day >= ? GROUP BY e').bind(dayAgo(6)),
+    db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu GROUP BY e'),
+    db.prepare('SELECT MIN(day) AS since FROM evu'),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
   return json({
@@ -344,5 +365,9 @@ async function visits(env, json) {
     countriesAll: geoAll.results.map(r => [r.country, r.n]),
     platforms: plat.results.map(r => [r.plat, r.n]),
     sources: { all: srcAll.results.map(r => [r.src, r.kind, r.n]), today: srcToday.results.map(r => [r.src, r.kind, r.n]), contacted: (contacted.results[0] || {}).n || 0 },
+    // online services interest (07.11.2026): taps per day/kind (30 days), taps all time, distinct people today / 7 days / all
+    svc: { days: svDays.results.map(r => [r.day, r.kind, r.n]), all: svAll.results.map(r => [r.kind, r.n]),
+      people: { today: pT.results.map(r => [r.e, r.n]), d7: p7.results.map(r => [r.e, r.n]), all: pA.results.map(r => [r.e, r.n]) },
+      since: (svSince.results[0] || {}).since || null },
   });
 }
