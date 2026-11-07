@@ -196,6 +196,12 @@
   dims the screen (`.tiphole` box-shadow spotlight on the Profile tab), bouncing arrow, «Заполни профиль» + «Заполнить»
   (→ Профиль + profile sheet) / «Позже»; tap on the tab = fill, elsewhere = close. Once (`fedoskin-prof-tip`), skipped
   if a nick is set; waits until home is shown with no sheet/full screen.
+- Profile form step by step (owner 07.11.2026 «пошаговая инструкция… чтобы подсвечивались шаги»): `#profForm` fields are
+  numbered steps `.pst` (1 Имя, 2 Страна, 3 Город) + progress bar `.psteps` + «Шаг N из 3» (`#pStepT`): the active step
+  (focused field, else the first empty one) is orange with a pulsing ring and its hint `.phint` (NOT `.ph` — that class is
+  the hatched placeholder background), filled ones get a green ✓, later ones are dimmed; all filled ⇒ «Всё заполнено —
+  нажми «Сохранить»» + the save button pulses. Enter / keyboard «Далее» (enterkeyhint) moves to the next field.
+  `openProf()` focuses step 1 when no nick yet. `paintSteps()`. Translated in 9 languages.
 - Tablets (owner 01.11.2026 «приложение должно быть качественным»): CSS only at `(min-width:680px) and (min-height:560px)`
   (a phone on its side is never 560 tall ⇒ phones unchanged): .app up to 1180, sections 4 columns, lesson covers auto-fill
   176px, reading screens ≤ 760 centred, sheets = centred cards (handle hidden), fs buttons ≤ 620 wide. ≥ 960 wide: lesson page

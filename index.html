@@ -121,6 +121,29 @@ p{margin:0}
 .field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px}
 .field input{height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font-size:16px}
 .field input::placeholder{color:var(--muted)}
+/* profile: step-by-step (owner 07.11.2026 «пошаговая инструкция… чтобы подсвечивались шаги») */
+.psteps{display:flex;gap:6px;margin-top:14px}
+.psteps i{flex:1;height:4px;border-radius:2px;background:#26262A;transition:background .3s}
+.psteps i.ok{background:var(--new)}.psteps i.on{background:var(--accent)}
+.pstep-t{margin:8px 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.pstep-t.done{color:var(--new)}
+.pst{transition:opacity .25s}
+.pst:not(.on):not(.ok){opacity:.42}
+.pst label{display:flex;align-items:center;gap:8px}
+.pst .pn{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#26262A;color:var(--muted);font:800 12px/1 var(--body,inherit);letter-spacing:0;transition:background .25s,color .25s}
+.pst.on .pn{background:var(--accent);color:#0B0B0C}
+.pst.ok .pn{background:var(--new);color:#0B0B0C}
+.pst.on label{color:var(--fg)}
+.pst input{transition:border-color .25s,box-shadow .25s}
+.pst.on input{border-color:var(--accent);box-shadow:0 0 0 3px rgba(226,97,26,.22);animation:pglow 1.8s ease-in-out infinite}
+.pst.on input:focus{animation:none;box-shadow:0 0 0 3px rgba(226,97,26,.32)}
+.pst.ok input{border-color:rgba(59,209,111,.45)}
+@keyframes pglow{0%,100%{box-shadow:0 0 0 3px rgba(226,97,26,.14)}50%{box-shadow:0 0 0 5px rgba(226,97,26,.34)}}
+.pst .phint{font-size:12.5px;line-height:1.35;color:var(--soft,#B9B9BE);max-height:0;overflow:hidden;opacity:0;transition:max-height .3s,opacity .3s}
+.pst.on .phint{max-height:40px;opacity:1}
+#profSave.ready{animation:psave 1.6s ease-in-out infinite}
+@keyframes psave{0%,100%{box-shadow:0 0 0 0 rgba(226,97,26,0)}50%{box-shadow:0 0 0 6px rgba(226,97,26,.28)}}
+@media (prefers-reduced-motion: reduce){.pst.on input,#profSave.ready{animation:none}}
 
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--hair);
@@ -838,14 +861,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <form class="sheet" id="profForm" role="dialog" aria-modal="true" aria-labelledby="profTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
     <h2 id="profTitle" style="font-size:24px">Твой профиль</h2>
-    <div class="stack" style="gap:14px;margin-top:16px">
-      <div class="field"><label for="fNick">Имя (никнейм)</label><input id="fNick" maxlength="20" autocomplete="nickname" placeholder="Например, B-boy Storm"></div>
-      <div class="field"><label for="fCountry">Страна</label><input id="fCountry" maxlength="30" list="countryList" autocomplete="country-name" placeholder="Например, Россия"></div>
-      <div class="field"><label for="fCity">Город</label><input id="fCity" maxlength="30" autocomplete="address-level2" placeholder="Где ты тренируешься"></div>
+    <div class="psteps" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="pstep-t" id="pStepT" aria-live="polite"></p>
+    <div class="stack" style="gap:12px;margin-top:12px">
+      <div class="field pst"><label for="fNick"><b class="pn">1</b>Имя (никнейм)</label><input id="fNick" maxlength="20" autocomplete="nickname" enterkeyhint="next" placeholder="Например, B-boy Storm"><span class="phint">Как тебя зовут на батлах — так тебя увидят в рейтинге</span></div>
+      <div class="field pst"><label for="fCountry"><b class="pn">2</b>Страна</label><input id="fCountry" maxlength="30" list="countryList" autocomplete="country-name" enterkeyhint="next" placeholder="Например, Россия"><span class="phint">Начни писать и выбери из подсказок</span></div>
+      <div class="field pst"><label for="fCity"><b class="pn">3</b>Город</label><input id="fCity" maxlength="30" autocomplete="address-level2" enterkeyhint="done" placeholder="Где ты тренируешься"><span class="phint">Город, где ты тренируешься — для рейтинга «Мой город»</span></div>
       <datalist id="countryList"><option value="Россия"><option value="Казахстан"><option value="Беларусь"><option value="Украина"><option value="Узбекистан"><option value="Кыргызстан"><option value="Армения"><option value="Грузия"><option value="Азербайджан"><option value="Таджикистан"><option value="Молдова"><option value="Германия"><option value="США"></datalist>
     </div>
     <button class="btn btn-ghost" type="button" id="profAvatarBtn" style="margin-top:14px;min-height:48px">Сменить аватар</button>
-    <button class="btn btn-accent" type="submit" style="margin-top:10px;min-height:52px">Сохранить</button>
+    <button class="btn btn-accent" type="submit" id="profSave" style="margin-top:10px;min-height:52px">Сохранить</button>
   </form>
 </div>
 
@@ -2994,7 +3019,36 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#pId').textContent = prof.id;
   }
   paintProfile();
-  function openProf(){ $('#fNick').value = prof.nick; $('#fCountry').value = prof.country || ''; $('#fCity').value = prof.city; $('#profSheet').hidden = false; }
+  // step by step: the current step is lit (orange, pulsing, with a hint), filled ones get a green tick, later ones are dimmed
+  const PST = ['fNick', 'fCountry', 'fCity'];
+  let pstFocus = -1;
+  function paintSteps(){
+    const filled = PST.map(id => $('#' + id).value.trim() !== '');
+    const act = pstFocus >= 0 ? pstFocus : filled.indexOf(false);
+    document.querySelectorAll('#profForm .pst').forEach((el, i) => {
+      el.classList.toggle('on', i === act); el.classList.toggle('ok', filled[i] && i !== act);
+      el.querySelector('.pn').textContent = filled[i] && i !== act ? '✓' : String(i + 1);
+    });
+    document.querySelectorAll('#profForm .psteps i').forEach((b, i) => { b.className = i === act ? 'on' : filled[i] ? 'ok' : ''; });
+    const all = filled.every(Boolean), t = $('#pStepT');
+    t.textContent = all && act < 0 ? T('Всё заполнено — нажми «Сохранить»') : T('Шаг {n} из 3', { n: (act < 0 ? filled.indexOf(false) : act) + 1 });
+    t.classList.toggle('done', all && act < 0);
+    $('#profSave').classList.toggle('ready', all && act < 0);
+  }
+  PST.forEach((id, i) => {
+    const inp = $('#' + id);
+    inp.addEventListener('focus', () => { pstFocus = i; paintSteps(); });
+    inp.addEventListener('blur', () => { setTimeout(() => { if (!PST.some(x => document.activeElement && document.activeElement.id === x)) { pstFocus = -1; paintSteps(); } }, 0); });
+    inp.addEventListener('input', paintSteps);
+    inp.addEventListener('change', paintSteps);
+    if (i < PST.length - 1) inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#' + PST[i + 1]).focus(); } });
+  });
+  function openProf(){
+    $('#fNick').value = prof.nick; $('#fCountry').value = prof.country || ''; $('#fCity').value = prof.city;
+    pstFocus = -1; paintSteps(); $('#profSheet').hidden = false;
+    // nothing filled yet (first time) ⇒ start right away on step 1
+    if (!prof.nick) setTimeout(() => { try { $('#fNick').focus({ preventScroll: true }); } catch (_) {} }, 320);
+  }
   $('#editProfile').addEventListener('click', openProf);
   $('#profSheet').addEventListener('click', e => { if (e.target.id === 'profSheet') $('#profSheet').hidden = true; });
   $('#profAvatarBtn').addEventListener('click', () => { $('#profSheet').hidden = true; openSheet(); });
