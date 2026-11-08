@@ -44,6 +44,15 @@ window.LESSON_SB = {
   "h": 320,
   "cols": 10
  },
+ "fw-baby-love": {
+  "src": "9365fefb-f0d4-49a7-8a55-34dd56a9a68e",
+  "every": 0.5,
+  "n": 92,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "fw-cc": {
   "src": "gh",
   "every": 0.5,
@@ -253,10 +262,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "fw-baby-love": {
-  "src": "9365fefb-f0d4-49a7-8a55-34dd56a9a68e",
+ "gd-knee-down-spin": {
+  "src": "32636f48-5008-4c13-8c63-cc76fc4a5376",
   "every": 0.5,
-  "n": 92,
+  "n": 59,
   "w": 180,
   "h": 320,
   "cols": 10,
