@@ -137,6 +137,17 @@ window.LESSONS_DATA = [
   "ks": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad"
  },
  {
+  "id": "gd-knee-down-spin",
+  "sec": "Godowns",
+  "name": "Knee down spin",
+  "dur": 29,
+  "ru": "",
+  "added": "2026-11-08",
+  "pv": true,
+  "vertical": true,
+  "ks": "32636f48-5008-4c13-8c63-cc76fc4a5376"
+ },
+ {
   "id": "fr-easychair",
   "sec": "Freezes",
   "name": "Easy chair freeze",
