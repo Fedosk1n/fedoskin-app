@@ -281,7 +281,7 @@
   сервера» (`#wkCopy`) + steps whenever `/visits` lacks `sources` or `svc` (worker older than the admin); `#svCopy` in the
   services card too. Admin «версия 22».
 - Calm coaching call in lessons (owner 08.11.2026 «не кричащий, спокойный призыв к действию с переходом на услуги»):
-  lesson page card `#ctaCard` under the description («Не получается? Федоскин поможет» — owner 08.11; en «Stuck? Fedosk1n will help», his nick in Latin = Fedosk1n / «Попробуй личный коучинг 1‑на‑1 с одним
+  lesson page card `#ctaCard` (pale transparent green — owner 08.11: rgba(59,209,111,.07) bg, .28 border, link #7BE3A0) under the description («Не получается? Федоскин поможет» — owner 08.11; en «Stuck? Fedosk1n will help», his nick in Latin = Fedosk1n / «Попробуй личный коучинг 1‑на‑1 с одним
   из опытнейших тренеров мира. / Онлайн-услуги →», owner's wording) and a small chip `#ctaChip` at the top of the video («Не получается? Федоскин поможет →»)
   (below the fs top bar) shown only when the person seems stuck: `ctaNote()` meter +1 per second played slowed (rate < 1) or
   in the 3-sec loop, +18 per full repeat (in frame()); at 40 ⇒ fades in for 9 s; once per lesson a day, ≤ 3 a day, «×» = no
