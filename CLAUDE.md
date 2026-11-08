@@ -275,6 +275,14 @@
   Owner couldn't find the copy button (07.11): stats now show a big orange banner `#wkNew` with its own «Скопировать код
   сервера» (`#wkCopy`) + steps whenever `/visits` lacks `sources` or `svc` (worker older than the admin); `#svCopy` in the
   services card too. Admin «версия 22».
+- Calm coaching call in lessons (owner 08.11.2026 «не кричащий, спокойный призыв к действию с переходом на услуги»):
+  lesson page card `#ctaCard` under the description («Не получается самостоятельно? / Попробуй личный коучинг 1‑на‑1 с одним
+  из опытнейших тренеров мира. / Онлайн-услуги →», owner's wording) and a small chip `#ctaChip` at the top of the video
+  (below the fs top bar) shown only when the person seems stuck: `ctaNote()` meter +1 per second played slowed (rate < 1) or
+  in the 3-sec loop, +18 per full repeat (in frame()); at 40 ⇒ fades in for 9 s; once per lesson a day, ≤ 3 a day, «×» = no
+  more today (`fedoskin-cta`); hidden on openLesson. Tap ⇒ pause, `go('review')`, `sendEv('cta', 'card'|'chip')`; shown chip
+  ⇒ `sendEv('ctas')`. Worker kinds cta / ctas / cta:card / cta:chip; admin services card: row «Пришли из урока по призыву» +
+  note with card/chip numbers. «1‑на‑1» uses non-breaking hyphens (U+2011) so the chip stays one line. Admin «версия 23».
 - Share (owner 05.11.2026 «кнопку поделиться с другом»): lesson header right `#lessonShare` (link `?lesson=<id>&from=share`)
   and Профиль → «Поделиться приложением» `#shareApp` (`?from=share`) → `shareLink()` = navigator.share, else copy + toast.
   `share` is its own row («Поделились друзья») in admin sources. The «Приведи друга» card in the hidden promo tab is still a mock.

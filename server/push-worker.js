@@ -302,7 +302,7 @@ async function ev(req, env, json) {
   if (!env.DB) return json({ ok: false, nodb: true });
   const b = JSON.parse((await req.text()) || '{}');
   const raw = String(b.id || '').slice(0, 40);
-  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp|sv|so)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
+  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp|sv|so|cta|ctas)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
   const db = env.DB;
   await schema(db);
   const id = await hash('v1:' + raw), day = mskDay(), src = cleanSrc(b.s);
@@ -315,6 +315,11 @@ async function ev(req, env, json) {
   if (b.e === 'sv' || b.e === 'so') { // sv = opened the «Онлайн услуги» tab, so = opened one service (07.11.2026)
     if (b.e === 'so' && !svc) return json({ error: 'bad event' }, 400);
     await db.batch(await seen(b.e === 'sv' ? ['sv'] : ['so', 'so:' + svc])); // so = any service, so:<id> = this one
+    return json({ ok: true });
+  }
+  if (b.e === 'cta' || b.e === 'ctas') { // calm «need help?» call in a lesson (08.11.2026): ctas = chip shown, cta = tapped (v = card | chip)
+    const where = /^(card|chip)$/.test(b.v || '') ? b.v : '';
+    await db.batch([srcAdd(db, day, src, b.e)].concat(b.e === 'cta' && where ? [srcAdd(db, day, src, 'cta:' + where)] : []));
     return json({ ok: true });
   }
   if (b.e !== 'tg') { // crypto payment: cr = opened the «Оплата криптой» window, crp = tapped «Я оплатил» (07.11.2026)
@@ -348,8 +353,8 @@ async function visits(env, json) {
     db.prepare('SELECT src, kind, SUM(n) AS n FROM src GROUP BY src, kind'),
     db.prepare('SELECT src, kind, n FROM src WHERE day = ?').bind(day),
     db.prepare('SELECT COUNT(*) AS n FROM contacted'),
-    db.prepare("SELECT day, kind, SUM(n) AS n FROM src WHERE day >= ? AND (kind IN ('sv','u:sv','so','u:so','tg','cr','crp') OR kind LIKE 'so:%' OR kind LIKE 'u:so:%' OR kind LIKE 'svc:%') GROUP BY day, kind").bind(dayAgo(29)),
-    db.prepare("SELECT kind, SUM(n) AS n FROM src WHERE kind IN ('sv','so','tg','cr','crp') OR kind LIKE 'so:%' OR kind LIKE 'svc:%' GROUP BY kind"),
+    db.prepare("SELECT day, kind, SUM(n) AS n FROM src WHERE day >= ? AND (kind IN ('sv','u:sv','so','u:so','tg','cr','crp','cta','ctas','cta:card','cta:chip') OR kind LIKE 'so:%' OR kind LIKE 'u:so:%' OR kind LIKE 'svc:%') GROUP BY day, kind").bind(dayAgo(29)),
+    db.prepare("SELECT kind, SUM(n) AS n FROM src WHERE kind IN ('sv','so','tg','cr','crp','cta','ctas','cta:card','cta:chip') OR kind LIKE 'so:%' OR kind LIKE 'svc:%' GROUP BY kind"),
     db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu WHERE day = ? GROUP BY e').bind(day),
     db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu WHERE day >= ? GROUP BY e').bind(dayAgo(6)),
     db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu GROUP BY e'),

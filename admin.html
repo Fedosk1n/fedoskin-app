@@ -248,7 +248,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 22</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 23</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1775,6 +1775,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       ['Открыли страницу услуги', soP, soT, false],
       ['Нажали «Написать тренеру»', ppl.tg || 0, taps.tg || 0, false],
     ];
+    if (taps.cta || taps.ctas) rows.push(['Пришли из урока по призыву «Не получается?»', null, taps.cta || 0, true]);
     if (taps.cr || taps.crp) { rows.push(['Открыли «Оплатить криптой»', null, taps.cr || 0, true]); rows.push(['Нажали «Я оплатил»', null, taps.crp || 0, true]); }
     const top = Math.max(1, ...rows.map(r => r[1] == null ? r[2] : r[1]));
     $('#svFunnel').innerHTML = rows.map(([t, p, n, sub], i) => {
@@ -1795,7 +1796,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const mx = Math.max(1, ...days.map(d => byDay[d] || 0));
     $('#svSpark').innerHTML = days.map(d => { const n = byDay[d] || 0; return '<i class="' + (n ? '' : 'z') + '" style="height:' + Math.max(4, n / mx * 100) + '%" title="' + fmtDay(d) + ': ' + n + ' чел."></i>'; }).join('');
     $('#svX0').textContent = fmtDay(days[0]);
-    $('#svNote').textContent = 'Люди — сколько разных человек (один человек считается один раз за выбранный период). Раз — сколько всего нажатий. Счёт с ' + (S.since ? fmtDay(S.since) : 'сегодняшнего дня') + '; «Написать тренеру» по людям — тоже с этой даты.';
+    const ctaInfo = (taps.cta || taps.ctas) ? ' Призыв в уроке: карточка под видео — ' + nf(taps['cta:card'] || 0) + ' переходов; плашка в плеере показана ' + nf(taps.ctas || 0) + ' раз, нажали ' + nf(taps['cta:chip'] || 0) + '.' : '';
+    $('#svNote').textContent = 'Люди — сколько разных человек (один человек считается один раз за выбранный период). Раз — сколько всего нажатий. Счёт с ' + (S.since ? fmtDay(S.since) : 'сегодняшнего дня') + '; «Написать тренеру» по людям — тоже с этой даты.' + ctaInfo;
   }
   document.querySelectorAll('#svPer button').forEach(b => b.addEventListener('click', () => { svPer = b.dataset.p; store.set('fedoskin-admin-svper', svPer); renderServices(); }));
 
