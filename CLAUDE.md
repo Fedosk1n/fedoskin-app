@@ -159,6 +159,11 @@
   screen — «Звук / Без звука» 6th captioned button of the bottom row (`#fsSound`, hidden in fs-vert); `#btnMute` on the
   page player; the old top-bar icon `#fsMute` is not shown. `toggleSound()`: one state `soundOff`, remembered in
   `fedoskin-mute`, short centre sign `#sndFlash`. Autoplay-blocked fallback still mutes without saving.
+- Slow motion is silent (owner 08.11.2026 «при 0.5 и 0.25 звук выключался автоматически без возможности включить»):
+  `quiet()` = soundOff || P.rate < 1 drives `applyMute()` and `paintMute()` (which paints what is heard); at < 1x all sound
+  buttons get `.snd-lock` (dimmed, aria-disabled) and `toggleSound()` only flashes + toast «На замедлении звук выключен — он
+  вернётся на скорости 1x» (≤ once per 2.5 s); the saved choice `fedoskin-mute` is never touched by the slow-down; the
+  speed handler calls applyMute + paintMute.
 - Video file size: admin publishes via the Git Data API (MAX_FILE 70 MB). Most lessons are 1.5–7 MB (720p); short
   lessons moved from Kinescope are 1080p60 copies, ~20–35 MB.
 - Short Kinescope lessons → GitHub (owner 31.10: «1080, 60 кадров, не урезай»): admin «Уроки» → card «Короткие уроки из

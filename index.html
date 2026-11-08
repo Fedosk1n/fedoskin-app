@@ -295,6 +295,8 @@ body.fsmode.fs-vert.fs-full #fsInfo{display:none}
 body.fsmode.fs-vert #fsSound{display:none}
 body.fsmode.fs-vert.fs-full #fsSoundC{right:62px!important}
 #fsSoundC[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.snd-lock{opacity:.45}
+#fsSoundC.snd-lock[aria-pressed="true"],.fsic.snd-lock[aria-pressed="true"]{background:rgba(255,255,255,.14);color:#F2EFE8}
 /* subtitles (owner 03.11.2026): our own line over the video, so they work with the intro, slow motion, mirror, loop and our full screen */
 .subtl{position:absolute;left:50%;bottom:64px;translate:-50% 0;z-index:3;width:max-content;max-width:min(90%, 680px);text-align:center;pointer-events:none;transition:bottom .2s ease,opacity .15s}
 .subtl span{padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.74);color:#fff;font:600 15px/1.5 var(--body);-webkit-box-decoration-break:clone;box-decoration-break:clone;white-space:pre-line}
@@ -1494,7 +1496,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the stream starts loading only when the intro is fully downloaded — they don't fight over the connection
   let streamDefer = null, streamDeferT = 0;
   function startStream(){ if (!streamDefer) return; const f = streamDefer; streamDefer = null; clearTimeout(streamDeferT); f(); }
-  function applyMute(){ vid.muted = av === vid ? soundOff : true; vin.muted = av === vin ? soundOff : true; }
+  // owner 08.11.2026: at 0.5x / 0.25x the sound is always off (slowed speech is useless) and can't be turned on;
+  // back at 1x the person's own choice (`soundOff`) returns. The saved choice is never changed by the slow-down.
+  const quiet = () => soundOff || (typeof P !== 'undefined' && P.rate < 1);
+  function applyMute(){ const q = quiet(); vid.muted = av === vid ? q : true; vin.muted = av === vin ? q : true; }
   const introEnd = () => vin.duration && isFinite(vin.duration) ? vin.duration : 5;
   function clearIntro(){
     introOn = false; av = vid; streamDefer = null; clearTimeout(streamDeferT); vin._tok = null;
@@ -2474,6 +2479,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#btnFs').addEventListener('click', () => enterFs());
   function paintMute(){
+    const slow = P.rate < 1, soundOff = quiet(); // shadows the stored choice: paint what is heard
+    ['#btnMute', '#fsMute', '#fsSound', '#fsSoundC'].forEach(id => { const b = $(id); if (b) { b.classList.toggle('snd-lock', slow); b.setAttribute('aria-disabled', String(slow)); } });
     $('#icoMute').innerHTML = soundOff ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>';
     $('#btnMute').setAttribute('aria-label', soundOff ? T('Включить звук') : T('Выключить звук'));
     $('#fsIcoMute').innerHTML = $('#icoMute').innerHTML; $('#fsMute').setAttribute('aria-label', $('#btnMute').getAttribute('aria-label'));
@@ -2484,7 +2491,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   // sound on / off: every sound button does the same; the choice is remembered for the next lessons and next time
   let sndT = 0;
+  let slowTipT = 0;
   function toggleSound(){
+    if (P.rate < 1) { // slowed: sound stays off
+      const f = $('#sndFlash'); $('#sndFlashIco').innerHTML = $('#icoMute').innerHTML; f.classList.add('on'); clearTimeout(sndT); sndT = setTimeout(() => f.classList.remove('on'), 650);
+      if (Date.now() - slowTipT > 2500) { slowTipT = Date.now(); toast(T('На замедлении звук выключен — он вернётся на скорости 1x')); }
+      return;
+    }
     soundOff = !soundOff; applyMute(); paintMute();
     try { localStorage.setItem('fedoskin-mute', soundOff ? '1' : '0'); } catch (_) {}
     const f = $('#sndFlash'); $('#sndFlashIco').innerHTML = $('#icoMute').innerHTML;
@@ -2555,6 +2568,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.rate = +b.dataset.rate;
     $('#speedSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
     av.playbackRate = P.rate; vid.playbackRate = P.rate;
+    applyMute(); paintMute(); // slow ⇒ silent, 1x ⇒ the person's own sound choice
     $('#badgeSpeed').hidden = P.rate === 1; $('#badgeSpeed').textContent = P.rate + 'x';
     $('#toolHint').textContent = P.rate === 1 ? T('Обычная скорость.') : T('Замедление {r}x — смотри, как ставятся ноги и куда переносится вес.', {r: P.rate});
   });
