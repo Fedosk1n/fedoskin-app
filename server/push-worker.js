@@ -72,7 +72,10 @@ export default {
       if (path === '/lb') return await leaderboard(req, env, json);
       if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
       if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
-      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/')) return json({ error: 'not found' }, 404);
+      // reviews from paying clients (09.11.2026): the link check and the form are public, the code itself is the key
+      if (path === '/rv/inv' && req.method === 'GET') return await rvInv(req, env, json);
+      if (path === '/rv/submit' && req.method === 'POST') return await rvSubmit(req, env, json);
+      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
@@ -96,6 +99,7 @@ export default {
       }
       if (path === '/visits') return await visits(env, json);
       if (path.startsWith('/r2/')) return await r2Admin(req, env, path, json);
+      if (path.startsWith('/rv/')) return await rvAdmin(req, env, path, json);
       if (path === '/notify') {
         const body = await req.json();
         // first page: remember the message so phones without payload support can fetch it
@@ -388,6 +392,9 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS contacted (id TEXT PRIMARY KEY, first TEXT, src TEXT) WITHOUT ROWID'),
     // who did what on which day (online services interest, 07.11.2026): e = sv | so:<svc> | tg | tg:<svc>
     db.prepare('CREATE TABLE IF NOT EXISTS evu (e TEXT NOT NULL, id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (e, id, day)) WITHOUT ROWID'),
+    // reviews (09.11.2026): one-time invitations the owner makes after a payment, and what clients wrote with them
+    db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
   return schemaReady;
 }
@@ -499,4 +506,79 @@ async function visits(env, json) {
       people: { today: pT.results.map(r => [r.e, r.n]), d7: p7.results.map(r => [r.e, r.n]), all: pA.results.map(r => [r.e, r.n]) },
       since: (svSince.results[0] || {}).since || null },
   });
+}
+
+// ===== reviews from paying clients (owner 09.11.2026 «оставить отзыв может только клиент, который оплатил») =====
+// The owner makes a one-time link in the admin after a client has paid (POST /rv/invite) and sends it in the chat.
+// The app opens ?review=<code>: GET /rv/inv checks it, POST /rv/submit stores the review and burns the code. The owner
+// reads new reviews in the admin (GET /rv/list), publishes the good ones into reviews.js and marks them (POST /rv/set).
+const RV_ABC = 'abcdefghjkmnpqrstuvwxyz23456789', RV_LANGS = ['ru', 'en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh'];
+const RV_SVC = /^[a-z]{1,12}$/;
+function rvCode(n = 10) { const b = crypto.getRandomValues(new Uint8Array(n)); return Array.from(b, x => RV_ABC[x % RV_ABC.length]).join(''); }
+const rvOkCode = c => /^[a-z0-9]{10}$/.test(String(c || ''));
+async function rvInv(req, env, json) {
+  if (!env.DB) return json({ ok: false, why: 'nodb' });
+  const c = new URL(req.url).searchParams.get('c');
+  if (!rvOkCode(c)) return json({ ok: false, why: 'bad' });
+  await schema(env.DB);
+  const r = await env.DB.prepare('SELECT svc, used FROM rv_inv WHERE code = ?').bind(c).first();
+  if (!r) return json({ ok: false, why: 'bad' });
+  if (r.used) return json({ ok: false, why: 'used' });
+  return json({ ok: true, svc: r.svc || '' });
+}
+async function rvSubmit(req, env, json) {
+  if (!env.DB) return json({ ok: false, why: 'nodb' });
+  const b = JSON.parse((await req.text()) || '{}');
+  const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const text = String(b.text || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 2000);
+  const stars = Math.round(+b.stars);
+  const lang = RV_LANGS.includes(b.lang) ? b.lang : 'en';
+  if (!rvOkCode(b.c)) return json({ ok: false, why: 'bad' }, 400);
+  if (name.length < 2 || text.length < 10 || !(stars >= 1 && stars <= 5)) return json({ ok: false, why: 'fields' }, 400);
+  const db = env.DB;
+  await schema(db);
+  const now = Date.now();
+  // burn the code first: one link = one review, even if two taps arrive at once
+  const u = await db.prepare('UPDATE rv_inv SET used = ? WHERE code = ? AND used = 0').bind(now, b.c).run();
+  if (!u.meta || !u.meta.changes) {
+    const r = await db.prepare('SELECT used FROM rv_inv WHERE code = ?').bind(b.c).first();
+    return json({ ok: false, why: r ? 'used' : 'bad' }, 409);
+  }
+  const inv = await db.prepare('SELECT svc FROM rv_inv WHERE code = ?').bind(b.c).first();
+  const country = /^[A-Z]{2}$/.test((req.cf && req.cf.country) || '') ? req.cf.country : '';
+  await db.prepare('INSERT INTO rv_sub (id, code, svc, name, country, stars, text, lang, made, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'new\')')
+    .bind(rvCode(12), b.c, (inv && inv.svc) || '', name, country, stars, text, lang, now).run();
+  return json({ ok: true });
+}
+async function rvAdmin(req, env, path, json) {
+  if (!env.DB) return json({ error: 'no-db' }, 409);
+  const db = env.DB;
+  await schema(db);
+  if (path === '/rv/list') {
+    const inv = await db.prepare('SELECT code, svc, note, made, used FROM rv_inv ORDER BY made DESC LIMIT 200').all();
+    const sub = await db.prepare('SELECT id, code, svc, name, country, stars, text, lang, made, status FROM rv_sub ORDER BY made DESC LIMIT 300').all();
+    return json({ inv: inv.results || [], sub: sub.results || [] });
+  }
+  const b = JSON.parse((await req.text()) || '{}');
+  if (path === '/rv/invite') {
+    const svc = RV_SVC.test(b.svc || '') ? b.svc : '';
+    const note = String(b.note || '').slice(0, 80);
+    for (let i = 0; i < 5; i++) {
+      const code = rvCode();
+      const r = await db.prepare('INSERT OR IGNORE INTO rv_inv (code, svc, note, made) VALUES (?, ?, ?, ?)').bind(code, svc, note, Date.now()).run();
+      if (r.meta && r.meta.changes) return json({ ok: true, code });
+    }
+    return json({ error: 'try again' }, 500);
+  }
+  if (path === '/rv/set') {
+    if (!/^[a-z0-9]{12}$/.test(b.id || '') || !['new', 'ok', 'no'].includes(b.status)) return json({ error: 'bad' }, 400);
+    await db.prepare('UPDATE rv_sub SET status = ? WHERE id = ?').bind(b.status, b.id).run();
+    return json({ ok: true });
+  }
+  if (path === '/rv/delinv') {
+    if (!rvOkCode(b.code)) return json({ error: 'bad' }, 400);
+    await db.prepare('DELETE FROM rv_inv WHERE code = ? AND used = 0').bind(b.code).run();
+    return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
 }

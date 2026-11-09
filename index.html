@@ -139,6 +139,14 @@ p{margin:0}
 .rvitem .rvt{display:block;-webkit-line-clamp:unset;overflow:visible}
 .rvitem.flash{animation:rvflash 1.4s ease}
 @keyframes rvflash{0%,40%{background:rgba(227,196,122,.09)}100%{background:transparent}}
+.rvfstars{display:flex;gap:6px;margin-top:2px}
+.rvfstars button{all:unset;cursor:pointer;font-size:34px;line-height:1;color:#3A3A3F;padding:2px;transition:transform .12s,color .12s}
+.rvfstars button.on{color:#E3C47A}
+.rvfstars button:active{transform:scale(.88)}
+#rvFormSheet textarea{width:100%;box-sizing:border-box;min-height:132px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font:inherit;font-size:16px;line-height:1.45;resize:vertical}
+#rvFormSheet .field + .field{margin-top:14px}
+.rvfmsg{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:8px 0 4px;line-height:1.45}
+.rvfmsg .big{font-size:44px;line-height:1}
 .rvorig{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px;align-self:flex-start}
 .svccard .fit{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);line-height:1.35}
 /* premium tier: its own quiet gold look, not a "better deal" badge (owner 09.11.2026) */
@@ -1070,6 +1078,23 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <h2 id="rvTitle" style="font-size:24px">Отзывы учеников</h2>
     <p class="muted" id="rvNote" style="margin-top:6px;font-size:13px;line-height:1.4"></p>
     <div id="rvList" style="margin-top:8px"></div>
+  </div>
+</div>
+<div class="sheet-bg" id="rvFormSheet" hidden>
+  <div class="sheet rvsheet" role="dialog" aria-modal="true" aria-labelledby="rvfTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="rvfTitle" style="font-size:24px">Оставь отзыв</h2>
+    <p class="muted" id="rvfSub" style="margin-top:6px;font-size:13px;line-height:1.4"></p>
+    <div id="rvfWait" class="muted" style="padding:18px 0">Проверяю ссылку…</div>
+    <div id="rvfBody" hidden style="margin-top:14px">
+      <div class="field"><label>Оценка</label><div class="rvfstars" id="rvfStars" role="radiogroup"></div></div>
+      <div class="field"><label for="rvfName">Имя</label><input id="rvfName" maxlength="40" autocomplete="given-name" enterkeyhint="next"><span class="muted" style="font-size:12px">Покажем только имя. Фамилию писать не обязательно.</span></div>
+      <div class="field"><label for="rvfText">Отзыв</label><textarea id="rvfText" maxlength="2000" placeholder="Что получилось за время занятий? Что изменилось?"></textarea></div>
+      <p id="rvfErr" style="margin:10px 0 0;font-size:13px;color:#FF8A6B;min-height:1em"></p>
+      <button class="btn btn-accent" id="rvfSend" type="button" style="margin-top:8px">Отправить отзыв</button>
+    </div>
+    <div id="rvfDone" class="rvfmsg" hidden><span class="big">✓</span><b>Спасибо! Отзыв отправлен тренеру.</b><span class="muted">Он появится в приложении после проверки.</span><button class="btn btn-ghost" type="button" data-close>Закрыть</button></div>
+    <div id="rvfBad" class="rvfmsg" hidden><b id="rvfBadT"></b><button class="btn btn-ghost" type="button" data-close>Закрыть</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="contactSheet" hidden>
@@ -3219,15 +3244,22 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // ===== reviews of students (owner 09.11.2026): reviews.js (window.REVIEWS_DATA), original Russian + 8 translations.
   // Coaching tab: a row of cards under the coach card (before the prices) + «Все отзывы» sheet; a service page: up to 2
   // reviews about that service right above «Написать тренеру». Non-ru: the translation, «Показать оригинал» in the sheet.
-  const REVIEWS = Array.isArray(window.REVIEWS_DATA) ? window.REVIEWS_DATA.filter(r => r && r.t && r.t.ru) : [];
-  const rvText = (r, orig) => (LANG === 'ru' || orig) ? r.t.ru : (r.t[LANG] || r.t.en || r.t.ru);
-  const rvName = r => LANG === 'ru' ? r.n.ru : (r.n.lat || r.n.ru);
+  const REVIEWS = Array.isArray(window.REVIEWS_DATA) ? window.REVIEWS_DATA.filter(r => r && r.t && r.n && r.t[r.o || 'ru']) : [];
+  // r.o = language the review was written in (old VK ones: ru); r.st = stars (default 5); r.cc = country code
+  const rvOrig = r => r.o || 'ru';
+  const rvText = (r, orig) => (orig || LANG === rvOrig(r)) ? r.t[rvOrig(r)] : (r.t[LANG] || r.t[rvOrig(r)] || r.t.en);
+  const rvTranslated = r => LANG !== rvOrig(r) && !!r.t[LANG];
+  const rvName = r => LANG === 'ru' ? (r.n.ru || r.n.lat) : (r.n.lat || r.n.ru);
+  const rvStars = r => { const n = Math.max(1, Math.min(5, Math.round(+r.st || 5))); return '★'.repeat(n) + '☆'.repeat(5 - n); };
+  const rvFlag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
+  const rvCountry = cc => { if (!/^[A-Z]{2}$/.test(cc || '')) return ''; try { return new Intl.DisplayNames([LANG === 'zh' ? 'zh-CN' : LANG], {type: 'region'}).of(cc) || ''; } catch (_) { return ''; } };
   const rvDate = r => { if (!r.d) return ''; try { return new Date(r.d + 'T12:00:00').toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, {month: 'short', year: 'numeric'}); } catch (_) { return ''; } };
   function rvCard(r, tag){
     const c = document.createElement(tag || 'button'); c.className = 'rvcard'; if (c.tagName === 'BUTTON') c.type = 'button';
-    c.innerHTML = '<span class="rvstars" aria-label="5/5">★★★★★</span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+    c.innerHTML = '<span class="rvstars"></span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+    c.querySelector('.rvstars').textContent = rvStars(r); c.querySelector('.rvstars').setAttribute('aria-label', (r.st || 5) + '/5');
     c.querySelector('.rvt').textContent = rvText(r);
-    c.querySelector('.rvby b').textContent = rvName(r);
+    c.querySelector('.rvby b').textContent = rvName(r) + (r.cc ? ' ' + rvFlag(r.cc) : '');
     const d = rvDate(r); c.querySelector('.rvby span').textContent = d ? ' · ' + d : '';
     c.addEventListener('click', () => openReviews(r.id));
     return c;
@@ -3237,14 +3269,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#rvNote').hidden = true; // owner 09.11.2026: no «from our VK group» / «translated from Russian» note
     REVIEWS.forEach(r => {
       const it = document.createElement('div'); it.className = 'rvitem'; it.dataset.id = r.id;
-      it.innerHTML = '<span class="rvstars" aria-label="5/5">★★★★★</span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+      it.innerHTML = '<span class="rvstars"></span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+      it.querySelector('.rvstars').textContent = rvStars(r); it.querySelector('.rvstars').setAttribute('aria-label', (r.st || 5) + '/5');
       const t = it.querySelector('.rvt'); t.textContent = rvText(r);
       it.querySelector('.rvby b').textContent = rvName(r);
-      const d = rvDate(r); it.querySelector('.rvby span').textContent = d ? ' · ' + d : '';
-      if (LANG !== 'ru') {
+      const d = rvDate(r), cn = r.cc ? rvFlag(r.cc) + ' ' + rvCountry(r.cc) : '';
+      it.querySelector('.rvby span').textContent = [cn, d].filter(Boolean).map(x => ' · ' + x).join('');
+      if (rvTranslated(r)) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'rvorig'; b.textContent = T('Показать оригинал');
         let orig = false;
-        b.addEventListener('click', () => { orig = !orig; t.textContent = rvText(r, orig); t.lang = orig ? 'ru' : ''; b.textContent = T(orig ? 'Показать перевод' : 'Показать оригинал'); });
+        b.addEventListener('click', () => { orig = !orig; t.textContent = rvText(r, orig); t.lang = orig ? rvOrig(r) : ''; b.textContent = T(orig ? 'Показать перевод' : 'Показать оригинал'); });
         it.appendChild(b);
       }
       list.appendChild(it);
@@ -3265,6 +3299,45 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     row.appendChild(more);
     $('#rvHead').hidden = false; row.hidden = false;
   })();
+  // ===== leave a review — only with a one-time link the coach sends after payment (owner 09.11.2026 «оставить отзыв
+  // может только клиент, который оплатил»). ?review=<code> → check the code on the server → stars, name, text → sent to
+  // the coach; he reads it in the admin and publishes it. The link works until the review is sent (closing the form keeps it).
+  let rvfCode = '', rvfStarN = 0;
+  const RV_BASE = String(CFG.pushUrl || '').replace(/\/+$/, '');
+  const RV_SVC_NAME = { rv: LANG === 'ru' ? 'Разбор элемента или перехода' : 'Консультация', online: 'Онлайн-ведение', coach: 'Тренер для тренера', full: 'Полное ведение' };
+  const RVF_DRAFT = 'fedoskin-rvdraft';
+  (function(){ const box = $('#rvfStars'); for (let i = 1; i <= 5; i++) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '★'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', i + '/5'); b.addEventListener('click', () => { rvfStarN = i; rvfPaint(); rvfSave(); }); box.appendChild(b); } })();
+  function rvfPaint(){ [...$('#rvfStars').children].forEach((b, i) => { b.classList.toggle('on', i < rvfStarN); b.setAttribute('aria-checked', String(i + 1 === rvfStarN)); }); }
+  function rvfShow(part){ ['#rvfWait', '#rvfBody', '#rvfDone', '#rvfBad'].forEach(id => { $(id).hidden = id !== part; }); }
+  function rvfSave(){ $('#rvfErr').textContent = ''; try { localStorage.setItem(RVF_DRAFT, JSON.stringify({ c: rvfCode, s: rvfStarN, n: $('#rvfName').value, t: $('#rvfText').value })); } catch (_) {} }
+  function rvfBad(why){ $('#rvfBadT').textContent = T(why === 'used' ? 'По этой ссылке отзыв уже оставлен. Спасибо!' : why === 'net' ? 'Нет связи с сервером. Проверь интернет и открой ссылку ещё раз.' : 'Ссылка недействительна. Попроси тренера прислать новую.'); rvfShow('#rvfBad'); }
+  async function openReviewForm(code){
+    rvfCode = code; rvfStarN = 0; $('#rvfName').value = prof.nick || ''; $('#rvfText').value = ''; $('#rvfErr').textContent = ''; $('#rvfSub').textContent = '';
+    try { const d = JSON.parse(localStorage.getItem(RVF_DRAFT) || 'null'); if (d && d.c === code) { rvfStarN = +d.s || 0; $('#rvfName').value = d.n || $('#rvfName').value; $('#rvfText').value = d.t || ''; } } catch (_) {}
+    rvfPaint(); rvfShow('#rvfWait'); $('#rvFormSheet').hidden = false;
+    try {
+      const r = await fetch(RV_BASE + '/rv/inv?c=' + encodeURIComponent(code), { cache: 'no-store' }).then(x => x.json());
+      if (!r.ok) return rvfBad(r.why);
+      $('#rvfSub').textContent = (r.svc && RV_SVC_NAME[r.svc] ? T('Услуга:') + ' ' + T(RV_SVC_NAME[r.svc]) + '. ' : '') + T('Отзыв увидят другие ученики в приложении.');
+      rvfShow('#rvfBody');
+    } catch (_) { rvfBad('net'); }
+  }
+  ['#rvfName', '#rvfText'].forEach(id => $(id).addEventListener('input', rvfSave));
+  $('#rvfSend').addEventListener('click', async () => {
+    const name = $('#rvfName').value.trim(), text = $('#rvfText').value.trim();
+    const err = !rvfStarN ? T('Поставь оценку — нажми на звёзды.') : name.length < 2 ? T('Напиши своё имя.') : text.length < 10 ? T('Напиши хотя бы пару предложений.') : '';
+    $('#rvfErr').textContent = err; if (err) return;
+    const btn = $('#rvfSend'); btn.disabled = true; btn.textContent = T('Отправляю…');
+    try {
+      // text/plain: no CORS pre-flight; the server reads the body as text
+      const r = await fetch(RV_BASE + '/rv/submit', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ c: rvfCode, name, text, stars: rvfStarN, lang: LANG }) }).then(x => x.json());
+      if (r.ok) { try { localStorage.removeItem(RVF_DRAFT); } catch (_) {} $('#rvfSub').textContent = ''; rvfShow('#rvfDone'); }
+      else if (r.why === 'used' || r.why === 'bad') rvfBad(r.why);
+      else $('#rvfErr').textContent = T('Не получилось отправить. Проверь интернет и попробуй ещё раз.');
+    } catch (_) { $('#rvfErr').textContent = T('Не получилось отправить. Проверь интернет и попробуй ещё раз.'); }
+    btn.disabled = false; btn.textContent = T('Отправить отзыв');
+  });
+  $('#rvFormSheet').addEventListener('click', e => { if (e.target.id === 'rvFormSheet' || e.target.closest('[data-close]')) $('#rvFormSheet').hidden = true; });
   function rvForService(s){
     const key = (s.id === 'consult' || s.id === 'review') ? 'rv' : s.id;
     const pick = REVIEWS.filter(r => (r.s || []).includes(key)).slice(0, 2);
@@ -4182,6 +4255,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   try {
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
+    const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
+    if (rvc && /^[a-z0-9]{10}$/.test(rvc)) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openReviewForm(rvc), 300); }
   } catch (_) {}
 })();
 </script>

@@ -88,6 +88,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pt-item .pt-k i{font-style:normal;color:var(--accent)}
 .pt-item textarea{margin-top:6px;min-height:0;field-sizing:content;border:none;background:none;padding:0;border-radius:0;font-size:15px;line-height:1.45;resize:none;overflow:hidden}
 .pt-item .row{gap:8px;margin-top:8px}
+/* reviews from paying clients (09.11.2026) */
+.rvs-item{border-top:1px solid #222225;padding:14px 0;display:flex;flex-direction:column;gap:6px}
+.rvs-item:first-child{border-top:none}
+.rvs-st{color:#E3C47A;letter-spacing:2px}
+.rvs-text{white-space:pre-line;line-height:1.45}
+.rvs-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:#26262A;color:var(--muted)}
+.rvs-badge.ok{background:rgba(59,209,111,.15);color:#3BD16F}
+.rvs-link{word-break:break-all;font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#131315;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:12px}
+.rvs-msg{white-space:pre-line;font-size:14px;line-height:1.45;background:#131315;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .pt-reset{background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
 .seg{display:flex;gap:6px;margin-top:14px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);color:#0B0B0C;border-color:var(--accent)}
 .ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
@@ -248,7 +257,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 24</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 25</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -279,6 +288,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <button class="tab" role="tab" data-tab="add">Добавить видео</button>
       <button class="tab" role="tab" data-tab="settings">Тексты и настройки</button>
       <button class="tab" role="tab" data-tab="stats">Статистика</button>
+      <button class="tab" role="tab" data-tab="reviews">Отзывы</button>
       <button class="tab" role="tab" data-tab="social">Соцсети</button>
     </nav>
 
@@ -429,6 +439,42 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <h3 hidden data-later="metrika">Статистика</h3>
       <label class="f" hidden data-later="metrika"><span>Номер счётчика Яндекс Метрики</span><input type="text" id="sMetrika" placeholder="например 98765432" inputmode="numeric"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика».</span></label>
       <div class="row" style="margin-top:28px"><button class="btn btn-sm" id="logoutBtn">Выйти из админки на этом устройстве</button></div>
+    </div>
+
+    <div data-pane="reviews" hidden>
+      <div class="card" id="rvOld" hidden style="margin-top:12px;border-color:var(--accent)">
+        <h2 style="margin:0">Нужно обновить код сервера</h2>
+        <p class="hint" style="margin:6px 0 0">Отзывы клиентов работают через ваш сервер в Cloudflare. Один раз обновите его код:</p>
+        <ol class="hint" style="margin:8px 0 0;padding-left:20px;line-height:1.6">
+          <li><button class="btn btn-sm btn-accent" id="rvCopyCode" type="button" style="min-height:32px">Скопировать код сервера</button></li>
+          <li>Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Edit code</b>.</li>
+          <li>Выделите всё, удалите, вставьте скопированное → <b>Deploy</b>.</li>
+          <li>Вернитесь сюда и нажмите <button class="btn btn-sm" id="rvRecheck" type="button" style="min-height:32px">Проверить</button></li>
+        </ol>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Ссылка для отзыва</h2>
+        <p class="hint" style="margin:6px 0 0">Клиент оплатил — создайте для него личную ссылку и отправьте в чат. По одной ссылке можно оставить только один отзыв. Без ссылки отзыв оставить нельзя.</p>
+        <label class="f"><span>Услуга</span><select id="rvSvc"><option value="online">Онлайн-ведение</option><option value="rv">Консультация / разбор видео</option><option value="full">Полное ведение</option><option value="coach">Тренер для тренера</option></select></label>
+        <label class="f"><span>Для кого (видно только вам)</span><input type="text" id="rvNote" maxlength="80" placeholder="например, Mike из США"></label>
+        <div class="row" style="margin-top:14px"><button class="btn btn-accent" id="rvMake" type="button">Создать ссылку</button></div>
+        <div id="rvMade" hidden>
+          <div class="rvs-link" id="rvLink"></div>
+          <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm" id="rvCopyLink" type="button">Копировать ссылку</button></div>
+          <p class="hint" style="margin:14px 0 6px">Готовое сообщение клиенту — выберите язык и скопируйте:</p>
+          <div class="stack" id="rvMsgs" style="gap:10px"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between"><h2 style="margin:0">Отзывы клиентов</h2><button class="btn btn-sm" id="rvReload" type="button">Обновить</button></div>
+        <p class="hint" style="margin:6px 0 0">Новые отзывы видите только вы. «Опубликовать» — отзыв появится в приложении (первым в списке, на языке клиента). Перевести его на остальные языки можно позже — попросите Claude: «переведи новые отзывы».</p>
+        <p class="hint" id="rvErr" style="color:#FF8A6B"></p>
+        <div id="rvList"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Ссылки, по которым ещё не написали</h2>
+        <div id="rvInvList" style="margin-top:8px"></div>
+      </div>
     </div>
 
     <div data-pane="social" hidden>
@@ -913,7 +959,141 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
     if (name === 'stats') renderStats();
     if (name === 'social') { try { renderPosts(); renderLinks(); } catch (_) {} }
+    if (name === 'reviews') renderReviews();
     store.set('fedoskin-admin-tab', name);
+  }
+
+  // ---------- reviews from paying clients (owner 09.11.2026 «оставить отзыв может только клиент, который оплатил») ----------
+  // A one-time link per client (worker /rv/invite) → the client writes in the app (?review=<code>) → the review waits here →
+  // «Опубликовать» puts it at the top of reviews.js (own commit, client's language only: the app shows it as written).
+  const RV_SVC_RU = { online: 'Онлайн-ведение', rv: 'Консультация / разбор', full: 'Полное ведение', coach: 'Тренер для тренера' };
+  const RV_LANG_RU = { ru: 'русский', en: 'английский', es: 'испанский', pt: 'португальский', fr: 'французский', de: 'немецкий', ja: 'японский', ko: 'корейский', zh: 'китайский' };
+  const rvEsc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const rvFlag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
+  const rvCountry = cc => { try { return /^[A-Z]{2}$/.test(cc || '') ? new Intl.DisplayNames(['ru'], {type: 'region'}).of(cc) : ''; } catch (_) { return cc || ''; } };
+  const rvAppUrl = () => ((remote && remote.cfg && remote.cfg.appUrl) || (location.origin + location.pathname.replace(/[^/]*$/, ''))).replace(/\/?$/, '/');
+  const rvDay = ms => new Date(ms).toLocaleDateString('ru', {day: 'numeric', month: 'short', year: 'numeric'});
+  let rvData = null;
+  function rvCopy(text, what){
+    const ok = () => toast(what + ' — скопировано');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, () => fallbackCopy(text) ? ok() : toast('Не удалось скопировать', true));
+    else if (fallbackCopy(text)) ok(); else toast('Не удалось скопировать', true);
+  }
+  function rvMsgs(link){
+    return [
+      ['English — просто', 'Thank you for training with me! If you have a minute, please leave a short review here:\n' + link],
+      ['English — сленг', 'Appreciate you putting in the work with me! Got a sec? Drop a quick review here:\n' + link],
+      ['Español', '¡Gracias por entrenar conmigo! Si tienes un minuto, deja una opinión corta aquí:\n' + link],
+      ['Português', 'Obrigado por treinar comigo! Se tiver um minuto, deixe uma avaliação curta aqui:\n' + link],
+      ['Русский', 'Спасибо, что занимаешься со мной! Если есть минутка, оставь, пожалуйста, короткий отзыв:\n' + link],
+    ];
+  }
+  function rvShowLink(code){
+    const link = rvAppUrl() + '?review=' + code;
+    $('#rvLink').textContent = link; $('#rvMade').hidden = false;
+    $('#rvCopyLink').onclick = () => rvCopy(link, 'Ссылка');
+    const box = $('#rvMsgs'); box.innerHTML = '';
+    rvMsgs(link).forEach(([lang, text]) => {
+      const d = document.createElement('div');
+      d.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:13px"></b><button class="btn btn-sm" type="button">Копировать</button></div><div class="rvs-msg"></div>';
+      d.querySelector('b').textContent = lang; d.querySelector('.rvs-msg').textContent = text;
+      d.querySelector('button').addEventListener('click', () => rvCopy(text, 'Сообщение (' + lang + ')'));
+      box.appendChild(d);
+    });
+  }
+  $('#rvMake').addEventListener('click', async () => {
+    if (!cfg.pushUrl) { toast('Сначала подключите сервер (вкладка «Статистика»)', true); return; }
+    const b = $('#rvMake'); b.disabled = true; b.textContent = 'Создаю…';
+    try {
+      const r = await pushApi('/rv/invite', { svc: $('#rvSvc').value, note: $('#rvNote').value.trim() });
+      rvShowLink(r.code); $('#rvNote').value = ''; toast('Ссылка готова — отправьте её клиенту');
+      renderReviews();
+    } catch (e) { if (/not found/.test(e.message)) $('#rvOld').hidden = false; toast('Не получилось: ' + e.message, true); }
+    b.disabled = false; b.textContent = 'Создать ссылку';
+  });
+  $('#rvCopyCode').addEventListener('click', () => $('#visCopy').click());
+  $('#rvRecheck').addEventListener('click', () => renderReviews());
+  $('#rvReload').addEventListener('click', () => renderReviews(true));
+  async function rvPublished(){ // ids of client reviews that are in reviews.js now
+    try { const f = await gh('/contents/reviews.js?ref=' + BRANCH); return new Set((parseData(b64ToUtf8(f.content), 'window.REVIEWS_DATA').data || []).map(r => r.id)); } catch (_) { return new Set(); }
+  }
+  async function renderReviews(loud){
+    if (!cfg.pushUrl) { $('#rvErr').textContent = 'Сервер не подключён — см. вкладку «Статистика».'; return; }
+    $('#rvErr').textContent = loud ? 'Обновляю…' : '';
+    try {
+      const [d, pub] = await Promise.all([pushApi('/rv/list'), rvPublished()]);
+      rvData = d; $('#rvOld').hidden = true; $('#rvErr').textContent = '';
+      const list = $('#rvList'); list.innerHTML = '';
+      const subs = (d.sub || []).filter(x => x.status !== 'no' || pub.has('c-' + x.id));
+      if (!subs.length) list.innerHTML = '<p class="hint">Пока отзывов нет. Создайте ссылку выше и отправьте клиенту после оплаты.</p>';
+      subs.forEach(x => {
+        const live = pub.has('c-' + x.id);
+        const it = document.createElement('div'); it.className = 'rvs-item';
+        it.innerHTML = '<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><span class="rvs-st"></span><span class="rvs-badge"></span></div>' +
+          '<b class="rvs-who"></b><span class="hint rvs-meta"></span><div class="rvs-text"></div><div class="row" style="flex-wrap:wrap;gap:8px;margin-top:4px"></div>';
+        it.querySelector('.rvs-st').textContent = '★'.repeat(x.stars) + '☆'.repeat(5 - x.stars);
+        const bd = it.querySelector('.rvs-badge'); bd.textContent = live ? 'В приложении ✓' : 'Новый'; if (live) bd.classList.add('ok');
+        it.querySelector('.rvs-who').textContent = x.name + (x.country ? '  ' + rvFlag(x.country) + ' ' + rvCountry(x.country) : '');
+        it.querySelector('.rvs-meta').textContent = [RV_SVC_RU[x.svc] || '', 'язык: ' + (RV_LANG_RU[x.lang] || x.lang), rvDay(x.made)].filter(Boolean).join(' · ');
+        it.querySelector('.rvs-text').textContent = x.text;
+        const row = it.lastElementChild;
+        const btn = (txt, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm ' + (cls || ''); b.textContent = txt; b.addEventListener('click', () => fn(b)); row.appendChild(b); };
+        if (!live) {
+          btn('Опубликовать', 'btn-accent', b => rvPublish(x, b));
+          btn('Не публиковать', '', async b => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Точно скрыть?'; setTimeout(() => { b.dataset.sure = ''; b.textContent = 'Не публиковать'; }, 4000); return; } await pushApi('/rv/set', {id: x.id, status: 'no'}).catch(e => toast(e.message, true)); renderReviews(); });
+        } else btn('Убрать из приложения', '', b => rvUnpublish(x, b));
+        list.appendChild(it);
+      });
+      const il = $('#rvInvList'); il.innerHTML = '';
+      const free = (d.inv || []).filter(v => !v.used);
+      if (!free.length) il.innerHTML = '<p class="hint">Нет — все отправленные ссылки уже использованы.</p>';
+      free.forEach(v => {
+        const r = document.createElement('div'); r.className = 'rvs-item';
+        r.innerHTML = '<b></b><span class="hint"></span><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button">Показать ссылку и сообщения</button><button class="btn btn-sm" type="button">Удалить</button></div>';
+        r.querySelector('b').textContent = v.note || 'Без пометки';
+        r.querySelector('.hint').textContent = (RV_SVC_RU[v.svc] || '') + ' · создана ' + rvDay(v.made);
+        const [show, del] = r.querySelectorAll('button');
+        show.addEventListener('click', () => { rvShowLink(v.code); $('#rvMade').scrollIntoView({behavior: 'smooth', block: 'center'}); });
+        del.addEventListener('click', async () => { if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; setTimeout(() => { del.dataset.sure = ''; del.textContent = 'Удалить'; }, 4000); return; } await pushApi('/rv/delinv', {code: v.code}).catch(e => toast(e.message, true)); toast('Ссылка удалена — по ней больше нельзя оставить отзыв'); renderReviews(); });
+        il.appendChild(r);
+      });
+      if (loud) toast('Отзывы обновлены');
+    } catch (e) {
+      if (/not found/.test(e.message)) { $('#rvOld').hidden = false; $('#rvErr').textContent = ''; }
+      else $('#rvErr').textContent = 'Не получилось загрузить: ' + e.message;
+    }
+  }
+  async function rvCommit(change, message){ // change(list) edits the array of reviews.js in place
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const ref = await gh('/git/ref/heads/' + BRANCH);
+      const head = await gh('/git/commits/' + ref.object.sha);
+      const f = await gh('/contents/reviews.js?ref=' + ref.object.sha);
+      const P = parseData(b64ToUtf8(f.content), 'window.REVIEWS_DATA');
+      const list = P.data || []; change(list);
+      const tree = [{path: 'reviews.js', mode: '100644', type: 'blob', content: P.header + 'window.REVIEWS_DATA = ' + JSON.stringify(list, null, 1) + ';\n'}];
+      const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
+      const commit = await gh('/git/commits', {method: 'POST', body: {message, tree: newTree.sha, parents: [ref.object.sha]}});
+      try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); return; }
+      catch (e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; }
+    }
+  }
+  async function rvPublish(x, b){
+    b.disabled = true; b.textContent = 'Публикую…';
+    try {
+      const entry = { id: 'c-' + x.id, n: { ru: x.name, lat: x.name }, d: new Date(x.made).toISOString().slice(0, 10), s: x.svc ? [x.svc] : [], st: x.stars, cc: x.country || '', o: x.lang, t: { [x.lang]: x.text } };
+      await rvCommit(list => { if (!list.some(r => r.id === entry.id)) list.unshift(entry); }, 'Админка: отзыв клиента — ' + x.name);
+      await pushApi('/rv/set', {id: x.id, status: 'ok'});
+      toast('Опубликовано — в приложении появится через 1–2 минуты'); renderReviews();
+    } catch (e) { toast('Не получилось: ' + e.message, true); b.disabled = false; b.textContent = 'Опубликовать'; }
+  }
+  async function rvUnpublish(x, b){
+    if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Точно убрать?'; setTimeout(() => { b.dataset.sure = ''; b.textContent = 'Убрать из приложения'; }, 4000); return; }
+    b.disabled = true; b.textContent = 'Убираю…';
+    try {
+      await rvCommit(list => { const i = list.findIndex(r => r.id === 'c-' + x.id); if (i >= 0) list.splice(i, 1); }, 'Админка: убран отзыв клиента — ' + x.name);
+      await pushApi('/rv/set', {id: x.id, status: 'no'});
+      toast('Отзыв убран из приложения'); renderReviews();
+    } catch (e) { toast('Не получилось: ' + e.message, true); b.disabled = false; b.textContent = 'Убрать из приложения'; }
   }
 
   // ---------- dirty state / save bar ----------

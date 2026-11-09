@@ -451,3 +451,19 @@
   (owner 09.11 «отзыв есть отзыв» — the reviews are real, the translation is ordinary localization); service page `#svcRv` = up to 2 reviews tagged for that service (consult/review ⇒ rv) above
   «Написать тренеру» (`rvForService`). Order in the file = display order (strongest first). Code sits BEFORE openService
   (const REVIEWS — TDZ if openService runs first).
+- Reviews from paying clients only (owner 09.11.2026 «оставить отзыв может только клиент, который оплатил»): no payment
+  system yet ⇒ the owner confirms payment himself: admin tab «Отзывы» (`data-pane="reviews"`, admin «версия 25») → «Создать
+  ссылку» (service + private note) → worker POST /rv/invite → one-time code (10 chars) → link `<app>/?review=<code>` + ready
+  messages (English simple + slang, Español, Português, Русский) to paste in the chat. App: `?review=` (startup, URL cleaned)
+  ⇒ Коучинг tab + sheet `#rvFormSheet`: GET /rv/inv checks the code (bad / used ⇒ message), stars + name (prefilled from the
+  profile nick) + text, draft kept in `fedoskin-rvdraft` per code; POST /rv/submit (text/plain, no pre-flight) burns the
+  code atomically (UPDATE … WHERE used = 0) and stores {name, stars, text, lang = app language, country = Cloudflare
+  cf.country} in D1 `rv_sub` (status new/ok/no); `rv_inv` holds the codes. Admin list (GET /rv/list + current reviews.js):
+  «Опубликовать» = own commit putting {id: 'c-<subId>', n {ru, lat} = name, d, s [svc], st, cc, o = lang, t {o: text}} at the
+  TOP of reviews.js + /rv/set ok; «Не публиковать» (2-tap) = no; «Убрать из приложения» removes it; unused links listed
+  with show / delete (/rv/delinv). App shows client reviews in their own language until translated (rvText falls back to
+  t[o]; «Показать оригинал» only when a translation exists), flag after the name on cards, flag + country name in the sheet,
+  ☆ for < 5 stars. To translate later: add t[<lang>] for the other 8 languages in reviews.js. Old worker ⇒ admin banner
+  `#rvOld` with «Скопировать код сервера» (reuses #visCopy). Tested: worker on node:sqlite (invite, check, short text,
+  double submit, delete), app form en/es (validation, done, used, bad link), admin create → client submits → publish →
+  app shows it first with 🇪🇸.
