@@ -434,7 +434,7 @@
   bother with the $1000») — every card has a `fit` line «для кого» (`.fit`: Разово разобрать элемент / Стабильный прогресс
   по одному элементу / Для тренеров / Подготовка к крупным соревнованиям), all write buttons `.btn-line`; full coaching =
   `prem: true` ⇒ quiet gold look `.svccard.prem`, short + body say «Количество элементов не ограничено» and «Отлично подходит
-  для подготовки к крупным соревнованиям: полное сопровождение до выхода на батл» (owner's words); `#svcStart` hint (intl only) under the cards; «Как это
+  для подготовки к крупным соревнованиям: полное сопровождение до выхода на батл» (owner's words); NO 20-min video calls in full coaching (owner 09.11 «уберём их, сейчас неприемлемо») — don't promise calls anywhere; `#svcStart` hint (intl only) under the cards; «Как это
   работает» `#svcHow` 4 steps (write → discuss, free → payment agreed in chat (+USDT intl; ru «Реквизиты пришлю в чате») →
   answer/first task within reviewHours); `#svcHours` reply window 11–14 Moscow shown in the viewer's own time (`HRS`, also in
   the online-coaching rule via T(t, HRS)) + intl «Переписка — на твоём языке» (owner 09.11: he chats in the client's language and translates both ways). Consultation (intl) =
