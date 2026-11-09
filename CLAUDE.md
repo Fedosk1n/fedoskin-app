@@ -401,4 +401,7 @@
 - iPhone R2 fix (owner 09.11.2026 «видео не воспроизводится», R2 lesson stuck on the big play button; a check page in
   Safari showed pass, ranges and direct R2 playback all fine, with and without crossorigin): the video's address is now set
   only through `setSrc(el, u)` — crossorigin="anonymous" ONLY for a direct R2 address (starts with R2_BASE), never for a
-  blob: copy from `introMem` (neighbour preload) or anything else; Kinescope removes it. Owner confirmed playing after reload.
+  blob: copy from `introMem` (neighbour preload) or anything else; Kinescope removes it. NOTE: the owner found it playing
+  again BEFORE this fix was deployed ⇒ the real cause is unconfirmed; most likely his home-screen app still ran code loaded
+  before the worker started requiring passes (no ?p= ⇒ 403) and got fresh code on reopening. The blob/crossorigin guard is
+  kept as a precaution. If it recurs: ask how the lesson was opened (section / swipe / search) and whether the app was reopened.
