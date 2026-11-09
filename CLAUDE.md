@@ -441,3 +441,13 @@
   breakdown of the person's video in text with screenshots (owner: «консультация это и есть разбор видео»), «за 1 видео»,
   video requirements, `['go', text, 'online']` body item = tappable link to another service. Service page: «Оплата — после
   того, как обсудим задачу.»; crypto button `.btn-crypto` (green-tinted, no longer looks disabled).
+- Student reviews (owner 09.11.2026 «куча отзывов… на всех 8 языков, подумай где раздел»): `reviews.js`
+  (`window.REVIEWS_DATA`, strict JSON: id, n {ru, lat}, d, s [rv|online|coach|full], t {ru original + 8 translations}) —
+  20 reviews from his VK group (screenshots 09.11; Ivan Alekseevich had no text ⇒ skipped). Names = first name + surname
+  initial (Latin outside ru), no photos. Translations faithful (Fedor stays «Fedor»; флаер=flare, гелик=windmill,
+  спичаг=press to handstand). Coaching tab: `#rvHead` + row `#rvRow` of `.rvcard` (first 10, clamp 6 lines, + «Все отзывы
+  (N) →») between the coach card and the prices; tap ⇒ sheet `#rvSheet` (.sheet-bg ⇒ own history step) with all reviews,
+  scrolled to + flashing the tapped one, non-ru «Показать оригинал / перевод» per review, note «из нашей группы ВКонтакте.
+  Перевод с русского.»; service page `#svcRv` = up to 2 reviews tagged for that service (consult/review ⇒ rv) above
+  «Написать тренеру» (`rvForService`). Order in the file = display order (strongest first). Code sits BEFORE openService
+  (const REVIEWS — TDZ if openService runs first).

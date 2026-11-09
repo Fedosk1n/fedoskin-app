@@ -121,6 +121,25 @@ p{margin:0}
 .cc-links a{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:12px;font-weight:600}
 .cc-start{margin-top:14px;font-size:13px;line-height:1.45}
 .svccard.rec{border-color:rgba(226,97,26,.6)}
+.rvhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:24px 0 10px}
+.rvhead .label{margin:0}
+.rvlink{all:unset;cursor:pointer;font-size:13px;font-weight:600;color:var(--soft);text-decoration:underline;text-decoration-color:rgba(226,97,26,.6);text-underline-offset:3px}
+.rvrow{padding-bottom:6px}
+.rvcard{flex:0 0 272px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:16px;background:var(--surface);border:1px solid #222225;text-align:left;font:inherit;color:var(--fg);cursor:pointer}
+.rvstars{color:#E3C47A;font-size:13px;letter-spacing:2px;line-height:1}
+.rvt{margin:0;font-size:14px;line-height:1.45;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.rvby{font-size:12px;color:var(--muted);margin-top:auto}
+.rvby b{color:var(--fg);font-weight:700}
+.rvmore{flex:0 0 150px;align-items:center;justify-content:center;text-align:center;font-weight:700;font-size:15px}
+.svcrv .rvcard{flex:none;width:100%}
+.svcrv .rvt{-webkit-line-clamp:5}
+.rvsheet{max-height:88dvh;overflow-y:auto;overscroll-behavior:contain}
+.rvitem{padding:14px 0;border-top:1px solid #222225;display:flex;flex-direction:column;gap:8px}
+.rvitem:first-child{border-top:none}
+.rvitem .rvt{display:block;-webkit-line-clamp:unset;overflow:visible}
+.rvitem.flash{animation:rvflash 1.4s ease}
+@keyframes rvflash{0%,40%{background:rgba(227,196,122,.09)}100%{background:transparent}}
+.rvorig{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px;align-self:flex-start}
 .svccard .fit{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);line-height:1.35}
 /* premium tier: its own quiet gold look, not a "better deal" badge (owner 09.11.2026) */
 .svccard.prem{border-color:rgba(214,176,92,.55);background:linear-gradient(180deg,rgba(214,176,92,.07),rgba(214,176,92,0) 60%),var(--surface)}
@@ -821,12 +840,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <img class="cc-ph" src="icons/coach.jpg?v=2" alt="" width="64" height="64">
       <span class="stack" style="gap:4px;min-width:0"><span class="d cc-name">Федоскин</span><span class="muted cc-role">Тренер по брейкингу, автор уроков в приложении</span><span class="cc-links" id="ccLinks"></span></span>
     </div>
-    <div class="cc-stats">
+    <div class="cc-stats" id="ccStats">
       <span><b class="d">28</b><small>лет в брейкинге</small></span>
       <span><b class="d">19</b><small>лет тренирую</small></span>
       <span><b class="d">11</b><small>стран — онлайн-ученики</small></span>
     </div>
   </div>
+  <div class="rvhead" id="rvHead" hidden><span class="label">Отзывы учеников</span><button class="rvlink" id="rvAll" type="button">Все отзывы</button></div>
+  <div class="hrow rvrow" id="rvRow" hidden></div>
   <div class="stack" id="svcList" style="gap:12px;margin-top:16px"></div>
   <p class="soft cc-start" id="svcStart" hidden>Не уверен, что нужно ведение? Начни с консультации: пришли видео — разберу его по кадрам.</p>
   <span class="label" style="display:block;margin:28px 0 10px">Как это работает</span>
@@ -840,6 +861,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <h1 id="svcTitle" style="margin-top:16px;font-size:34px"></h1>
   <div class="row" style="gap:8px;align-items:baseline;margin-top:10px"><span class="d" id="svcPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" id="svcPer" style="font-size:14px"></span></div>
   <div id="svcBody"></div>
+  <div class="svcrv" id="svcRv" hidden><span class="label" style="display:block;margin:26px 0 10px">Отзывы учеников</span><div class="stack" id="svcRvList" style="gap:10px"></div></div>
   <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
   <p class="muted" style="margin-top:4px;font-size:12px;text-align:center;line-height:1.4">Оплата — после того, как обсудим задачу.</p>
@@ -1042,6 +1064,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="btn btn-accent" id="cryptoPaid" style="margin-top:14px;min-height:54px;font-size:16px;border-radius:16px;width:100%">Я оплатил — отправить скриншот</button>
   </div>
 </div>
+<div class="sheet-bg" id="rvSheet" hidden>
+  <div class="sheet rvsheet" role="dialog" aria-modal="true" aria-labelledby="rvTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="rvTitle" style="font-size:24px">Отзывы учеников</h2>
+    <p class="muted" id="rvNote" style="margin-top:6px;font-size:13px;line-height:1.4"></p>
+    <div id="rvList" style="margin-top:8px"></div>
+  </div>
+</div>
 <div class="sheet-bg" id="contactSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -1121,6 +1151,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
+<script src="reviews.js"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -3185,6 +3216,62 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (String(CFG.ig || '').trim()) links.push(['Instagram', 'https://instagram.com/' + encodeURIComponent(String(CFG.ig).trim().replace(/^@/, ''))]);
     links.forEach(([n, u]) => { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = n + ' ↗'; $('#ccLinks').appendChild(a); });
   })();
+  // ===== reviews of students (owner 09.11.2026): reviews.js (window.REVIEWS_DATA), original Russian + 8 translations.
+  // Coaching tab: a row of cards under the coach card (before the prices) + «Все отзывы» sheet; a service page: up to 2
+  // reviews about that service right above «Написать тренеру». Non-ru: the translation, «Показать оригинал» in the sheet.
+  const REVIEWS = Array.isArray(window.REVIEWS_DATA) ? window.REVIEWS_DATA.filter(r => r && r.t && r.t.ru) : [];
+  const rvText = (r, orig) => (LANG === 'ru' || orig) ? r.t.ru : (r.t[LANG] || r.t.en || r.t.ru);
+  const rvName = r => LANG === 'ru' ? r.n.ru : (r.n.lat || r.n.ru);
+  const rvDate = r => { if (!r.d) return ''; try { return new Date(r.d + 'T12:00:00').toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, {month: 'short', year: 'numeric'}); } catch (_) { return ''; } };
+  function rvCard(r, tag){
+    const c = document.createElement(tag || 'button'); c.className = 'rvcard'; if (c.tagName === 'BUTTON') c.type = 'button';
+    c.innerHTML = '<span class="rvstars" aria-label="5/5">★★★★★</span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+    c.querySelector('.rvt').textContent = rvText(r);
+    c.querySelector('.rvby b').textContent = rvName(r);
+    const d = rvDate(r); c.querySelector('.rvby span').textContent = d ? ' · ' + d : '';
+    c.addEventListener('click', () => openReviews(r.id));
+    return c;
+  }
+  function openReviews(focusId){
+    const list = $('#rvList'); list.innerHTML = '';
+    $('#rvNote').textContent = T('Отзывы учеников из нашей группы ВКонтакте.') + (LANG !== 'ru' ? ' ' + T('Перевод с русского.') : '');
+    REVIEWS.forEach(r => {
+      const it = document.createElement('div'); it.className = 'rvitem'; it.dataset.id = r.id;
+      it.innerHTML = '<span class="rvstars" aria-label="5/5">★★★★★</span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';
+      const t = it.querySelector('.rvt'); t.textContent = rvText(r);
+      it.querySelector('.rvby b').textContent = rvName(r);
+      const d = rvDate(r); it.querySelector('.rvby span').textContent = d ? ' · ' + d : '';
+      if (LANG !== 'ru') {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'rvorig'; b.textContent = T('Показать оригинал');
+        let orig = false;
+        b.addEventListener('click', () => { orig = !orig; t.textContent = rvText(r, orig); t.lang = orig ? 'ru' : ''; b.textContent = T(orig ? 'Показать перевод' : 'Показать оригинал'); });
+        it.appendChild(b);
+      }
+      list.appendChild(it);
+    });
+    $('#rvSheet').hidden = false;
+    const sh = $('#rvSheet .sheet'); sh.scrollTop = 0;
+    if (focusId) requestAnimationFrame(() => { const el = list.querySelector('[data-id="' + focusId + '"]'); if (el) { sh.scrollTop = Math.max(0, el.offsetTop - 12); el.classList.add('flash'); } });
+  }
+  $('#rvSheet').addEventListener('click', e => { if (e.target.id === 'rvSheet') $('#rvSheet').hidden = true; });
+  $('#rvAll').addEventListener('click', () => openReviews());
+  (function rvRowPaint(){
+    if (!REVIEWS.length) return;
+    $('#rvAll').textContent = T('Все отзывы ({n})', {n: REVIEWS.length});
+    const row = $('#rvRow');
+    REVIEWS.slice(0, 10).forEach(r => row.appendChild(rvCard(r)));
+    const more = document.createElement('button'); more.type = 'button'; more.className = 'rvcard rvmore';
+    more.textContent = T('Все отзывы ({n})', {n: REVIEWS.length}) + ' →'; more.addEventListener('click', () => openReviews());
+    row.appendChild(more);
+    $('#rvHead').hidden = false; row.hidden = false;
+  })();
+  function rvForService(s){
+    const key = (s.id === 'consult' || s.id === 'review') ? 'rv' : s.id;
+    const pick = REVIEWS.filter(r => (r.s || []).includes(key)).slice(0, 2);
+    const box = $('#svcRvList'); box.innerHTML = '';
+    pick.forEach(r => box.appendChild(rvCard(r)));
+    $('#svcRv').hidden = !pick.length;
+  }
   function openService(s, quiet){
     curSvc = s;
     if (!quiet) { try { sendEv('so', s.id); } catch (_) {} } // which service was opened (07.11.2026)
@@ -3203,9 +3290,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (el) body.appendChild(el);
     });
     paintCryptoBtn();
+    rvForService(s);
     go('svc');
     $('#svc').scrollTop = 0;
   }
+
   // «Написать тренеру» (owner 07.11.2026: in the US few people use Telegram) → choose a messenger. Order: came from
   // Instagram ⇒ Instagram first; Russian ⇒ Telegram first; others ⇒ Instagram, WhatsApp. Empty setting = not shown.
   const MSGR = {
