@@ -3177,7 +3177,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ];
     const how = $('#svcHow');
     steps.forEach(([h, t]) => { const li = document.createElement('li'); li.innerHTML = '<b></b><span></span>'; li.children[0].textContent = T(h); li.children[1].textContent = T(t, HRS); how.appendChild(li); });
-    $('#svcHours').textContent = T('Отвечаю раз в день, с {a} до {b} по твоему времени.', HRS) + (LANG !== 'ru' ? ' ' + T('Переписка — на твоём языке.') : '');
+    // owner 09.11.2026: no reply-time line at the bottom; only the chat-language note (not in ru)
+    $('#svcHours').textContent = LANG !== 'ru' ? T('Переписка — на твоём языке.') : '';
+    $('#svcHours').hidden = LANG === 'ru';
     // where to see the coach: YouTube and Instagram
     const links = [['YouTube', 'https://www.youtube.com/fe_dosk1n']];
     if (String(CFG.ig || '').trim()) links.push(['Instagram', 'https://instagram.com/' + encodeURIComponent(String(CFG.ig).trim().replace(/^@/, ''))]);

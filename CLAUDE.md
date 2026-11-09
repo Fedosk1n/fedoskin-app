@@ -436,8 +436,8 @@
   `prem: true` ⇒ quiet gold look `.svccard.prem`, short + body say «Количество элементов не ограничено» and «Отлично подходит
   для подготовки к крупным соревнованиям: полное сопровождение до выхода на батл» (owner's words); NO 20-min video calls in full coaching (owner 09.11 «уберём их, сейчас неприемлемо») — don't promise calls anywhere; `#svcStart` hint (intl only) under the cards; «Как это
   работает» `#svcHow` 4 steps (write → discuss, free → payment agreed in chat (+USDT intl; ru «Реквизиты пришлю в чате») →
-  answer/first task within reviewHours); `#svcHours` reply window 11–14 Moscow shown in the viewer's own time (`HRS`, also in
-  the online-coaching rule via T(t, HRS)) + intl «Переписка — на твоём языке» (owner 09.11: he chats in the client's language and translates both ways). Consultation (intl) =
+  answer/first task within reviewHours); `#svcHours` = only intl «Переписка — на твоём языке» (owner 09.11 removed the reply-time line there; the
+  online-coaching rule still shows 11–14 Moscow in the viewer's own time via `HRS`) (owner 09.11: he chats in the client's language and translates both ways). Consultation (intl) =
   breakdown of the person's video in text with screenshots (owner: «консультация это и есть разбор видео»), «за 1 видео»,
   video requirements, `['go', text, 'online']` body item = tappable link to another service. Service page: «Оплата — после
   того, как обсудим задачу.»; crypto button `.btn-crypto` (green-tinted, no longer looks disabled).
