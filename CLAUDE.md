@@ -1,5 +1,8 @@
 # Fedoskin team app — notes for Claude
 
+- PRIORITY (owner 09.11.2026): «забудь вообще про русских, не надо под них подстраиваться» — the primary goal is money in
+  dollars from the foreign audience. Don't design features, hosting or legal setups around Russian users; existing ru UI
+  stays as is but gets no special effort.
 - Owner writes in Russian; answer in Russian, plain language (he is not a developer).
 - Static web alpha, no build step: `index.html` (all UI + JS), `lessons.js` (lesson data, strict JSON after `window.LESSONS_DATA =`),
   `config.js` (settings: alpha, banner, Telegram, review prices/hours, newDays, metrikaId,
