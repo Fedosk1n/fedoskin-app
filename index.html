@@ -1435,7 +1435,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the whole video file of a lesson: on GitHub next to the app (v/<id>.mp4), or in Cloudflare R2 behind our server
   // (lesson field `r2` = file name, owner 09.11.2026) — both play the same way, with every player feature
   const R2_BASE = String(CFG.r2Base || CFG.pushUrl || '').replace(/\/+$/, '');
-  const fileFor = l => l.r2 && R2_BASE ? R2_BASE + '/v/' + l.r2 : 'v/' + l.id + '.mp4';
+  // R2 videos are given only with a pass from our server (GET /pass, valid 24 h, owner 09.11.2026 «ссылки на видео
+  // открытые — исправь»): asked once, kept on the phone, renewed in the background when less than 12 hours are left
+  const PASS_KEY = 'fedoskin-vpass';
+  let vPass = null, passP = null;
+  try { const j = JSON.parse(localStorage.getItem(PASS_KEY) || 'null'); if (j && j.p && j.exp > Date.now() / 1000 + 600) vPass = j; } catch (_) {}
+  function getPass(){
+    if (vPass && vPass.exp - Date.now() / 1000 > 12 * 3600) return Promise.resolve(vPass);
+    if (!R2_BASE || !window.fetch) return Promise.reject(new Error('no server'));
+    return passP || (passP = fetch(R2_BASE + '/pass', { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(new Error('pass ' + r.status)))
+      .then(j => { if (!j || !j.p) throw new Error('pass'); vPass = j; try { localStorage.setItem(PASS_KEY, JSON.stringify(j)); } catch (_) {} return j; })
+      .finally(() => { passP = null; }));
+  }
+  const passFresh = () => !!(vPass && vPass.exp > Date.now() / 1000 + 300);
+  if (R2_BASE && (window.LESSONS_DATA || []).some(l => l.r2)) getPass().catch(() => {});
+  const fileFor = l => l.r2 && R2_BASE ? R2_BASE + '/v/' + l.r2 + (passFresh() ? '?p=' + vPass.p : '') : 'v/' + l.id + '.mp4';
   const mediaFor = l => !l ? '' : l.ks ? introFor(l) : fileFor(l);
   // short lessons in 1080p60 are 20–35 MB; an iPhone gets less room (under memory pressure it drops the video's picture)
   const MEM_MAX = isApple ? 3 : 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = (isApple ? 60 : 100) * 1048576;
@@ -1485,7 +1499,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   function abortIntro(j){ j.ac.abort(); }
   async function fromSaved(u){
-    const r = await caches.match(new URL(u, location.href).href);
+    const r = await caches.match(new URL(u, location.href).href, { ignoreSearch: true });
     if (!r) throw new Error('not saved');
     const blob = await r.blob(), url = URL.createObjectURL(blob);
     if (!introMem.has(u)) { introMem.set(u, url); memSize.set(u, blob.size); }
@@ -1498,6 +1512,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // where the opened lesson's video (the GitHub file, or a Kinescope lesson's start) comes from: memory, a download
   // that is already well under way, or the network
   function introSource(l){
+    // an R2 lesson without a pass yet: get one first (offline the saved copy still plays — sw.js ignores the pass)
+    if (l && !l.ks && l.r2 && R2_BASE && !passFresh()) return { url: fileFor(l), wait: getPass().then(() => fileFor(l)) };
+    if (l && l.r2) getPass().catch(() => {});
     const u = mediaFor(l); if (!u) return null;
     if (introMem.has(u)) return { url: introMem.get(u) };
     const j = introCur && introCur.u === u ? introCur : null;

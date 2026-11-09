@@ -294,7 +294,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       </div>
       <div class="card" id="moveCard" style="margin-top:12px" hidden>
         <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
-          <div style="min-width:0"><b>Короткие уроки из Kinescope — на GitHub</b>
+          <div style="min-width:0"><b>Короткие уроки из Kinescope — в Cloudflare R2</b>
             <div class="hint" id="moveInfo" style="margin-top:4px"></div>
             <div class="prog" id="moveProg" hidden><i id="moveBar"></i></div>
           </div>
@@ -651,9 +651,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // to the worker in 16 MB pieces (a free worker takes at most 100 MB per request), signed with the owner's GitHub key
   // like everything else on the server; the app plays <server>/v/<file>. lessons.js keeps the file name (field `r2`):
   // a new name for every upload, so phones may keep their copies forever.
-  let r2Info = null, r2Xhr = null, r2Abort = false;
+  let r2Info = null, r2Xhr = null, r2Abort = false, r2Pass = '';
   const r2Base = () => String((cfg && cfg.pushUrl) || (remote && remote.cfg.pushUrl) || '').replace(/\/+$/, '');
-  const r2Url = key => r2Base() + '/v/' + key;
+  // the server gives videos only with a fresh pass (GET /pass from this site, 24 h) — see server/push-worker.js
+  const r2Url = key => r2Base() + '/v/' + key + (r2Pass ? '?p=' + r2Pass : '');
+  async function r2GetPass(){ try { const r = await fetch(r2Base() + '/pass', {cache: 'no-store'}); const j = await r.json(); if (r.ok && j.p) r2Pass = j.p; } catch(e) {} return r2Pass; }
   const r2Ready = () => !!(r2Info && r2Info.ok);
   const fmtGB = b => (b / 1e9 < 0.1 ? Math.round(b / 1e6) + ' МБ' : (b / 1e9).toFixed(2).replace('.', ',') + ' ГБ');
   async function r2Check(){
@@ -661,6 +663,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     try {
       const r = await fetch(r2Base() + '/r2/usage', {headers: {'Authorization': 'Bearer ' + token}});
       const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) await r2GetPass();
       r2Info = r.ok && j.ok ? {ok: true, bytes: j.bytes || 0, count: j.count || 0, files: new Map(j.files || [])}
         : r.status === 409 ? {err: 'nobucket'} : r.status === 404 ? {err: 'old'} : r.status === 403 ? {err: 'other', msg: 'сервер не принял ключ GitHub'} : {err: 'other', msg: j.error || 'ошибка ' + r.status};
     } catch(e) { r2Info = {err: 'net'}; }
@@ -1407,7 +1410,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#aCompressRow').hidden = dest === 'ks'; $('#aPhoneHelp').hidden = dest !== 'gh';
     $('#aDestHint').textContent = dest === 'ks'
       ? (ksReady() ? 'Загружайте исходник как есть — 4K, 60 кадров, любой длины. Kinescope сам сделает качества для телефонов. Бесплатно — 100 минут видео на всё.' : 'Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки».')
-      : dest === 'gh' ? 'Для коротких роликов до 70 МБ (после сжатия). Длинные уроки — в Kinescope или Cloudflare R2.'
+      : dest === 'gh' ? 'Для коротких роликов до 70 МБ (после сжатия). Внимание: на GitHub видео лежит по открытой ссылке — скачать его может любой. Для уроков лучше Cloudflare R2: там видео отдаётся только приложению.'
       : r2Ready() ? 'Cloudflare R2: занято ' + fmtGB(r2Info.bytes) + ' из 10 ГБ бесплатных (' + r2Info.count + ' видео). Любая длина и размер, трафик бесплатный. Видео играет в приложении как есть — качество выберите ниже.'
       : r2Info && r2Info.err === 'net' ? 'Не получилось связаться с сервером — проверьте интернет и нажмите «Проверить» ниже.'
       : r2Info ? '' : 'Проверяю подключение Cloudflare R2…';
@@ -2161,6 +2164,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // the strip: frames every 0.5 s (long lessons: at most ~120 frames), small, 10 in a row, one JPEG
   async function cutStrip(l, fileBlob){
     const M = await mb();
+    if (l.r2 && !r2Pass) await r2GetPass();
     const url = l.ks ? ksHls(l.ks) : l.r2 ? r2Url(l.r2) : new URL('v/' + l.id + '.mp4', location.href).href;
     const input = new M.Input({source: fileBlob ? new M.BlobSource(fileBlob) : new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
     const vts = await input.getVideoTracks();
@@ -2289,7 +2293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#moveGo').hidden = !!moveJob || !list.length;
     $('#moveGo').textContent = 'Перенести (' + list.length + ')';
     $('#moveInfo').textContent = moveNote || ('Короткие уроки (до минуты), сейчас в Kinescope: ' + list.map(l => '«' + l.name + '»').join(', ') +
-      '. На GitHub они целиком попадают в телефон и перематываются пальцем чётко везде. Видео копируется без пережатия: 1080p, 60 кадров в секунду, со звуком.');
+      '. Из R2 они целиком попадают в телефон и перематываются пальцем чётко везде. Видео копируется без пережатия: 1080p, 60 кадров в секунду, со звуком.' + (r2Ready() ? '' : ' Сначала подключите Cloudflare R2 («Добавить видео» → «Cloudflare R2»).'));
   }
   async function cutFull(l, onProgress){
     const M = await mb();
@@ -2309,7 +2313,6 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     await conv.execute();
     const blob = new Blob([output.target.buffer], {type: 'video/mp4'});
     if (blob.size < 100000) throw new Error('получился пустой файл');
-    if (blob.size > MAX_FILE) throw new Error('файл ' + fmtMB(blob.size) + ' — больше, чем примет GitHub');
     let dur = 0; try { dur = await new M.Input({source: new M.BlobSource(blob), formats: M.ALL_FORMATS}).computeDuration(); } catch(e) {}
     return {blob, w: pick.displayWidth, h: pick.displayHeight, fps, sound: !!aud, dur};
   }
@@ -2318,7 +2321,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (moveJob || publishing) return;
     if (pending().length) { toast('Сначала опубликуйте или отмените свои изменения — потом переносите', true); return; }
     const list = moveWanted(); if (!list.length) return;
-    if (!confirm('Перенести на GitHub ' + list.length + ' ' + (list.length === 1 ? 'урок' : 'уроков') + ': ' + list.map(l => '«' + l.name + '»').join(', ') +
+    if (!r2Ready()) { await r2Check(); if (!r2Ready()) { toast('Сначала подключите Cloudflare R2: «Добавить видео» → «Cloudflare R2»', true); return; } }
+    if (!confirm('Перенести в Cloudflare R2 ' + list.length + ' ' + (list.length === 1 ? 'урок' : 'уроков') + ': ' + list.map(l => '«' + l.name + '»').join(', ') +
       '?\n\nВидео скопируется из Kinescope без пережатия (1080p, 60 кадров/с, со звуком), ~20–35 МБ на урок. Займёт несколько минут — не закрывайте страницу.')) return;
     moveJob = (async () => {
       const made = [], bad = [];
@@ -2331,17 +2335,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
             say('копирую видео из Kinescope…', 0);
             const r = await withTimeout(cutFull(l, p => say('копирую видео из Kinescope ' + Math.round(p * 100) + '%…', p * 0.6)), 600000);
             say('делаю ленту кадров…', 0.6);
-            const gl = Object.assign({}, l); delete gl.ks;
+            const key = r2Key(l.id);
+            const gl = Object.assign({}, l, {r2: key}); delete gl.ks;
             const sb = await withTimeout(cutStrip(gl, r.blob), 240000).catch(() => null);
-            say('загружаю на GitHub (' + fmtMB(r.blob.size) + ')…', 0.7);
-            const sha = await ghBlob(await blobToB64(r.blob), p => say('загружаю на GitHub ' + Math.round(p * 100) + '%…', 0.7 + p * 0.28));
+            say('загружаю в Cloudflare R2 (' + fmtMB(r.blob.size) + ')…', 0.7);
+            await r2Upload(r.blob, key, p => say('загружаю в Cloudflare R2 ' + Math.round(p * 100) + '%…', 0.7 + p * 0.28));
             const sbSha = sb ? await ghBlob(await blobToB64(sb.blob)) : null;
-            made.push({l, r, sha, sb, sbSha});
+            made.push({l, r, key, sb, sbSha});
           } catch(e) { bad.push('«' + l.name + '» — ' + (e && e.message || e)); }
         }
         if (made.length) { moveNote = 'Сохраняю…'; paintMove(1); await commitMove(made); }
         moveNote = bad.length ? 'Не получилось: ' + bad.join('; ') + '. Нажмите «Перенести» ещё раз.' : '';
-        if (made.length) toast('Перенесено на GitHub: ' + made.map(m => '«' + m.l.name + '» ' + Math.min(m.r.w, m.r.h) + 'p ' + (m.r.fps ? m.r.fps + ' к/с' : '')).join(', ') + '. В приложении через 1–5 минут');
+        if (made.length) toast('Перенесено в Cloudflare R2: ' + made.map(m => '«' + m.l.name + '» ' + Math.min(m.r.w, m.r.h) + 'p ' + (m.r.fps ? m.r.fps + ' к/с' : '')).join(', ') + '. В приложении через 1–5 минут');
         await loadRemote(); renderAll();
       } catch(e) {
         moveNote = 'Не получилось сохранить: ' + (e && e.message || e) + '. Нажмите «Перенести» ещё раз.';
@@ -2360,9 +2365,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const tree = [], names = [];
       for (const m of made) {
         const l = L.data.find(x => x.id === m.l.id && x.ks === m.l.ks); if (!l) continue; // changed meanwhile: skip
-        delete l.ks; if (m.r.dur) l.dur = Math.round(m.r.dur); if (m.r.h > m.r.w) l.vertical = true;
+        delete l.ks; l.r2 = m.key; if (m.r.dur) l.dur = Math.round(m.r.dur); if (m.r.h > m.r.w) l.vertical = true;
         names.push(l.name);
-        tree.push({path: 'v/' + l.id + '.mp4', mode: '100644', type: 'blob', sha: m.sha});
         if (vFiles[l.id + '-intro.mp4'] != null) tree.push({path: 'v/' + l.id + '-intro.mp4', mode: '100644', type: 'blob', sha: null});
         delete I.data[l.id];
         if (m.sbSha) { tree.push({path: 'v/' + l.id + '-sb.jpg', mode: '100644', type: 'blob', sha: m.sbSha}); S.data[l.id] = Object.assign({}, m.sb.info, {v: ((S.data[l.id] && S.data[l.id].v) || 0) + 1}); }
@@ -2373,7 +2377,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (inf) tree.push({path: 'intros.js', mode: '100644', type: 'blob', content: I.header + 'window.LESSON_INTROS = ' + JSON.stringify(I.data, null, 1) + ';\n'});
       if (sbf) tree.push({path: 'storyboards.js', mode: '100644', type: 'blob', content: S.header + 'window.LESSON_SB = ' + JSON.stringify(S.data, null, 1) + ';\n'});
       const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
-      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: короткие уроки из Kinescope перенесены на GitHub (1080p 60 к/с, без пережатия) — ' + names.join(', '), tree: newTree.sha, parents: [ref.object.sha]}});
+      const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: короткие уроки из Kinescope перенесены в Cloudflare R2 (1080p 60 к/с, без пережатия) — ' + names.join(', '), tree: newTree.sha, parents: [ref.object.sha]}});
       try { await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}}); }
       catch(e) { if (attempt === 0 && (e.status === 422 || e.status === 409)) continue; throw e; }
       return;

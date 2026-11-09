@@ -50,10 +50,11 @@ function parseRange(h){
   const m = /^bytes=(\d+)-(\d*)$/.exec((h || '').trim()); if (!m) return null;
   return { a: +m[1], b: m[2] === '' ? null : +m[2] };
 }
-function startDl(key){
+function startDl(key, url){
   const j = { key, buf: null, got: 0, total: 0, done: false, failed: false, readers: 0, ac: new AbortController(), wake: new Set(), idle: 0 };
   j.head = (async () => {
-    const r = await fetch(key, { signal: j.ac.signal, cache: 'no-store' });
+    // the address with its pass (R2 videos need one); saved under the address without it
+    const r = await fetch(url || key, { signal: j.ac.signal, cache: 'no-store' });
     const total = +r.headers.get('content-length') || 0;
     if (!r.ok || r.status !== 200 || !total || !r.body) { j.failed = true; return; }
     j.total = total; j.buf = new Uint8Array(total);
@@ -120,7 +121,7 @@ async function serveVideo(req, key){
   }
   if (m) { recheck(key, m.meta); return answer(m.buf, m.buf.length, m.meta.type, range); }
   // 2. being downloaded (or start now)
-  let j = dl.get(key); if (!j || j.failed) j = startDl(key);
+  let j = dl.get(key); if (!j || j.failed) j = startDl(key, req.url);
   await j.head;
   if (j.failed || !j.total) return fetch(req);
   if (j.done) return answer(j.buf, j.total, j.type, range);

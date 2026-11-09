@@ -380,3 +380,15 @@
   so the SW re-reads the limit and forgets in-memory copies. Apple: nothing is saved there ⇒ note `#storeApple`, limit
   hidden. sw.js recheck drops a copy whose file is 404/410 on the server. 17 new i18n keys. Tested (Pixel 7 / desktop en /
   iPhone): sizes, limit 0 ⇒ nothing saved, 500 MB, × on one lesson, clear all, back closes the sheet.
+- Closed video links (owner 09.11.2026 «ссылки на видео открытые… исправь это сейчас»): R2 videos need a pass. Worker
+  GET /pass (only when Origin/Referer is https://fedosk1n.github.io or localhost) → {p: "<exp base36>.<HMAC-SHA256 32 chars>",
+  exp} valid 24 h, secret `vpass` in KV made on first call, nothing stored per pass; GET/HEAD /v/<file>?p= without a valid
+  pass ⇒ 403 (with CORS). App: `getPass()` (localStorage `fedoskin-vpass`, renewed in the background when < 12 h left),
+  `fileFor` appends ?p=; `introSource` waits for a pass when there is none (offline: falls back, the SW copy plays);
+  sw.js saves/serves under the address WITHOUT the query (startDl fetches req.url with the pass), fromSaved uses
+  ignoreSearch. Admin: `r2GetPass()` in r2Check, `r2Url` appends it (strips, «Смотреть»). The «Короткие уроки из Kinescope»
+  card now moves into R2 (not GitHub); the add-video GitHub choice warns that GitHub files are public. Limits (honest):
+  anyone who opens the app can get a pass — this stops shared/permanent links and «download everything from GitHub», not a
+  determined scraper; real protection = accounts + subscription check (plan in the Project doc
+  claude/fedoskin-content-protection.md). Tested: forged/expired/missing pass 403, ranges with pass, app playback + SW copy
+  offline, admin upload and strip cutting with pass.

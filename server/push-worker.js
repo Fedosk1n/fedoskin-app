@@ -14,7 +14,9 @@
 //   GET  /visits       — посещаемость: сегодня, за всё время, 30 дней, страны, устройства (только для админа)
 //   POST /ev           — {id, e, s, v, m} действие в приложении: e='tg' — нажали «Написать тренеру» (m — мессенджер),
 //                        e='cr' — открыли оплату криптой, e='crp' — нажали «Я оплатил»; s — откуда пришёл человек
-//   GET  /v/<файл>.mp4 — видео урока из Cloudflare R2 (нужна привязка R2 с именем VIDEOS), отдаёт и куски (Range)
+//   GET  /pass         — временный пропуск к видео (на 24 часа), только для страницы приложения
+//   GET  /v/<файл>.mp4?p=<пропуск> — видео урока из Cloudflare R2 (привязка R2 с именем VIDEOS), отдаёт и куски (Range);
+//                        без действующего пропуска — 403 (ссылку нельзя просто скопировать и раздать)
 //   GET  /r2/usage     — сколько места занято в R2 (только для админа)
 //   POST /r2/mpu?key=  — начать загрузку видео; PUT /r2/mpu?key=&id=&n= — кусок; POST /r2/done?key=&id= {parts} — готово;
 //   POST /r2/abort?key=&id= — отменить; DELETE /r2/obj?key= — удалить видео (всё это только для админа)
@@ -50,11 +52,19 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
     const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
-    // lesson videos from R2 — for everyone, works even without the KV binding
-    if (path.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD')) {
-      try { return await r2Serve(req, env, path.slice(3), cors); } catch (e) { return json({ error: String(e && e.message || e) }, 500); }
-    }
     if (!env.PUSH) return json({ error: 'KV binding PUSH is missing' }, 500);
+    // lesson videos from R2 — only with a pass the app got a moment ago (owner 09.11.2026: «ссылки на видео открытые — исправь»)
+    if (path.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD')) {
+      try {
+        if (!(await passOk(env, new URL(req.url).searchParams.get('p')))) return new Response(JSON.stringify({ error: 'pass' }), { status: 403, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        return await r2Serve(req, env, path.slice(3), cors);
+      } catch (e) { return json({ error: String(e && e.message || e) }, 500); }
+    }
+    if (path === '/pass' && req.method === 'GET') {
+      const from = req.headers.get('Origin') || (req.headers.get('Referer') || '').replace(/^(https?:\/\/[^/]+).*$/, '$1');
+      if (!PASS_FROM.test(from)) return json({ error: 'forbidden' }, 403);
+      const r = json(await passMake(env)); r.headers.set('Cache-Control', 'no-store'); return r;
+    }
     try {
       if (path === '/' ) return json({ ok: true, service: 'fedoskin-push' });
       if (path === '/key') return json({ key: (await vapid(env)).pub });
@@ -142,6 +152,24 @@ async function isAdmin(req, env) {
 // File names are made by the admin: <lesson id>-<random>.mp4, a new name for every upload, so a phone or a browser
 // may keep a copy forever (a replaced video simply has another name).
 const R2_KEY = /^[a-z0-9][a-z0-9-]{0,80}\.mp4$/;
+// Passes: "<expiry, base 36>.<signature>", signed with a random secret kept in KV (made on the first call). Nothing is
+// stored per pass. Given only to requests coming from the app's own pages (and local tests).
+const PASS_TTL = 24 * 3600, PASS_FROM = /^(https:\/\/fedosk1n\.github\.io|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
+let passKeyP = null;
+function passKey(env) {
+  return passKeyP || (passKeyP = (async () => {
+    let s = await env.PUSH.get('vpass');
+    if (!s) { s = b64u(crypto.getRandomValues(new Uint8Array(32))); await env.PUSH.put('vpass', s); }
+    return crypto.subtle.importKey('raw', enc.encode(s), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  })().catch(e => { passKeyP = null; throw e; }));
+}
+async function passSig(env, exp) { return b64u(await crypto.subtle.sign('HMAC', await passKey(env), enc.encode('v1.' + exp))).slice(0, 32); }
+async function passMake(env) { const exp = Math.floor(Date.now() / 1000) + PASS_TTL; return { p: exp.toString(36) + '.' + await passSig(env, exp), exp }; }
+async function passOk(env, p) {
+  const m = /^([0-9a-z]{1,10})\.([A-Za-z0-9_-]{32})$/.exec(p || ''); if (!m) return false;
+  const exp = parseInt(m[1], 36); if (!(exp > Date.now() / 1000) || exp > Date.now() / 1000 + PASS_TTL + 60) return false;
+  return (await passSig(env, exp)) === m[2];
+}
 async function r2Serve(req, env, key, cors) {
   const h = new Headers(cors);
   if (!env.VIDEOS || !R2_KEY.test(key)) return new Response('not found', { status: 404, headers: h });
