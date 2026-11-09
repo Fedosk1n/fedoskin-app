@@ -435,7 +435,7 @@
   badge «Рекомендую», orange button, other cards `.btn-line`; `#svcStart` hint (intl only) under the cards; «Как это
   работает» `#svcHow` 4 steps (write → discuss, free → payment agreed in chat (+USDT intl; ru «Реквизиты пришлю в чате») →
   answer/first task within reviewHours); `#svcHours` reply window 11–14 Moscow shown in the viewer's own time (`HRS`, also in
-  the online-coaching rule via T(t, HRS)) + intl «Переписка — на английском» (owner to confirm). Consultation (intl) =
+  the online-coaching rule via T(t, HRS)) + intl «Переписка — на твоём языке» (owner 09.11: he chats in the client's language and translates both ways). Consultation (intl) =
   breakdown of the person's video in text with screenshots (owner: «консультация это и есть разбор видео»), «за 1 видео»,
   video requirements, `['go', text, 'online']` body item = tappable link to another service. Service page: «Оплата — после
   того, как обсудим задачу.»; crypto button `.btn-crypto` (green-tinted, no longer looks disabled).
