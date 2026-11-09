@@ -405,6 +405,8 @@
   again BEFORE this fix was deployed ⇒ the real cause is unconfirmed; most likely his home-screen app still ran code loaded
   before the worker started requiring passes (no ?p= ⇒ 403) and got fresh code on reopening. The blob/crossorigin guard is
   kept as a precaution. If it recurs: ask how the lesson was opened (section / swipe / search) and whether the app was reopened.
+  Recurred 09.11 15:03 (whole Tricks section stuck on ▶, mid-deploy of 15:05): R2 files, pass, ranges, moov-first and codecs
+  all checked fine (same as Freezes); fully closing + reopening the home-screen app fixed it ⇒ stale code on the phone.
 - Usability pass (owner 09.11.2026 «переделай все это»): home row «Новые уроки» (`#newHome/#newRow`, `paintNewRow()`:
   10 newest by `added`, repainted on going home after a lesson was seen — `newRowDirty`); section tiles say «N новых»
   (1 новый); NEW pill sits on the lesson cover (`.covernew`). Tab «Онлайн» renamed «Коучинг» with a chat icon. Lesson page:
