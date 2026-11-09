@@ -17,7 +17,10 @@ const getLimit = () => limitP || (limitP = caches.open(VCFG).then(c => c.match(V
   .then(j => j && typeof j.limit === 'number' && j.limit >= 0 ? j.limit : VLIMIT_DEFAULT).catch(() => VLIMIT_DEFAULT));
 // the page changed something in the storage: re-read the limit, forget copies kept in memory, trim to the limit
 self.addEventListener('message', e => {
-  const d = e.data || {}; if (d.type !== 'vcache') return;
+  const d = e.data || {};
+  // the lesson screen asks how far the video's download has got (the bar on the video's timeline, owner 09.11.2026)
+  if (d.type === 'vprog' && d.url && e.ports && e.ports[0]) { e.waitUntil(progress(d.url).then(x => e.ports[0].postMessage(x)).catch(() => {})); return; }
+  if (d.type !== 'vcache') return;
   limitP = null;
   if (d.cmd === 'reset') mem.clear(); else if (d.cmd === 'drop' && d.url) mem.delete(d.url);
   e.waitUntil(trim(null));
@@ -34,6 +37,16 @@ async function trim(keep){
 const dl = new Map();   // video address -> download in progress
 const mem = new Map();  // the last couple of saved videos, ready in memory
 const checked = new Map();
+const fin = new Map();  // finished downloads: address -> {total, saved} (saved = false when the person keeps no videos)
+async function progress(key){
+  const j = dl.get(key);
+  if (j && !j.failed && !j.done) return { st: 'dl', got: j.got, total: j.total };
+  const m = mem.get(key); if (m) return { st: 'saved', got: m.buf.length, total: m.buf.length };
+  const c = await caches.open(VCACHE), hit = await c.match(key);
+  if (hit) { const n = +hit.headers.get('content-length') || 0; return { st: 'saved', got: n, total: n }; }
+  const f = fin.get(key); if (f) return { st: f.saved ? 'saved' : 'done', got: f.total, total: f.total };
+  return { st: APPLE ? 'off' : 'none' };
+}
 const APPLE = /iPhone|iPad|iPod|Macintosh/.test(self.navigator.userAgent) && !/Chrome|Android/.test(self.navigator.userAgent);
 const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.pathname);
 
@@ -70,7 +83,7 @@ function startDl(key, url){
         }
         if (j.got !== j.total) throw new Error('short');
         j.done = true;
-        await save(j);
+        fin.set(key, { total: j.total, saved: await save(j) }); while (fin.size > 30) fin.delete(fin.keys().next().value);
       } catch (_) { j.failed = true; }
       j.wake.forEach(f => f()); j.wake.clear();
       if (dl.get(key) === j) dl.delete(key);
@@ -81,13 +94,14 @@ function startDl(key, url){
 }
 async function save(j){
   try {
-    if (j.total > await getLimit()) return; // «don't keep» (0), or bigger than the whole allowed space
+    if (j.total > await getLimit()) return false; // «don't keep» (0), or bigger than the whole allowed space
     const c = await caches.open(VCACHE);
     await c.put(j.key, new Response(j.buf, { headers: { 'Content-Type': j.type, 'Content-Length': String(j.total), 'ETag': j.etag, 'Last-Modified': j.lm, 'X-Saved': String(Date.now()) } }));
     keepMem(j.key, j.buf, { type: j.type, etag: j.etag, lm: j.lm });
     checked.set(j.key, Date.now());
     await trim(j.key);
-  } catch (_) {}
+    return true;
+  } catch (_) { return false; }
 }
 function keepMem(key, buf, meta){ mem.delete(key); mem.set(key, { buf, meta }); while (mem.size > 2) mem.delete(mem.keys().next().value); }
 // a file someone replaced on the site: its old copy is dropped (the next opening downloads the new one)

@@ -399,6 +399,12 @@ body.fsmode .bigplay{z-index:3}
 .track{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
 .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0}
 .track .loopzone{position:absolute;top:0;bottom:0;background:rgba(242,239,232,.35)}
+/* how much of the video is already loaded / saved on the phone (owner 09.11.2026): a light layer under the orange line */
+.track .load{position:absolute;inset:0;pointer-events:none}
+.track .load i{position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(242,239,232,.42);transition:width .35s linear}
+.dlst{font-size:11px;font-weight:600;color:#C9C5BD;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding:0 8px;opacity:0;transition:opacity .35s}
+.dlst.on{opacity:1}
+.dlst.ok{color:#3BD16F}
 .timeline{touch-action:none}
 /* the dot on the line: where the video is / where the finger holds it; bigger while dragging */
 .timeline .knob{position:absolute;top:14px;left:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#F2EFE8;border:3px solid var(--accent);box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;transition:transform .12s ease}
@@ -681,8 +687,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         </div>
         <div class="fsbottom">
           <div class="fsside" aria-hidden="true"><b id="fsSideName"></b><span id="fsSideMeta"></span></div>
-          <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
-          <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
+          <div class="timeline" style="margin:0"><div class="track"><div class="load" id="fsLoadBar"></div><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
+          <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span class="dlst" id="fsLoad" aria-live="polite"></span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
             <button class="fsk" id="fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">Цикл 3 сек</span></button>
             <button class="fsk" id="fsSpeed" aria-label="Скорость"><span class="fsi fstxt" id="fsSpeedVal">1x</span><span class="fsl">Скорость</span></button>
@@ -697,6 +703,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </div>
     <div class="timeline">
       <div class="track" id="track">
+        <div class="load" id="loadBar"></div>
         <div class="loopzone" id="loopZone" hidden></div>
         <div class="fill" id="fill"></div>
       </div>
@@ -704,7 +711,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Перемотка">
     </div>
     <div class="row" style="justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums">
-      <span class="muted" id="tCur">0:00</span><span class="muted" id="tDur">1:35</span>
+      <span class="muted" id="tCur">0:00</span><span class="dlst" id="tLoad" aria-live="polite"></span><span class="muted" id="tDur">1:35</span>
     </div>
   </div>
 
@@ -1791,6 +1798,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
     const srcInfo = introSource(l);
     loadVideo(fileFor(l), 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
+    ldStart(l);
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -1813,6 +1821,72 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lesson').scrollTop = 0;
   }
   $('#lessonBack').addEventListener('click', () => goBack(() => openSection(curSection)));
+
+  // ===== how much of the lesson's video is already on the phone (owner 09.11.2026 «шкалу загрузки в сам ролик») =====
+  // A light layer on the timeline grows as the file comes in, and a small label between the times says «Загрузка 45 %»,
+  // then «✓ Сохранён на телефоне» (fades after a few seconds; the full light line stays). Android/desktop: exact numbers
+  // from the service worker's one whole-file download (sw.js `vprog`). iPhone (nothing is saved there) and Kinescope
+  // lessons (streamed in pieces): only the bar, from what the player itself has loaded.
+  let ldTimer = 0, ldHideT = 0, ldGen = 0, ldState = '', ldSum = 0, ldGrowT = 0;
+  const ldKey = l => { try { const u = new URL(fileFor(l), location.href); return u.origin + u.pathname; } catch (_) { return ''; } };
+  function swProg(key){
+    const c = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (!key || !c || isApple || !window.MessageChannel) return Promise.resolve(null);
+    return new Promise(res => {
+      const ch = new MessageChannel(), t = setTimeout(() => res(null), 800); // an old service worker doesn't answer
+      ch.port1.onmessage = e => { clearTimeout(t); res(e.data || null); };
+      try { c.postMessage({ type: 'vprog', url: key }, [ch.port2]); } catch (_) { clearTimeout(t); res(null); }
+    });
+  }
+  function ldPaint(segs){
+    ['#loadBar', '#fsLoadBar'].forEach(id => {
+      const el = $(id); if (!el) return;
+      while (el.children.length > segs.length) el.lastChild.remove();
+      while (el.children.length < segs.length) el.appendChild(document.createElement('i'));
+      segs.forEach((x, i) => { const c = el.children[i]; c.style.left = (x[0] * 100) + '%'; c.style.width = (Math.max(0, x[1] - x[0]) * 100) + '%'; });
+    });
+  }
+  function ldLabel(txt, ok){
+    ['#tLoad', '#fsLoad'].forEach(id => { const el = $(id); if (!el) return; if (txt) el.textContent = txt; el.classList.toggle('on', !!txt); el.classList.toggle('ok', !!ok); });
+  }
+  function ldDone(txt, ms){ ldLabel('✓ ' + txt, true); clearTimeout(ldHideT); ldHideT = setTimeout(() => ldLabel(''), ms); }
+  function bufSegs(){
+    const d = P.dur || av.duration, out = []; if (!d || !isFinite(d)) return out;
+    try { const b = av.buffered; for (let i = 0; i < b.length; i++) out.push([Math.max(0, b.start(i) / d), Math.min(1, b.end(i) / d)]); } catch (_) {}
+    return out;
+  }
+  async function ldTick(gen, l){
+    if (gen !== ldGen || curLesson !== l) return;
+    let next = 500;
+    if (!document.hidden && (!$('#lesson').hidden || document.body.classList.contains('fsmode'))) {
+      const x = l.ks ? null : await swProg(ldKey(l));
+      if (gen !== ldGen || curLesson !== l) return;
+      if (x && x.st === 'dl' && x.total) {
+        const f = Math.min(1, x.got / x.total); ldPaint([[0, f]]);
+        clearTimeout(ldHideT); ldLabel(T('Загрузка {p} %', {p: Math.floor(f * 100)})); ldState = 'dl';
+      } else if (x && (x.st === 'saved' || x.st === 'done')) {
+        ldPaint([[0, 1]]);
+        // just finished = 5 s; already saved when the lesson opened = a short note
+        if (ldState !== x.st) ldDone(x.st === 'saved' ? T('Сохранён на телефоне') : T('Загружен целиком'), ldState === 'dl' ? 5000 : 2500);
+        ldState = x.st; next = 3000;
+      } else {
+        const sg = bufSegs(); ldPaint(sg);
+        const sum = sg.reduce((a, y) => a + y[1] - y[0], 0);
+        if (!l.ks && sum >= 0.995) { if (ldState !== 'full') ldDone(T('Загружен целиком'), 3000); ldState = 'full'; next = 3000; }
+        // iPhone: the label shows while the player keeps loading (it may stop part way — then the label goes away)
+        else if (!l.ks) {
+          if (sum > ldSum + 0.002) { ldSum = sum; ldGrowT = Date.now(); }
+          if (sg.length && Date.now() - ldGrowT < 2500) { clearTimeout(ldHideT); ldLabel(T('Загрузка {p} %', {p: Math.floor(sum * 100)})); ldState = 'buf'; }
+          else if (ldState === 'buf' || ldState === 'dl') { ldLabel(''); ldState = ''; }
+        } else if (ldState === 'dl') { ldLabel(''); ldState = ''; }
+      }
+    }
+    ldTimer = setTimeout(() => ldTick(gen, l), next);
+  }
+  function ldStart(l){
+    clearTimeout(ldTimer); clearTimeout(ldHideT); ldGen++; ldState = ''; ldSum = 0; ldGrowT = 0; ldPaint([]); ldLabel('');
+    const g = ldGen; ldTimer = setTimeout(() => ldTick(g, l), 250);
+  }
 
   // ===== swipe on the video: next / previous lesson of the section =====
   // finger to the left = next lesson, to the right = previous. The video follows the finger and the neighbour's cover

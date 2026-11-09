@@ -413,3 +413,10 @@
   contact sheet straight away) + «Подробнее». Profile: compact alpha card, settings list right under the stats, empty nick
   shows «+ Добавить имя». Install guide no longer pops up on the very first start: `installWanted` → shown after the first
   lesson watched ≥ 8 s, on returning from it (`installAfterLesson`); profile tip only after 2+ lessons seen.
+- Loading bar on the video (owner 09.11.2026 «шкалу загрузки в сам ролик… процесс загрузки в кэш»): `.track .load`
+  (`#loadBar`, `#fsLoadBar`) = light layer under the orange line; label `#tLoad`/`#fsLoad` between the times: «Загрузка N %» →
+  «✓ Сохранён на телефоне» (5 s after finishing, 2.5 s if already saved; «Загружен целиком» when the limit keeps nothing).
+  `ldStart(l)` in openLesson, `ldTick` polls every 0.5 s (3 s once complete): Android/desktop ask sw.js by MessageChannel
+  `{type:'vprog', url}` → {st: dl|saved|done|none|off, got, total} (sw `progress()`, `fin` map of finished downloads,
+  `save()` returns whether it kept the file; old SW = no answer in 0.8 s ⇒ fallback). Fallback / iPhone / Kinescope: the
+  player's own `buffered` ranges (bar; label only while it grows, non-Kinescope). Tested with a 1.2 MB/s server.
