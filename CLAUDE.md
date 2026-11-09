@@ -398,3 +398,7 @@
   determined scraper; real protection = accounts + subscription check (plan in the Project doc
   claude/fedoskin-content-protection.md). Tested: forged/expired/missing pass 403, ranges with pass, app playback + SW copy
   offline, admin upload and strip cutting with pass.
+- iPhone R2 fix (owner 09.11.2026 «видео не воспроизводится», R2 lesson stuck on the big play button; a check page in
+  Safari showed pass, ranges and direct R2 playback all fine, with and without crossorigin): the video's address is now set
+  only through `setSrc(el, u)` — crossorigin="anonymous" ONLY for a direct R2 address (starts with R2_BASE), never for a
+  blob: copy from `introMem` (neighbour preload) or anything else; Kinescope removes it. Owner confirmed playing after reload.
