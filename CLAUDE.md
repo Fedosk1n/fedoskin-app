@@ -38,7 +38,13 @@
   owner 05.11 «уберём кнопку качать», `data-later="download"`, tools row now 2 columns: Зеркало / Повтор), the lesson header's «Проверить на своём видео»
   upload button (owner 31.10 «убери её»; `data-later="own-video"`; its place on the right is now the share button `#lessonShare`). Elements carry `hidden data-later="..."`
   or are commented out in TABS.
-- Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
+- NO LESSON VIDEOS ON GITHUB (owner 09.11.2026 «ссылки открытые — исправь»): the 17 former GitHub lessons were moved to
+  Cloudflare R2 (checksums verified on read-back) and all 25 lesson mp4 paths ever committed (incl. old pw-* 720p copies)
+  were purged from the whole git history (filter-branch + force push 09.11; old commits may stay reachable on GitHub by
+  exact SHA until GitHub's GC — GitHub Support can purge). Only covers, -p3 previews, 5-s -intro.mp4 and -sb.jpg strips
+  remain in v/. New lessons go to R2 or Kinescope via the admin (the sandbox can't reach workers.dev). Never commit a
+  full lesson mp4 to the repo again (it is public).
+- (old) Adding a lesson: encode to 720p H.264 60fps CRF 26 (`-preset veryfast`), cover jpg 480px wide from 2s,
   preview `<id>-p3.mp4` = first 3s, crop 720:960 → 360x480, 30fps, no audio; add a row to `lessons.js` with `added` date.
 - Kinescope (since 30.10.2026): lessons with `ks` play `https://kinescope.io/<ks>/master.m3u8` in OUR <video> (so slow-mo,
   mirror, loop, own full screen keep working): native HLS on Apple, hls.js 1.5.20 from `vendor/hls.min.js` (Apache-2.0,
