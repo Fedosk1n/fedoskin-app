@@ -139,6 +139,43 @@ p{margin:0}
 .rvitem .rvt{display:block;-webkit-line-clamp:unset;overflow:visible}
 .rvitem.flash{animation:rvflash 1.4s ease}
 @keyframes rvflash{0%,40%{background:rgba(227,196,122,.09)}100%{background:transparent}}
+/* chat with the coach (09.11.2026): the client writes here, the coach answers from Telegram */
+#chat{display:flex;flex-direction:column;padding:0;overflow:hidden}
+#chat[hidden]{display:none}
+body.chatmode .tabs{display:none}
+.chathead{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:var(--bg)}
+.chathead .back{position:static;flex:none}
+.chatava{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);flex:none}
+.chathead b{font-size:20px;line-height:1}
+.chatlist{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));display:flex;flex-direction:column;gap:8px}
+.cmsg{max-width:82%;padding:9px 12px;border-radius:16px;font-size:15px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;position:relative}
+.cmsg.in{align-self:flex-end;background:#3A2414;border:1px solid rgba(226,97,26,.45);border-bottom-right-radius:6px}
+.cmsg.out{align-self:flex-start;background:var(--surface);border:1px solid #26262A;border-bottom-left-radius:6px}
+.cmsg .ct{display:block;font-size:11px;color:var(--muted);margin-top:4px;text-align:right}
+.cmsg img,.cmsg video{display:block;max-width:100%;max-height:340px;border-radius:12px;margin:-2px -4px 6px;background:#000}
+.cmsg img{cursor:zoom-in}
+.cmsg.pending{opacity:.7}
+.cmsg.fail{border-color:#FF8A6B;cursor:pointer}
+.cmsg .cbar{height:4px;border-radius:2px;background:#26262A;margin-top:6px;overflow:hidden}
+.cmsg .cbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.chatday{align-self:center;font-size:11px;color:var(--muted);margin:6px 0}
+.chatempty{margin:auto;max-width:300px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--soft);line-height:1.45;font-size:14px}
+.chatempty img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)}
+.chatnote{margin:0 max(14px, env(safe-area-inset-left, 0px)) 8px;padding:10px 12px;border-radius:14px;background:rgba(59,209,111,.07);border:1px solid rgba(59,209,111,.28);font-size:13px;line-height:1.4;display:flex;gap:10px;align-items:center}
+.chatnote button{flex:none;width:auto;padding:8px 14px;font-size:13px}
+.chatnote[hidden]{display:none}
+.chatname{display:flex;gap:8px;align-items:center;margin:0 max(14px, env(safe-area-inset-left, 0px)) 8px}
+.chatname input{flex:1;height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font-size:16px}
+.chatbar{display:flex;align-items:flex-end;gap:8px;padding:8px max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));border-top:1px solid var(--hair);background:var(--bg)}
+.chatbar textarea{flex:1;min-height:42px;max-height:140px;padding:10px 14px;border-radius:21px;border:1px solid var(--line);background:#131315;color:var(--fg);font:inherit;font-size:16px;line-height:1.35;resize:none}
+.chatbar button{flex:none;width:42px;height:42px;border-radius:50%;border:none;display:grid;place-items:center;cursor:pointer;background:var(--surface-2);color:var(--fg)}
+.chatbar .send{background:var(--accent);color:var(--on-accent)}
+.chatbar button svg{width:20px;height:20px}
+.chatbtn{margin-top:12px;width:100%}
+.unread{position:relative}
+.unread::after{content:'';position:absolute;top:6px;right:calc(50% - 22px);width:9px;height:9px;border-radius:50%;background:var(--new);box-shadow:0 0 0 2px var(--bg)}
+.chatbtn.unread::after{top:-3px;right:-3px}
+.msgr.chatin{border-color:rgba(226,97,26,.6)}
 .rvfstars{display:flex;gap:6px;margin-top:2px}
 .rvfstars button{all:unset;cursor:pointer;font-size:34px;line-height:1;color:#3A3A3F;padding:2px;transition:transform .12s,color .12s}
 .rvfstars button.on{color:#E3C47A}
@@ -839,6 +876,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </section>
 
+<!-- ЧАТ С ТРЕНЕРОМ (09.11.2026): клиент пишет здесь, тренер отвечает из Telegram -->
+<section class="screen" id="chat" aria-label="Чат с тренером" hidden>
+  <div class="chathead">
+    <button class="back" data-back="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+    <img class="chatava" src="icons/coach.jpg?v=2" alt="">
+    <span class="stack" style="gap:3px;min-width:0"><b class="d">Федоскин</b><span class="muted" style="font-size:12px">Отвечает лично</span></span>
+  </div>
+  <div class="chatlist" id="chatList"></div>
+  <div class="chatnote" id="chatNote" hidden><span id="chatNoteT" style="flex:1"></span><button class="btn btn-sm" id="chatNoteBtn" type="button"></button></div>
+  <div class="chatname" id="chatNameRow" hidden><input id="chatName" maxlength="40" autocomplete="given-name" placeholder="Как тебя зовут?" enterkeyhint="next"></div>
+  <div class="chatbar">
+    <input type="file" id="chatFile" accept="image/*,video/*" hidden>
+    <button type="button" id="chatAttach" aria-label="Фото или видео"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m21 11-8.6 8.6a5 5 0 0 1-7-7l8.5-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.3-2.4l7.9-7.9"/></svg></button>
+    <textarea id="chatText" rows="1" maxlength="3000" placeholder="Сообщение…"></textarea>
+    <button type="button" class="send" id="chatSend" aria-label="Отправить"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+  </div>
+</section>
+
 <!-- ОНЛАЙН УСЛУГИ (вкладка id="review"; тексты услуг — в SERVICES в скрипте) -->
 <section class="screen" id="review" aria-label="Онлайн услуги" hidden>
   <!-- owner 09.11.2026: no title / description on top — the tab starts with the coach himself -->
@@ -852,6 +907,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span><b class="d">19</b><small>лет тренирую</small></span>
       <span><b class="d">11</b><small>стран — онлайн-ученики</small></span>
     </div>
+    <button class="btn btn-accent chatbtn" id="ccChat" type="button" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать в чат</button>
   </div>
   <div class="rvhead" id="rvHead" hidden><span class="label">Отзывы учеников</span><button class="rvlink" id="rvAll" type="button">Все отзывы</button></div>
   <div class="hrow rvrow" id="rvRow" hidden></div>
@@ -1190,7 +1246,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
   let installWanted = false, watchedNow = false, newRowDirty = false;
-  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',promo:'promo',profile:'profile'};
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',chat:'review',promo:'promo',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== languages =====
@@ -3124,6 +3180,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (id !== 'lesson' && typeof P !== 'undefined' && P.playing) setPlaying(false);
     if (id !== 'lesson' && document.body.classList.contains('fsmode')) exitFs();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; });
+    document.body.classList.toggle('chatmode', id === 'chat');
+    if (id === 'chat') { try { chShown(); } catch (_) {} } else if (typeof chatHidden === 'function') chatHidden();
     const el = document.getElementById(id); if (el) el.scrollTop = 0;
     if (id !== 'lesson' && pvHold) pvRelease();
     if (typeof pvRestore === 'function') pvRestore(el);
@@ -3338,6 +3396,199 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     btn.disabled = false; btn.textContent = T('Отправить отзыв');
   });
   $('#rvFormSheet').addEventListener('click', e => { if (e.target.id === 'rvFormSheet' || e.target.closest('[data-close]')) $('#rvFormSheet').hidden = true; });
+  // ===== chat with the coach (owner 09.11.2026 «клиент работает в интерфейсе приложения, я ему отвечаю в тг») =====
+  // No account: a random chat id + key of this phone (localStorage). Messages go to the worker (/chat/send, /chat/file),
+  // the coach gets them from his Telegram bot and answers with «Reply»; his answers come back by /chat/get (every 4 s
+  // while the chat is open, every 60 s otherwise) and by a web push when the phone allows notifications.
+  const CHAT = { on: false, msgs: [], last: 0, timer: 0, bg: 0, svc: '', busy: false, pend: [] };
+  const CH_BASE = String(CFG.pushUrl || '').replace(/\/+$/, '');
+  const chGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  const chSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
+  const chRand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'[b & 63]).join('');
+  function chIds(){
+    let id = chGet('fedoskin-chat-id'), k = chGet('fedoskin-chat-key');
+    if (!id || !k) { id = chRand(16); k = chRand(32); chSet('fedoskin-chat-id', id); chSet('fedoskin-chat-key', k); }
+    return { id, k };
+  }
+  const chName = () => (chGet('fedoskin-chat-name') || prof.nick || '').trim();
+  const chQ = extra => { const { id, k } = chIds(); return new URLSearchParams(Object.assign({ id, k }, extra || {})).toString(); };
+  try { CHAT.msgs = JSON.parse(chGet('fedoskin-chat') || '[]'); CHAT.last = CHAT.msgs.reduce((m, x) => Math.max(m, x.n || 0), 0); } catch (_) { CHAT.msgs = []; }
+  const chHas = () => !!chGet('fedoskin-chat-has');
+  function chUnread(){ const seen = +chGet('fedoskin-chat-seen') || 0; return CHAT.msgs.some(m => m.d === 'out' && m.n > seen); }
+  function chPaintBadge(){
+    const u = chUnread() && $('#chat').hidden;
+    const tab = document.querySelector('.tab[data-tab="review"]'); if (tab) tab.classList.toggle('unread', u);
+    $('#ccChat').classList.toggle('unread', u);
+    $('#ccChat').lastChild.textContent = chHas() ? T('Чат с тренером') : T('Написать в чат');
+  }
+  function chTime(ms){ try { return new Date(ms).toLocaleTimeString(LANG === 'zh' ? 'zh-CN' : LANG, { hour: '2-digit', minute: '2-digit' }); } catch (_) { return ''; } }
+  function chDay(ms){ try { return new Date(ms).toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, { day: 'numeric', month: 'long' }); } catch (_) { return ''; } }
+  function chBubble(m){
+    const b = document.createElement('div'); b.className = 'cmsg ' + (m.d === 'out' ? 'out' : 'in') + (m.pending ? ' pending' : '') + (m.fail ? ' fail' : '');
+    if (m.m || m.local) {
+      const src = m.local || m.m;
+      if (m.k === 'photo') { const im = document.createElement('img'); im.src = src; im.alt = ''; im.loading = 'lazy'; im.addEventListener('click', () => window.open(src, '_blank')); b.appendChild(im); }
+      else { const v = document.createElement('video'); v.src = src; v.controls = true; v.playsInline = true; v.preload = 'metadata'; b.appendChild(v); }
+    }
+    if (m.t) b.appendChild(document.createTextNode(m.t));
+    if (m.pending) { const bar = document.createElement('div'); bar.className = 'cbar'; bar.innerHTML = '<i></i>'; if (m.prog != null) bar.firstChild.style.width = Math.round(m.prog * 100) + '%'; b.appendChild(bar); }
+    const ct = document.createElement('span'); ct.className = 'ct'; ct.textContent = m.fail ? T('Не отправлено — нажми, чтобы повторить') : m.pending ? T('Отправляется…') : chTime(m.at); b.appendChild(ct);
+    if (m.fail) b.addEventListener('click', () => { CHAT.pend = CHAT.pend.filter(x => x !== m); m.fail = false; if (m.file) chSendFile(m.file, m.t, m); else chSendText(m.t, m); });
+    return b;
+  }
+  function chRender(stick){
+    const list = $('#chatList'), atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    list.innerHTML = '';
+    const all = CHAT.msgs.concat(CHAT.pend);
+    if (!all.length) {
+      const e = document.createElement('div'); e.className = 'chatempty';
+      e.innerHTML = '<img src="icons/coach.jpg?v=2" alt=""><b></b><span></span>';
+      e.querySelector('b').textContent = T('Напиши тренеру');
+      e.querySelector('span').textContent = T('Расскажи, что умеешь и чего хочешь добиться. Можно сразу прикрепить видео элемента — Федоскин ответит лично здесь же.');
+      list.appendChild(e);
+    }
+    let day = '';
+    all.forEach(m => {
+      const d = m.at ? chDay(m.at) : '';
+      if (d && d !== day) { day = d; const s = document.createElement('div'); s.className = 'chatday'; s.textContent = d; list.appendChild(s); }
+      list.appendChild(chBubble(m));
+    });
+    if (stick || atEnd) {
+      list.scrollTop = list.scrollHeight;
+      // pictures get their height only when loaded — keep the newest message in view
+      list.querySelectorAll('img,video').forEach(x => x.addEventListener(x.tagName === 'IMG' ? 'load' : 'loadedmetadata', () => { list.scrollTop = list.scrollHeight; }, { once: true }));
+    }
+  }
+  function chSave(){ chSet('fedoskin-chat', JSON.stringify(CHAT.msgs.slice(-300))); }
+  async function chPoll(){
+    if (!CH_BASE || CHAT.busy) return;
+    if (!chHas() && $('#chat').hidden) return;
+    CHAT.busy = true;
+    try {
+      const r = await fetch(CH_BASE + '/chat/get?' + chQ({ after: CHAT.last }), { cache: 'no-store' }).then(x => x.json());
+      if (typeof r.on === 'boolean' && r.on !== CHAT.on) { CHAT.on = r.on; chPaintEntry(); }
+      const fresh = (r.msgs || []).filter(m => m.n > CHAT.last);
+      if (fresh.length) {
+        CHAT.msgs = CHAT.msgs.concat(fresh); CHAT.last = fresh[fresh.length - 1].n; chSave();
+        if (!$('#chat').hidden) { chRender(); chSet('fedoskin-chat-seen', String(CHAT.last)); }
+        chPaintBadge();
+      }
+      // signed media addresses live 7 days: refresh the old ones once in a while
+      if (!$('#chat').hidden && !CHAT.refreshed && CHAT.msgs.some(m => m.m && m.at < Date.now() - 5 * 864e5)) {
+        CHAT.refreshed = true;
+        const all = await fetch(CH_BASE + '/chat/get?' + chQ({ after: 0 }), { cache: 'no-store' }).then(x => x.json());
+        if (all.msgs && all.msgs.length) { CHAT.msgs = all.msgs; chSave(); chRender(); }
+      }
+    } catch (_) {}
+    CHAT.busy = false;
+  }
+  function chShownNote(){
+    const note = $('#chatNote'), pushOn = 'Notification' in window && Notification.permission === 'granted' && chGet('fedoskin-push') === 'on';
+    const canPush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:';
+    note.hidden = true;
+    if (!chHas() || pushOn) return;
+    if (isIOS && !isStandalone()) { $('#chatNoteT').textContent = T('Чтобы ответ тренера приходил уведомлением, добавь приложение на экран «Домой».'); $('#chatNoteBtn').textContent = T('Как добавить'); note.hidden = false; note.dataset.act = 'install'; }
+    else if (canPush && Notification.permission === 'default') { $('#chatNoteT').textContent = T('Включи уведомления, чтобы не пропустить ответ тренера.'); $('#chatNoteBtn').textContent = T('Включить'); note.hidden = false; note.dataset.act = 'push'; }
+  }
+  $('#chatNoteBtn').addEventListener('click', async () => {
+    if ($('#chatNote').dataset.act === 'install') { openInstall(); return; }
+    if (typeof window.fedoskinPushOn === 'function') { await window.fedoskinPushOn(); chLinkPush(); chShownNote(); }
+  });
+  async function chLinkPush(){ // tell the server where to send the coach's answers
+    try {
+      if (!('serviceWorker' in navigator) || Notification.permission !== 'granted' || !chHas()) return;
+      const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+      if (!sub) return;
+      const { id, k } = chIds();
+      await fetch(CH_BASE + '/chat/push', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ id, k, sub: sub.toJSON() }) });
+      chSet('fedoskin-chat-push', sub.endpoint.slice(-24));
+    } catch (_) {}
+  }
+  function chShown(){
+    chRender(true); chSet('fedoskin-chat-seen', String(CHAT.last)); chPaintBadge(); chShownNote();
+    $('#chatNameRow').hidden = !!chName();
+    clearInterval(CHAT.timer); CHAT.timer = setInterval(() => { if (!document.hidden) chPoll(); }, 4000); chPoll();
+    chFit();
+  }
+  function chatHidden(){ if (CHAT.timer && !$('#chat').hidden) return; clearInterval(CHAT.timer); CHAT.timer = 0; chPaintBadge(); }
+  window.fedoskinChat = () => ({ on: CHAT.on, timer: !!CHAT.timer, last: CHAT.last, busy: CHAT.busy, msgs: CHAT.msgs.length, pend: CHAT.pend.length });
+  function openChat(prefill, svc){
+    CHAT.svc = svc || '';
+    if (prefill && !CHAT.msgs.length && !$('#chatText').value.trim()) $('#chatText').value = prefill;
+    go('chat'); chGrow();
+  }
+  function chGrow(){ const t = $('#chatText'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight + 2) + 'px'; }
+  // the phone keyboard: keep the bar right above it (iPhone moves the page instead of resizing it)
+  function chFit(){ const vv = window.visualViewport; if (!vv || $('#chat').hidden) { $('#chat').style.height = ''; return; } $('#chat').style.height = vv.height + 'px'; if (vv.offsetTop) window.scrollTo(0, 0); }
+  if (window.visualViewport) { visualViewport.addEventListener('resize', chFit); visualViewport.addEventListener('scroll', chFit); }
+  $('#chatText').addEventListener('input', chGrow);
+  function chNeedName(){
+    if (chName()) return false;
+    const v = $('#chatName').value.trim();
+    if (v.length >= 2) { chSet('fedoskin-chat-name', v); $('#chatNameRow').hidden = true; return false; }
+    $('#chatNameRow').hidden = false; $('#chatName').focus(); toast(T('Напиши, как тебя зовут')); return true;
+  }
+  const chBase = () => ({ name: chName(), lang: LANG, svc: CHAT.svc });
+  async function chSendText(text, retry){
+    const m = retry || { d: 'in', k: 'text', t: text, pending: true, at: Date.now() };
+    m.pending = true; m.fail = false; if (!retry) CHAT.pend.push(m); else CHAT.pend.push(m);
+    chRender(true);
+    try {
+      const { id, k } = chIds();
+      const r = await fetch(CH_BASE + '/chat/send', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id, k, text }, chBase())) }).then(x => x.json());
+      if (!r.ok) throw new Error(r.why || 'x');
+      CHAT.pend = CHAT.pend.filter(x => x !== m);
+      if (!chHas()) { chSet('fedoskin-chat-has', '1'); try { sendEv('tg', CHAT.svc || 'chat', 'chat'); } catch (_) {} }
+      await chPoll(); chRender(true); chShownNote(); chLinkPush(); chPaintBadge();
+    } catch (e) {
+      m.pending = false; m.fail = true; chRender(true);
+      if (String(e.message) === 'limit') toast(T('Слишком много сообщений подряд — подожди немного'));
+    }
+  }
+  function chSendFile(file, cap, retry){
+    const kind = /^image\//.test(file.type) ? 'photo' : 'video';
+    const m = retry || { d: 'in', k: kind, t: cap || '', pending: true, at: Date.now(), local: URL.createObjectURL(file), file, prog: 0 };
+    m.pending = true; m.fail = false; m.prog = 0; CHAT.pend.push(m); chRender(true);
+    const x = new XMLHttpRequest();
+    x.open('POST', CH_BASE + '/chat/file?' + chQ(Object.assign({ cap: cap || '' }, chBase())));
+    x.setRequestHeader('Content-Type', file.type || (kind === 'photo' ? 'image/jpeg' : 'video/mp4'));
+    x.upload.onprogress = e => { if (e.lengthComputable) { m.prog = e.loaded / e.total; const bar = [...document.querySelectorAll('#chatList .cmsg.pending .cbar i')].pop(); if (bar) bar.style.width = Math.round(m.prog * 100) + '%'; } };
+    x.onload = async () => {
+      let r = {}; try { r = JSON.parse(x.responseText); } catch (_) {}
+      if (x.status >= 200 && x.status < 300 && r.ok) {
+        CHAT.pend = CHAT.pend.filter(y => y !== m); try { URL.revokeObjectURL(m.local); } catch (_) {}
+        if (!chHas()) chSet('fedoskin-chat-has', '1');
+        await chPoll(); chRender(true); chShownNote(); chLinkPush(); chPaintBadge();
+      } else { m.pending = false; m.fail = true; chRender(true); toast(r.why === 'big' ? T('Файл слишком большой — до 95 МБ. Обрежь видео или сними короче.') : r.why === 'type' ? T('Можно отправить только фото или видео') : T('Не получилось отправить файл')); }
+    };
+    x.onerror = () => { m.pending = false; m.fail = true; chRender(true); toast(T('Не получилось отправить файл')); };
+    x.send(file);
+  }
+  $('#chatSend').addEventListener('click', () => {
+    const t = $('#chatText'), text = t.value.trim();
+    if (!text || chNeedName()) return;
+    t.value = ''; chGrow(); chSendText(text); t.focus();
+  });
+  $('#chatText').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !COARSE) { e.preventDefault(); $('#chatSend').click(); } });
+  $('#chatAttach').addEventListener('click', () => { if (!chNeedName()) $('#chatFile').click(); });
+  $('#chatFile').addEventListener('change', () => {
+    const f = $('#chatFile').files[0]; $('#chatFile').value = '';
+    if (!f) return;
+    if (!/^(image|video)\//.test(f.type || '')) { toast(T('Можно отправить только фото или видео')); return; }
+    if (f.size > 95 * 1048576) { toast(T('Файл слишком большой — до 95 МБ. Обрежь видео или сними короче.')); return; }
+    const cap = $('#chatText').value.trim(); $('#chatText').value = ''; chGrow();
+    chSendFile(f, cap);
+  });
+  $('#chatName').addEventListener('change', () => { const v = $('#chatName').value.trim(); if (v.length >= 2) { chSet('fedoskin-chat-name', v); $('#chatNameRow').hidden = true; } });
+  $('#ccChat').addEventListener('click', () => openChat('', ''));
+  function chPaintEntry(){ $('#ccChat').hidden = !CHAT.on && !chHas(); chPaintBadge(); }
+  setTimeout(async () => { // is the chat switched on (the coach's bot connected)?
+    if (!CH_BASE) return;
+    try { CHAT.on = !!(await fetch(CH_BASE + '/chat/on', { cache: 'no-store' }).then(x => x.json())).on; } catch (_) {}
+    chPaintEntry(); if (chHas()) { chPoll(); chLinkPush(); }
+    CHAT.bg = setInterval(() => { if (!document.hidden && $('#chat').hidden && chHas()) chPoll(); }, 60e3);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && chHas()) chPoll(); });
+  }, 1200);
   function rvForService(s){
     const key = (s.id === 'consult' || s.id === 'review') ? 'rv' : s.id;
     const pick = REVIEWS.filter(r => (r.s || []).includes(key)).slice(0, 2);
@@ -3386,6 +3637,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     msgOverride = typeof text === 'string' ? text : '';
     const order = SRC === 'ig' ? ['ig', 'wa', 'tg', 'fb'] : LANG === 'ru' ? ['tg', 'wa', 'ig', 'fb'] : SRC === 'fb' ? ['fb', 'wa', 'ig', 'tg'] : ['ig', 'wa', 'tg', 'fb'];
     const list = $('#contactList'); list.innerHTML = '';
+    if (CHAT.on) { // chat in the app first (09.11.2026); the messengers stay as a backup
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'msgr chatin';
+      c.innerHTML = '<span class="mi" style="background:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="#0B0B0C" stroke-width="2.2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span></span><span class="sub"></span>';
+      c.children[1].textContent = T('Чат в приложении'); c.children[2].textContent = T('ответ придёт сюда');
+      const text = msgText();
+      c.addEventListener('click', () => { $('#contactSheet').hidden = true; sendEv('tg', curSvc.id, 'chat'); setTimeout(() => openChat(text, curSvc.id), 250); });
+      list.appendChild(c);
+    }
     order.filter(k => k === 'tg' ? TG_USERNAME : String(CFG[k] || '').trim()).forEach(k => {
       const m = MSGR[k], text = msgText(), a = document.createElement('a');
       a.className = 'msgr'; a.href = m.href(text); a.target = '_blank'; a.rel = 'noopener';
@@ -4161,6 +4420,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const r = await fetch(URL_ + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!r.ok) throw new Error('server ' + r.status);
     }
+    window.fedoskinPushOn = () => turnOn(); // the chat asks for notifications too (09.11.2026)
     async function turnOn(){
       set('fedoskin-push-asked', '1');
       const perm = await Notification.requestPermission();
@@ -4207,7 +4467,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BY_ID[id]) { openSection(BY_ID[id].sec); openLesson(id); }
     else toast(T('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить'));
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); if (e.data && e.data.type === 'open-chat') { go('review'); openChat(); } });
 
   // ===== language picker =====
   (function langPicker(){
@@ -4255,6 +4515,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   try {
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
+    if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
     if (rvc && /^[a-z0-9]{10}$/.test(rvc)) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openReviewForm(rvc), 300); }
   } catch (_) {}

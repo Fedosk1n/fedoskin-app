@@ -257,7 +257,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 25</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 26</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -288,7 +288,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <button class="tab" role="tab" data-tab="add">Добавить видео</button>
       <button class="tab" role="tab" data-tab="settings">Тексты и настройки</button>
       <button class="tab" role="tab" data-tab="stats">Статистика</button>
-      <button class="tab" role="tab" data-tab="reviews">Отзывы</button>
+      <button class="tab" role="tab" data-tab="reviews">Клиенты</button>
       <button class="tab" role="tab" data-tab="social">Соцсети</button>
     </nav>
 
@@ -442,6 +442,21 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     </div>
 
     <div data-pane="reviews" hidden>
+      <div class="card" style="margin-top:12px" id="tgCard">
+        <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">Чат с клиентами через Telegram</h2><span class="rvs-badge" id="tgState">проверяю…</span></div>
+        <p class="hint" style="margin:6px 0 0">Клиент пишет вам прямо в приложении (вкладка «Коучинг»), а вы получаете и отвечаете в своём Telegram — через своего бота. Instagram, WhatsApp и Telegram остаются запасным вариантом.</p>
+        <p class="hint" id="tgOk" hidden style="margin:10px 0 0;color:#3BD16F"></p>
+        <ol class="hint" id="tgSteps" style="margin:10px 0 0;padding-left:20px;line-height:1.65">
+          <li>В Telegram откройте <b>@BotFather</b> → <b>/newbot</b> → имя, например <b>Fedoskin Coach</b> → короткое имя на латинице, заканчивается на <b>bot</b> (например <b>fedoskin_coach_bot</b>). BotFather пришлёт <b>ключ</b> — длинную строку с двоеточием. Никому его не отправляйте, в том числе Claude.</li>
+          <li>Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Settings</b> → <b>Variables and Secrets</b> → <b>Add</b> → тип <b>Secret</b>, имя <b>TG_TOKEN</b>, значение — ключ от BotFather → <b>Deploy</b>.</li>
+          <li>Обновите код сервера: <button class="btn btn-sm btn-accent" id="tgCopy" type="button" style="min-height:32px">Скопировать код сервера</button> → там же <b>Edit code</b> → выделите всё, вставьте → <b>Deploy</b>.</li>
+          <li>Нажмите <button class="btn btn-sm btn-accent" id="tgSetup" type="button" style="min-height:32px">Подключить</button> — появится кнопка «Открыть бота». В Telegram нажмите <b>Start</b> (или «Запустить»).</li>
+          <li>Вернитесь сюда и нажмите <button class="btn btn-sm" id="tgCheck" type="button" style="min-height:32px">Проверить</button></li>
+        </ol>
+        <div class="row" id="tgLinkRow" hidden style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-accent" id="tgOpen" target="_blank" rel="noopener">Открыть бота в Telegram</a></div>
+        <p class="hint" id="tgErr" style="color:#FF8A6B;margin:8px 0 0"></p>
+        <p class="hint" style="margin:10px 0 0">Как отвечать: в Telegram смахните сообщение клиента влево (или «Ответить») и пишите — текст, фото, видео. Бот поставит 👍, когда ответ дойдёт до клиента.</p>
+      </div>
       <div class="card" id="rvOld" hidden style="margin-top:12px;border-color:var(--accent)">
         <h2 style="margin:0">Нужно обновить код сервера</h2>
         <p class="hint" style="margin:6px 0 0">Отзывы клиентов работают через ваш сервер в Cloudflare. Один раз обновите его код:</p>
@@ -959,7 +974,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
     if (name === 'stats') renderStats();
     if (name === 'social') { try { renderPosts(); renderLinks(); } catch (_) {} }
-    if (name === 'reviews') renderReviews();
+    if (name === 'reviews') { renderReviews(); tgStatus(); }
     store.set('fedoskin-admin-tab', name);
   }
 
@@ -1012,6 +1027,33 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     b.disabled = false; b.textContent = 'Создать ссылку';
   });
   $('#rvCopyCode').addEventListener('click', () => $('#visCopy').click());
+  // ---------- chat with clients through the owner's Telegram bot (09.11.2026) ----------
+  $('#tgCopy').addEventListener('click', () => $('#visCopy').click());
+  async function tgStatus(){
+    const st = $('#tgState'), err = $('#tgErr'); err.textContent = '';
+    if (!cfg.pushUrl) { st.textContent = 'сервер не подключён'; return; }
+    try {
+      const r = await pushApi('/tg/status');
+      if (r.owner && r.hook) { st.textContent = 'работает ✓'; st.classList.add('ok'); $('#tgOk').hidden = false; $('#tgOk').textContent = 'Чат включён: сообщения клиентов приходят вам в Telegram от @' + r.bot + '. В приложении у клиентов есть кнопка «Написать в чат».'; $('#tgSteps').hidden = true; $('#tgLinkRow').hidden = true; }
+      else { st.textContent = r.owner ? 'нажмите «Подключить»' : 'шаг 4: Подключить → Start'; st.classList.remove('ok'); $('#tgOk').hidden = true; $('#tgSteps').hidden = false; if (r.hookErr) err.textContent = 'Telegram: ' + r.hookErr; }
+    } catch (e) {
+      st.classList.remove('ok'); $('#tgOk').hidden = true; $('#tgSteps').hidden = false;
+      if (/no-token/.test(e.message)) st.textContent = 'шаг 1–2: нет ключа бота';
+      else if (/not found/.test(e.message)) st.textContent = 'шаг 3: обновите код сервера';
+      else if (/no-db/.test(e.message)) st.textContent = 'нет базы D1 (см. «Статистика»)';
+      else { st.textContent = 'ошибка'; err.textContent = e.message; }
+    }
+  }
+  $('#tgCheck').addEventListener('click', tgStatus);
+  $('#tgSetup').addEventListener('click', async () => {
+    const b = $('#tgSetup'); b.disabled = true; b.textContent = 'Подключаю…'; $('#tgErr').textContent = '';
+    try {
+      const r = await pushApi('/tg/setup', {});
+      $('#tgOpen').href = r.link; $('#tgLinkRow').hidden = false;
+      toast('Готово — откройте бота и нажмите Start');
+    } catch (e) { $('#tgErr').textContent = /no-token/.test(e.message) ? 'Сервер не видит ключ бота — проверьте шаг 2 (имя TG_TOKEN, тип Secret, Deploy).' : /not found/.test(e.message) ? 'Сначала обновите код сервера (шаг 3).' : 'Не получилось: ' + e.message; }
+    b.disabled = false; b.textContent = 'Подключить';
+  });
   $('#rvRecheck').addEventListener('click', () => renderReviews());
   $('#rvReload').addEventListener('click', () => renderReviews(true));
   async function rvPublished(){ // ids of client reviews that are in reviews.js now

@@ -74,8 +74,16 @@ export default {
       if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
       // reviews from paying clients (09.11.2026): the link check and the form are public, the code itself is the key
       if (path === '/rv/inv' && req.method === 'GET') return await rvInv(req, env, json);
+      // chat with the coach (09.11.2026): the client writes in the app, the coach answers in Telegram
+      if (path === '/chat/on' && req.method === 'GET') return json({ on: await chatOn(env) });
+      if (path === '/chat/get' && req.method === 'GET') return await chatGet(req, env, json);
+      if (path.startsWith('/chat/m/') && (req.method === 'GET' || req.method === 'HEAD')) return await chatMedia(req, env, path.slice(8), cors);
+      if (path === '/chat/send' && req.method === 'POST') return await chatSend(req, env, json);
+      if (path === '/chat/file' && req.method === 'POST') return await chatFile(req, env, json);
+      if (path === '/chat/push' && req.method === 'POST') return await chatPush(req, env, json);
+      if (path === '/tg/hook' && req.method === 'POST') return await tgHook(req, env, json);
       if (path === '/rv/submit' && req.method === 'POST') return await rvSubmit(req, env, json);
-      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list') return json({ error: 'not found' }, 404);
+      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list' && path !== '/tg/status') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
@@ -100,6 +108,7 @@ export default {
       if (path === '/visits') return await visits(env, json);
       if (path.startsWith('/r2/')) return await r2Admin(req, env, path, json);
       if (path.startsWith('/rv/')) return await rvAdmin(req, env, path, json);
+      if (path === '/tg/setup' || path === '/tg/status') return await tgAdmin(req, env, path, json);
       if (path === '/notify') {
         const body = await req.json();
         // first page: remember the message so phones without payload support can fetch it
@@ -174,12 +183,12 @@ async function passOk(env, p) {
   const exp = parseInt(m[1], 36); if (!(exp > Date.now() / 1000) || exp > Date.now() / 1000 + PASS_TTL + 60) return false;
   return (await passSig(env, exp)) === m[2];
 }
-async function r2Serve(req, env, key, cors) {
+async function r2Serve(req, env, key, cors, opt) {
   const h = new Headers(cors);
-  if (!env.VIDEOS || !R2_KEY.test(key)) return new Response('not found', { status: 404, headers: h });
+  if (!env.VIDEOS || !(opt ? opt.ok : R2_KEY.test(key))) return new Response('not found', { status: 404, headers: h });
   h.set('Accept-Ranges', 'bytes');
-  h.set('Cache-Control', 'public, max-age=31536000, immutable');
-  h.set('Content-Type', 'video/mp4');
+  h.set('Cache-Control', opt ? 'private, max-age=604800' : 'public, max-age=31536000, immutable');
+  h.set('Content-Type', (opt && opt.ct) || 'video/mp4');
   if (req.method === 'HEAD') {
     const o = await env.VIDEOS.head(key);
     if (!o) return new Response(null, { status: 404, headers: h });
@@ -393,6 +402,11 @@ function schema(db) {
     // who did what on which day (online services interest, 07.11.2026): e = sv | so:<svc> | tg | tg:<svc>
     db.prepare('CREATE TABLE IF NOT EXISTS evu (e TEXT NOT NULL, id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (e, id, day)) WITHOUT ROWID'),
     // reviews (09.11.2026): one-time invitations the owner makes after a payment, and what clients wrote with them
+    // chat (09.11.2026): one thread per phone, its messages, and which Telegram message belongs to which thread
+    db.prepare('CREATE TABLE IF NOT EXISTS chat_thr (id TEXT PRIMARY KEY, kh TEXT, name TEXT, lang TEXT, country TEXT, svc TEXT, made INTEGER, last INTEGER, push TEXT) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS chat_msg (n INTEGER PRIMARY KEY AUTOINCREMENT, thr TEXT NOT NULL, dir TEXT NOT NULL, kind TEXT NOT NULL, text TEXT, media TEXT, t INTEGER)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS chat_msg_thr ON chat_msg (thr, n)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS chat_map (tg INTEGER PRIMARY KEY, thr TEXT NOT NULL)'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
@@ -581,4 +595,217 @@ async function rvAdmin(req, env, path, json) {
     return json({ ok: true });
   }
   return json({ error: 'not found' }, 404);
+}
+
+// ===== chat with the coach through Telegram (owner 09.11.2026 «клиент работает в интерфейсе приложения, я ему отвечаю
+// в тг на самом деле») =====
+// Secret TG_TOKEN (Cloudflare → the worker → Settings → Variables and Secrets) = the bot from @BotFather. The admin's
+// «Подключить» (POST /tg/setup) points the bot's webhook here and makes a one-time link t.me/<bot>?start=<code>; the
+// owner taps Start there and his Telegram chat becomes the coach's (KV tg:owner). A client's message (the app, no
+// account: phone id + its own random key) goes into D1 and to the owner's Telegram; the owner answers with «Reply» on that
+// message — text, photo, video — and the answer lands in the client's chat (+ a web push if the phone allowed them).
+// Media live in R2 under chat/<thread>/…, served only with a signed address.
+const CHAT_ID = /^[\w-]{4,40}$/, CHAT_KEY = /^[A-Za-z0-9_-]{16,64}$/, CHAT_MAX = 95 * 1048576, CHAT_HOUR = 30;
+const SVC_RU = { online: 'Онлайн-ведение', rv: 'Разбор / консультация', consult: 'Консультация', review: 'Разбор', full: 'Полное ведение', coach: 'Тренер для тренера' };
+const LANG_RU = { ru: 'рус', en: 'англ', es: 'исп', pt: 'порт', fr: 'франц', de: 'нем', ja: 'япон', ko: 'кор', zh: 'кит' };
+const flag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
+async function tg(env, method, body) {
+  const isForm = body instanceof FormData;
+  const r = await fetch('https://api.telegram.org/bot' + env.TG_TOKEN + '/' + method, { method: 'POST', body: isForm ? body : JSON.stringify(body || {}), headers: isForm ? {} : { 'Content-Type': 'application/json' } });
+  const j = await r.json().catch(() => ({}));
+  if (!j.ok) throw new Error('telegram ' + method + ': ' + (j.description || r.status));
+  return j.result;
+}
+async function chatOn(env) { return !!(env.TG_TOKEN && env.DB && (await env.PUSH.get('tg:owner'))); }
+async function chatSign(env, key, days) { const exp = Math.floor(Date.now() / 1000) + days * 86400; return exp.toString(36) + '.' + b64u(await crypto.subtle.sign('HMAC', await passKey(env), enc.encode('cm.' + key + '.' + exp))).slice(0, 32); }
+async function chatSigOk(env, key, s) {
+  const m = /^([0-9a-z]{1,10})\.([A-Za-z0-9_-]{32})$/.exec(s || ''); if (!m) return false;
+  const exp = parseInt(m[1], 36); if (!(exp > Date.now() / 1000)) return false;
+  return b64u(await crypto.subtle.sign('HMAC', await passKey(env), enc.encode('cm.' + key + '.' + exp))).slice(0, 32) === m[2];
+}
+const chatKeyOk = k => /^chat\/[A-Za-z0-9_-]{8,40}\/[a-z0-9]{12}\.(jpg|png|webp|gif|mp4|mov|webm|m4v)$/.test(k);
+const CT = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/mp4' };
+async function chatMedia(req, env, key, cors) {
+  const s = new URL(req.url).searchParams.get('s');
+  if (!chatKeyOk(key) || !(await chatSigOk(env, key, s))) return new Response('forbidden', { status: 403, headers: cors });
+  return r2Serve(req, env, key, cors, { ok: true, ct: CT[key.split('.').pop()] });
+}
+// the client's thread: made on the first message; later calls must bring the same key
+async function chatThread(env, b, req, make) {
+  const raw = String(b.id || ''), k = String(b.k || '');
+  if (!CHAT_ID.test(raw) || !CHAT_KEY.test(k)) return { err: 'bad' };
+  const db = env.DB; await schema(db);
+  const id = (await hash('c1:' + raw)).slice(0, 24), kh = await hash('ck:' + k);
+  let t = await db.prepare('SELECT * FROM chat_thr WHERE id = ?').bind(id).first();
+  if (t && t.kh !== kh) return { err: 'key' };
+  if (!t) {
+    if (!make) return { id, none: true };
+    const country = /^[A-Z]{2}$/.test((req.cf && req.cf.country) || '') ? req.cf.country : '';
+    t = { id, kh, name: '', lang: 'en', country, svc: '', made: Date.now(), last: 0, push: null, fresh: true };
+    await db.prepare('INSERT INTO chat_thr (id, kh, name, lang, country, svc, made, last) VALUES (?, ?, ?, ?, ?, ?, ?, 0)').bind(id, kh, '', 'en', country, '', t.made).run();
+  }
+  const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40), lang = LANG_RU[b.lang] ? b.lang : '', svc = /^[a-z]{1,12}$/.test(b.svc || '') ? b.svc : '';
+  if ((name && name !== t.name) || (lang && lang !== t.lang) || (svc && svc !== t.svc)) {
+    t.name = name || t.name; t.lang = lang || t.lang; t.svc = svc || t.svc;
+    await db.prepare('UPDATE chat_thr SET name = ?, lang = ?, svc = ? WHERE id = ?').bind(t.name, t.lang, t.svc, id).run();
+  }
+  return { t };
+}
+async function chatLimited(env, thr) {
+  const r = await env.DB.prepare("SELECT COUNT(*) AS c FROM chat_msg WHERE thr = ? AND dir = 'in' AND t > ?").bind(thr, Date.now() - 3600e3).first();
+  return (r && r.c) >= CHAT_HOUR;
+}
+function chatHead(t) {
+  return '💬 ' + (t.name || 'Без имени') + (t.country ? ' ' + flag(t.country) : '') + (t.svc ? ' · ' + (SVC_RU[t.svc] || t.svc) : '') + ' · ' + (LANG_RU[t.lang] || t.lang) + ' · #' + t.id.slice(0, 5);
+}
+const CHAT_HINT = '\n\n↩️ Чтобы ответить клиенту — смахните это сообщение влево (или «Ответить») и пишите. Можно фото и видео.';
+async function chatToOwner(env, t, send) {
+  const owner = await env.PUSH.get('tg:owner');
+  const m = await send(owner);
+  if (m && m.message_id) await env.DB.prepare('INSERT OR REPLACE INTO chat_map (tg, thr) VALUES (?, ?)').bind(m.message_id, t.id).run();
+}
+async function chatSend(req, env, json) {
+  if (!(await chatOn(env))) return json({ ok: false, why: 'off' }, 409);
+  const b = JSON.parse((await req.text()) || '{}');
+  const text = String(b.text || '').replace(/\r/g, '').trim().slice(0, 3000);
+  if (!text) return json({ ok: false, why: 'empty' }, 400);
+  const { t, err } = await chatThread(env, b, req, true);
+  if (err) return json({ ok: false, why: err }, 403);
+  if (await chatLimited(env, t.id)) return json({ ok: false, why: 'limit' }, 429);
+  const now = Date.now();
+  const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, t) VALUES (?, 'in', 'text', ?, ?)").bind(t.id, text, now).run();
+  await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
+  try { await chatToOwner(env, t, owner => tg(env, 'sendMessage', { chat_id: owner, text: (chatHead(t) + '\n\n' + text + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
+  catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); } // kept; Telegram was not reachable
+  return json({ ok: true, n: r.meta && r.meta.last_row_id });
+}
+async function chatFile(req, env, json) {
+  if (!(await chatOn(env))) return json({ ok: false, why: 'off' }, 409);
+  if (!env.VIDEOS) return json({ ok: false, why: 'nobucket' }, 409);
+  const q = Object.fromEntries(new URL(req.url).searchParams);
+  const { t, err } = await chatThread(env, q, req, true);
+  if (err) return json({ ok: false, why: err }, 403);
+  if (await chatLimited(env, t.id)) return json({ ok: false, why: 'limit' }, 429);
+  const ct = (req.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
+  const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/x-m4v': 'm4v' }[ct];
+  if (!ext) return json({ ok: false, why: 'type' }, 415);
+  const len = +req.headers.get('Content-Length') || 0;
+  if (len > CHAT_MAX) return json({ ok: false, why: 'big' }, 413);
+  const buf = await req.arrayBuffer();
+  if (!buf.byteLength || buf.byteLength > CHAT_MAX) return json({ ok: false, why: 'big' }, 413);
+  const kind = ct.startsWith('image/') ? 'photo' : 'video', key = 'chat/' + t.id + '/' + rvCode(12) + '.' + ext;
+  await env.VIDEOS.put(key, buf, { httpMetadata: { contentType: ct } });
+  const cap = String(q.cap || '').slice(0, 900), now = Date.now();
+  const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'in', ?, ?, ?, ?)").bind(t.id, kind, cap, key, now).run();
+  await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
+  const head = chatHead(t) + (cap ? '\n\n' + cap : '') + (t.fresh ? CHAT_HINT : '');
+  try {
+    await chatToOwner(env, t, async owner => {
+      const big = kind === 'photo' ? buf.byteLength > 9.5 * 1048576 : buf.byteLength > 49 * 1048576;
+      if (big) {
+        const link = new URL(req.url).origin + '/chat/m/' + key + '?s=' + await chatSign(env, key, 30);
+        return tg(env, 'sendMessage', { chat_id: owner, text: (head + '\n\n📎 ' + (kind === 'photo' ? 'Фото' : 'Видео') + ' (' + (buf.byteLength / 1048576).toFixed(0) + ' МБ — больше лимита Telegram): ' + link).slice(0, 4096) });
+      }
+      const f = new FormData(); f.append('chat_id', owner); f.append('caption', head.slice(0, 1024));
+      f.append(kind === 'photo' ? 'photo' : 'video', new Blob([buf], { type: ct }), 'file.' + ext);
+      if (kind === 'video') f.append('supports_streaming', 'true');
+      return tg(env, kind === 'photo' ? 'sendPhoto' : 'sendVideo', f);
+    });
+  } catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); }
+  return json({ ok: true, n: r.meta && r.meta.last_row_id });
+}
+async function chatGet(req, env, json) {
+  if (!env.DB) return json({ msgs: [] });
+  const q = Object.fromEntries(new URL(req.url).searchParams);
+  const { t, err, none, id } = await chatThread(env, q, req, false);
+  if (err) return json({ ok: false, why: err }, 403);
+  if (none) return json({ msgs: [], on: await chatOn(env) });
+  const after = Math.max(0, parseInt(q.after) || 0);
+  const r = await env.DB.prepare('SELECT n, dir, kind, text, media, t FROM chat_msg WHERE thr = ? AND n > ? ORDER BY n LIMIT 200').bind(t.id, after).all();
+  const origin = new URL(req.url).origin;
+  const msgs = await Promise.all((r.results || []).map(async m => ({ n: m.n, d: m.dir, k: m.kind, t: m.text || '', at: m.t, m: m.media ? origin + '/chat/m/' + m.media + '?s=' + await chatSign(env, m.media, 7) : '' })));
+  return json({ msgs, on: await chatOn(env) });
+}
+async function chatPush(req, env, json) {
+  const b = JSON.parse((await req.text()) || '{}');
+  const { t, err, none } = await chatThread(env, b, req, false);
+  if (err) return json({ ok: false, why: err }, 403);
+  if (none) return json({ ok: false, why: 'none' });
+  const s = b.sub || {};
+  if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys || !s.keys.p256dh || !s.keys.auth) return json({ ok: false, why: 'sub' }, 400);
+  await env.DB.prepare('UPDATE chat_thr SET push = ? WHERE id = ?').bind(JSON.stringify({ endpoint: s.endpoint, p256dh: s.keys.p256dh, auth: s.keys.auth }), t.id).run();
+  return json({ ok: true });
+}
+const PUSH_TITLE = { ru: 'Ответ тренера', en: 'Your coach replied', es: 'Tu entrenador respondió', pt: 'Seu treinador respondeu', fr: 'Ton coach a répondu', de: 'Dein Coach hat geantwortet', ja: 'コーチから返信', ko: '코치의 답장', zh: '教练回复了你' };
+const PUSH_MEDIA = { ru: 'Фото или видео', en: 'Photo or video', es: 'Foto o video', pt: 'Foto ou vídeo', fr: 'Photo ou vidéo', de: 'Foto oder Video', ja: '写真または動画', ko: '사진 또는 동영상', zh: '图片或视频' };
+async function tgHook(req, env, json) {
+  if (!env.TG_TOKEN || req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== (await env.PUSH.get('tg:hook'))) return json({ ok: false }, 403);
+  const u = await req.json().catch(() => ({})), m = u.message;
+  if (!m || !m.chat) return json({ ok: true });
+  const owner = await env.PUSH.get('tg:owner'), from = String(m.chat.id);
+  try {
+    const start = /^\/start(?:\s+(\S+))?/.exec(m.text || '');
+    if (start) {
+      const bind = await env.PUSH.get('tg:bind');
+      if (start[1] && bind && start[1] === bind) {
+        await env.PUSH.put('tg:owner', from); await env.PUSH.delete('tg:bind');
+        await tg(env, 'sendMessage', { chat_id: from, text: 'Готово ✓ Сюда будут приходить сообщения клиентов из приложения Fedoskin team.\n\nЧтобы ответить клиенту — смахните его сообщение влево (или «Ответить») и пишите: текст, фото, видео. Ответ появится у него в приложении.' });
+      } else if (from !== owner) await tg(env, 'sendMessage', { chat_id: from, text: 'This bot only delivers messages to the coach. Write from the Fedoskin team app → Coaching.' });
+      return json({ ok: true });
+    }
+    if (from !== owner) return json({ ok: true }); // only the coach talks to clients through the bot
+    await schema(env.DB);
+    const rep = m.reply_to_message && m.reply_to_message.message_id;
+    const map = rep ? await env.DB.prepare('SELECT thr FROM chat_map WHERE tg = ?').bind(rep).first() : null;
+    if (!map) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Не понял, кому это. Смахните влево сообщение клиента (или «Ответить» на нём) и напишите ответ ещё раз.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+    const t = await env.DB.prepare('SELECT * FROM chat_thr WHERE id = ?').bind(map.thr).first();
+    if (!t) return json({ ok: true });
+    let kind = 'text', media = '', text = m.text || m.caption || '';
+    const file = m.photo ? m.photo[m.photo.length - 1] : m.video || m.animation || (m.document && /^(image|video)\//.test(m.document.mime_type || '') ? m.document : null);
+    if (file) {
+      const mime = m.photo ? 'image/jpeg' : (file.mime_type || 'video/mp4');
+      kind = mime.startsWith('image/') ? 'photo' : 'video';
+      if ((file.file_size || 0) > 20 * 1048576) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Файл больше 20 МБ — бот Telegram не может его забрать. Сожмите видео или пришлите ссылку.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+      if (!env.VIDEOS) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Нет хранилища R2 — фото и видео пока не отправить, только текст.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+      const f = await tg(env, 'getFile', { file_id: file.file_id });
+      const r = await fetch('https://api.telegram.org/file/bot' + env.TG_TOKEN + '/' + f.file_path);
+      if (!r.ok) throw new Error('download ' + r.status);
+      const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/quicktime': 'mov', 'video/webm': 'webm' }[mime] || (kind === 'photo' ? 'jpg' : 'mp4');
+      media = 'chat/' + t.id + '/' + rvCode(12) + '.' + ext;
+      await env.VIDEOS.put(media, await r.arrayBuffer(), { httpMetadata: { contentType: mime } });
+    } else if (!text) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Такое пока не передаётся — отправьте текст, фото или видео.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+    const now = Date.now();
+    await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'out', ?, ?, ?, ?)").bind(t.id, kind, text.slice(0, 4000), media || null, now).run();
+    await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
+    let pushed = false;
+    if (t.push) {
+      const rec = JSON.parse(t.push), L = PUSH_TITLE[t.lang] ? t.lang : 'en';
+      const res = await sendPush(rec, JSON.stringify({ title: PUSH_TITLE[L], body: (text || PUSH_MEDIA[L]).slice(0, 140), tag: 'chat', chat: 1 }), await vapid(env)).catch(() => null);
+      pushed = !!(res && res.ok);
+      if (res && (res.status === 404 || res.status === 410)) await env.DB.prepare('UPDATE chat_thr SET push = NULL WHERE id = ?').bind(t.id).run();
+    }
+    try { await tg(env, 'setMessageReaction', { chat_id: from, message_id: m.message_id, reaction: [{ type: 'emoji', emoji: '👍' }] }); }
+    catch (_) { await tg(env, 'sendMessage', { chat_id: from, text: '✓ Доставлено', reply_to_message_id: m.message_id }).catch(() => {}); }
+    if (!pushed && !t.push) await env.PUSH.get('tg:nopush:' + t.id).then(async seen => { if (!seen) { await env.PUSH.put('tg:nopush:' + t.id, '1', { expirationTtl: 30 * 86400 }); await tg(env, 'sendMessage', { chat_id: from, text: 'ℹ️ У этого клиента не включены уведомления — он увидит ответ, когда откроет чат в приложении.' }).catch(() => {}); } });
+  } catch (e) {
+    await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Не получилось доставить: ' + String(e && e.message || e).slice(0, 200), reply_to_message_id: m.message_id }).catch(() => {});
+  }
+  return json({ ok: true });
+}
+async function tgAdmin(req, env, path, json) {
+  if (!env.TG_TOKEN) return json({ error: 'no-token' }, 409);
+  if (!env.DB) return json({ error: 'no-db' }, 409);
+  if (path === '/tg/status') {
+    const me = await tg(env, 'getMe').catch(e => ({ err: e.message }));
+    if (me.err) return json({ error: 'token: ' + me.err }, 409);
+    const info = await tg(env, 'getWebhookInfo').catch(() => ({}));
+    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '' });
+  }
+  // /tg/setup: point the webhook here, make a one-time binding link for the coach's own Telegram
+  const me = await tg(env, 'getMe');
+  const secret = b64u(crypto.getRandomValues(new Uint8Array(24))), bind = rvCode(16);
+  await env.PUSH.put('tg:hook', secret); await env.PUSH.put('tg:bind', bind, { expirationTtl: 3600 });
+  await tg(env, 'setWebhook', { url: new URL(req.url).origin + '/tg/hook', secret_token: secret, allowed_updates: ['message'], drop_pending_updates: true });
+  await schema(env.DB);
+  return json({ ok: true, bot: me.username, link: 'https://t.me/' + me.username + '?start=' + bind, owner: !!(await env.PUSH.get('tg:owner')) });
 }

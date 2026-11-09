@@ -467,3 +467,18 @@
   `#rvOld` with «Скопировать код сервера» (reuses #visCopy). Tested: worker on node:sqlite (invite, check, short text,
   double submit, delete), app form en/es (validation, done, used, bad link), admin create → client submits → publish →
   app shows it first with 🇪🇸.
+- Chat with the coach through Telegram (owner 09.11.2026 «клиент работает в интерфейсе приложения, я ему отвечаю в тг»;
+  messengers stay as the backup): app screen `#chat` (Коучинг → coach card «Написать в чат» `#ccChat`, and the first item
+  «Чат в приложении» in the contact sheet, prefilled with the service text) — shown only when GET /chat/on says the bot is
+  connected. Thread = random `fedoskin-chat-id` + `fedoskin-chat-key` (server stores only hashes); name asked once
+  (`fedoskin-chat-name`); text POST /chat/send, photo/video POST /chat/file (≤95 MB, R2 `chat/<thr>/…`); poll /chat/get every
+  4 s while the screen is open (`chShown`/`chatHidden` from go()), 60 s in the background + unread dot on the tab; messages
+  cached in `fedoskin-chat`. Note in the chat: iPhone not on Home Screen ⇒ install hint, else «Включить» notifications;
+  POST /chat/push links the push subscription so replies arrive as a push (sw.js opens `./?chat=1`).
+  Worker: tables chat_thr / chat_msg / chat_map; bot token = Cloudflare secret `TG_TOKEN` (owner puts it there himself —
+  NEVER ask him to send it); admin «Клиенты» → card «Чат с клиентами через Telegram» → «Подключить» (/tg/setup sets the
+  webhook with a secret in KV tg:hook, gives a /start link that binds the owner's Telegram as KV tg:owner) → «Проверить»
+  (/tg/status). To the owner: «💬 Name 🇺🇸 · service · lang · #id»; media as photo/video (big ones as a 30-day signed link).
+  Owner answers by REPLYING to a client's message (text/photo/video) ⇒ saved + web push + 👍 reaction; a non-reply gets a
+  hint. Client media URLs are signed (/chat/m/<key>?s=). 30 messages/hour per thread. No reply-time promise in the chat
+  header (owner removed those). Tested with a fake Telegram API (node:sqlite D1, in-memory R2/KV). Admin «версия 26».

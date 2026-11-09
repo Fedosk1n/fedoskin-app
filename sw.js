@@ -177,7 +177,8 @@ self.addEventListener('push', e => {
       icon: 'icons/icon2-192.png',
       badge: 'icons/icon2-192.png',
       tag: msg.tag || 'new-lesson',
-      data: { id: msg.id || '' }
+      renotify: !!msg.chat,
+      data: { id: msg.id || '', chat: msg.chat ? 1 : 0 }
     });
   })());
 });
@@ -186,13 +187,14 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const id = (e.notification.data && e.notification.data.id) || '';
-  const url = new URL('./' + (id ? '?lesson=' + encodeURIComponent(id) : ''), self.registration.scope).href;
+  const chat = !!(e.notification.data && e.notification.data.chat); // the coach answered in the chat (09.11.2026)
+  const url = new URL('./' + (chat ? '?chat=1' : id ? '?lesson=' + encodeURIComponent(id) : ''), self.registration.scope).href;
   e.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const w of wins) {
       if (w.url.startsWith(self.registration.scope)) {
         await w.focus();
-        try { w.postMessage({ type: 'open-lesson', id }); return; } catch (_) {}
+        try { w.postMessage(chat ? { type: 'open-chat' } : { type: 'open-lesson', id }); return; } catch (_) {}
       }
     }
     await self.clients.openWindow(url);
