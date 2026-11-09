@@ -1605,6 +1605,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!introOn) return;
     if (P.playing && (vin.ended || vin.currentTime >= introEnd() - 0.03)) toStream(introEnd());
   }
+  // the video's address is set here: a file straight from our R2 server is asked for with CORS (so its frames can be
+  // copied for scrubbing); anything else — a blob: copy from the phone's memory above all — WITHOUT it: Safari on iPhone
+  // refuses to play a blob: video marked crossorigin (owner 09.11.2026, R2 lesson stuck on the play button)
+  function setSrc(el, u){
+    if (R2_BASE && typeof u === 'string' && u.indexOf(R2_BASE + '/') === 0) el.crossOrigin = 'anonymous'; else el.removeAttribute('crossorigin');
+    el.src = u;
+  }
   function playMain(){
     if (scrub) return;
     if (!vid.getAttribute('src') && !hls) return; // the lesson's video is still on its way (its source is set when ready)
@@ -1652,9 +1659,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
-    // a file from another site (R2): asked for with CORS, so its frames can be copied for scrubbing
-    let other = false; try { other = !ks && /^https?:/.test(src) && new URL(src).origin !== location.origin; } catch (_) {}
-    if (other) vid.crossOrigin = 'anonymous'; else vid.removeAttribute('crossorigin');
+    if (ks) vid.removeAttribute('crossorigin');
     stage.classList.add('portrait');
     if (ks && intro) {
       introOn = true; av = vin; streamBudget = null;
@@ -1674,8 +1679,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (intro && intro.wait) {
         const tok = vid._srcTok = {};
         vid.removeAttribute('src'); try { vid.load(); } catch (_) {} // the previous lesson must not play meanwhile
-        intro.wait.then(u => u, () => intro.url).then(u => { if (vid._srcTok !== tok) return; vid.src = u; vid.playbackRate = P.rate; if (P.playing) playMain(); });
-      } else { vid._srcTok = null; vid.src = intro ? intro.url : src; vid.playbackRate = P.rate; }
+        intro.wait.then(u => u, () => intro.url).then(u => { if (vid._srcTok !== tok) return; setSrc(vid, u); vid.playbackRate = P.rate; if (P.playing) playMain(); });
+      } else { vid._srcTok = null; setSrc(vid, intro ? intro.url : src); vid.playbackRate = P.rate; }
       return;
     }
     if (introOn) { vid.removeAttribute('src'); vid.load(); streamDefer = () => loadStream(ks); }
@@ -2158,7 +2163,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // a copy from the phone's memory that won't draw: take the file from the site instead
     const src = /^blob:/.test(el.currentSrc || el.src) ? new URL(fileFor(curLesson), location.href).href : (el.currentSrc || el.src); if (!src) return;
     el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (_) {} if (P.playing) playMain(); }, { once: true });
-    el.src = src; el.playbackRate = P.rate;
+    setSrc(el, src); el.playbackRate = P.rate;
   }, 500);
   // the frame for this moment, if the phone has it
   function fcGet(T){

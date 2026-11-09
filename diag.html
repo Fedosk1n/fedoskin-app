@@ -13,6 +13,7 @@ small{color:#999;word-break:break-all}
 <p>Подожди 15 секунд и пришли скриншот всей страницы.</p>
 <div id="out"></div>
 <div><video id="a" muted playsinline></video><video id="b" muted playsinline></video></div>
+<div><video id="c" muted playsinline></video><video id="d" muted playsinline></video></div>
 <p><small id="ua"></small></p>
 <script>
 // Temporary diagnostics (09.11.2026): why an R2 lesson does not play on the owner's iPhone.
@@ -34,7 +35,19 @@ document.getElementById('ua').textContent = navigator.userAgent + ' · standalon
     v.src = url; const pr = v.play(); if (pr && pr.catch) pr.catch(e => ev.push('play(): ' + e.name));
     setTimeout(() => { const good = v.currentTime > 1; rr(good ? 'ok' : 'bad', (good ? 'играет, ' : 'НЕ играет, ') + 't=' + v.currentTime.toFixed(1) + ' rs=' + v.readyState + ' ns=' + v.networkState + (v.error ? ' err=' + v.error.code + ' ' + (v.error.message || '') : '') + ' · ' + ev.join(', ')); res(); }, 9000);
   });
+  const test2 = (id, name, cors, src) => new Promise(res => {
+    const rr = row(name), v = document.getElementById(id); const ev = [];
+    if (cors) v.crossOrigin = 'anonymous';
+    ['loadedmetadata', 'canplay', 'playing', 'error'].forEach(n => v.addEventListener(n, () => ev.push(n + '@' + v.currentTime.toFixed(1))));
+    v.src = src; const pr = v.play(); if (pr && pr.catch) pr.catch(e => ev.push('play(): ' + e.name));
+    setTimeout(() => { const good = v.currentTime > 1; rr(good ? 'ok' : 'bad', (good ? 'играет, ' : 'НЕ играет, ') + 't=' + v.currentTime.toFixed(1) + ' rs=' + v.readyState + (v.error ? ' err=' + v.error.code : '') + ' · ' + ev.join(', ')); res(); }, 9000);
+  });
   await Promise.all([test('a', '3. Видео с crossorigin (как в приложении)', true), test('b', '4. Видео без crossorigin', false)]);
+  // the app keeps the next lessons of a section in the phone's memory (blob:) — the case under suspicion
+  let blobUrl = '';
+  const r5 = row('5. Копия урока в памяти телефона');
+  try { const r = await fetch(url, { cache: 'no-store' }); const bl = await r.blob(); blobUrl = URL.createObjectURL(new Blob([bl], { type: 'video/mp4' })); r5('ok', 'скачано ' + Math.round(bl.size / 1048576) + ' МБ'); } catch (e) { r5('bad', 'ошибка: ' + e.message); }
+  if (blobUrl) await Promise.all([test2('c', '6. Копия из памяти С crossorigin (было в приложении)', true, blobUrl), test2('d', '7. Копия из памяти БЕЗ crossorigin (исправление)', false, blobUrl)]);
 })();
 </script>
 </body></html>
