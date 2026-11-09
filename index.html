@@ -224,6 +224,8 @@ p{margin:0}
 .ctachip .x{flex:none;width:34px;height:34px;display:grid;place-items:center;background:none;border:0;color:rgba(242,239,232,.6);font-size:18px;cursor:pointer}
 body.fsmode .ctachip{top:calc(env(safe-area-inset-top,0px) + 72px)}
 body.fsmode.fs-full .ctachip{top:calc(env(safe-area-inset-top,0px) + 14px)}
+.vpnchip .go{cursor:default}
+.vpnchip .go b{color:var(--accent);font-weight:700}
 .swhint{position:absolute;left:50%;top:44%;z-index:5;translate:-50% 0;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:22px;background:rgba(11,11,12,.8);color:#F2EFE8;font-size:14px;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .3s}
 .swhint.on{opacity:1}
 .swhint svg{animation:swnudge 1.1s ease-in-out infinite}
@@ -649,6 +651,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="swend" id="swEnd" aria-hidden="true"></div>
       <div class="swhint" id="swHint" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Листай вбок — соседний урок</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
       <div class="ctachip" id="ctaChip" role="status" aria-live="polite"><button class="go" id="ctaGo" type="button">Не получается? Федоскин поможет <i>→</i></button><button class="x" id="ctaX" type="button" aria-label="Скрыть">×</button></div>
+      <div class="ctachip vpnchip" id="vpnChip" role="status" aria-live="polite"><span class="go" id="vpnText"></span><button class="x" id="vpnX" type="button" aria-label="Скрыть">×</button></div>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
       <svg id="figure" viewBox="0 0 200 200" aria-hidden="true">
         <g id="dancer" stroke="#F2EFE8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -1777,6 +1780,31 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     paint();
   });
   vid.addEventListener('ended', () => { if (av !== vid) return; if (P.loop || P.repeat) { seekTo(P.loop ? P.loop.a : 0); vid.play().catch(() => {}); } else setPlaying(false); });
+  // VPN hint for Russian users (owner 09.11.2026 «плашку для русских над видео с r2 "может понадобиться впн", когда видос
+  // не прогружается»): R2 videos come from Cloudflare (workers.dev), which is throttled/blocked in Russia. Only in the
+  // ru UI, only for R2 lessons, and only when the video really doesn't start: 6 s of «play» with no picture yet, or a
+  // load error. Hides itself as soon as the video plays; «×» = not again until the app is reopened.
+  const vpnChip = $('#vpnChip');
+  let vpnT = 0, vpnLesson = null, vpnWait = 0, vpnOff = false;
+  if (LANG === 'ru') $('#vpnText').innerHTML = 'Видео не грузится? <b>Может понадобиться VPN</b>';
+  function vpnHide(){ clearInterval(vpnT); vpnT = 0; vpnChip.classList.remove('show'); }
+  function vpnShow(){ if (vpnOff || LANG !== 'ru' || !curLesson || curLesson !== vpnLesson) return; clearInterval(vpnT); vpnT = 0; vpnChip.classList.add('show'); }
+  function vpnArm(l){
+    vpnHide(); vpnLesson = null;
+    if (vpnOff || LANG !== 'ru' || !l || !l.r2 || l.ks) return;
+    vpnLesson = l; vpnWait = 0;
+    let ticks = 0;
+    vpnT = setInterval(() => {
+      if (++ticks > 120 || curLesson !== l || !document.body.contains(vid)) return vpnHide();
+      if (document.hidden || !P.playing) return; // counts only while the person wants it to play
+      if (vid.readyState >= 3 && !vid.paused) { vpnLesson = null; return vpnHide(); }
+      if (++vpnWait >= 6) vpnShow();
+    }, 1000);
+  }
+  vid.addEventListener('playing', () => { if (vpnLesson && curLesson === vpnLesson) { vpnLesson = null; vpnHide(); } });
+  vid.addEventListener('error', () => { const s = vid.getAttribute('src') || ''; if (vpnLesson && curLesson === vpnLesson && R2_BASE && s.indexOf(R2_BASE + '/') === 0) vpnShow(); });
+  $('#vpnX').addEventListener('click', e => { e.stopPropagation(); vpnOff = true; vpnHide(); });
+  ['pointerdown', 'touchstart', 'click'].forEach(ev => vpnChip.addEventListener(ev, e => e.stopPropagation()));
   function openLesson(id){
     { const c = document.getElementById('ctaChip'); if (c) c.classList.remove('show'); }
     const l = BY_ID[id]; if (!l) return;
@@ -1798,6 +1826,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
     const srcInfo = introSource(l);
     loadVideo(fileFor(l), 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
+    vpnArm(l);
     ldStart(l);
     paint();
     paintSave();

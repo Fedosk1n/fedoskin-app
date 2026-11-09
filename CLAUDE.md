@@ -422,3 +422,9 @@
   `{type:'vprog', url}` → {st: dl|saved|done|none|off, got, total} (sw `progress()`, `fin` map of finished downloads,
   `save()` returns whether it kept the file; old SW = no answer in 0.8 s ⇒ fallback). Fallback / iPhone / Kinescope: the
   player's own `buffered` ranges (bar; label only while it grows, non-Kinescope). Tested with a 1.2 MB/s server.
+- VPN hint for Russians (owner 09.11.2026 «плашку для русских над видео с r2 "может понадобиться впн"… когда видос не
+  прогружается»): `#vpnChip` (same look as #ctaChip, top-left of the video) «Видео не грузится? Может понадобиться VPN» —
+  only when LANG === 'ru', only for R2 lessons (no ks), shown after 6 s of wanting to play (P.playing, page visible) with no
+  playing picture, or at once on a video error from an R2 address; hidden on `playing`; «×» = off until the app is reopened
+  (`vpnOff`). `vpnArm(l)` in openLesson. Text is set in JS for ru only (no i18n key needed). Tested headless: blocked /
+  hanging server ⇒ shown (2 s / 5 s), working ⇒ never, en UI ⇒ never.
