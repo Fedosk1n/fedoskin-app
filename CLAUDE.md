@@ -428,8 +428,8 @@
   playing picture, or at once on a video error from an R2 address; hidden on `playing`; «×» = off until the app is reopened
   (`vpnOff`). `vpnArm(l)` in openLesson. Text is set in JS for ru only (no i18n key needed). Tested headless: blocked /
   hanging server ⇒ shown (2 s / 5 s), working ⇒ never, en UI ⇒ never.
-- Coaching tab pass (owner 09.11.2026, points 1–5 «как видишь», 7 «строгий стиль, без лишних обещаний»): header text
-  «Индивидуальная работа с тренером по переписке…»; coach card `.coachcard` (photo `icons/coach.jpg?v=2` = owner's red-light handstand photo 09.11, circle crop, name «Федоскин»/Fedosk1n, role, YouTube youtube.com/fe_dosk1n + Instagram from CFG.ig, tiles 28 years in breaking /
+- Coaching tab pass (owner 09.11.2026, points 1–5 «как видишь», 7 «строгий стиль, без лишних обещаний»): NO title / description on top (owner 09.11 «пусть всё
+  начинается с меня») — the tab opens with the coach card; coach card `.coachcard` (photo `icons/coach.jpg?v=2` = owner's red-light handstand photo 09.11, circle crop, name «Федоскин»/Fedosk1n, role, YouTube youtube.com/fe_dosk1n + Instagram from CFG.ig, tiles 28 years in breaking /
   19 coaching / 11 countries — owner's own facts; add titles/reviews when he gives them); NO «Рекомендую» badge (owner 09.11: it read as «don't
   bother with the $1000») — every card has a `fit` line «для кого» (`.fit`: Разово разобрать элемент / Стабильный прогресс
   по одному элементу / Для тренеров / Подготовка к крупным соревнованиям), all write buttons `.btn-line`; full coaching =
