@@ -103,6 +103,10 @@ p{margin:0}
 .svccard .pr{white-space:normal;text-align:right;flex:0 1 auto;max-width:46%}
 .svccard .pr small{white-space:nowrap}
 .svccard .more{font-size:13px;font-weight:600;color:var(--soft);display:flex;align-items:center;gap:4px}
+.svccard .svcopen{all:unset;display:flex;flex-direction:column;gap:8px;cursor:pointer}
+.svcbtns{display:flex;gap:8px;margin-top:6px}
+.svcbtns .btn{min-height:44px;font-size:14px}
+.svcbtns .btn-ghost{flex:0 0 auto;width:auto;padding:0 16px}
 .svcb p{margin:16px 0 0;line-height:1.5}
 .svcb .label{display:block;margin:24px 0 10px}
 .svcb ul,.svcb ol{margin:0;padding:16px 16px 16px 34px;line-height:1.45;font-size:14px;border-radius:16px;background:var(--surface);border:1px solid #222225}
@@ -329,7 +333,9 @@ body.fsmode .bigplay{z-index:3}
 .alphatag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 7px;border-radius:5px;background:var(--accent);color:var(--on-accent)}
 .alphabadge{display:inline-flex;align-items:center;font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.6px;padding:4px 8px;border-radius:6px;background:var(--accent);color:var(--on-accent)}
 .alphamini{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;vertical-align:middle}
-.alphacard{margin-top:16px;padding:16px;border-radius:18px;background:var(--accent);color:var(--on-accent)}
+.alphacard{margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(226,97,26,.1);border:1px solid rgba(226,97,26,.35);color:var(--fg);display:flex;gap:10px;align-items:flex-start}
+.alphacard .alphatag{flex:none}
+.alphacard p{margin:0!important;font-size:13px!important;line-height:1.4!important;font-weight:500!important;color:var(--soft)}
 .avex{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 5px;border-radius:4px;background:var(--fg);color:var(--bg)}
 .isteps{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:st}
 .isteps li{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface);border:1px solid #222225;font-size:14px;line-height:1.4;counter-increment:st}
@@ -364,6 +370,20 @@ body.fsmode .bigplay{z-index:3}
 .tile{position:relative}
 .tilenew{position:absolute;top:12px;right:12px}
 .lcard.isnew .lcover{border-color:var(--new)}
+.lcover .covernew{position:absolute;top:8px;left:8px;z-index:2}
+/* home: a row of the newest lessons (owner 09.11.2026 — people from reels should see videos at once) */
+.hrow{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
+  margin:0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px)));
+  padding:0 max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px));scroll-padding-left:max(20px, env(safe-area-inset-left, 0px))}
+.hrow::-webkit-scrollbar{display:none}
+.hrow .lcard{flex:0 0 132px;scroll-snap-align:start}
+.hrow .lname{font-size:13px;line-height:1.25}
+/* lesson page: one row of round captioned buttons, like the full-screen panel (owner 09.11.2026: mirror/repeat were below the fold) */
+.pkrow{display:flex;align-items:flex-start;margin-top:12px}
+.pkrow .fsk .fsl{color:var(--soft)}
+.pkrow .fsk .fsi.fsplay{background:var(--fg);color:var(--bg)}
+/* profile: no nick yet — a small call, not a giant grey title */
+#pNick.nickph{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:17px;font-weight:700;color:var(--accent)}
 .lgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
 .lcard{display:flex;flex-direction:column;gap:8px;padding:0;border:none;background:none;color:var(--fg);text-align:left;cursor:pointer;min-width:0}
 .lcover{position:relative;display:block;aspect-ratio:3/4;max-width:100%;border-radius:16px;overflow:hidden;background:#1C1C1F;border:1px solid #222225;transition:transform .12s ease}
@@ -564,6 +584,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="sec-head" style="margin-bottom:10px"><h2>Сохранённое</h2><button class="muted" data-go="profile" style="background:none;border:none;font-size:13px;padding:10px 0;cursor:pointer">Все</button></div>
     <div class="chips" id="savedChips"></div>
   </div>
+  <div id="newHome" hidden style="margin-top:20px">
+    <h2 style="margin-bottom:10px">Новые уроки</h2>
+    <div class="hrow" id="newRow"></div>
+  </div>
   <h1 style="font-size:30px;margin-top:20px">Разделы</h1>
   <div class="grid2" id="sections" style="margin-top:12px"></div>
 
@@ -660,7 +684,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           <div class="timeline" style="margin:0"><div class="track"><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
           <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
-            <button class="fsk" id="fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">3 сек</span></button>
+            <button class="fsk" id="fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">Цикл 3 сек</span></button>
             <button class="fsk" id="fsSpeed" aria-label="Скорость"><span class="fsi fstxt" id="fsSpeedVal">1x</span><span class="fsl">Скорость</span></button>
             <button class="fsk fskplay" id="fsPlay" aria-label="Смотреть"><span class="fsi fsplay"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" id="fsIcoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></span></button>
             <button class="fsk" id="fsMirror" aria-pressed="false" aria-label="Зеркало"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></span><span class="fsl">Зеркало</span></button>
@@ -684,29 +708,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </div>
   </div>
 
-  <div class="row" style="gap:10px;margin-top:10px">
-    <button class="ctl" id="btnLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg><span style="font-size:11px">3 сек</span></button>
-    <button class="ctl ctl-main" id="btnPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" id="icoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
-    <div class="seg" role="group" aria-label="Скорость" id="speedSeg" style="flex:1;margin:0">
-      <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
-    </div>
+  <div class="pkrow">
+    <button class="fsk" id="btnLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">Цикл 3 сек</span></button>
+    <button class="fsk" id="btnSpeed" aria-label="Скорость"><span class="fsi fstxt" id="btnSpeedVal">1x</span><span class="fsl">Скорость</span></button>
+    <button class="fsk fskplay" id="btnPlay" aria-label="Смотреть"><span class="fsi fsplay"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" id="icoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></span></button>
+    <button class="fsk" id="btnMirror" aria-pressed="false" aria-label="Зеркало"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></span><span class="fsl">Зеркало</span></button>
+    <button class="fsk" id="btnLoop" aria-pressed="true" aria-label="Повтор урока"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></span><span class="fsl" id="loopText">Повтор</span></button>
   </div>
-
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">
-    <button class="tool" id="btnMirror" aria-pressed="false">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg>
-      <span>Зеркало</span>
-    </button>
-    <button class="tool" id="btnLoop" aria-pressed="true" aria-label="Повтор урока">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
-      <span id="loopText">Повтор</span>
-    </button>
+  <!-- the speed choice itself (logic + keyboard); the round «Скорость» button above cycles 1x → 0.5x → 0.25x -->
+  <div class="seg" role="group" aria-label="Скорость" id="speedSeg" hidden>
+    <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
+  </div>
+  <div hidden>
     <button class="tool" id="btnDownload" aria-pressed="false" hidden data-later="download"><!-- owner 05.11: «уберём кнопку качать» (it was only a mock) -->
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" id="icoDl"><path d="M12 4v12M6 10l6 6 6-6"/><path d="M4 20h16"/></svg>
       <span id="dlText">Скачать</span>
     </button>
   </div>
-  <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и «3 сек» помогут разобрать движение: «3 сек» зацикливает момент, на котором стоит видео. «Повтор» крутит весь урок по кругу.</p>
+  <p class="muted" id="toolHint" style="margin-top:10px;font-size:12px;line-height:1.4;min-height:34px">Замедление, зеркало и «Цикл 3 сек» помогут разобрать движение: «Цикл 3 сек» крутит по кругу момент, на котором стоит видео, «Повтор» — весь урок.</p>
   </div>
   <div class="lcol-b">
 
@@ -805,6 +824,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stMins">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stStreak">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">дней подряд</span></div>
   </div>
+  <div class="sec stack" style="margin-top:14px">
+    <button class="list-item" id="shareApp"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span style="flex:1;font-weight:600">Поделиться приложением</span><span class="muted" style="font-size:13px">с другом</span></button>
+    <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
+    <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
+    <button class="list-item" id="installItem"><span style="flex:1;font-weight:600" id="installLabel">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
+    <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
+    <button class="list-item" id="storeItem"><span style="flex:1;font-weight:600">Память на телефоне</span><span class="muted" style="font-size:13px" id="storeState"></span></button>
+  </div>
   <p class="muted" id="statsNote" style="margin-top:8px;font-size:11px">Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом телефоне.</p>
 
   <div class="sec">
@@ -839,16 +868,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="stack" id="progress" style="gap:12px"></div>
   </div>
 
-  <div class="sec stack">
-    <button class="list-item" id="shareApp"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span style="flex:1;font-weight:600">Поделиться приложением</span><span class="muted" style="font-size:13px">с другом</span></button>
-    <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-    <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-    <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
-    <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
-    <button class="list-item" id="installItem"><span style="flex:1;font-weight:600" id="installLabel">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
-    <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
-    <button class="list-item" id="storeItem"><span style="flex:1;font-weight:600">Память на телефоне</span><span class="muted" style="font-size:13px" id="storeState"></span></button>
-  </div>
   </div>
 </section>
 
@@ -1054,11 +1073,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const TABS = [
     ['home','Главная','<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>'],
     // ['courses','Курсы', ...] — hidden for now, comes back later
-    ['review','Онлайн услуги',''], // text only, two lines
+    ['review','Коучинг','<path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12.5 11.5h.01M16.5 11.5h.01" stroke-width="2.6"/>'], // owner 09.11.2026: icon + one short word
     // promo tab hidden for now, comes back later
     // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
     ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
   ];
+  // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
+  let installWanted = false, watchedNow = false, newRowDirty = false;
   const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',promo:'promo',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
@@ -1151,7 +1172,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (seen.includes(id)) return;
     seen.push(id);
     try { localStorage.setItem('fedoskin-seen', JSON.stringify(seen)); } catch (_) {}
-    paintTiles();
+    paintTiles(); newRowDirty = true;
   }
   const inSec = sec => LESSONS.filter(l => l.sec === sec);
   const isFree = l => inSec(l.sec).indexOf(l) < 2;
@@ -1175,11 +1196,19 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function paintTiles(){
     grid.querySelectorAll('.tile').forEach(t => {
       const old = t.querySelector('.newpill'); if (old) old.remove();
-      if (secHasNew(t.dataset.sec)) { const p = newPill(); p.classList.add('tilenew'); t.appendChild(p); t.setAttribute('aria-label', T('{sec}, есть новые видео', {sec: t.dataset.sec})); }
+      const nn = LESSONS.filter(l => l.sec === t.dataset.sec && isNew(l)).length;
+      if (nn) { const p = newPill(); p.textContent = nn === 1 ? T('1 новый') : T('{n} новых', {n: nn}); p.classList.add('tilenew'); t.appendChild(p); t.setAttribute('aria-label', T('{sec}, есть новые видео', {sec: t.dataset.sec})); }
       else t.removeAttribute('aria-label');
     });
   }
   paintTiles();
+  // the newest lessons in one swipeable row on the home screen
+  function paintNewRow(){
+    const row = $('#newRow'); if (!row) return;
+    const list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
+    row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l)));
+    $('#newHome').hidden = !list.length;
+  }
   function lessonRow(l, opts){
     opts = opts || {};
     const b = document.createElement('button');
@@ -1241,7 +1270,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (l.pv !== false) pvSet(pv, 'v/' + l.id + '-p3.mp4');
     b.querySelector('.ldur').textContent = fmtD(l.dur);
     b.querySelector('.lname').textContent = l.name;
-    if (isNew(l)) { b.querySelector('.lname').prepend(newPill(), ' '); b.classList.add('isnew'); }
+    if (isNew(l)) { const np = newPill(); np.classList.add('covernew'); b.querySelector('.lcover').appendChild(np); b.classList.add('isnew'); }
     if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
     b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
     b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
@@ -1756,7 +1785,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     loadSubs(l);
     setLoop(null);
     setRepeat(navReplace ? P.repeat !== false : true);
-    $('#toolHint').textContent = T('Замедление, зеркало и «3 сек» помогут разобрать движение: «3 сек» зацикливает момент, на котором стоит видео. «Повтор» крутит весь урок по кругу.');
+    $('#toolHint').textContent = T('Замедление, зеркало и «Цикл 3 сек» помогут разобрать движение: «Цикл 3 сек» крутит по кругу момент, на котором стоит видео, «Повтор» — весь урок.');
     P.dur = l.dur;
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
@@ -2625,9 +2654,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tl.addEventListener(ev, end));
   });
 
+  $('#btnSpeed').addEventListener('click', () => {
+    const next = { '1': '0.5', '0.5': '0.25', '0.25': '1' }[String(P.rate)];
+    $('#speedSeg').querySelector('[data-rate="' + next + '"]').click();
+  });
   $('#speedSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     P.rate = +b.dataset.rate;
+    $('#btnSpeedVal').textContent = P.rate + 'x'; $('#btnSpeed').setAttribute('aria-pressed', P.rate !== 1);
     $('#speedSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
     av.playbackRate = P.rate; vid.playbackRate = P.rate;
     applyMute(); paintMute(); // slow ⇒ silent, 1x ⇒ the person's own sound choice
@@ -2877,6 +2911,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   function go(id){
     if (id === 'profile') setTimeout(() => { try { stRender(); } catch (_) {} }, 0);
+    if (id !== 'lesson' && watchedNow && installWanted) setTimeout(() => { try { installAfterLesson(); } catch (_) {} }, 700);
+    if (id === 'home' && newRowDirty) { newRowDirty = false; setTimeout(() => { try { paintNewRow(); } catch (_) {} }, 0); }
     // interest in online services (07.11.2026): the tab opened by the person — not the start-up restore, not «back» from a service
     if (id === 'review' && performance.now() > 2500) {
       const cur = [...document.querySelectorAll('.screen')].find(x => !x.hidden);
@@ -2959,11 +2995,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const box = $('#svcList');
     // Russian UI (rubles) and every other language (dollars) get different sets of services
     SERVICES.filter(s => !s.only || (s.only === 'ru') === (LANG === 'ru')).forEach(s => {
-      const b = document.createElement('button'); b.className = 'card svccard';
-      b.innerHTML = '<span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
-        '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span>' +
-        '<span class="more">' + esc(T('Подробнее')) + '<svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
-      b.addEventListener('click', () => openService(s));
+      const b = document.createElement('div'); b.className = 'card svccard';
+      b.innerHTML = '<button class="svcopen" type="button"><span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
+        '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span></button>' +
+        '<span class="svcbtns"><button class="btn btn-accent" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
+      b.querySelector('.svcopen').addEventListener('click', () => openService(s));
+      b.querySelector('[data-act="more"]').addEventListener('click', () => openService(s));
+      // straight to the messenger choice for this service (owner 09.11.2026: a visible button gets more requests)
+      b.querySelector('[data-act="write"]').addEventListener('click', () => { curSvc = s; openContact(); });
       box.appendChild(b);
     });
   })();
@@ -3123,6 +3162,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     stats.sec += 1; sessionSec += 1;
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
     if (!sessionCounted && sessionSec >= 5) { stats.views += 1; sessionCounted = true; }
+    if (sessionSec >= 8) watchedNow = true;
     const t = todayKey();
     if (stats.last !== t) {
       const y = new Date(); y.setDate(y.getDate() - 1);
@@ -3140,7 +3180,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   try { const raw = JSON.parse(localStorage.getItem('fedoskin-profile') || 'null'); if (raw) prof = Object.assign(prof, raw); } catch (_) {}
   if (!prof.id) { prof.id = String(100000 + Math.floor(Math.random() * 900000)); try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {} }
   function paintProfile(){
-    $('#pNick').textContent = prof.nick || T('Добавь ник');
+    $('#pNick').textContent = prof.nick || T('+ Добавить имя');
+    $('#pNick').classList.toggle('nickph', !prof.nick);
     $('#pNick').style.color = prof.nick ? '' : 'var(--muted)';
     $('#pCity').textContent = [prof.city, prof.country].filter(Boolean).join(', ') || T('Город и страна не указаны');
     $('#pId').textContent = prof.id;
@@ -3631,19 +3672,28 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#storeItem').addEventListener('click', () => { stDisarm(); $('#storeSheet').hidden = false; stRender(); });
   $('#storeSheet').addEventListener('click', e => { if (e.target.id === 'storeSheet') $('#storeSheet').hidden = true; });
   setTimeout(stRender, 3000);
+  paintNewRow();
   $('#installNative').addEventListener('click', async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     try { await deferredPrompt.userChoice; } catch (_) {}
     deferredPrompt = null; $('#installSheet').hidden = true;
   });
-  // show the guide once on a phone, then again only after 3 days if postponed
+  // show the guide once on a phone, then again only after 3 days if postponed. Owner 09.11.2026: not before the person has
+  // seen anything — on the first visit it waits until they have watched a lesson (8+ s) and come back from it; a person
+  // who already watched lessons on an earlier visit gets it soon after the start, as before.
   (function autoShow(){
     if (isStandalone() || !(isIOS || isAndroid)) return;
     let later = 0; try { later = +localStorage.getItem('fedoskin-install-later') || 0; } catch (_) {}
     if (later && Date.now() - later < 3 * 864e5) return;
-    setTimeout(openInstall, 1500);
+    installWanted = true;
+    if (seen.length) setTimeout(installAfterLesson, 1500);
   })();
+  function installAfterLesson(){
+    if (!installWanted || isStandalone()) return;
+    if (openOverlay() || document.body.classList.contains('fsmode') || !$('#lesson').hidden) return;
+    installWanted = false; openInstall();
+  }
 
   // ===== first-run tip «fill in your profile» (owner 01.11.2026) =====
   // Once per phone (and once more in the iPhone home-screen app — it has its own storage), after the
@@ -3663,7 +3713,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       box.style.left = Math.max(16, Math.min(vw - bw - 16, cx - bw + 44)) + 'px';
       box.style.top = Math.max(12, r.top - 62 - (box.offsetHeight || 170)) + 'px';
     }
-    const ready = () => !$('#home').hidden && !openOverlay() && !document.body.classList.contains('fsmode') && tabBtn();
+    const ready = () => seen.length >= 2 && !$('#home').hidden && !openOverlay() && !document.body.classList.contains('fsmode') && tabBtn();
     function tryShow(){
       if (seen() || prof.nick) return;
       if (!ready()) { setTimeout(tryShow, 800); return; }

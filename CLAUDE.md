@@ -405,3 +405,11 @@
   again BEFORE this fix was deployed ⇒ the real cause is unconfirmed; most likely his home-screen app still ran code loaded
   before the worker started requiring passes (no ?p= ⇒ 403) and got fresh code on reopening. The blob/crossorigin guard is
   kept as a precaution. If it recurs: ask how the lesson was opened (section / swipe / search) and whether the app was reopened.
+- Usability pass (owner 09.11.2026 «переделай все это»): home row «Новые уроки» (`#newHome/#newRow`, `paintNewRow()`:
+  10 newest by `added`, repainted on going home after a lesson was seen — `newRowDirty`); section tiles say «N новых»
+  (1 новый); NEW pill sits on the lesson cover (`.covernew`). Tab «Онлайн» renamed «Коучинг» with a chat icon. Lesson page:
+  one row of round captioned buttons `.pkrow` like the fs panel — «Цикл 3 сек» / «Скорость» (#btnSpeed cycles 1→0.5→0.25,
+  #speedSeg kept hidden) / ▶ / «Зеркало» / «Повтор»; old tool grid hidden. Service cards: «Написать тренеру» (opens the
+  contact sheet straight away) + «Подробнее». Profile: compact alpha card, settings list right under the stats, empty nick
+  shows «+ Добавить имя». Install guide no longer pops up on the very first start: `installWanted` → shown after the first
+  lesson watched ≥ 8 s, on returning from it (`installAfterLesson`); profile tip only after 2+ lessons seen.
