@@ -107,6 +107,29 @@ p{margin:0}
 .svcbtns{display:flex;gap:8px;margin-top:6px}
 .svcbtns .btn{min-height:44px;font-size:14px}
 .svcbtns .btn-ghost{flex:0 0 auto;width:auto;padding:0 16px}
+/* coaching tab (owner 09.11.2026): who the coach is, the recommended service, how it works */
+.coachcard{margin-top:18px;padding:16px;border-radius:18px;background:var(--surface);border:1px solid #222225}
+.cc-head{display:flex;gap:14px;align-items:center}
+.cc-ph{width:60px;height:60px;border-radius:50%;object-fit:cover;flex:0 0 60px;border:2px solid var(--accent);background:var(--surface-2)}
+.cc-name{font-size:24px;line-height:1}
+.cc-role{font-size:13px;line-height:1.35}
+.cc-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.cc-stats > span{display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:12px;background:var(--surface-2);min-width:0}
+.cc-stats b{font-size:22px;line-height:1}
+.cc-stats small{font-size:11px;line-height:1.3;color:var(--muted)}
+.cc-links{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.cc-links a{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:12px;font-weight:600}
+.cc-start{margin-top:14px;font-size:13px;line-height:1.45}
+.svccard.rec{border-color:rgba(226,97,26,.6)}
+.recbadge{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--on-accent);background:var(--accent);padding:4px 8px;border-radius:6px}
+.btn-line{background:transparent;border:1px solid rgba(226,97,26,.6);color:var(--fg)}
+.btn-crypto{background:rgba(38,161,123,.1);border:1px solid rgba(38,161,123,.55);color:var(--fg)}
+.howto{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:hw}
+.howto li{counter-increment:hw;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;row-gap:2px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid #222225;font-size:14px;line-height:1.4}
+.howto li::before{content:counter(hw);grid-row:span 2;width:28px;height:28px;border-radius:14px;background:var(--surface-2);color:var(--fg);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.howto b{font-weight:700}
+.howto span{color:var(--soft)}
+.svcb .note.go{cursor:pointer;color:var(--fg);text-decoration:underline;text-decoration-color:rgba(226,97,26,.6);text-underline-offset:3px}
 .svcb p{margin:16px 0 0;line-height:1.5}
 .svcb .label{display:block;margin:24px 0 10px}
 .svcb ul,.svcb ol{margin:0;padding:16px 16px 16px 34px;line-height:1.45;font-size:14px;border-radius:16px;background:var(--surface);border:1px solid #222225}
@@ -786,8 +809,23 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <!-- ОНЛАЙН УСЛУГИ (вкладка id="review"; тексты услуг — в SERVICES в скрипте) -->
 <section class="screen" id="review" aria-label="Онлайн услуги" hidden>
   <h1>Онлайн услуги</h1>
-  <p class="soft" style="margin-top:10px;line-height:1.45">Тренировки лично с Федоскиным — создателем приложения. Всё общение и видео — в удобном тебе мессенджере.</p>
-  <div class="stack" id="svcList" style="gap:12px;margin-top:20px"></div>
+  <p class="soft" style="margin-top:10px;line-height:1.45">Индивидуальная работа с тренером по переписке: разбор твоих видео, задания и план тренировок.</p>
+  <div class="coachcard">
+    <div class="cc-head">
+      <img class="cc-ph" src="icons/coach.jpg" alt="" width="64" height="64">
+      <span class="stack" style="gap:4px;min-width:0"><span class="d cc-name">Федоскин</span><span class="muted cc-role">Тренер по брейкингу, автор уроков в приложении</span><span class="cc-links" id="ccLinks"></span></span>
+    </div>
+    <div class="cc-stats">
+      <span><b class="d">28</b><small>лет в брейкинге</small></span>
+      <span><b class="d">19</b><small>лет тренирую</small></span>
+      <span><b class="d">11</b><small>стран — онлайн-ученики</small></span>
+    </div>
+  </div>
+  <div class="stack" id="svcList" style="gap:12px;margin-top:16px"></div>
+  <p class="soft cc-start" id="svcStart" hidden>Не уверен, что нужно ведение? Начни с консультации: пришли видео — разберу его по кадрам.</p>
+  <span class="label" style="display:block;margin:28px 0 10px">Как это работает</span>
+  <ol class="howto" id="svcHow"></ol>
+  <p class="muted" id="svcHours" style="font-size:13px;margin-top:12px;line-height:1.45"></p>
 </section>
 
 <!-- УСЛУГА: подробно -->
@@ -798,7 +836,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div id="svcBody"></div>
   <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
-  <button class="btn" id="cryptoBtn" hidden style="margin-top:16px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
+  <p class="muted" style="margin-top:4px;font-size:12px;text-align:center;line-height:1.4">Оплата — после того, как обсудим задачу.</p>
+  <button class="btn btn-crypto" id="cryptoBtn" hidden style="margin-top:16px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
 </section>
 
 <!-- ПРОФИЛЬ -->
@@ -3051,20 +3090,25 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['link', 'Посмотреть пример разбора', 'https://vk.com/wall-227244034_98'],
         ['note', 'После разбора можно перейти на онлайн-ведение и прийти к результату ещё быстрее.']
       ] },
-    { id: 'consult', only: 'intl', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 вопрос',
-      short: 'Отвечу на твой вопрос о брейкинге текстом в мессенджере.',
+    // consultation = a breakdown of the person's video in text: screenshots of key moments with what to fix (owner 09.11.2026)
+    { id: 'consult', only: 'intl', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 видео',
+      short: 'Пришли видео — разберу его по кадрам: скриншоты ключевых моментов и что исправить.',
       body: [
-        ['p', 'Задай любой вопрос о брейкинге — я лично отвечу текстом в мессенджере.'],
-        ['note', 'Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.']
+        ['p', 'Присылаешь видео элемента или перехода. Я лично разбираю его и отвечаю текстом.'],
+        ['h', 'Что ты получишь'],
+        ['ul', ['Скриншоты ключевых моментов твоего видео.', 'На каждом — где должны быть ноги, руки и корпус и зачем.', 'С чего начать исправлять.']],
+        ['h', 'Требования к видео'],
+        ['ul', ['Не в формате GIF.', 'Руки и ноги не вылетают за кадр, пока ты делаешь элемент.', 'Без пустого времени: обрежь, как включаешь камеру, отходишь и подходишь.']],
+        ['go', 'Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.', 'online']
       ] },
-    { id: 'online', name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
+    { id: 'online', rec: true, name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
       short: 'Индивидуальные задания и разбор каждого видео. Один элемент — весь фокус на прогрессе.',
       body: [
         ['p', 'Выбираем один элемент или переход и направляем на него всё внимание и силы — так прогресс идёт быстрее всего.'],
         ['h', 'Как проходит обучение'],
         ['ol', ['Уточняем, что ты умеешь сейчас.', 'Я даю задание. Ты выполняешь его и снимаешь каждый пункт отдельным видео.', 'После каждого задания — консультация: техника, тренировочный процесс и не только.', 'Следующее задание — только после проверки предыдущего.']],
         ['h', 'Правила'],
-        ['ul', ['Всё обучение проходит в мессенджере: Instagram, WhatsApp или Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с 11:00 до 14:00 по Москве. Иногда отвечаю и в другое время.']]
+        ['ul', ['Всё обучение проходит в мессенджере: Instagram, WhatsApp или Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с {a} до {b} по твоему времени. Иногда отвечаю и в другое время.']]
       ] },
     { id: 'coach', only: 'ru', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
       short: 'Для тренеров, которые уже ведут учеников: методики, работа с группой, свежий взгляд.',
@@ -3086,6 +3130,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['note', 'Отличный выбор, если финансовый вопрос решён и ты давно хотел всерьёз заняться брейкингом. С хорошим тренером брейкинг в радость, а результат не заставит себя ждать.']
       ] }
   ];
+  // the coach works 11:00–14:00 Moscow time (UTC+3) — shown in the viewer's own time (owner 09.11.2026)
+  const HRS = (() => {
+    const f = h => { const d = new Date(); d.setUTCHours(h, 0, 0, 0); try { return d.toLocaleTimeString(LANG === 'zh' ? 'zh-CN' : LANG, {hour: 'numeric', minute: '2-digit'}); } catch (_) { return String(d.getHours()).padStart(2, '0') + ':00'; } };
+    return { a: f(8), b: f(11), h: +CFG.reviewHours || 24 };
+  })();
   const money = (rub, usd) => LANG === 'ru' ? String(Math.round(+rub || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽' : '$' + (+usd || 0).toLocaleString('en-US');
   const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const TG_USERNAME = String(CFG.tg || 'Fe_DoSk1n').replace(/^@/, ''); // Telegram username of the app creator, without @
@@ -3097,17 +3146,34 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   (function renderServices(){
     const box = $('#svcList');
     // Russian UI (rubles) and every other language (dollars) get different sets of services
-    SERVICES.filter(s => !s.only || (s.only === 'ru') === (LANG === 'ru')).forEach(s => {
-      const b = document.createElement('div'); b.className = 'card svccard';
-      b.innerHTML = '<button class="svcopen" type="button"><span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
+    const shown = SERVICES.filter(s => !s.only || (s.only === 'ru') === (LANG === 'ru'));
+    $('#svcStart').hidden = !shown.some(s => s.id === 'consult');
+    shown.forEach(s => {
+      const b = document.createElement('div'); b.className = 'card svccard' + (s.rec ? ' rec' : '');
+      b.innerHTML = (s.rec ? '<span class="recbadge">' + esc(T('Рекомендую')) + '</span>' : '') + '<button class="svcopen" type="button"><span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
         '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span></button>' +
-        '<span class="svcbtns"><button class="btn btn-accent" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
+        '<span class="svcbtns"><button class="btn ' + (s.rec ? 'btn-accent' : 'btn-line') + '" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
       b.querySelector('.svcopen').addEventListener('click', () => openService(s));
       b.querySelector('[data-act="more"]').addEventListener('click', () => openService(s));
       // straight to the messenger choice for this service (owner 09.11.2026: a visible button gets more requests)
       b.querySelector('[data-act="write"]').addEventListener('click', () => { curSvc = s; openContact(); });
       box.appendChild(b);
     });
+    // how it works: 4 steps, payment after the talk; reply times in the viewer's own time
+    const crypto = String(CFG.usdtTrc20 || '').trim() && LANG !== 'ru';
+    const steps = [
+      ['Напиши тренеру', 'Выбери услугу и мессенджер — сообщение уже будет написано.'],
+      ['Обсуждаем задачу', 'Расскажи, что уже умеешь и чего хочешь добиться. Это бесплатно.'],
+      ['Оплата', LANG === 'ru' ? 'Реквизиты пришлю в чате.' : crypto ? 'Способ оплаты обсудим в чате. Можно оплатить криптой (USDT).' : 'Способ оплаты обсудим в чате.'],
+      ['Старт', 'Ответ или первое задание — в течение {h} часов.']
+    ];
+    const how = $('#svcHow');
+    steps.forEach(([h, t]) => { const li = document.createElement('li'); li.innerHTML = '<b></b><span></span>'; li.children[0].textContent = T(h); li.children[1].textContent = T(t, HRS); how.appendChild(li); });
+    $('#svcHours').textContent = T('Отвечаю раз в день, с {a} до {b} по твоему времени.', HRS) + (LANG !== 'ru' ? ' ' + T('Переписка — на английском.') : '');
+    // where to see the coach: YouTube and Instagram
+    const links = [['YouTube', 'https://www.youtube.com/fe_dosk1n']];
+    if (String(CFG.ig || '').trim()) links.push(['Instagram', 'https://instagram.com/' + encodeURIComponent(String(CFG.ig).trim().replace(/^@/, ''))]);
+    links.forEach(([n, u]) => { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = n + ' ↗'; $('#ccLinks').appendChild(a); });
   })();
   function openService(s, quiet){
     curSvc = s;
@@ -3118,9 +3184,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const body = $('#svcBody'); body.className = 'svcb'; body.innerHTML = '';
     s.body.forEach(([kind, a, b]) => {
       let el;
-      if (kind === 'p') { el = document.createElement('p'); el.textContent = T(a); }
+      if (kind === 'p') { el = document.createElement('p'); el.textContent = T(a, HRS); }
       else if (kind === 'h') { el = document.createElement('span'); el.className = 'label'; el.textContent = T(a); }
-      else if (kind === 'ol' || kind === 'ul') { el = document.createElement(kind); a.forEach(t => { const li = document.createElement('li'); li.textContent = T(t); el.appendChild(li); }); }
+      else if (kind === 'ol' || kind === 'ul') { el = document.createElement(kind); a.forEach(t => { const li = document.createElement('li'); li.textContent = T(t, HRS); el.appendChild(li); }); }
+      else if (kind === 'go') { const to = SERVICES.find(x => x.id === b); if (to) { el = document.createElement('p'); el.className = 'note go'; el.setAttribute('role', 'link'); el.textContent = T(a) + ' →'; el.addEventListener('click', () => openService(to)); } }
       else if (kind === 'note') { el = document.createElement('p'); el.className = 'note'; el.textContent = T(a); }
       else if (kind === 'link') { el = document.createElement('p'); const l = document.createElement('a'); l.href = b; l.target = '_blank'; l.rel = 'noopener'; l.textContent = T(a) + ' ↗'; el.appendChild(l); }
       if (el) body.appendChild(el);
