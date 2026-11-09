@@ -75,6 +75,8 @@ function recheck(key, meta){
   const t = checked.get(key) || 0; if (Date.now() - t < 36e5) return;
   checked.set(key, Date.now());
   fetch(key, { method: 'HEAD', cache: 'no-store' }).then(async r => {
+    // gone from the server (a deleted lesson's video): the saved copy goes too
+    if (r.status === 404 || r.status === 410) { mem.delete(key); const c = await caches.open(VCACHE); await c.delete(key); return; }
     if (!r.ok) return;
     const et = r.headers.get('etag') || '', lm = r.headers.get('last-modified') || '';
     if ((et && meta.etag && et !== meta.etag) || (!et && lm && meta.lm && lm !== meta.lm)) { mem.delete(key); const c = await caches.open(VCACHE); await c.delete(key); }
