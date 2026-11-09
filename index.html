@@ -3252,7 +3252,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const rvStars = r => { const n = Math.max(1, Math.min(5, Math.round(+r.st || 5))); return '★'.repeat(n) + '☆'.repeat(5 - n); };
   const rvFlag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
   const rvCountry = cc => { if (!/^[A-Z]{2}$/.test(cc || '')) return ''; try { return new Intl.DisplayNames([LANG === 'zh' ? 'zh-CN' : LANG], {type: 'region'}).of(cc) || ''; } catch (_) { return ''; } };
-  const rvDate = r => { if (!r.d) return ''; try { return new Date(r.d + 'T12:00:00').toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, {month: 'short', year: 'numeric'}); } catch (_) { return ''; } };
+  const RV_SHOW_DATE = false; // owner 09.11.2026: no dates on reviews (seven old ones share one day; old dates read as «nobody writes»)
+  const rvDate = r => { if (!RV_SHOW_DATE || !r.d) return ''; try { return new Date(r.d + 'T12:00:00').toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, {month: 'short', year: 'numeric'}); } catch (_) { return ''; } };
   function rvCard(r, tag){
     const c = document.createElement(tag || 'button'); c.className = 'rvcard'; if (c.tagName === 'BUTTON') c.type = 'button';
     c.innerHTML = '<span class="rvstars"></span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';

@@ -449,7 +449,7 @@
   (N) →») between the coach card and the prices; tap ⇒ sheet `#rvSheet` (.sheet-bg ⇒ own history step) with all reviews,
   scrolled to + flashing the tapped one, non-ru «Показать оригинал / перевод» per review; NO note about VK or «переведено с русского»
   (owner 09.11 «отзыв есть отзыв» — the reviews are real, the translation is ordinary localization); service page `#svcRv` = up to 2 reviews tagged for that service (consult/review ⇒ rv) above
-  «Написать тренеру» (`rvForService`). Order in the file = display order (strongest first). Code sits BEFORE openService
+  «Написать тренеру» (`rvForService`). Order in the file = display order (strongest first). NO dates shown (owner 09.11; `RV_SHOW_DATE = false`, `d` kept in the data). Code sits BEFORE openService
   (const REVIEWS — TDZ if openService runs first).
 - Reviews from paying clients only (owner 09.11.2026 «оставить отзыв может только клиент, который оплатил»): no payment
   system yet ⇒ the owner confirms payment himself: admin tab «Отзывы» (`data-pane="reviews"`, admin «версия 25») → «Создать
