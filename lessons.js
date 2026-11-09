@@ -11,7 +11,8 @@ window.LESSONS_DATA = [
   "ru": "Indian step Индиан степ",
   "added": "2026-11-04",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "tr-indian-step-5i96sa6m.mp4"
  },
  {
   "id": "tr-cross",
@@ -20,7 +21,8 @@ window.LESSONS_DATA = [
   "dur": 52,
   "ru": "кросс степ",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "tr-cross-5if3qtlc.mp4"
  },
  {
   "id": "tr-kick-step",
@@ -30,7 +32,8 @@ window.LESSONS_DATA = [
   "ru": "кикстеп kick step",
   "added": "2026-11-02",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "tr-kick-step-5iix8jqf.mp4"
  },
  {
   "id": "fw-6step",
@@ -39,7 +42,8 @@ window.LESSONS_DATA = [
   "dur": 28,
   "ru": "сикс степ шесть шагов",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-6step-5iu2h0ii.mp4"
  },
  {
   "id": "fw-3step",
@@ -48,7 +52,8 @@ window.LESSONS_DATA = [
   "dur": 33,
   "ru": "три степ",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-3step-5j8vxy9g.mp4"
  },
  {
   "id": "fw-baby-love",
@@ -68,7 +73,8 @@ window.LESSONS_DATA = [
   "dur": 26,
   "ru": "сиси сс",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-cc-5jcxjs45.mp4"
  },
  {
   "id": "fw-zulu",
@@ -77,7 +83,8 @@ window.LESSONS_DATA = [
   "dur": 23,
   "ru": "зулу спин",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-zulu-5jgingql.mp4"
  },
  {
   "id": "fw-hooks",
@@ -87,7 +94,8 @@ window.LESSONS_DATA = [
   "ru": "хуки хук",
   "added": "2026-10-26",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-hooks-5jjfvtog.mp4"
  },
  {
   "id": "fw-kickout",
@@ -96,7 +104,8 @@ window.LESSONS_DATA = [
   "dur": 35,
   "ru": "кик аут",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-kickout-5jn0e4er.mp4"
  },
  {
   "id": "fw-fishtail",
@@ -106,7 +115,8 @@ window.LESSONS_DATA = [
   "ru": "фиштейл флип",
   "added": "2026-10-26",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fw-fishtail-5jt17l7a.mp4"
  },
  {
   "id": "gd-underknee",
@@ -115,7 +125,8 @@ window.LESSONS_DATA = [
   "dur": 13,
   "ru": "андерни под колено",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "gd-underknee-5jwzo0bt.mp4"
  },
  {
   "id": "gd-unknown",
@@ -124,7 +135,8 @@ window.LESSONS_DATA = [
   "dur": 32,
   "ru": "",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "gd-unknown-5jzr6kuk.mp4"
  },
  {
   "id": "gd-windmill-entry",
@@ -154,7 +166,8 @@ window.LESSONS_DATA = [
   "dur": 21,
   "ru": "изи чеир стул chair чер",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fr-easychair-5k378e3e.mp4"
  },
  {
   "id": "fr-elbow",
@@ -164,7 +177,8 @@ window.LESSONS_DATA = [
   "ru": "элбоу локоть",
   "added": "2026-10-26",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fr-elbow-5kd77lsq.mp4"
  },
  {
   "id": "fr-shoulder-freeze",
@@ -174,7 +188,8 @@ window.LESSONS_DATA = [
   "ru": "shoulder на плече",
   "added": "2026-10-31",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "fr-shoulder-freeze-5kuht6i2.mp4"
  },
  {
   "id": "tk-monkey",
@@ -184,7 +199,8 @@ window.LESSONS_DATA = [
   "ru": "манки флип обезьяна",
   "added": "2026-10-26",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "tk-monkey-5l5vx1ua.mp4"
  },
  {
   "id": "tk-turtlehs",
@@ -193,7 +209,8 @@ window.LESSONS_DATA = [
   "dur": 41,
   "ru": "черепаха стойка на руках хендстенд",
   "pv": true,
-  "vertical": true
+  "vertical": true,
+  "r2": "tk-turtlehs-5lh3mwr0.mp4"
  },
  {
   "id": "pw-airflare",

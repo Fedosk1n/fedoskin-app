@@ -2,7 +2,7 @@
 // урок → {src: id видео Kinescope или "gh", every: сек между кадрами, n: кадров, w/h: размер кадра, cols: кадров в ряду}; картинка v/<урок>-sb.jpg
 window.LESSON_SB = {
  "tr-indian-step": {
-  "src": "gh",
+  "src": "r2:tr-indian-step-5i96sa6m.mp4",
   "every": 0.5,
   "n": 81,
   "w": 180,
@@ -11,7 +11,7 @@ window.LESSON_SB = {
   "v": 1
  },
  "tr-cross": {
-  "src": "gh",
+  "src": "r2:tr-cross-5if3qtlc.mp4",
   "every": 0.5,
   "n": 104,
   "w": 180,
@@ -19,7 +19,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "tr-kick-step": {
-  "src": "gh",
+  "src": "r2:tr-kick-step-5iix8jqf.mp4",
   "every": 1,
   "n": 70,
   "w": 180,
@@ -28,7 +28,7 @@ window.LESSON_SB = {
   "v": 1
  },
  "fw-6step": {
-  "src": "gh",
+  "src": "r2:fw-6step-5iu2h0ii.mp4",
   "every": 0.5,
   "n": 56,
   "w": 180,
@@ -37,7 +37,7 @@ window.LESSON_SB = {
   "v": 2
  },
  "fw-3step": {
-  "src": "gh",
+  "src": "r2:fw-3step-5j8vxy9g.mp4",
   "every": 0.5,
   "n": 66,
   "w": 180,
@@ -54,7 +54,7 @@ window.LESSON_SB = {
   "v": 1
  },
  "fw-cc": {
-  "src": "gh",
+  "src": "r2:fw-cc-5jcxjs45.mp4",
   "every": 0.5,
   "n": 52,
   "w": 180,
@@ -62,7 +62,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "fw-zulu": {
-  "src": "gh",
+  "src": "r2:fw-zulu-5jgingql.mp4",
   "every": 0.5,
   "n": 47,
   "w": 180,
@@ -70,7 +70,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "fw-hooks": {
-  "src": "gh",
+  "src": "r2:fw-hooks-5jjfvtog.mp4",
   "every": 0.5,
   "n": 52,
   "w": 180,
@@ -78,7 +78,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "fw-kickout": {
-  "src": "gh",
+  "src": "r2:fw-kickout-5jn0e4er.mp4",
   "every": 0.5,
   "n": 71,
   "w": 180,
@@ -86,7 +86,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "fw-fishtail": {
-  "src": "gh",
+  "src": "r2:fw-fishtail-5jt17l7a.mp4",
   "every": 0.5,
   "n": 68,
   "w": 180,
@@ -94,7 +94,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "gd-underknee": {
-  "src": "gh",
+  "src": "r2:gd-underknee-5jwzo0bt.mp4",
   "every": 0.5,
   "n": 26,
   "w": 180,
@@ -102,7 +102,7 @@ window.LESSON_SB = {
   "cols": 10
  },
  "gd-unknown": {
-  "src": "gh",
+  "src": "r2:gd-unknown-5jzr6kuk.mp4",
   "every": 0.5,
   "n": 64,
   "w": 180,
@@ -119,7 +119,7 @@ window.LESSON_SB = {
   "v": 1
  },
  "fr-easychair": {
-  "src": "gh",
+  "src": "r2:fr-easychair-5k378e3e.mp4",
   "every": 0.5,
   "n": 41,
   "w": 180,
@@ -128,7 +128,7 @@ window.LESSON_SB = {
   "v": 2
  },
  "fr-elbow": {
-  "src": "gh",
+  "src": "r2:fr-elbow-5kd77lsq.mp4",
   "every": 0.5,
   "n": 79,
   "w": 180,
@@ -137,7 +137,7 @@ window.LESSON_SB = {
   "v": 2
  },
  "fr-shoulder-freeze": {
-  "src": "gh",
+  "src": "r2:fr-shoulder-freeze-5kuht6i2.mp4",
   "every": 0.5,
   "n": 118,
   "w": 180,
@@ -146,7 +146,7 @@ window.LESSON_SB = {
   "v": 1
  },
  "tk-monkey": {
-  "src": "gh",
+  "src": "r2:tk-monkey-5l5vx1ua.mp4",
   "every": 0.5,
   "n": 68,
   "w": 180,
@@ -155,7 +155,7 @@ window.LESSON_SB = {
   "v": 2
  },
  "tk-turtlehs": {
-  "src": "gh",
+  "src": "r2:tk-turtlehs-5lh3mwr0.mp4",
   "every": 0.5,
   "n": 82,
   "w": 180,
