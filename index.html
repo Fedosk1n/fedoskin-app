@@ -3234,7 +3234,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   function openReviews(focusId){
     const list = $('#rvList'); list.innerHTML = '';
-    $('#rvNote').textContent = T('Отзывы учеников из нашей группы ВКонтакте.') + (LANG !== 'ru' ? ' ' + T('Перевод с русского.') : '');
+    $('#rvNote').hidden = true; // owner 09.11.2026: no «from our VK group» / «translated from Russian» note
     REVIEWS.forEach(r => {
       const it = document.createElement('div'); it.className = 'rvitem'; it.dataset.id = r.id;
       it.innerHTML = '<span class="rvstars" aria-label="5/5">★★★★★</span><p class="rvt"></p><span class="rvby"><b></b><span></span></span>';

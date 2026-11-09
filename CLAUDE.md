@@ -447,7 +447,7 @@
   initial (Latin outside ru), no photos. Translations faithful (Fedor stays «Fedor»; флаер=flare, гелик=windmill,
   спичаг=press to handstand). Coaching tab: `#rvHead` + row `#rvRow` of `.rvcard` (first 10, clamp 6 lines, + «Все отзывы
   (N) →») between the coach card and the prices; tap ⇒ sheet `#rvSheet` (.sheet-bg ⇒ own history step) with all reviews,
-  scrolled to + flashing the tapped one, non-ru «Показать оригинал / перевод» per review, note «из нашей группы ВКонтакте.
-  Перевод с русского.»; service page `#svcRv` = up to 2 reviews tagged for that service (consult/review ⇒ rv) above
+  scrolled to + flashing the tapped one, non-ru «Показать оригинал / перевод» per review; NO note about VK or «переведено с русского»
+  (owner 09.11 «отзыв есть отзыв» — the reviews are real, the translation is ordinary localization); service page `#svcRv` = up to 2 reviews tagged for that service (consult/review ⇒ rv) above
   «Написать тренеру» (`rvForService`). Order in the file = display order (strongest first). Code sits BEFORE openService
   (const REVIEWS — TDZ if openService runs first).
