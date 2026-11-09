@@ -121,6 +121,12 @@ p{margin:0}
 .cc-links a{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:12px;font-weight:600}
 .cc-start{margin-top:14px;font-size:13px;line-height:1.45}
 .svccard.rec{border-color:rgba(226,97,26,.6)}
+.svccard .fit{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);line-height:1.35}
+/* premium tier: its own quiet gold look, not a "better deal" badge (owner 09.11.2026) */
+.svccard.prem{border-color:rgba(214,176,92,.55);background:linear-gradient(180deg,rgba(214,176,92,.07),rgba(214,176,92,0) 60%),var(--surface)}
+.svccard.prem .fit{color:#D6B05C}
+.svccard.prem .pr{color:#E3C47A}
+.svccard.prem .btn-line{border-color:rgba(214,176,92,.6)}
 .recbadge{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--on-accent);background:var(--accent);padding:4px 8px;border-radius:6px}
 .btn-line{background:transparent;border:1px solid rgba(226,97,26,.6);color:var(--fg)}
 .btn-crypto{background:rgba(38,161,123,.1);border:1px solid rgba(38,161,123,.55);color:var(--fg)}
@@ -3079,7 +3085,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Texts are Russian; T() translates them. Prices come from config.js (admin «Тексты и настройки»):
   // Russian UI shows rubles, every other language shows dollars.
   const SERVICES = [
-    { id: 'review', only: 'ru', name: 'Разбор элемента или перехода', rub: CFG.reviewRub, usd: CFG.reviewUsd, per: 'за 1 видео',
+    { id: 'review', only: 'ru', fit: 'Разово разобрать элемент', name: 'Разбор элемента или перехода', rub: CFG.reviewRub, usd: CFG.reviewUsd, per: 'за 1 видео',
       short: 'Пойму, что тебе мешает, и распишу по пунктам, как это исправить.',
       body: [
         ['p', 'Сделаю твой путь к результату понятным: распишу, над чем работать и что исправить.'],
@@ -3091,7 +3097,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['note', 'После разбора можно перейти на онлайн-ведение и прийти к результату ещё быстрее.']
       ] },
     // consultation = a breakdown of the person's video in text: screenshots of key moments with what to fix (owner 09.11.2026)
-    { id: 'consult', only: 'intl', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 видео',
+    { id: 'consult', only: 'intl', fit: 'Разово разобрать элемент', name: 'Консультация', rub: CFG.consultRub, usd: CFG.consultUsd, per: 'за 1 видео',
       short: 'Пришли видео — разберу его по кадрам: скриншоты ключевых моментов и что исправить.',
       body: [
         ['p', 'Присылаешь видео элемента или перехода. Я лично разбираю его и отвечаю текстом.'],
@@ -3101,7 +3107,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['ul', ['Не в формате GIF.', 'Руки и ноги не вылетают за кадр, пока ты делаешь элемент.', 'Без пустого времени: обрежь, как включаешь камеру, отходишь и подходишь.']],
         ['go', 'Хочешь, чтобы я вёл тебя постоянно? Посмотри онлайн-ведение.', 'online']
       ] },
-    { id: 'online', rec: true, name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
+    { id: 'online', fit: 'Стабильный прогресс по одному элементу', name: 'Онлайн-ведение', rub: CFG.onlineRub, usd: CFG.onlineUsd, per: 'в месяц',
       short: 'Индивидуальные задания и разбор каждого видео. Один элемент — весь фокус на прогрессе.',
       body: [
         ['p', 'Выбираем один элемент или переход и направляем на него всё внимание и силы — так прогресс идёт быстрее всего.'],
@@ -3110,7 +3116,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['h', 'Правила'],
         ['ul', ['Всё обучение проходит в мессенджере: Instagram, WhatsApp или Telegram.', 'Видео можно присылать в любое время дня и ночи — разные часовые пояса учтены.', 'В день — не больше 2 видео по одному элементу. Исключение: если я сам попросил прислать что-то ещё, например видео ежедневной подкачки.', 'Я смотрю видео и даю задания раз в день, с {a} до {b} по твоему времени. Иногда отвечаю и в другое время.']]
       ] },
-    { id: 'coach', only: 'ru', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
+    { id: 'coach', only: 'ru', fit: 'Для тренеров', name: 'Тренер для тренера', rub: CFG.coachRub, usd: CFG.coachUsd, per: 'в месяц',
       short: 'Для тренеров, которые уже ведут учеников: методики, работа с группой, свежий взгляд.',
       body: [
         ['p', 'Ты уже тренируешь учеников, но сталкиваешься с трудностями:'],
@@ -3120,13 +3126,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ['ul', ['Стартовый созвон 60–90 минут в первый день: разбираем цели, трудности, твой стиль преподавания и строим план развития.', 'Разбор раз в неделю, 30–45 минут: реальные случаи за неделю — конфликты в группе, неудачное занятие, прогресс учеников, адаптация программ.', 'Поддержка в мессенджере в приоритете: отвечаю в течение дня на любые вопросы — «что делать, если ребёнок не слушается?», «как изменить тренировку при травме?».']],
         ['note', 'Это не лекции и не шаблоны, а живая работа с твоей реальной практикой — от коллеги, который прошёл этот путь и знает, где подводные камни.']
       ] },
-    { id: 'full', name: 'Полное ведение', rub: CFG.fullRub, usd: CFG.fullUsd, per: 'в месяц',
-      short: 'Я думаю за тебя: план под тебя, питание, ежедневная коррекция и 8 тренировок один на один.',
+    { id: 'full', prem: true, fit: 'Подготовка к крупным соревнованиям', name: 'Полное ведение', rub: CFG.fullRub, usd: CFG.fullUsd, per: 'в месяц',
+      short: 'Я думаю за тебя: план под тебя, питание, ежедневная коррекция и 8 тренировок один на один. Количество элементов не ограничено.',
       body: [
         ['p', 'Для тех, кто ценит своё время и здоровье. Я буду думать за тебя: что, как, когда и зачем тренировать.'],
+        ['p', 'Отлично подходит для подготовки к крупным соревнованиям: полное сопровождение до выхода на батл.'],
         ['p', 'Весь мой опыт и знания доступны тебе целый месяц. Это сильно экономит время и снижает риск травм. Тренироваться самому можно всегда, но тренер есть даже у чемпионов мира — и я очень жалею, что в моё время такой возможности не было.'],
         ['h', 'План под твои особенности'],
-        ['ul', ['подводящие упражнения;', 'спортивное питание;', 'элементы и тренировочные тайминги;', 'ежедневная коррекция тренировок: устал, заболел, перетрудился;', '8 видеотренировок один на один со мной по 20 минут — 2 в неделю.']],
+        ['ul', ['любое количество элементов — без ограничений;', 'подводящие упражнения;', 'спортивное питание;', 'элементы и тренировочные тайминги;', 'ежедневная коррекция тренировок: устал, заболел, перетрудился;', '8 видеотренировок один на один со мной по 20 минут — 2 в неделю.']],
         ['note', 'Отличный выбор, если финансовый вопрос решён и ты давно хотел всерьёз заняться брейкингом. С хорошим тренером брейкинг в радость, а результат не заставит себя ждать.']
       ] }
   ];
@@ -3149,10 +3156,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const shown = SERVICES.filter(s => !s.only || (s.only === 'ru') === (LANG === 'ru'));
     $('#svcStart').hidden = !shown.some(s => s.id === 'consult');
     shown.forEach(s => {
-      const b = document.createElement('div'); b.className = 'card svccard' + (s.rec ? ' rec' : '');
-      b.innerHTML = (s.rec ? '<span class="recbadge">' + esc(T('Рекомендую')) + '</span>' : '') + '<button class="svcopen" type="button"><span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
+      // no «recommended» badge (owner 09.11: it read as «the $1000 isn't worth it») — each card says who it's for instead
+      const b = document.createElement('div'); b.className = 'card svccard' + (s.prem ? ' prem' : '');
+      b.innerHTML = '<button class="svcopen" type="button">' + (s.fit ? '<span class="fit">' + esc(T(s.fit)) + '</span>' : '') + '<span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
         '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span></button>' +
-        '<span class="svcbtns"><button class="btn ' + (s.rec ? 'btn-accent' : 'btn-line') + '" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
+        '<span class="svcbtns"><button class="btn btn-line" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
       b.querySelector('.svcopen').addEventListener('click', () => openService(s));
       b.querySelector('[data-act="more"]').addEventListener('click', () => openService(s));
       // straight to the messenger choice for this service (owner 09.11.2026: a visible button gets more requests)
