@@ -3,7 +3,7 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
-// ===== lesson videos on the phone (v/<id>.mp4, v/<id>-intro.mp4) =====
+// ===== lesson videos on the phone (v/<id>.mp4, v/<id>-intro.mp4, and <our server>/v/<file>.mp4 from Cloudflare R2) =====
 // A video is downloaded ONCE, whole, in one go: the player, the app's preloading and the frame preparation for
 // scrubbing all read that one download (before, each of them fetched the file separately). Ready files stay in the
 // phone's storage (the last ~300 MB), so a lesson opened again plays without the internet. If a video was replaced on
@@ -17,7 +17,7 @@ const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.
 
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
-  const u = new URL(req.url); if (u.origin !== location.origin || !isVideo(u)) return;
+  const u = new URL(req.url); if (!isVideo(u) || (u.origin !== location.origin && u.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(u.hostname))) return;
   // iPhone/iPad/Mac Safari: videos load exactly as before, nothing goes through here (a lesson started from a copy kept
   // here showed only its cover there)
   if (APPLE) return;

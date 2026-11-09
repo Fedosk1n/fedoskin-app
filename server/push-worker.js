@@ -14,6 +14,10 @@
 //   GET  /visits       — посещаемость: сегодня, за всё время, 30 дней, страны, устройства (только для админа)
 //   POST /ev           — {id, e, s, v, m} действие в приложении: e='tg' — нажали «Написать тренеру» (m — мессенджер),
 //                        e='cr' — открыли оплату криптой, e='crp' — нажали «Я оплатил»; s — откуда пришёл человек
+//   GET  /v/<файл>.mp4 — видео урока из Cloudflare R2 (нужна привязка R2 с именем VIDEOS), отдаёт и куски (Range)
+//   GET  /r2/usage     — сколько места занято в R2 (только для админа)
+//   POST /r2/mpu?key=  — начать загрузку видео; PUT /r2/mpu?key=&id=&n= — кусок; POST /r2/done?key=&id= {parts} — готово;
+//   POST /r2/abort?key=&id= — отменить; DELETE /r2/obj?key= — удалить видео (всё это только для админа)
 // Админ = тот, чей ключ GitHub может записывать в репозиторий приложения. Своих паролей у сервера нет.
 
 const REPO = 'Fedosk1n/fedoskin-app';
@@ -38,13 +42,19 @@ export default {
   async fetch(req, env) {
     const cors = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Range',
+      'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag',
+      'Access-Control-Max-Age': '86400',
     };
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-    if (!env.PUSH) return json({ error: 'KV binding PUSH is missing' }, 500);
     const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
+    // lesson videos from R2 — for everyone, works even without the KV binding
+    if (path.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD')) {
+      try { return await r2Serve(req, env, path.slice(3), cors); } catch (e) { return json({ error: String(e && e.message || e) }, 500); }
+    }
+    if (!env.PUSH) return json({ error: 'KV binding PUSH is missing' }, 500);
     try {
       if (path === '/' ) return json({ ok: true, service: 'fedoskin-push' });
       if (path === '/key') return json({ key: (await vapid(env)).pub });
@@ -52,7 +62,7 @@ export default {
       if (path === '/lb') return await leaderboard(req, env, json);
       if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
       if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
-      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits') return json({ error: 'not found' }, 404);
+      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/')) return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
@@ -75,6 +85,7 @@ export default {
         return json({ subscribers: n });
       }
       if (path === '/visits') return await visits(env, json);
+      if (path.startsWith('/r2/')) return await r2Admin(req, env, path, json);
       if (path === '/notify') {
         const body = await req.json();
         // first page: remember the message so phones without payload support can fetch it
@@ -125,6 +136,91 @@ async function isAdmin(req, env) {
   const ok = !!(repo.permissions && repo.permissions.push);
   if (ok) await env.PUSH.put(cacheKey, '1', { expirationTtl: 3600 });
   return ok;
+}
+
+// ---------- lesson videos in Cloudflare R2 (binding VIDEOS) ----------
+// File names are made by the admin: <lesson id>-<random>.mp4, a new name for every upload, so a phone or a browser
+// may keep a copy forever (a replaced video simply has another name).
+const R2_KEY = /^[a-z0-9][a-z0-9-]{0,80}\.mp4$/;
+async function r2Serve(req, env, key, cors) {
+  const h = new Headers(cors);
+  if (!env.VIDEOS || !R2_KEY.test(key)) return new Response('not found', { status: 404, headers: h });
+  h.set('Accept-Ranges', 'bytes');
+  h.set('Cache-Control', 'public, max-age=31536000, immutable');
+  h.set('Content-Type', 'video/mp4');
+  if (req.method === 'HEAD') {
+    const o = await env.VIDEOS.head(key);
+    if (!o) return new Response(null, { status: 404, headers: h });
+    h.set('ETag', o.httpEtag); h.set('Content-Length', String(o.size));
+    return new Response(null, { status: 200, headers: h });
+  }
+  const rh = req.headers.get('Range');
+  const m = rh ? /^bytes=(\d*)-(\d*)$/.exec(rh.trim()) : null;
+  let range;
+  if (m && (m[1] !== '' || m[2] !== '')) {
+    if (m[1] === '') range = { suffix: +m[2] };
+    else range = m[2] === '' ? { offset: +m[1] } : { offset: +m[1], length: +m[2] - +m[1] + 1 };
+    if (range.length !== undefined && range.length <= 0) range = undefined;
+  }
+  let o;
+  try { o = await env.VIDEOS.get(key, range ? { range } : {}); }
+  catch (e) {
+    const head = await env.VIDEOS.head(key);
+    if (!head) return new Response('not found', { status: 404, headers: h });
+    h.set('Content-Range', 'bytes */' + head.size);
+    return new Response(null, { status: 416, headers: h });
+  }
+  if (!o) return new Response('not found', { status: 404, headers: h });
+  h.set('ETag', o.httpEtag);
+  const size = o.size;
+  if (range && o.range) {
+    const r = o.range;
+    let a, len;
+    if ('suffix' in r && r.suffix !== undefined) { len = Math.min(r.suffix, size); a = size - len; }
+    else { a = r.offset || 0; len = r.length !== undefined ? Math.min(r.length, size - a) : size - a; }
+    h.set('Content-Range', 'bytes ' + a + '-' + (a + len - 1) + '/' + size);
+    h.set('Content-Length', String(len));
+    return new Response(o.body, { status: 206, headers: h });
+  }
+  h.set('Content-Length', String(size));
+  return new Response(o.body, { status: 200, headers: h });
+}
+async function r2Admin(req, env, path, json) {
+  if (!env.VIDEOS) return json({ error: 'no-bucket' }, 409);
+  const q = new URL(req.url).searchParams, key = q.get('key') || '';
+  if (path === '/r2/usage') {
+    let bytes = 0, count = 0, cursor; const files = [];
+    do {
+      const r = await env.VIDEOS.list({ cursor, limit: 1000 });
+      for (const o of r.objects) { bytes += o.size; count++; if (files.length < 2000) files.push([o.key, o.size]); }
+      cursor = r.truncated ? r.cursor : null;
+    } while (cursor);
+    return json({ ok: true, bytes, count, files });
+  }
+  if (!R2_KEY.test(key)) return json({ error: 'bad file name' }, 400);
+  if (path === '/r2/mpu' && req.method === 'POST') {
+    const u = await env.VIDEOS.createMultipartUpload(key, { httpMetadata: { contentType: 'video/mp4' } });
+    return json({ id: u.uploadId });
+  }
+  const id = q.get('id') || '';
+  if (path === '/r2/mpu' && req.method === 'PUT') {
+    const n = +q.get('n');
+    if (!id || !(n >= 1 && n <= 10000) || !req.body) return json({ error: 'bad part' }, 400);
+    const part = await env.VIDEOS.resumeMultipartUpload(key, id).uploadPart(n, req.body);
+    return json({ n: part.partNumber, etag: part.etag });
+  }
+  if (path === '/r2/done' && req.method === 'POST') {
+    const { parts } = await req.json();
+    if (!id || !Array.isArray(parts) || !parts.length) return json({ error: 'no parts' }, 400);
+    const o = await env.VIDEOS.resumeMultipartUpload(key, id).complete(parts.map(p => ({ partNumber: +p.n, etag: String(p.etag) })));
+    return json({ ok: true, size: o.size });
+  }
+  if (path === '/r2/abort' && req.method === 'POST') {
+    if (id) await env.VIDEOS.resumeMultipartUpload(key, id).abort().catch(() => {});
+    return json({ ok: true });
+  }
+  if (path === '/r2/obj' && req.method === 'DELETE') { await env.VIDEOS.delete(key); return json({ ok: true }); }
+  return json({ error: 'not found' }, 404);
 }
 
 // ---------- helpers ----------

@@ -248,7 +248,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 23</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 24</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -322,10 +322,22 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="aRu" placeholder="виндмил мельница"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как люди будут искать урок — слова через пробел, можно и по-английски. Окончания и предлоги («с», «в», «на») не важны: «флай твист» найдётся и по запросу «с флая в твист».</span></label>
         <label class="f"><span>Имя файла (латиницей)</span><input type="text" id="aId" placeholder="pw-windmill" spellcheck="false"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Заполняется само. Менять не обязательно.</span></label>
         <div class="f"><span>Куда загрузить видео</span>
-          <div class="seg" role="group" aria-label="Куда загрузить видео"><button class="btn btn-sm" type="button" id="aDestKs" aria-pressed="true">Kinescope</button><button class="btn btn-sm" type="button" id="aDestGh" aria-pressed="false">GitHub</button></div>
-          <span class="hint" id="aDestHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
-        <div class="f" id="aCompressRow"><span>Качество в GitHub</span>
-          <div class="seg" role="group" aria-label="Качество в GitHub"><button class="btn btn-sm" type="button" data-q="720" aria-pressed="false">720p</button><button class="btn btn-sm" type="button" data-q="1080" aria-pressed="false">1080p</button><button class="btn btn-sm" type="button" data-q="orig" aria-pressed="false">Без сжатия</button></div>
+          <div class="seg" role="group" aria-label="Куда загрузить видео"><button class="btn btn-sm" type="button" id="aDestKs" aria-pressed="true">Kinescope</button><button class="btn btn-sm" type="button" id="aDestGh" aria-pressed="false">GitHub</button><button class="btn btn-sm" type="button" id="aDestR2" aria-pressed="false">Cloudflare R2</button></div>
+          <span class="hint" id="aDestHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span>
+          <div class="card" id="r2Setup" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08);text-transform:none;letter-spacing:0;font-weight:400">
+            <b style="font-size:15px">Подключите Cloudflare R2 — один раз, минут 5. Бесплатно до 10 ГБ</b>
+            <p class="soft small" id="r2State" style="margin:6px 0 0"></p>
+            <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
+              <li>Откройте <b>dash.cloudflare.com</b> → слева <b>R2 Object Storage</b> (раздел Storage &amp; Databases). Если Cloudflare попросит включить R2 и привязать карту — привяжите: при наших объёмах (до 10 ГБ) платить ничего не придётся.</li>
+              <li>Нажмите <b>Create bucket</b> → имя <b>fedoskin-video</b> → <b>Create bucket</b>. Остальное не трогайте.</li>
+              <li>Слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → вкладка <b>Settings</b> → <b>Bindings</b> → <b>Add</b> → <b>R2 bucket</b>. Variable name: <b>VIDEOS</b> (большими буквами), R2 bucket: <b>fedoskin-video</b> → <b>Deploy</b> (или Save).</li>
+              <li id="r2StepCode">Обновите код сервера: <button class="btn btn-sm btn-accent" id="r2Copy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> → там же, в <b>fedoskin-push</b>, кнопка <b>Edit code</b> → выделите всё, удалите, вставьте → <b>Deploy</b>.</li>
+              <li>Вернитесь сюда и нажмите <button class="btn btn-sm" id="r2Recheck" type="button" style="margin:2px 0;min-height:32px">Проверить</button></li>
+            </ol>
+            <p class="hint" style="margin:6px 0 0">Уведомления, рейтинг и статистика не пропадут — меняется только программа сервера.</p>
+          </div></div>
+        <div class="f" id="aCompressRow"><span>Качество видео</span>
+          <div class="seg" role="group" aria-label="Качество видео"><button class="btn btn-sm" type="button" data-q="720" aria-pressed="false">720p</button><button class="btn btn-sm" type="button" data-q="1080" aria-pressed="false">1080p</button><button class="btn btn-sm" type="button" data-q="orig" aria-pressed="false">Без сжатия</button></div>
           <span class="hint" id="aCompressHint" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
         <div class="row" style="margin-top:18px;flex-wrap:wrap"><button class="btn btn-accent" id="aGo" disabled>Подготовить урок</button><button class="btn" id="aCancel" hidden>Отменить</button></div>
         <div id="aWork" hidden>
@@ -634,6 +646,81 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     return id;
   }
 
+  // ---------- Cloudflare R2 (owner 09.11.2026: «чтобы я мог сам выгружать на выбор и туда тоже») ----------
+  // Videos live in the R2 bucket bound to our worker (server/push-worker.js, binding VIDEOS). The admin sends the file
+  // to the worker in 16 MB pieces (a free worker takes at most 100 MB per request), signed with the owner's GitHub key
+  // like everything else on the server; the app plays <server>/v/<file>. lessons.js keeps the file name (field `r2`):
+  // a new name for every upload, so phones may keep their copies forever.
+  let r2Info = null, r2Xhr = null, r2Abort = false;
+  const r2Base = () => String((cfg && cfg.pushUrl) || (remote && remote.cfg.pushUrl) || '').replace(/\/+$/, '');
+  const r2Url = key => r2Base() + '/v/' + key;
+  const r2Ready = () => !!(r2Info && r2Info.ok);
+  const fmtGB = b => (b / 1e9 < 0.1 ? Math.round(b / 1e6) + ' МБ' : (b / 1e9).toFixed(2).replace('.', ',') + ' ГБ');
+  async function r2Check(){
+    if (!r2Base()) { r2Info = {err: 'nopush'}; paintDest(); return; }
+    try {
+      const r = await fetch(r2Base() + '/r2/usage', {headers: {'Authorization': 'Bearer ' + token}});
+      const j = await r.json().catch(() => ({}));
+      r2Info = r.ok && j.ok ? {ok: true, bytes: j.bytes || 0, count: j.count || 0, files: new Map(j.files || [])}
+        : r.status === 409 ? {err: 'nobucket'} : r.status === 404 ? {err: 'old'} : r.status === 403 ? {err: 'other', msg: 'сервер не принял ключ GitHub'} : {err: 'other', msg: j.error || 'ошибка ' + r.status};
+    } catch(e) { r2Info = {err: 'net'}; }
+    paintDest(); if ($('[data-pane="stats"]') && !$('[data-pane="stats"]').hidden) renderStats();
+  }
+  const r2Key = id => id + '-' + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5) + '.mp4';
+  async function r2Api(path, method, body){
+    let r;
+    try { r = await fetch(r2Base() + path, {method, headers: Object.assign({'Authorization': 'Bearer ' + token}, body ? {'Content-Type': 'application/json'} : {}), body: body ? JSON.stringify(body) : undefined}); }
+    catch(e) { throw new Error('нет связи с сервером'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(r.status === 409 ? 'хранилище R2 не привязано к серверу' : r.status === 403 ? 'сервер не принял ключ GitHub' : 'сервер ответил: ' + (j.error || r.status));
+    return j;
+  }
+  // one piece, with up to 3 tries (phones drop connections)
+  function r2Part(key, id, n, blob, onProg){
+    return new Promise((ok, bad) => {
+      let tries = 0;
+      const go = () => {
+        const x = r2Xhr = new XMLHttpRequest();
+        x.open('PUT', r2Base() + '/r2/mpu?key=' + encodeURIComponent(key) + '&id=' + encodeURIComponent(id) + '&n=' + n);
+        x.setRequestHeader('Authorization', 'Bearer ' + token);
+        x.upload.onprogress = e => onProg(e.loaded);
+        x.onload = () => { r2Xhr = null; let o = null; try { o = JSON.parse(x.responseText); } catch(e) {}
+          if (x.status >= 200 && x.status < 300 && o && o.etag) ok(o); else if (++tries < 3 && x.status >= 500) setTimeout(go, 1500 * tries); else bad(new Error('сервер не принял кусок видео (' + ((o && o.error) || x.status) + ')')); };
+        x.onerror = () => { r2Xhr = null; if (r2Abort) return bad(new Error('загрузка отменена')); if (++tries < 3) setTimeout(go, 1500 * tries); else bad(new Error('связь оборвалась во время загрузки — попробуйте ещё раз')); };
+        x.onabort = () => { r2Xhr = null; bad(new Error('загрузка отменена')); };
+        x.send(blob);
+      };
+      go();
+    });
+  }
+  async function r2Upload(blob, key, onProgress){
+    const PART = 16 * 1048576;
+    r2Abort = false;
+    const {id} = await r2Api('/r2/mpu?key=' + encodeURIComponent(key), 'POST');
+    const parts = [];
+    try {
+      for (let a = 0, n = 1; a < blob.size || n === 1; a += PART, n++) {
+        if (r2Abort) throw new Error('загрузка отменена');
+        const piece = blob.slice(a, Math.min(blob.size, a + PART));
+        const p = await r2Part(key, id, n, piece, got => onProgress(Math.min(1, (a + got) / Math.max(1, blob.size))));
+        parts.push({n: p.n, etag: p.etag});
+        if (a + PART >= blob.size) break;
+      }
+      const done = await r2Api('/r2/done?key=' + encodeURIComponent(key) + '&id=' + encodeURIComponent(id), 'POST', {parts});
+      onProgress(1);
+      if (r2Info && r2Info.ok) { r2Info.bytes += done.size || blob.size; r2Info.count++; r2Info.files.set(key, done.size || blob.size); }
+      return done.size || blob.size;
+    } catch(e) {
+      r2Api('/r2/abort?key=' + encodeURIComponent(key) + '&id=' + encodeURIComponent(id), 'POST').catch(() => {});
+      throw e;
+    }
+  }
+  function r2Delete(key){
+    return r2Api('/r2/obj?key=' + encodeURIComponent(key), 'DELETE').then(() => {
+      if (r2Info && r2Info.ok && r2Info.files.has(key)) { r2Info.bytes -= r2Info.files.get(key); r2Info.count--; r2Info.files.delete(key); }
+    });
+  }
+
   // ---------- Kinescope ----------
   // Upload goes straight from this browser to uploader.kinescope.io (it allows that); the Kinescope REST API
   // (api.kinescope.io) does NOT allow browser requests, so we never need it: the app plays
@@ -714,7 +801,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     setTimeout(tick, 15000);
   }
   function ksPill(l){
-    if (!l.ks) return '';
+    if (!l.ks) return l.r2 ? '<span class="pill ks">R2</span>' : '';
     const st = ksState[l.ks];
     return st === 'wait' ? '<span class="pill ks">KINESCOPE: ОБРАБОТКА</span>' : '<span class="pill ks">KINESCOPE</span>';
   }
@@ -797,6 +884,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       $('#loading').hidden = true; $('#main').hidden = false;
       renderAll();
       setTimeout(introAuto, 2500);
+      r2Check();
     } catch(e) {
       $('#loading').hidden = true; $('#login').hidden = false;
       const err = $('#loginErr'); err.hidden = false;
@@ -894,7 +982,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#saveMsg').innerHTML = '<b>Не опубликовано</b><span class="cnt">' + items.length + '</span><span class="list soft">' + esc(shown) + '</span>';
     $('#saveMsg').title = items.join('\n');
   }
-  window.addEventListener('beforeunload', e => { if (isDirty() || pushList || ksXhr) { e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', e => { if (isDirty() || pushList || ksXhr || r2Xhr) { e.preventDefault(); e.returnValue = ''; } });
   $('#undoBtn').addEventListener('click', () => {
     if (!confirm('Отменить все неопубликованные изменения?')) return;
     lessons = clone(remote.lessons); cfg = clone(remote.cfg); uploads = {}; deleted = []; dropGh = []; renderAll();
@@ -919,7 +1007,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         if (showsNew(l)) nm.insertAdjacentHTML('beforeend', '<span class="pill new">NEW</span>');
         if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
         if (ksJobs[l.id] != null) nm.insertAdjacentHTML('beforeend', '<span class="pill up" data-ksjob="' + l.id + '">ЗАГРУЗКА ' + Math.round(ksJobs[l.id] * 100) + '%</span>');
-        else if (l.ks) nm.insertAdjacentHTML('beforeend', ksPill(l));
+        else if (l.ks || l.r2) nm.insertAdjacentHTML('beforeend', ksPill(l));
         if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">' + (uploads[l.id].replace ? 'НОВОЕ ВИДЕО — НЕ ОПУБЛИКОВАНО' : 'НЕ ОПУБЛИКОВАН') + '</span>');
         const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
         tx.append(nm, mt);
@@ -1012,9 +1100,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#eCover').src = coverSrc(l);
     $('#eFile').textContent = l.id;
     const up = uploads[l.id];
-    $('#eWatch').href = l.ks ? ksPlay(l.ks) : up && up.mp4 ? URL.createObjectURL(up.mp4) : 'v/' + l.id + '.mp4';
+    $('#eWatch').href = l.ks ? ksPlay(l.ks) : l.r2 ? r2Url(l.r2) : up && up.mp4 ? URL.createObjectURL(up.mp4) : 'v/' + l.id + '.mp4';
     const size = up && up.mp4 ? up.mp4.size : vFiles[l.id + '.mp4'];
-    $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (l.ks ? ' · играет из Kinescope' : '') + (size ? ' · в GitHub ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
+    const r2Size = l.r2 && r2Info && r2Info.ok ? r2Info.files.get(l.r2) : null;
+    $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (l.ks ? ' · играет из Kinescope' : l.r2 ? ' · играет из Cloudflare R2' + (r2Size ? ' (' + fmtMB(r2Size) + ')' : '') : '') + (size && !l.r2 ? ' · в GitHub ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
     $('#eKs').value = l.ks ? ksPlay(l.ks) : '';
     paintKs(l);
     $('#eName').value = l.name;
@@ -1148,6 +1237,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const published = remote.lessons.some(x => x.id === l.id);
     delete uploads[l.id];
     if (published) deleted.push(l.id);
+    // a video sent to R2 for a lesson that was never published: nothing in the app uses it — remove it right away
+    // (a published one is removed after «Опубликовать», see publish)
+    else if (l.r2) r2Delete(l.r2).catch(() => {});
     closeEdit(); renderLessons(); paintSaveBar();
   });
 
@@ -1272,7 +1364,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const vis = lessons.filter(l => !l.hidden);
     const mins = Math.round(vis.reduce((a, l) => a + (l.dur || 0), 0) / 60);
     const ksMin = Math.ceil(lessons.filter(l => l.ks).reduce((a, l) => a + (l.dur || 0), 0) / 60);
-    const kp = [[vis.length, 'уроков в приложении'], [mins, 'минут видео'], [ksMin + ' / 100', 'минут в Kinescope (бесплатно 100)'], [vis.filter(showsNew).length, 'со значком NEW'], [lessons.filter(l => l.hidden).length, 'скрыто']];
+    const kp = [[vis.length, 'уроков в приложении'], [mins, 'минут видео'], [ksMin + ' / 100', 'минут в Kinescope (бесплатно 100)']];
+    if (r2Ready()) kp.push([fmtGB(r2Info.bytes), 'занято в Cloudflare R2 (' + r2Info.count + ' видео, бесплатно 10 ГБ)']);
+    kp.push([vis.filter(showsNew).length, 'со значком NEW'], [lessons.filter(l => l.hidden).length, 'скрыто']);
     $('#kpis').innerHTML = kp.map(([n, t]) => '<div class="kpi"><b>' + n + '</b><span>' + t + '</span></div>').join('');
     const max = Math.max(1, ...SECTIONS.map(s => vis.filter(l => l.sec === s).length));
     $('#bars').innerHTML = SECTIONS.map(s => { const n = vis.filter(l => l.sec === s).length; return '<div class="b"><span>' + s + '</span><span class="t"><i style="width:' + (n / max * 100) + '%"></i></span><span class="muted">' + n + '</span></div>'; }).join('');
@@ -1288,29 +1382,52 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // GitHub quality: 720p (smallest), 1080p (sharper, ~3x bigger), orig (upload the file as it is)
   let quality = store.get('fedoskin-admin-quality') || (canEncode && !isPhone ? '720' : 'orig');
   if (!canEncode) quality = 'orig';
+  let dest = store.get('fedoskin-admin-dest') || 'ks';
   const Q_HINT = {
     '720': 'Самый лёгкий файл (~1 Мбит/с, ролик 30 сек ≈ 4 МБ). Сжимает браузер — лучше на компьютере в Chrome.',
     '1080': 'Чётче, особенно в замедлении. Ролик 30 сек ≈ 10–13 МБ (в 3 раза больше, чем 720p). Сжимает браузер — лучше на компьютере в Chrome.',
     'orig': 'Файл загрузится как есть, без потерь от админки. Должен быть меньше 70 МБ — например, экспорт из CapCut в 720p или 1080p.'
   };
+  const Q_HINT_R2 = {
+    '720': '~1 Мбит/с: урок 10 минут ≈ 75 МБ. Быстро стартует даже на слабом интернете. Сжимает браузер — лучше на компьютере в Chrome.',
+    '1080': '~3,5 Мбит/с при 60 кадрах: урок 10 минут ≈ 260 МБ. Чётче, особенно в замедлении, но на слабом интернете дольше грузится. Сжимает браузер — лучше на компьютере в Chrome.',
+    'orig': 'Файл загрузится как есть, любого размера. Учтите: R2 не подстраивает качество под интернет, как Kinescope, — тяжёлый файл у людей со слабой сетью стартует дольше.'
+  };
   function paintQuality(){
     document.querySelectorAll('#aCompressRow [data-q]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.q === quality)); b.disabled = !canEncode && b.dataset.q !== 'orig'; });
-    $('#aCompressHint').textContent = canEncode ? Q_HINT[quality] : 'Этот браузер не умеет сжимать видео — загрузится как есть. Для сжатия откройте админку на компьютере в Chrome.';
+    $('#aCompressHint').textContent = canEncode ? (dest === 'r2' ? Q_HINT_R2 : Q_HINT)[quality] : 'Этот браузер не умеет сжимать видео — загрузится как есть. Для сжатия откройте админку на компьютере в Chrome.';
   }
   document.querySelectorAll('#aCompressRow [data-q]').forEach(b => b.addEventListener('click', () => { if (busy) return; quality = b.dataset.q; store.set('fedoskin-admin-quality', quality); paintQuality(); }));
   paintQuality();
   let file = null, meta = null, idTouched = false, busy = false, cancelled = false;
-  let dest = store.get('fedoskin-admin-dest') || 'ks';
   function paintDest(){
     $('#aDestKs').setAttribute('aria-pressed', String(dest === 'ks'));
     $('#aDestGh').setAttribute('aria-pressed', String(dest === 'gh'));
-    $('#aCompressRow').hidden = dest === 'ks'; $('#aPhoneHelp').hidden = dest === 'ks';
+    $('#aDestR2').setAttribute('aria-pressed', String(dest === 'r2'));
+    $('#aCompressRow').hidden = dest === 'ks'; $('#aPhoneHelp').hidden = dest !== 'gh';
     $('#aDestHint').textContent = dest === 'ks'
       ? (ksReady() ? 'Загружайте исходник как есть — 4K, 60 кадров, любой длины. Kinescope сам сделает качества для телефонов. Бесплатно — 100 минут видео на всё.' : 'Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки».')
-      : 'Для коротких роликов до 70 МБ (после сжатия). Длинные уроки — только в Kinescope.';
+      : dest === 'gh' ? 'Для коротких роликов до 70 МБ (после сжатия). Длинные уроки — в Kinescope или Cloudflare R2.'
+      : r2Ready() ? 'Cloudflare R2: занято ' + fmtGB(r2Info.bytes) + ' из 10 ГБ бесплатных (' + r2Info.count + ' видео). Любая длина и размер, трафик бесплатный. Видео играет в приложении как есть — качество выберите ниже.'
+      : r2Info && r2Info.err === 'net' ? 'Не получилось связаться с сервером — проверьте интернет и нажмите «Проверить» ниже.'
+      : r2Info ? '' : 'Проверяю подключение Cloudflare R2…';
+    paintR2Setup(); paintQuality();
+    if (dest === 'r2' && !r2Info && remote) r2Check();
   }
   $('#aDestKs').addEventListener('click', () => { if (busy) return; dest = 'ks'; store.set('fedoskin-admin-dest', dest); paintDest(); });
   $('#aDestGh').addEventListener('click', () => { if (busy) return; dest = 'gh'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  $('#aDestR2').addEventListener('click', () => { if (busy) return; dest = 'r2'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  $('#r2Copy').addEventListener('click', () => $('#visCopy').click());
+  $('#r2Recheck').addEventListener('click', async () => { const b = $('#r2Recheck'); b.disabled = true; b.textContent = 'Проверяю…'; await r2Check(); b.disabled = false; b.textContent = 'Проверить'; if (r2Ready()) toast('Cloudflare R2 подключён — можно загружать'); else if (r2Info && r2Info.err === 'nobucket') toast('Код сервера новый, но хранилище не привязано — проверьте шаг 3 (имя VIDEOS)', true); else if (r2Info && r2Info.err === 'old') toast('Сервер пока со старым кодом — проверьте шаг 4', true); });
+  function paintR2Setup(){
+    const show = dest === 'r2' && !!r2Info && !r2Info.ok && r2Info.err !== 'net';
+    $('#r2Setup').hidden = !show; if (!show) return;
+    $('#r2State').textContent = r2Info.err === 'nopush' ? 'Сначала нужен сервер приложения: вкладка «Статистика» → «Уведомления» — там шаги. Потом вернитесь сюда.'
+      : r2Info.err === 'nobucket' ? 'Код сервера уже новый — осталось создать хранилище и привязать его (шаги 1–3).'
+      : r2Info.err === 'old' ? 'Сервер пока со старым кодом — нужны все шаги.'
+      : 'Сервер ответил: ' + (r2Info.msg || 'ошибка') + '. Пройдите шаги ещё раз.';
+    $('#r2StepCode').style.opacity = r2Info.err === 'nobucket' ? '.55' : '';
+  }
   paintDest();
   function autoId(){ if (!idTouched) $('#aId').value = uniqueId(PREFIX[$('#aSec').value] + '-' + (slug($('#aName').value) || 'lesson')); }
   $('#aName').addEventListener('input', () => { autoId(); paintGo(); });
@@ -1425,18 +1542,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (extra != null) li.querySelector('.st').textContent = extra;
   }
   const bar = p => { $('#aBar').style.width = Math.round(p * 100) + '%'; };
-  $('#aCancel').addEventListener('click', () => { cancelled = true; if (current) current.cancel().catch(() => {}); if (ksXhr) ksXhr.abort(); });
+  $('#aCancel').addEventListener('click', () => { cancelled = true; if (current) current.cancel().catch(() => {}); if (ksXhr) ksXhr.abort(); r2Abort = true; if (r2Xhr) r2Xhr.abort(); });
   $('#aGo').addEventListener('click', async () => {
     const id = $('#aId').value, name = $('#aName').value.trim(), sec = $('#aSec').value;
     if (lessons.some(l => l.id === id) || vFiles[id + '.mp4']) { $('#aErr').hidden = false; $('#aErr').textContent = 'Урок с именем файла «' + id + '» уже есть — поменяйте имя файла.'; return; }
-    const toKs = dest === 'ks';
+    const toKs = dest === 'ks', toR2 = dest === 'r2';
     if (toKs && !ksReady()) { $('#aErr').hidden = false; $('#aErr').textContent = 'Впишите токен и проект Kinescope во вкладке «Тексты и настройки» — или выберите «GitHub».'; return; }
+    if (toR2 && !r2Ready()) { await r2Check(); if (!r2Ready()) { $('#aErr').hidden = false; $('#aErr').textContent = r2Info && r2Info.err === 'net' ? 'Нет связи с сервером — проверьте интернет и попробуйте ещё раз.' : 'Cloudflare R2 ещё не подключён — шаги под кнопками «Куда загрузить видео».'; return; } }
     const compress = !toKs && canEncode && quality !== 'orig';
     const target = quality === '1080' ? 1080 : 720;
-    if (!toKs && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Выберите «720p» или «1080p» — админка сожмёт, или экспортируйте из CapCut поменьше.'; return; }
+    if (!toKs && !toR2 && !compress && file.size > MAX_FILE) { $('#aErr').hidden = false; $('#aErr').textContent = 'Файл ' + fmtMB(file.size) + ' — слишком большой для GitHub (до 70 МБ). Выберите «720p» или «1080p» — админка сожмёт, или экспортируйте из CapCut поменьше.'; return; }
     busy = true; cancelled = false; paintGo(); $('#aCancel').hidden = false;
     $('#aErr').hidden = true; $('#aDone').hidden = true; $('#aWork').hidden = false; $('#aPrevs').hidden = true; bar(0);
-    setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до ' + target + 'p' : 'Видео без сжатия']);
+    setSteps(['Обложка', 'Анимация обложки (3 сек)', toKs ? 'Загрузка в Kinescope' : compress ? 'Сжатие видео до ' + target + 'p' : 'Видео без сжатия'].concat(toR2 ? ['Загрузка в Cloudflare R2'] : []));
     let step = 0;
     try {
       if (!meta) meta = await readMeta(file);
@@ -1462,7 +1580,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       } else stepState(1, 'skip', 'Анимация обложки — этот браузер не умеет, будет просто картинка');
       step = 2; bar(.15);
       // 3. main video
-      let mp4 = file, ksId = null;
+      let mp4 = file, ksId = null, r2 = null;
+      // R2: the compression takes the first half of the bar, the upload the rest
+      const vPart = toR2 ? .5 : 1;
       if (toKs) {
         stepState(2, 'run', 'Загрузка в Kinescope — 0%');
         ksId = await ksUpload(file, name, p => { bar(.15 + p * .85); stepState(2, 'run', 'Загрузка в Kinescope — ' + Math.round(p * 100) + '% из ' + fmtMB(file.size) + '. Не закрывайте страницу'); });
@@ -1478,20 +1598,29 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         const rate = fps >= 50 ? 60 : 30;
         // 720p ~1 Mbit/s; 1080p ~3.5 Mbit/s at 60 fps (2.5 at 30); never more than ~60 MB for long videos
         const cap = target === 1080 ? (rate === 60 ? 3500000 : 2500000) : 1000000;
-        const br = Math.max(target === 1080 ? 800000 : 400000, Math.min(cap, Math.floor(60e6 * 8 / Math.max(1, dur)) - 160000));
-        const prog = (from, k, label) => p => { bar(.15 + (from + p * k) * .85); stepState(2, 'run', label + Math.round((from + p * k) * 100) + '%'); };
+        // GitHub: never more than ~60 MB for long videos; R2 takes any size, so the quality stays as chosen
+        const br = toR2 ? cap : Math.max(target === 1080 ? 800000 : 400000, Math.min(cap, Math.floor(60e6 * 8 / Math.max(1, dur)) - 160000));
+        const prog = (from, k, label) => p => { bar(.15 + (from + p * k) * .85 * vPart); stepState(2, 'run', label + Math.round((from + p * k) * 100) + '%'); };
         mp4 = await convert(file, {bitrate: br, video: Object.assign({frameRate: rate}, size)}, prog(0, 1, 'Сжатие видео до ' + target + 'p — '));
-        if (mp4.size > MAX_FILE && !cancelled) {
+        if (!toR2 && mp4.size > MAX_FILE && !cancelled) {
           // still too big: second try at 30 fps with a lower bitrate, scaled to fit ~85 MB
           const br2 = Math.max(250000, Math.floor(br * (58 * 1048576) / mp4.size));
           stepState(2, 'run', 'Получилось ' + fmtMB(mp4.size) + ' — сжимаю сильнее…');
           mp4 = await convert(file, {bitrate: br2, video: Object.assign({frameRate: 30}, size)}, prog(0, 1, 'Сжимаю сильнее — '));
         }
         stepState(2, 'ok', 'Сжато: ' + fmtMB(file.size) + ' → ' + fmtMB(mp4.size) + (mp4.noAudio ? ' — ВНИМАНИЕ: звук не сохранился' : ''));
-        if (mp4.size > MAX_FILE) throw new Error('даже после сжатия файл ' + fmtMB(mp4.size) + ' — больше 70 МБ. Разрежьте видео на две части в CapCut');
+        if (!toR2 && mp4.size > MAX_FILE) throw new Error('даже после сжатия файл ' + fmtMB(mp4.size) + ' — больше 70 МБ. Разрежьте видео на две части в CapCut');
       } else {
         stepState(2, 'ok', 'Видео без сжатия: ' + fmtMB(file.size));
         mp4 = file.slice(0, file.size, 'video/mp4');
+      }
+      if (toR2 && mp4) {
+        step = 3; stepState(3, 'run', 'Загрузка в Cloudflare R2 — 0%');
+        const key = r2Key(id), up = mp4;
+        const got = await r2Upload(up, key, p => { bar(.15 + .85 * vPart + p * .85 * (1 - vPart)); stepState(3, 'run', 'Загрузка в Cloudflare R2 — ' + Math.round(p * 100) + '% из ' + fmtMB(up.size) + '. Не закрывайте страницу'); });
+        stepState(3, 'ok', 'Загружено в Cloudflare R2 (' + fmtMB(got) + ')');
+        r2 = key; mp4 = null;
+        paintDest();
       }
       bar(1);
       // add to the list as unpublished. Name, section, words and date are read NOW, so whatever was typed
@@ -1500,6 +1629,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const lesson = {id, sec: fSec, name: fName, dur: Math.round(dur), ru: fRu, added: fAdded, pv: !!p3};
       if (meta.h > meta.w) lesson.vertical = true; // the app opens vertical videos straight in full screen
       if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, fName); }
+      if (r2) lesson.r2 = r2;
       let at = -1; lessons.forEach((x, i) => { if (x.sec === fSec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
       uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
@@ -1509,7 +1639,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       $('#aDone').innerHTML = '<b style="color:var(--new)">✓ Урок добавлен — осталось нажать «Опубликовать» внизу</b>' +
         '<p class="soft small" style="margin:8px 0 0;line-height:1.6">Название: <b>' + esc(fName) + '</b><br>Раздел: ' + esc(fSec) +
-        '<br>Слова для поиска: ' + (fRu ? esc(fRu) : '<span class="muted">не заданы</span>') + '<br>Дата: ' + esc(fAdded) + (ksId ? '<br>Видео: Kinescope' : '') + '</p>' +
+        '<br>Слова для поиска: ' + (fRu ? esc(fRu) : '<span class="muted">не заданы</span>') + '<br>Дата: ' + esc(fAdded) + (ksId ? '<br>Видео: Kinescope' : r2 ? '<br>Видео: Cloudflare R2' : '') + '</p>' +
         '<div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="aDoneEdit">Изменить урок</button></div>' +
         '<p class="hint" style="margin-top:8px">Форма выше очищена для следующего видео.</p>';
       $('#aDone').hidden = false;
@@ -1963,8 +2093,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (dropGh.length) parts.push('видео перенесены в Kinescope: ' + dropGh.join(', '));
       if (tree.some(t => t.path === 'config.js')) parts.push('настройки');
       if (!parts.length) parts.push('уроки');
+      const r2Gone = deleted.map(id => (remote.lessons.find(x => x.id === id) || {}).r2).filter(Boolean);
       const commit = await gh('/git/commits', {method: 'POST', body: {message: 'Админка: ' + parts.join('; '), tree: newTree.sha, parents: [ref.object.sha]}});
       await gh('/git/refs/heads/' + BRANCH, {method: 'PATCH', body: {sha: commit.sha}});
+      // the app no longer lists these lessons: their videos in R2 can go (a failure only leaves a file behind)
+      for (const k of r2Gone) await r2Delete(k).catch(() => {});
       toast('Опубликовано! В приложении появится через 1–5 минут');
       const fresh = idsNew.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
       await loadRemote(); renderAll();
@@ -1991,11 +2124,11 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let introJob = null, publishing = false, introNote = '', introFail = {};
   const introWanted = () => remote ? remote.lessons.filter(l => l.ks && !(intros[l.id] === introKey(l) && vFiles[l.id + '-intro.mp4'] != null)) : [];
   // strip of small frames for the slider: every lesson whose video can be read (Kinescope or GitHub file)
-  const stripSrc = l => l.ks || 'gh';
-  const stripWanted = () => remote ? remote.lessons.filter(l => (l.ks || vFiles[l.id + '.mp4'] != null) && !(strips[l.id] && strips[l.id].src === stripSrc(l) && vFiles[l.id + '-sb.jpg'] != null)) : [];
+  const stripSrc = l => l.ks || (l.r2 ? 'r2:' + l.r2 : 'gh');
+  const stripWanted = () => remote ? remote.lessons.filter(l => (l.ks || l.r2 || vFiles[l.id + '.mp4'] != null) && !(strips[l.id] && strips[l.id].src === stripSrc(l) && vFiles[l.id + '-sb.jpg'] != null)) : [];
   function paintIntro(prog){
     const card = $('#introCard'); if (!remote) { card.hidden = true; return; }
-    const todo = introWanted().length + stripWanted().length, all = remote.lessons.filter(l => l.ks || vFiles[l.id + '.mp4'] != null).length;
+    const todo = introWanted().length + stripWanted().length, all = remote.lessons.filter(l => l.ks || l.r2 || vFiles[l.id + '.mp4'] != null).length;
     card.hidden = !all;
     $('#introProg').hidden = prog == null; if (prog != null) $('#introBar').style.width = Math.round(prog * 100) + '%';
     $('#introGo').hidden = !!introJob || !todo;
@@ -2028,7 +2161,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // the strip: frames every 0.5 s (long lessons: at most ~120 frames), small, 10 in a row, one JPEG
   async function cutStrip(l, fileBlob){
     const M = await mb();
-    const url = l.ks ? ksHls(l.ks) : new URL('v/' + l.id + '.mp4', location.href).href;
+    const url = l.ks ? ksHls(l.ks) : l.r2 ? r2Url(l.r2) : new URL('v/' + l.id + '.mp4', location.href).href;
     const input = new M.Input({source: fileBlob ? new M.BlobSource(fileBlob) : new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
     const vts = await input.getVideoTracks();
     const tr = vts.reduce((a, t) => !a || t.displayWidth * t.displayHeight < a.displayWidth * a.displayHeight ? t : a, null); // the lightest quality is plenty

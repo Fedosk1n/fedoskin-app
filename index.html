@@ -1399,7 +1399,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Skipped on slow connections and when the phone asks to save data. Opening a lesson stops the other downloads,
   // so the opened one gets the whole connection.
   const introMem = new Map(), memSize = new Map(); // video url -> blob: url, its size
-  const mediaFor = l => !l ? '' : l.ks ? introFor(l) : 'v/' + l.id + '.mp4';
+  // the whole video file of a lesson: on GitHub next to the app (v/<id>.mp4), or in Cloudflare R2 behind our server
+  // (lesson field `r2` = file name, owner 09.11.2026) — both play the same way, with every player feature
+  const R2_BASE = String(CFG.r2Base || CFG.pushUrl || '').replace(/\/+$/, '');
+  const fileFor = l => l.r2 && R2_BASE ? R2_BASE + '/v/' + l.r2 : 'v/' + l.id + '.mp4';
+  const mediaFor = l => !l ? '' : l.ks ? introFor(l) : fileFor(l);
   // short lessons in 1080p60 are 20–35 MB; an iPhone gets less room (under memory pressure it drops the video's picture)
   const MEM_MAX = isApple ? 3 : 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = (isApple ? 60 : 100) * 1048576;
   // Internet speed, remembered on the phone (measured on the stream's pieces and on the intro's download). The intro
@@ -1598,6 +1602,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
     vid.poster = poster || '';
+    // a file from another site (R2): asked for with CORS, so its frames can be copied for scrubbing
+    let other = false; try { other = !ks && /^https?:/.test(src) && new URL(src).origin !== location.origin; } catch (_) {}
+    if (other) vid.crossOrigin = 'anonymous'; else vid.removeAttribute('crossorigin');
     stage.classList.add('portrait');
     if (ks && intro) {
       introOn = true; av = vin; streamBudget = null;
@@ -1699,7 +1706,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
     const srcInfo = introSource(l);
-    loadVideo('v/' + l.id + '.mp4', 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
+    loadVideo(fileFor(l), 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -1883,7 +1890,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // soon as the video has got there. A Kinescope stream is only asked for parts it doesn't have yet when the finger
   // rests, so it isn't flooded with downloads that will never be shown. Letting go: playback goes on from there.
   const SB = window.LESSON_SB || {};
-  const sbFor = l => { const s = l && SB[l.id]; return s && s.src === (l.ks || 'gh') ? s : null; };
+  const sbFor = l => { const s = l && SB[l.id]; return s && s.src === (l.ks || (l.r2 ? 'r2:' + l.r2 : 'gh')) ? s : null; };
   const sbImg = new Image(); let sbUrl = '';
   function sbLoad(l){ const s = sbFor(l); if (!s) return; const u = 'v/' + l.id + '-sb.jpg?v=' + (s.v || 1); if (sbUrl !== u) { sbUrl = u; sbImg.src = u; } }
   const sbCan = $('#sbCan');
@@ -2099,7 +2106,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     wdLesson = curLesson;
     const t = el.currentTime;
     // a copy from the phone's memory that won't draw: take the file from the site instead
-    const src = /^blob:/.test(el.currentSrc || el.src) ? new URL('v/' + curLesson.id + '.mp4', location.href).href : (el.currentSrc || el.src); if (!src) return;
+    const src = /^blob:/.test(el.currentSrc || el.src) ? new URL(fileFor(curLesson), location.href).href : (el.currentSrc || el.src); if (!src) return;
     el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (_) {} if (P.playing) playMain(); }, { once: true });
     el.src = src; el.playbackRate = P.rate;
   }, 500);

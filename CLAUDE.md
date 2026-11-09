@@ -11,6 +11,7 @@
   the owner's browser). Keep lessons.js/config.js machine-readable JSON so the admin can parse them. Lesson fields:
   id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge), ks (Kinescope video id),
   vertical (true = portrait video → opens straight in full screen; admin sets it from the file's size on upload).
+  r2 (file name in Cloudflare R2, e.g. `tr-x-<random>.mp4` — see «Cloudflare R2» below).
   `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression: admin quality choice 720p (~1 Mbit/s) / 1080p
   (~3.5 Mbit/s at 60 fps) / «Без сжатия» (`fedoskin-admin-quality`).
   Vendored mediabunny is PATCHED (04.11.2026): line 2 sets `Symbol.dispose ??= Symbol.for('Symbol.dispose')` (+asyncDispose) —
@@ -354,3 +355,18 @@
 - Re-cropping a Kinescope lesson's cover: in the owner's Chrome (Claude in Chrome) mediabunny reads the HLS
   (`UrlSource(master.m3u8)` + HLS_FORMATS); CanvasSink for the jpg, Conversion with `crop` + trim 0–3 for -p3.mp4;
   commit with the admin's GitHub key from that page's localStorage. Kinescope lessons may be 16:9 (landscape).
+- Cloudflare R2 for lesson videos (owner 09.11.2026 «чтобы я мог сам выгружать на выбор и туда тоже»; «не переноси туда
+  ничего» — existing lessons stay where they are, the owner moves/uploads himself). Admin «Добавить видео» → 3rd destination
+  «Cloudflare R2» (`fedoskin-admin-dest`='r2'): optional compression (720p/1080p without the GitHub 60 MB cap, or as is) →
+  multipart upload in 16 MB pieces (XHR, 3 tries each) to the worker: POST /r2/mpu → PUT /r2/mpu?n= → POST /r2/done
+  (abort on error/cancel); admin auth = GitHub token as for /stats. Lesson gets `r2` = file name (`<id>-<random>.mp4`, new per
+  upload ⇒ immutable caching). Worker: binding `VIDEOS` (bucket fedoskin-video), GET/HEAD /v/<file> with Range → 206,
+  CORS (Range allowed, Content-Range exposed), GET /r2/usage (bytes/count/files), DELETE /r2/obj. No binding ⇒ 409
+  {error:'no-bucket'}; old worker ⇒ 404 — admin shows the setup card `#r2Setup` (bucket, binding, copy server code,
+  «Проверить»). Deleting a published lesson removes its R2 file after «Опубликовать»; an unpublished one at once. Stats KPI
+  shows R2 usage; edit card «играет из Cloudflare R2». Strips: stripSrc = 'r2:<file>' (app `sbFor` matches it).
+  App: `fileFor(l)` = `${CFG.r2Base || CFG.pushUrl}/v/<r2>` else v/<id>.mp4; mediaFor/openLesson/watchdog use it;
+  cross-origin file ⇒ `vid.crossOrigin='anonymous'` (frames can be captured for the frame cache); sw.js also keeps
+  cross-origin https /v/*.mp4 (and localhost for tests). Tested: worker with an in-memory R2 (ranges, 416, multipart,
+  delete, auth), admin upload of a 29 MB file (2 pieces, byte-identical), app playback Android/desktop via SW + frame
+  cache, admin strip cutting reads the R2 file by ranges. Admin «версия 24».
