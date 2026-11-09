@@ -384,6 +384,26 @@ for _r in _SVC: t(*_r)
 LANGS = [['ru', 'Русский'], ['en', 'English'], ['es', 'Español'], ['pt', 'Português'], ['fr', 'Français'], ['de', 'Deutsch'], ['ja', '日本語'], ['ko', '한국어'], ['zh', '中文']]
 
 import json
+# ---- Профиль → «Память на телефоне» (09.11.2026) ----
+t('Память на телефоне', 'Phone storage', 'Almacenamiento', 'Armazenamento', 'Stockage', 'Speicher', 'ストレージ', '저장 공간', '存储空间')
+t('Уроки, которые ты смотрел, хранятся на телефоне: второй раз они открываются сразу и без интернета. Когда место заканчивается, самые старые удаляются сами.', 'Lessons you watched are kept on your phone, so next time they open instantly, even offline. When the space runs out, the oldest ones are removed automatically.', 'Las lecciones que viste se guardan en tu teléfono: la próxima vez se abren al instante, incluso sin internet. Cuando se acaba el espacio, las más antiguas se borran solas.', 'As aulas que você assistiu ficam salvas no celular: na próxima vez abrem na hora, mesmo sem internet. Quando o espaço acaba, as mais antigas são apagadas sozinhas.', 'Les leçons que tu as regardées sont gardées sur ton téléphone : la prochaine fois, elles s’ouvrent tout de suite, même sans internet. Quand l’espace est plein, les plus anciennes sont supprimées automatiquement.', 'Lektionen, die du angesehen hast, bleiben auf deinem Handy: Beim nächsten Mal öffnen sie sofort, auch ohne Internet. Wenn der Platz voll ist, werden die ältesten automatisch gelöscht.', '見たレッスンはスマホに保存され、次回はすぐに、オフラインでも開けます。容量がいっぱいになると、古いものから自動で削除されます。', '본 레슨은 휴대폰에 저장되어 다음에는 바로, 인터넷 없이도 열립니다. 공간이 부족하면 오래된 것부터 자동으로 삭제됩니다.', '看过的课程会保存在手机上，下次可立即打开，没网也能看。空间不够时，会自动删除最早保存的课程。')
+t('На iPhone и iPad приложение не хранит видео — место на телефоне они не занимают.', 'On iPhone and iPad the app doesn’t keep videos, so they take no space on your device.', 'En iPhone y iPad la app no guarda videos, así que no ocupan espacio en tu dispositivo.', 'No iPhone e iPad o app não guarda vídeos, então eles não ocupam espaço no aparelho.', 'Sur iPhone et iPad, l’app ne garde pas les vidéos : elles ne prennent pas de place sur ton appareil.', 'Auf iPhone und iPad speichert die App keine Videos – sie belegen keinen Platz auf deinem Gerät.', 'iPhone・iPadではアプリは動画を保存しないため、端末の容量を使いません。', 'iPhone과 iPad에서는 앱이 영상을 저장하지 않아 기기 공간을 차지하지 않습니다.', '在 iPhone 和 iPad 上，应用不会保存视频，不占用设备空间。')
+t('Сколько места можно занять', 'Maximum space to use', 'Espacio máximo', 'Espaço máximo', 'Espace maximum', 'Maximaler Speicher', '使用できる最大容量', '최대 사용 공간', '最多可占用')
+t('Не хранить', 'Don’t keep', 'No guardar', 'Não guardar', 'Ne pas garder', 'Nicht speichern', '保存しない', '저장 안 함', '不保存')
+t('{n} МБ', '{n} MB', '{n} MB', '{n} MB', '{n} Mo', '{n} MB', '{n} MB', '{n} MB', '{n} MB')
+t('{n} ГБ', '{n} GB', '{n} GB', '{n} GB', '{n} Go', '{n} GB', '{n} GB', '{n} GB', '{n} GB')
+t('из {n}', 'of {n}', 'de {n}', 'de {n}', 'sur {n}', 'von {n}', '／ {n}', '/ {n}', '/ {n}')
+t('Видео не хранятся', 'Videos aren’t kept', 'Los videos no se guardan', 'Os vídeos não são guardados', 'Les vidéos ne sont pas gardées', 'Videos werden nicht gespeichert', '動画は保存されません', '영상이 저장되지 않습니다', '不保存视频')
+t('Уроки на телефоне', 'Lessons on this phone', 'Lecciones en el teléfono', 'Aulas no celular', 'Leçons sur le téléphone', 'Lektionen auf dem Handy', 'スマホ内のレッスン', '휴대폰에 저장된 레슨', '手机上的课程')
+t('Пока ничего не сохранено', 'Nothing saved yet', 'Aún no hay nada guardado', 'Nada salvo ainda', 'Rien n’est encore enregistré', 'Noch nichts gespeichert', 'まだ何も保存されていません', '아직 저장된 것이 없습니다', '还没有保存任何内容')
+t('Очистить всё', 'Clear all', 'Borrar todo', 'Limpar tudo', 'Tout effacer', 'Alles löschen', 'すべて削除', '모두 삭제', '全部清除')
+t('Нажми ещё раз — удалим всё', 'Tap again to delete everything', 'Toca otra vez para borrar todo', 'Toque de novo para apagar tudo', 'Appuie encore pour tout supprimer', 'Nochmal tippen, um alles zu löschen', 'もう一度タップするとすべて削除', '한 번 더 누르면 모두 삭제됩니다', '再点一次即全部删除')
+t('Освобождено {n}', '{n} freed', '{n} liberados', '{n} liberados', '{n} libérés', '{n} freigegeben', '{n} を解放しました', '{n} 확보됨', '已释放 {n}')
+t('Удалить', 'Delete', 'Borrar', 'Apagar', 'Supprimer', 'Löschen', '削除', '삭제', '删除')
+t('Удалённый урок', 'Removed lesson', 'Lección eliminada', 'Aula removida', 'Leçon supprimée', 'Entfernte Lektion', '削除されたレッスン', '삭제된 레슨', '已删除的课程')
+t('Пусто', 'Empty', 'Vacío', 'Vazio', 'Vide', 'Leer', 'なし', '없음', '无')
+
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'

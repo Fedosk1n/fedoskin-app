@@ -177,7 +177,7 @@
   -intro.mp4 removed. Kinescope keeps its copy (owner may delete it there). Tested with fake HLS → 1080x1920, 60 fps, AAC.
 - Videos on the phone (sw.js, 31.10): v/*.mp4 (not -p3) are downloaded ONCE whole by the service worker; player range
   requests, app preloads and the frame-cache build all read that one download (streamed 206 answers; a jump > 3 MB ahead
-  of the download goes to the network). Finished files go to Cache Storage `fedoskin-video-1` (≤ 300 MB / 20 files,
+  of the download goes to the network). Finished files go to Cache Storage `fedoskin-video-1` (≤ the person's limit, default 1 GB, see «Память на телефоне»,
   oldest out; ETag/Last-Modified rechecked by HEAD at most hourly — a replaced video is dropped). Apple: the player's
   nothing goes through the SW (see the iPhone note below).
   App: `introSource` for GitHub lessons tries `fromSaved()` (caches.match → blob:) first, so a reopened lesson plays
@@ -370,3 +370,13 @@
   cross-origin https /v/*.mp4 (and localhost for tests). Tested: worker with an in-memory R2 (ranges, 416, multipart,
   delete, auth), admin upload of a 29 MB file (2 pieces, byte-identical), app playback Android/desktop via SW + frame
   cache, admin strip cutting reads the R2 file by ranges. Admin «версия 24».
+- «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
+  `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
+  limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache
+  `fedoskin-vcfg` key `vlimit.json` (resolved against the app folder = SW scope) — sw.js `getLimit()` reads it, `save()`
+  skips files over it (0 = keep nothing), `trim()` drops oldest-saved first (count cap 500); list of saved lessons grouped
+  by lesson (`stLesson`: v/<id>.mp4, -intro, or r2 file name) with sizes and × per lesson; «Очистить всё» asks on the same
+  button (2nd tap within 4 s, no confirm()). Page changes the cache itself and posts {type:'vcache', cmd: limit|drop|reset}
+  so the SW re-reads the limit and forgets in-memory copies. Apple: nothing is saved there ⇒ note `#storeApple`, limit
+  hidden. sw.js recheck drops a copy whose file is 404/410 on the server. 17 new i18n keys. Tested (Pixel 7 / desktop en /
+  iPhone): sizes, limit 0 ⇒ nothing saved, 500 MB, × on one lesson, clear all, back closes the sheet.

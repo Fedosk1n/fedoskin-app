@@ -6,9 +6,31 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 // ===== lesson videos on the phone (v/<id>.mp4, v/<id>-intro.mp4, and <our server>/v/<file>.mp4 from Cloudflare R2) =====
 // A video is downloaded ONCE, whole, in one go: the player, the app's preloading and the frame preparation for
 // scrubbing all read that one download (before, each of them fetched the file separately). Ready files stay in the
-// phone's storage (the last ~300 MB), so a lesson opened again plays without the internet. If a video was replaced on
+// phone's storage (up to the limit the person picked in the app, 1 GB by default), so a lesson opened again plays without the internet. If a video was replaced on
 // the site, its saved copy is noticed (checked at most once an hour) and dropped.
-const VCACHE = 'fedoskin-video-1', VMAX_BYTES = 300 * 1048576, VMAX_FILES = 20, AHEAD_PASS = 3 * 1048576;
+const VCACHE = 'fedoskin-video-1', VMAX_FILES = 500, AHEAD_PASS = 3 * 1048576;
+// How much the saved videos may take — the person picks it in the app (Профиль → «Память на телефоне», owner 09.11.2026,
+// «как в Телеграм»): 0 = don't keep videos, else bytes; kept as a small JSON entry in its own cache, which the page writes.
+const VCFG = 'fedoskin-vcfg', VLIMIT_KEY = new URL('vlimit.json', self.registration.scope).href, VLIMIT_DEFAULT = 1024 * 1048576;
+let limitP = null;
+const getLimit = () => limitP || (limitP = caches.open(VCFG).then(c => c.match(VLIMIT_KEY)).then(r => r ? r.json() : null)
+  .then(j => j && typeof j.limit === 'number' && j.limit >= 0 ? j.limit : VLIMIT_DEFAULT).catch(() => VLIMIT_DEFAULT));
+// the page changed something in the storage: re-read the limit, forget copies kept in memory, trim to the limit
+self.addEventListener('message', e => {
+  const d = e.data || {}; if (d.type !== 'vcache') return;
+  limitP = null;
+  if (d.cmd === 'reset') mem.clear(); else if (d.cmd === 'drop' && d.url) mem.delete(d.url);
+  e.waitUntil(trim(null));
+});
+async function trim(keep){
+  try {
+    const limit = await getLimit(), c = await caches.open(VCACHE), keys = await c.keys(); const sizes = [];
+    for (const k of keys) { const r = await c.match(k); sizes.push([k, +(r && r.headers.get('content-length')) || 0]); }
+    let total = sizes.reduce((a, x) => a + x[1], 0), n = sizes.length;
+    // the oldest saved go first; the one just saved stays unless it alone is over the limit
+    for (const [k, sz] of sizes) { if (total <= limit && n <= VMAX_FILES) break; if (k.url === keep && sz <= limit) continue; await c.delete(k); mem.delete(k.url); total -= sz; n--; }
+  } catch (_) {}
+}
 const dl = new Map();   // video address -> download in progress
 const mem = new Map();  // the last couple of saved videos, ready in memory
 const checked = new Map();
@@ -58,15 +80,12 @@ function startDl(key){
 }
 async function save(j){
   try {
+    if (j.total > await getLimit()) return; // «don't keep» (0), or bigger than the whole allowed space
     const c = await caches.open(VCACHE);
     await c.put(j.key, new Response(j.buf, { headers: { 'Content-Type': j.type, 'Content-Length': String(j.total), 'ETag': j.etag, 'Last-Modified': j.lm, 'X-Saved': String(Date.now()) } }));
     keepMem(j.key, j.buf, { type: j.type, etag: j.etag, lm: j.lm });
     checked.set(j.key, Date.now());
-    // the oldest saved videos go when there are too many
-    const keys = await c.keys(); let sizes = [];
-    for (const k of keys) { const r = await c.match(k); sizes.push([k, +(r && r.headers.get('content-length')) || 0]); }
-    let total = sizes.reduce((a, x) => a + x[1], 0), n = sizes.length;
-    for (const [k, sz] of sizes) { if (total <= VMAX_BYTES && n <= VMAX_FILES) break; if (k.url === j.key) continue; await c.delete(k); mem.delete(k.url); total -= sz; n--; }
+    await trim(j.key);
   } catch (_) {}
 }
 function keepMem(key, buf, meta){ mem.delete(key); mem.set(key, { buf, meta }); while (mem.size > 2) mem.delete(mem.keys().next().value); }

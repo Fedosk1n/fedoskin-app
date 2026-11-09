@@ -393,6 +393,24 @@ body.fsmode .bigplay{z-index:3}
 .tool[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:rgba(226,97,26,.1)}
 .av{display:flex;align-items:center;justify-content:center;border-radius:50%;flex:0 0 auto}
 .av svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.stbar .row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.stbar b{font-size:24px;font-weight:800}
+.sttrack{height:8px;border-radius:4px;background:#222225;margin-top:10px;overflow:hidden}
+.sttrack i{display:block;height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .35s ease}
+.stlab{margin:20px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.stseg{margin-bottom:0}
+.stseg button{font-size:13px;line-height:1.15;height:auto;min-height:44px;padding:4px 2px}
+.stlist{max-height:min(32vh,260px);overflow:auto;border:1px solid #222225;border-radius:14px;overscroll-behavior:contain}
+.strow{display:flex;align-items:center;gap:10px;padding:6px 4px 6px 14px;border-bottom:1px solid #1d1d20}
+.strow:last-child{border-bottom:none}
+.strow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
+.strow em{font-style:normal;color:var(--muted);font-size:13px;white-space:nowrap}
+.strow button{flex:none;width:40px;height:40px;border:none;background:none;color:var(--muted);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.strow button:active{background:#222225;color:var(--fg)}
+.stempty{padding:14px;font-size:14px;color:var(--muted)}
+#storeClear{margin-top:16px;color:#ff7a6b;border-color:#3a2422}
+#storeClear.armed{background:rgba(255,90,70,.14);border-color:#ff7a6b}
+#storeClear:disabled{opacity:.4;cursor:default}
 .sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:480px;background:#141416;border-radius:24px 24px 0 0;border-top:1px solid var(--line);
   padding:12px max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));animation:up .22s ease}
@@ -829,6 +847,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
     <button class="list-item" id="installItem"><span style="flex:1;font-weight:600" id="installLabel">Установить на телефон</span><span class="muted" style="font-size:13px">иконка на экране</span></button>
     <button class="list-item" id="langItem"><span style="flex:1;font-weight:600">Язык</span><span class="muted" style="font-size:13px" id="langName">Русский</span></button>
+    <button class="list-item" id="storeItem"><span style="flex:1;font-weight:600">Память на телефоне</span><span class="muted" style="font-size:13px" id="storeState"></span></button>
   </div>
   </div>
 </section>
@@ -963,6 +982,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <h2 id="subsTitle" style="font-size:24px">Субтитры</h2>
     <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4">В уроке говорят по-русски. Выбери язык субтитров.</p>
     <div class="stack" id="subsList" role="radiogroup" aria-labelledby="subsTitle" style="gap:8px;margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="storeSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="storeTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="storeTitle" style="font-size:24px">Память на телефоне</h2>
+    <p class="muted" id="storeIntro" style="margin-top:6px;font-size:13px;line-height:1.45">Уроки, которые ты смотрел, хранятся на телефоне: второй раз они открываются сразу и без интернета. Когда место заканчивается, самые старые удаляются сами.</p>
+    <p class="muted" id="storeApple" style="margin-top:6px;font-size:13px;line-height:1.45" hidden>На iPhone и iPad приложение не хранит видео — место на телефоне они не занимают.</p>
+    <div class="stbar" style="margin-top:16px"><div class="row"><b id="storeUsed"></b><span class="muted" id="storeOf" style="font-size:14px"></span></div><div class="sttrack"><i id="storeFill"></i></div></div>
+    <div id="storeLimitBox"><p class="stlab" id="storeLimLab">Сколько места можно занять</p><div class="seg stseg" id="storeLimits" role="radiogroup" aria-labelledby="storeLimLab"></div></div>
+    <p class="stlab">Уроки на телефоне</p>
+    <div class="stlist" id="storeList"></div>
+    <button class="btn btn-ghost" id="storeClear" type="button">Очистить всё</button>
   </div>
 </div>
 
@@ -2821,6 +2854,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
 
   function go(id){
+    if (id === 'profile') setTimeout(() => { try { stRender(); } catch (_) {} }, 0);
     // interest in online services (07.11.2026): the tab opened by the person — not the start-up restore, not «back» from a service
     if (id === 'review' && performance.now() > 2500) {
       const cur = [...document.querySelectorAll('.screen')].find(x => !x.hidden);
@@ -3491,6 +3525,90 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#installLater').addEventListener('click', laterInstall);
   $('#installSheet').addEventListener('click', e => { if (e.target.id === 'installSheet') laterInstall(); });
   $('#installItem').addEventListener('click', openInstall);
+  // ===== Профиль → «Память на телефоне» (owner 09.11.2026: «кнопку очистить кэш… ограничения как в телеграм, не более 5 ГБ») =====
+  // Watched lessons are kept by sw.js in Cache Storage `fedoskin-video-1` (Android/computers; nothing on Apple). Here the
+  // person sees how much they take and which lessons, picks the limit (written to `fedoskin-vcfg`, read by sw.js; the oldest
+  // go first when over it), deletes one lesson or everything. sw.js gets a message so it also forgets its in-memory copies.
+  const VCACHE = 'fedoskin-video-1', VCFG = 'fedoskin-vcfg', VLIMIT_KEY = new URL('vlimit.json', location.href).href;
+  const ST_LIMITS = [0, 500, 1024, 2048, 5120].map(m => m * 1048576), ST_DEFAULT = 1024 * 1048576;
+  const ALL_LESSONS = window.LESSONS_DATA || [];
+  const stNum = (x, d) => { try { return Number(x).toLocaleString(LANG, { maximumFractionDigits: d }); } catch (_) { return String(+x.toFixed(d)); } };
+  const stFmt = b => b < 1024 * 1048576 ? T('{n} МБ', { n: stNum(b ? Math.max(1, Math.round(b / 1048576)) : 0, 0) }) : T('{n} ГБ', { n: stNum(b / 1073741824, 1) });
+  function stPing(cmd, url){ try { const c = navigator.serviceWorker && navigator.serviceWorker.controller; if (c) c.postMessage({ type: 'vcache', cmd, url }); } catch (_) {} }
+  async function stLimit(){ try { const r = await (await caches.open(VCFG)).match(VLIMIT_KEY); const j = r && await r.json(); return j && typeof j.limit === 'number' && j.limit >= 0 ? j.limit : ST_DEFAULT; } catch (_) { return ST_DEFAULT; } }
+  function stLesson(url){ let f = ''; try { f = new URL(url).pathname.split('/').pop(); } catch (_) {} return ALL_LESSONS.find(x => x.r2 && x.r2 === f) || ALL_LESSONS.find(x => f === x.id + '.mp4' || f === x.id + '-intro.mp4') || null; }
+  // saved files grouped by lesson (a Kinescope lesson may have only its 5-second start), newest first
+  async function stList(){
+    const out = new Map(); if (!window.caches) return [];
+    try {
+      const c = await caches.open(VCACHE);
+      for (const k of await c.keys()) {
+        const r = await c.match(k); const size = +(r && r.headers.get('content-length')) || 0, t = +(r && r.headers.get('x-saved')) || 0;
+        const l = stLesson(k.url), key = l ? l.id : k.url, g = out.get(key) || { l, size: 0, urls: [], t: 0 };
+        g.size += size; g.urls.push(k.url); g.t = Math.max(g.t, t); out.set(key, g);
+      }
+    } catch (_) {}
+    return [...out.values()].sort((a, b) => b.t - a.t);
+  }
+  async function stDrop(urls){ try { const c = await caches.open(VCACHE); for (const u of urls) { await c.delete(u); stPing('drop', u); } } catch (_) {} }
+  async function stTrim(limit){
+    const list = (await stList()).slice().reverse(); // oldest first
+    let total = list.reduce((a, g) => a + g.size, 0);
+    for (const g of list) { if (total <= limit) break; await stDrop(g.urls); total -= g.size; }
+  }
+  let stArm = 0;
+  function stDisarm(){ clearTimeout(stArm); stArm = 0; const b = $('#storeClear'); b.classList.remove('armed'); b.textContent = T('Очистить всё'); }
+  async function stRender(){
+    const [list, lim] = await Promise.all([stList(), stLimit()]);
+    const used = list.reduce((a, g) => a + g.size, 0);
+    $('#storeState').textContent = used ? stFmt(used) : T('Пусто');
+    if ($('#storeSheet').hidden) return;
+    $('#storeIntro').hidden = isApple; $('#storeApple').hidden = !isApple; $('#storeLimitBox').hidden = isApple;
+    $('#storeUsed').textContent = stFmt(used);
+    $('#storeOf').textContent = isApple ? '' : lim ? T('из {n}', { n: stFmt(lim) }) : T('Видео не хранятся');
+    $('#storeFill').style.width = (lim ? Math.min(100, used / lim * 100) : 0) + '%';
+    const seg = $('#storeLimits'); seg.innerHTML = '';
+    ST_LIMITS.forEach(b => {
+      const x = document.createElement('button'); x.type = 'button'; x.setAttribute('role', 'radio');
+      x.setAttribute('aria-checked', String(b === lim)); x.setAttribute('aria-pressed', String(b === lim));
+      x.textContent = b ? stFmt(b) : T('Не хранить');
+      x.addEventListener('click', async () => {
+        if (b === lim) return;
+        try { await (await caches.open(VCFG)).put(VLIMIT_KEY, new Response(JSON.stringify({ limit: b }), { headers: { 'Content-Type': 'application/json' } })); } catch (_) {}
+        stPing('limit');
+        const before = used; await stTrim(b); await stRender();
+        const freed = before - (await stList()).reduce((a, g) => a + g.size, 0);
+        if (freed > 0) toast(T('Освобождено {n}', { n: stFmt(freed) }));
+      });
+      seg.appendChild(x);
+    });
+    const box = $('#storeList'); box.innerHTML = '';
+    if (!list.length) { const p = document.createElement('p'); p.className = 'stempty'; p.textContent = T('Пока ничего не сохранено'); box.appendChild(p); }
+    list.forEach(g => {
+      const row = document.createElement('div'); row.className = 'strow';
+      const nm = document.createElement('span'); nm.textContent = g.l ? g.l.name : T('Удалённый урок');
+      const sz = document.createElement('em'); sz.textContent = stFmt(g.size);
+      const del = document.createElement('button'); del.type = 'button'; del.setAttribute('aria-label', T('Удалить') + ': ' + nm.textContent);
+      del.innerHTML = '<svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+      del.addEventListener('click', async () => { await stDrop(g.urls); toast(T('Освобождено {n}', { n: stFmt(g.size) })); stRender(); });
+      row.append(nm, sz, del); box.appendChild(row);
+    });
+    $('#storeClear').disabled = !list.length;
+  }
+  // «Очистить всё» asks once more on the same button (no pop-up window): second tap within 4 s deletes
+  $('#storeClear').addEventListener('click', async () => {
+    const b = $('#storeClear');
+    if (!stArm) { b.classList.add('armed'); b.textContent = T('Нажми ещё раз — удалим всё'); stArm = setTimeout(stDisarm, 4000); return; }
+    stDisarm();
+    const used = (await stList()).reduce((a, g) => a + g.size, 0);
+    try { await caches.delete(VCACHE); } catch (_) {}
+    stPing('reset');
+    toast(T('Освобождено {n}', { n: stFmt(used) }));
+    stRender();
+  });
+  $('#storeItem').addEventListener('click', () => { stDisarm(); $('#storeSheet').hidden = false; stRender(); });
+  $('#storeSheet').addEventListener('click', e => { if (e.target.id === 'storeSheet') $('#storeSheet').hidden = true; });
+  setTimeout(stRender, 3000);
   $('#installNative').addEventListener('click', async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
