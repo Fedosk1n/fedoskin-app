@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 32</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 33</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -481,6 +481,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         </ol>
         <div class="row" id="tgLinkRow" hidden style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-accent" id="tgOpen" target="_blank" rel="noopener">Открыть бота в Telegram</a></div>
         <p class="hint" id="tgErr" style="color:#FF8A6B;margin:8px 0 0"></p>
+        <div id="tgOld" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.1);border:1px solid rgba(226,97,26,.45);line-height:1.6" class="hint"><b style="color:var(--accent)">Код сервера устарел</b> — темы для клиентов, переводчик и /help заработают после обновления: нажмите кнопку ниже → Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Edit code</b> → выделите всё (Ctrl+A) → вставьте → <b>Deploy</b> → вернитесь и нажмите «Проверить».</div>
+        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" id="tgCopy2" type="button">Скопировать код сервера</button><button class="btn btn-sm btn-ghost" id="tgCheck2" type="button">Проверить</button></div>
         <p class="hint" id="tgTop" hidden style="margin:10px 0 0"></p>
         <div class="hint" id="tgAi" hidden style="margin:10px 0 0;line-height:1.6"></div>
         <div class="hint" id="tgPull" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.35);line-height:1.6"></div>
@@ -1070,6 +1072,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!cfg.pushUrl) { st.textContent = 'сервер не подключён'; return; }
     try {
       const r = await pushApi('/tg/status');
+      $('#tgOld').hidden = !(r.owner && r.ai === undefined); // a server older than this admin doesn't report topics / translator
       const tp = $('#tgTop'); tp.hidden = !(r.owner && r.topics);
       if (r.topics) {
         tp.style.color = r.topics.on && !r.topics.err ? '#3BD16F' : '#FF8A6B';
@@ -1096,6 +1099,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     }
   }
   $('#tgCheck').addEventListener('click', tgStatus);
+  $('#tgCheck2').addEventListener('click', async () => { const b = $('#tgCheck2'); b.disabled = true; b.textContent = 'Проверяю…'; await tgStatus(); b.disabled = false; b.textContent = 'Проверить'; toast('Проверено'); });
+  $('#tgCopy2').addEventListener('click', () => $('#visCopy').click());
   $('#tgSetup').addEventListener('click', async () => {
     const b = $('#tgSetup'); b.disabled = true; b.textContent = 'Подключаю…'; $('#tgErr').textContent = '';
     try {
