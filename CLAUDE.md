@@ -326,7 +326,9 @@
 - Admin bottom bar on iPhone (owner 07.11.2026 screenshot: «Всё опубликовано» bar hung mid-screen over statistics —
   Safari keeps fixed elements shifted, e.g. after the keyboard): `stickBar()` (last script in admin.html) compares the
   bar's bottom with visualViewport bottom and translateY's it back only when they differ (> 2 px); hides it (`.kb`) while
-  the keyboard is open. Checked on vv resize/scroll, scroll/scrollend, focusout and every 1 s. Admin «версия 9» (12 since the crypto wallet card, 13: «Скопировать код сервера» works on the first tap — fetches + copies via ClipboardItem).
+  the keyboard is open. Checked on vv resize/scroll, scroll/scrollend, focusout and every 1 s. 10.11.2026 (owner: «плашка съезжает при скролинге вверх»): it never measures while the page moves (scroll /
+  vv resize / touchmove / top bounce scrollY < 0) — waits for 250 ms of rest, then measures with the transform removed (no
+  added-up error); a focused SELECT no longer counts as «keyboard open». Admin «версия 9» (12 since the crypto wallet card, 13: «Скопировать код сервера» works on the first tap — fetches + copies via ClipboardItem).
 - Admin icon (owner 02.11.2026): admin.html has its own `admin.webmanifest` (id admin, start/scope admin.html, standalone),
   orange icons `icons/admin-{180,192,512}.png` (black logo + «АДМИНКА» band, Inter Black), status bar `black` (not
   translucent — avoids the iOS 26 short-viewport bug), og preview `icons/admin-share.png` 1200×630. On iPhone the
@@ -407,6 +409,12 @@
   kept as a precaution. If it recurs: ask how the lesson was opened (section / swipe / search) and whether the app was reopened.
   Recurred 09.11 15:03 (whole Tricks section stuck on ▶, mid-deploy of 15:05): R2 files, pass, ranges, moov-first and codecs
   all checked fine (same as Freezes); fully closing + reopening the home-screen app fixed it ⇒ stale code on the phone.
+- «Новые уроки» row order (owner 10.11.2026 «редактировать последовательность роликов»): config key `newRow` = lesson ids in
+  the owner's order; app `paintNewRow()` shows those (hidden/deleted skipped), empty/none ⇒ 10 newest by `added`. Admin
+  «Уроки» → card `#nrCard` (folded by default, `fedoskin-admin-nr`; summary of the first 3): rows with the same drag grip as
+  the lesson list (dragStart handles `data-nr` rows), × removes, «+ Добавить урок в ряд…» puts one first, «Вернуть по дате»
+  deletes `newRow`. A lesson added via «Добавить видео» goes first in a manual row. Save bar item «порядок в ряду «Новые
+  уроки»» (newRow is left out of normCfg). Admin «версия 27».
 - Usability pass (owner 09.11.2026 «переделай все это»): home row «Новые уроки» (`#newHome/#newRow`, `paintNewRow()`:
   10 newest by `added`, repainted on going home after a lesson was seen — `newRowDirty`); section tiles say «N новых»
   (1 новый); NEW pill sits on the lesson cover (`.covernew`). Tab «Онлайн» renamed «Коучинг» with a chat icon. Lesson page:

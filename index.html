@@ -1371,7 +1371,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the newest lessons in one swipeable row on the home screen
   function paintNewRow(){
     const row = $('#newRow'); if (!row) return;
-    const list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
+    // owner's own order from the admin (CFG.newRow, 10.11.2026); none / nothing left ⇒ the 10 newest by date
+    let list = Array.isArray(CFG.newRow) ? CFG.newRow.map(id => BY_ID[id]).filter(Boolean) : [];
+    if (!list.length) list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
     row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l)));
     $('#newHome').hidden = !list.length;
   }

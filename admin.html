@@ -108,6 +108,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .lrow{transition:transform .18s ease}
 .lrow.drag{position:relative;z-index:5;transition:none;background:#1F1F23;border-color:var(--accent);box-shadow:0 14px 34px rgba(0,0,0,.6);scale:1.02}
 .lrow.drag .grip{cursor:grabbing;color:var(--accent)}
+#nrList .lrow{padding:8px 10px}
+#nrList .lrow img,#nrList .lrow .ph{width:36px;height:48px;flex-basis:36px}
+#nrList .num{flex:0 0 22px;text-align:center;font-weight:800;color:var(--muted);font-size:13px}
+.nrx{flex:0 0 auto;width:34px;height:34px;border:0;border-radius:10px;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.nrx:hover{color:#fff;background:var(--surface-2)}
+#nrList .mt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nrMode{white-space:nowrap}
+#nrMode.man{background:rgba(226,97,26,.16);color:var(--accent)}
+#nrMode.auto{background:var(--surface-2);color:var(--muted)}
 body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 body.dragging .lrow:not(.drag) .tx{pointer-events:none}
 .savebar{position:fixed;left:0;right:0;bottom:0;transition:opacity .15s ease;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 12px);background:rgba(11,11,12,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:20}
@@ -257,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 26</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 27</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -309,6 +318,23 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
             <div class="prog" id="moveProg" hidden><i id="moveBar"></i></div>
           </div>
           <button class="btn btn-sm" id="moveGo" type="button" hidden>Перенести</button>
+        </div>
+      </div>
+      <div class="card" id="nrCard" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;align-items:center;gap:10px">
+          <b>Ряд «Новые уроки» на главной</b>
+          <span class="pill" id="nrMode"></span>
+        </div>
+        <p class="hint" id="nrSum" style="margin:6px 0 0"></p>
+        <button class="btn btn-sm btn-ghost" id="nrOpen" type="button" style="margin-top:10px">Изменить порядок</button>
+        <div id="nrBody" hidden>
+        <p class="hint" id="nrHint" style="margin:6px 0 0"></p>
+        <div id="nrList"></div>
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+          <select id="nrAdd" style="flex:1;min-width:180px"></select>
+          <button class="btn btn-sm btn-ghost" id="nrAuto" type="button" hidden>Вернуть по дате</button>
+          <button class="btn btn-sm btn-ghost" id="nrClose" type="button">Свернуть</button>
+        </div>
         </div>
       </div>
       <p class="muted small" style="margin:12px 0 0">Нажмите на урок, чтобы изменить. Порядок внутри раздела — потяните урок за точки ⠿ справа вверх или вниз. Изменения попадут в приложение после кнопки «Опубликовать» внизу.</p>
@@ -1152,7 +1178,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     });
     return JSON.stringify(o);
   }
-  const normCfg = c => JSON.stringify(Object.keys(Object.assign({}, CFG_DEFAULT, remote ? remote.cfg : {}, c)).sort().map(k => [k, String(c[k] ?? CFG_DEFAULT[k] ?? '')]));
+  const normCfg = c => JSON.stringify(Object.keys(Object.assign({}, CFG_DEFAULT, remote ? remote.cfg : {}, c)).filter(k => k !== 'newRow').sort().map(k => [k, String(c[k] ?? CFG_DEFAULT[k] ?? '')]));
   function pending(){
     const items = [];
     if (!remote) return items;
@@ -1183,6 +1209,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const same = new Set(lessons.filter(l => R[l.id] && R[l.id].sec === l.sec).map(l => l.id));
     const moved = SECTIONS.filter(sec => lessons.filter(l => l.sec === sec && same.has(l.id)).map(l => l.id).join() !== remote.lessons.filter(r => r.sec === sec && same.has(r.id)).map(r => r.id).join());
     if (moved.length) items.push('порядок уроков: ' + moved.join(', '));
+    if (JSON.stringify(cfg.newRow || []) !== JSON.stringify(remote.cfg.newRow || [])) items.push('порядок в ряду «Новые уроки»');
     if (normCfg(cfg) !== normCfg(remote.cfg)) items.push('тексты и настройки');
     return items;
   }
@@ -1250,6 +1277,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         r.append(img, tx, gr); box.appendChild(r);
       });
     });
+    renderNewRow();
   }
   $('#lFilter').addEventListener('input', renderLessons);
   function move(l, d){
@@ -1260,6 +1288,67 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     renderLessons(); paintSaveBar();
   }
 
+  // ---------- «Новые уроки» row on the app's home screen (owner 10.11.2026) ----------
+  // cfg.newRow = lesson ids in the owner's order; empty = automatic (10 newest by date, like the app does).
+  const NR_AUTO = 10;
+  const nrAutoIds = () => lessons.filter(l => !l.hidden).slice().sort((a, b) => String(b.added || '2026-10-01').localeCompare(String(a.added || '2026-10-01'))).slice(0, NR_AUTO).map(l => l.id);
+  const nrManual = () => Array.isArray(cfg.newRow) && cfg.newRow.some(id => lessons.some(l => l.id === id));
+  const nrIds = () => nrManual() ? cfg.newRow.filter(id => lessons.some(l => l.id === id)) : nrAutoIds();
+  function renderNewRow(){
+    const box = $('#nrList'); if (!box) return;
+    const ids = nrIds(), man = nrManual();
+    if (man && ids.length !== cfg.newRow.length) cfg.newRow = ids; // a deleted lesson leaves the row
+    $('#nrMode').textContent = man ? 'ваш порядок' : 'по дате';
+    $('#nrMode').className = 'pill ' + (man ? 'man' : 'auto');
+    $('#nrHint').textContent = man
+      ? 'Так ряд выглядит в приложении. Тяните за точки ⠿, чтобы поменять порядок, × — убрать из ряда. Новый урок, добавленный через «Добавить видео», встанет первым.'
+      : 'Сейчас в ряду ' + NR_AUTO + ' самых новых уроков по дате добавления. Потяните урок за точки ⠿, уберите × или добавьте другой — и ряд будет таким, как вы зададите.';
+    $('#nrAuto').hidden = !man;
+    const open = store.get('fedoskin-admin-nr') === '1';
+    $('#nrBody').hidden = !open; $('#nrOpen').hidden = open; $('#nrSum').hidden = open;
+    $('#nrSum').textContent = ids.slice(0, 3).map((id, i) => (i + 1) + '. ' + lessons.find(x => x.id === id).name).join(' · ') + (ids.length > 3 ? ' · … всего ' + ids.length : '');
+    box.innerHTML = '';
+    ids.forEach((id, i) => {
+      const l = lessons.find(x => x.id === id);
+      const r = document.createElement('div'); r.className = 'lrow' + (l.hidden ? ' off' : ''); r.dataset.id = id; r.dataset.nr = '1';
+      const num = document.createElement('span'); num.className = 'num'; num.textContent = i + 1;
+      const img = document.createElement('img'); img.loading = 'lazy'; img.alt = ''; img.src = coverSrc(l); img.onerror = () => { img.replaceWith(Object.assign(document.createElement('span'), {className: 'ph'})); };
+      const tx = document.createElement('div'); tx.className = 'tx';
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = l.name;
+      if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ — В РЯДУ НЕ ВИДЕН</span>');
+      const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = l.sec + ' · ' + (l.added || '—');
+      tx.append(nm, mt);
+      const x = document.createElement('button'); x.className = 'nrx'; x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Убрать «' + l.name + '» из ряда');
+      x.addEventListener('click', () => {
+        const left = nrIds().filter(v => v !== id);
+        if (!left.length) { toast('В ряду должен остаться хотя бы один урок', true); return; }
+        cfg.newRow = left; renderNewRow(); paintSaveBar(); toast('«' + l.name + '» убран из ряда «Новые уроки»');
+      });
+      const gr = document.createElement('button'); gr.className = 'grip'; gr.type = 'button';
+      gr.innerHTML = '<svg viewBox="0 0 18 22" fill="currentColor" aria-hidden="true"><circle cx="5" cy="4" r="1.9"/><circle cx="13" cy="4" r="1.9"/><circle cx="5" cy="11" r="1.9"/><circle cx="13" cy="11" r="1.9"/><circle cx="5" cy="18" r="1.9"/><circle cx="13" cy="18" r="1.9"/></svg>';
+      gr.setAttribute('aria-label', 'Перетащить «' + l.name + '» (или стрелки ↑ ↓ на клавиатуре)');
+      gr.disabled = ids.length < 2;
+      gr.addEventListener('keydown', e => { if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return; e.preventDefault();
+        const a = nrIds(), j = i + (e.key === 'ArrowUp' ? -1 : 1); if (j < 0 || j >= a.length) return;
+        [a[i], a[j]] = [a[j], a[i]]; cfg.newRow = a; renderNewRow(); paintSaveBar();
+        const g = document.querySelector('#nrList .lrow[data-id="' + id + '"] .grip'); if (g) g.focus(); });
+      gr.addEventListener('pointerdown', e => dragStart(e, r, l));
+      r.append(num, img, tx, x, gr); box.appendChild(r);
+    });
+    const sel = $('#nrAdd'); sel.innerHTML = '';
+    sel.add(new Option('+ Добавить урок в ряд…', ''));
+    lessons.filter(l => !l.hidden && !ids.includes(l.id)).sort((a, b) => String(b.added || '').localeCompare(String(a.added || ''))).forEach(l => sel.add(new Option(l.name + ' · ' + l.sec, l.id)));
+    sel.disabled = sel.options.length < 2;
+  }
+  $('#nrAdd').addEventListener('change', e => {
+    const id = e.target.value; if (!id) return;
+    cfg.newRow = [id].concat(nrIds().filter(v => v !== id)); renderNewRow(); paintSaveBar();
+    const l = lessons.find(x => x.id === id); toast('«' + (l ? l.name : id) + '» — первый в ряду. Потяните, чтобы поставить на другое место');
+  });
+  $('#nrOpen').addEventListener('click', () => { store.set('fedoskin-admin-nr', '1'); renderNewRow(); });
+  $('#nrClose').addEventListener('click', () => { store.set('fedoskin-admin-nr', '0'); renderNewRow(); $('#nrCard').scrollIntoView({ block: 'nearest' }); });
+  $('#nrAuto').addEventListener('click', () => { delete cfg.newRow; renderNewRow(); paintSaveBar(); toast('Ряд снова собирается сам — 10 самых новых по дате'); });
+
   // ---------- drag to reorder (owner 07.11.2026) ----------
   // Only the dragged row moves with the finger; the others in its section slide by one row to show the drop place.
   // Near the top/bottom of the screen the page scrolls by itself. Drop ⇒ lessons array reordered within the section.
@@ -1267,11 +1356,12 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   function dragStart(e, row, l){
     if (e.button > 0 || row.querySelector('.grip').disabled) return;
     e.preventDefault();
-    const rows = [...document.querySelectorAll('.lrow[data-sec="' + CSS.escape(l.sec) + '"]')];
+    const nr = !!row.dataset.nr;
+    const rows = [...document.querySelectorAll(nr ? '#nrList .lrow' : '#lessonList .lrow[data-sec="' + CSS.escape(l.sec) + '"]')];
     const from = rows.indexOf(row);
     const tops = rows.map(r => r.getBoundingClientRect().top + scrollY);
     const step = rows.length > 1 ? (tops[rows.length - 1] - tops[0]) / (rows.length - 1) : row.offsetHeight + 8;
-    drag = { row, l, rows, from, to: from, tops, step, y0: e.clientY + scrollY, y: e.clientY, id: e.pointerId, raf: 0 };
+    drag = { nr, row, l, rows, from, to: from, tops, step, y0: e.clientY + scrollY, y: e.clientY, id: e.pointerId, raf: 0 };
     try { row.querySelector('.grip').setPointerCapture(e.pointerId); } catch (_) {}
     row.classList.add('drag'); document.body.classList.add('dragging');
     if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {}
@@ -1304,6 +1394,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (d.to === d.from) { d.row.classList.remove('drag'); d.rows.forEach(r => { r.style.transform = ''; }); return; }
     // settle the dragged row into its slot, then reorder the data and redraw
     d.row.style.transition = 'transform .15s ease'; d.row.style.transform = 'translateY(' + (d.tops[d.to] - d.tops[d.from]) + 'px)';
+    if (d.nr) return setTimeout(() => {
+      const ids = nrIds(); ids.splice(d.from, 1); ids.splice(d.to, 0, d.l.id);
+      cfg.newRow = ids; renderNewRow(); paintSaveBar();
+      const r = document.querySelector('#nrList .lrow[data-id="' + d.l.id + '"]');
+      if (r) r.animate([{ background: 'rgba(226,97,26,.25)' }, { background: '' }], { duration: 700 });
+      toast('«' + d.l.name + '» — теперь ' + (d.to + 1) + '-й в ряду «Новые уроки». Не забудьте «Опубликовать»');
+    }, 150);
     setTimeout(() => {
       const list = lessons.filter(x => x.sec === d.l.sec), slots = list.map(x => lessons.indexOf(x));
       list.splice(d.from, 1); list.splice(d.to, 0, d.l);
@@ -1858,6 +1955,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       let at = -1; lessons.forEach((x, i) => { if (x.sec === fSec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
       uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
+      if (Array.isArray(cfg.newRow) && cfg.newRow.length) cfg.newRow = [id].concat(cfg.newRow.filter(x => x !== id)); // a manual row gets the new lesson first
       renderLessons(); paintSaveBar();
       toast('Урок готов. Нажмите «Опубликовать» внизу');
       // what was saved — stays on screen after the form is cleared for the next video
@@ -2615,28 +2713,32 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 // Fix: hide the bar while the keyboard is open, and whenever its bottom edge does not sit on the visible screen's
 // bottom, move it back there (only then — normally nothing is touched).
 (function stickBar(){
+  // Keeps the bottom bar on the visible bottom edge on iPhone (07.11.2026: after the keyboard Safari left it mid-screen).
+  // 10.11.2026 (owner: «плашка съезжает при скролинге вверх»): never measure while the page moves — during a scroll / the
+  // top bounce / Safari's toolbar animation the numbers are half-updated and the old code pushed the bar off by them and
+  // added up the error. Now: wait until the page rests 250 ms, then measure from scratch (transform removed first).
   const bar = document.getElementById('savebar'), vv = window.visualViewport;
   if (!bar || !vv) return;
-  let shift = 0, raf = 0;
+  let raf = 0, moved = 0, wait = 0;
   function fix(){
     raf = 0;
     if (bar.hidden) return;
-    const visBottom = vv.offsetTop + vv.height;
-    const kb = window.innerHeight - vv.height > 150 && /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+    const since = performance.now() - moved;
+    if (since < 250 || scrollY < 0) { clearTimeout(wait); wait = setTimeout(later, 260 - Math.min(since, 250)); return; }
+    const kb = window.innerHeight - vv.height > 150 && /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || '');
     bar.classList.toggle('kb', kb);
     if (kb) return;
-    const r = bar.getBoundingClientRect();
-    const miss = visBottom - r.bottom;
-    if (Math.abs(miss) > 2) { shift += miss; bar.style.transform = shift ? 'translateY(' + shift.toFixed(1) + 'px)' : ''; }
-    else if (shift && Math.abs(window.innerHeight - visBottom) < 2) { // back to normal: let CSS place it again
-      bar.style.transform = ''; shift = 0;
-      const r2 = bar.getBoundingClientRect(), m2 = visBottom - r2.bottom;
-      if (Math.abs(m2) > 2) { shift = m2; bar.style.transform = 'translateY(' + m2.toFixed(1) + 'px)'; }
-    }
+    const was = bar.style.transform;
+    bar.style.transform = '';
+    const miss = vv.offsetTop + vv.height - bar.getBoundingClientRect().bottom;
+    const want = Math.abs(miss) > 2 ? 'translateY(' + miss.toFixed(1) + 'px)' : '';
+    if (want !== was) bar.style.transform = want; else bar.style.transform = was;
   }
   const later = () => { if (!raf) raf = requestAnimationFrame(fix); };
-  vv.addEventListener('resize', later); vv.addEventListener('scroll', later);
-  window.addEventListener('scroll', later, { passive: true }); window.addEventListener('resize', later);
+  const moving = () => { moved = performance.now(); later(); };
+  vv.addEventListener('resize', moving); vv.addEventListener('scroll', moving);
+  window.addEventListener('scroll', moving, { passive: true }); window.addEventListener('resize', moving);
+  window.addEventListener('touchmove', () => { moved = performance.now(); }, { passive: true });
   document.addEventListener('focusin', later);
   document.addEventListener('focusout', () => { setTimeout(later, 60); setTimeout(later, 350); });
   window.addEventListener('scrollend', later);
