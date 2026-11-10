@@ -41,6 +41,11 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 export default {
+  // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
+  async scheduled(ev, env, ctx) {
+    if (!env.TG_TOKEN || !env.DB) return;
+    ctx.waitUntil((async () => { await schema(env.DB); await tgSet(env.DB, 'cron', Date.now()); await tgPull(env, 0); })().catch(() => {}));
+  },
   async fetch(req, env) {
     const cors = {
       'Access-Control-Allow-Origin': '*',
@@ -407,6 +412,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS chat_msg (n INTEGER PRIMARY KEY AUTOINCREMENT, thr TEXT NOT NULL, dir TEXT NOT NULL, kind TEXT NOT NULL, text TEXT, media TEXT, t INTEGER)'),
     db.prepare('CREATE INDEX IF NOT EXISTS chat_msg_thr ON chat_msg (thr, n)'),
     db.prepare('CREATE TABLE IF NOT EXISTS chat_map (tg INTEGER PRIMARY KEY, thr TEXT NOT NULL)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS tgs (k TEXT PRIMARY KEY, v TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
@@ -720,6 +726,7 @@ async function chatGet(req, env, json) {
   const { t, err, none, id } = await chatThread(env, q, req, false);
   if (err) return json({ ok: false, why: err }, 403);
   if (none) return json({ msgs: [], on: await chatOn(env) });
+  await tgPull(env).catch(() => {}); // pull mode: bring the coach's fresh answers first
   const after = Math.max(0, parseInt(q.after) || 0);
   const r = await env.DB.prepare('SELECT n, dir, kind, text, media, t FROM chat_msg WHERE thr = ? AND n > ? ORDER BY n LIMIT 200').bind(t.id, after).all();
   const origin = new URL(req.url).origin;
@@ -740,8 +747,14 @@ const PUSH_TITLE = { ru: 'Ответ тренера', en: 'Your coach replied', 
 const PUSH_MEDIA = { ru: 'Фото или видео', en: 'Photo or video', es: 'Foto o video', pt: 'Foto ou vídeo', fr: 'Photo ou vidéo', de: 'Foto oder Video', ja: '写真または動画', ko: '사진 또는 동영상', zh: '图片或视频' };
 async function tgHook(req, env, json) {
   if (!env.TG_TOKEN || req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== (await env.PUSH.get('tg:hook'))) return json({ ok: false }, 403);
-  const u = await req.json().catch(() => ({})), m = u.message;
-  if (!m || !m.chat) return json({ ok: true });
+  const u = await req.json().catch(() => ({}));
+  await tgUpdate(env, u.message);
+  return json({ ok: true });
+}
+// one message to the bot (from the webhook or from getUpdates in the pull mode)
+async function tgUpdate(env, m) {
+  const json = () => null;
+  if (!m || !m.chat) return;
   const owner = await env.PUSH.get('tg:owner'), from = String(m.chat.id);
   try {
     const start = /^\/start(?:\s+(\S+))?/.exec(m.text || '');
@@ -790,7 +803,29 @@ async function tgHook(req, env, json) {
   } catch (e) {
     await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Не получилось доставить: ' + String(e && e.message || e).slice(0, 200), reply_to_message_id: m.message_id }).catch(() => {});
   }
-  return json({ ok: true });
+}
+// ----- pull mode (10.11.2026): Telegram answered setWebhook with «bad webhook: Failed to resolve host» — its servers
+// could not reach *.workers.dev. Then the worker fetches the coach's messages itself (getUpdates): every minute from the
+// Cron trigger, every few seconds while a client has the chat open (/chat/get), and on the admin's «Проверить».
+// State in D1 table tgs (k, v): mode = hook|pull, off = next update id, lock = busy-until / last pull time, cron = last tick.
+async function tgGet(db, k) { const r = await db.prepare('SELECT v FROM tgs WHERE k = ?').bind(k).first(); return r ? r.v : null; }
+async function tgSet(db, k, v) { await db.prepare('INSERT INTO tgs (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(k, String(v)).run(); }
+async function tgPull(env, gap = 3000) {
+  if (!env.TG_TOKEN || !env.DB) return;
+  const db = env.DB; await schema(db);
+  if ((await tgGet(db, 'mode')) !== 'pull') return;
+  const now = Date.now();
+  // claim: only one pull at a time, and not more often than `gap`
+  const c = await db.prepare("INSERT INTO tgs (k, v) VALUES ('lock', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v WHERE CAST(tgs.v AS INTEGER) < ?").bind(String(now + 30000), now - gap).run();
+  if (!c.meta || !c.meta.changes) return;
+  try {
+    let off = parseInt(await tgGet(db, 'off')) || 0;
+    const ups = await tg(env, 'getUpdates', { offset: off || undefined, timeout: 0, limit: 50, allowed_updates: ['message'] });
+    for (const u of ups) {
+      off = u.update_id + 1; await tgSet(db, 'off', off); // saved first: a message is never handled twice
+      await tgUpdate(env, u.message);
+    }
+  } finally { await tgSet(db, 'lock', Date.now()); }
 }
 async function tgAdmin(req, env, path, json) {
   if (!env.TG_TOKEN) return json({ error: 'no-token' }, 409);
@@ -798,14 +833,28 @@ async function tgAdmin(req, env, path, json) {
   if (path === '/tg/status') {
     const me = await tg(env, 'getMe').catch(e => ({ err: e.message }));
     if (me.err) return json({ error: 'token: ' + me.err }, 409);
+    await schema(env.DB);
+    const mode = await tgGet(env.DB, 'mode');
+    if (mode === 'pull') {
+      await tgPull(env, 0).catch(() => {});
+      const cron = parseInt(await tgGet(env.DB, 'cron')) || 0;
+      return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: true, mode, cron: cron && Date.now() - cron < 5 * 60e3 });
+    }
     const info = await tg(env, 'getWebhookInfo').catch(() => ({}));
-    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '' });
+    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '', mode: 'hook' });
   }
   // /tg/setup: point the webhook here, make a one-time binding link for the coach's own Telegram
   const me = await tg(env, 'getMe');
   const secret = b64u(crypto.getRandomValues(new Uint8Array(24))), bind = rvCode(16);
   await env.PUSH.put('tg:hook', secret); await env.PUSH.put('tg:bind', bind, { expirationTtl: 3600 });
-  await tg(env, 'setWebhook', { url: new URL(req.url).origin + '/tg/hook', secret_token: secret, allowed_updates: ['message'], drop_pending_updates: true });
   await schema(env.DB);
-  return json({ ok: true, bot: me.username, link: 'https://t.me/' + me.username + '?start=' + bind, owner: !!(await env.PUSH.get('tg:owner')) });
+  let mode = 'hook';
+  try { await tg(env, 'setWebhook', { url: new URL(req.url).origin + '/tg/hook', secret_token: secret, allowed_updates: ['message'], drop_pending_updates: true }); }
+  catch (e) { // Telegram can't reach us ⇒ we go to Telegram (getUpdates works only without a webhook)
+    mode = 'pull';
+    await tg(env, 'deleteWebhook', { drop_pending_updates: true }).catch(() => {});
+    await tgSet(env.DB, 'off', 0); await tgSet(env.DB, 'lock', 0);
+  }
+  await tgSet(env.DB, 'mode', mode);
+  return json({ ok: true, mode, bot: me.username, link: 'https://t.me/' + me.username + '?start=' + bind, owner: !!(await env.PUSH.get('tg:owner')) });
 }

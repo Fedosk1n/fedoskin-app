@@ -490,3 +490,11 @@
   Owner answers by REPLYING to a client's message (text/photo/video) ⇒ saved + web push + 👍 reaction; a non-reply gets a
   hint. Client media URLs are signed (/chat/m/<key>?s=). 30 messages/hour per thread. No reply-time promise in the chat
   header (owner removed those). Tested with a fake Telegram API (node:sqlite D1, in-memory R2/KV). Admin «версия 26».
+  Pull mode (10.11.2026, live setup failed: setWebhook «bad webhook: Failed to resolve host» — Telegram couldn't resolve
+  fedoskin-push.fedosk1n.workers.dev although public DNS answers fine): /tg/setup falls back to deleteWebhook + D1 table
+  `tgs` (mode hook|pull, off, lock, cron); `tgPull()` = getUpdates → `tgUpdate()` (the same handler the webhook uses), offset
+  saved before handling (no doubles), one pull at a time via a conditional UPSERT on `lock`, ≥3 s apart from /chat/get
+  (the open chat polls every 4 s ⇒ replies in seconds), gap 0 from the admin's «Проверить» (/tg/status — also binds the
+  owner after Start) and from the Cron trigger (`scheduled()`, owner adds «* * * * *» in Cloudflare; status `cron` = a tick
+  within 5 min). Without cron, a closed app gets the reply (and push) only on the next pull. Admin «версия 28»: `#tgPull`
+  explains the mode + cron steps. Tested on a fake Telegram (srv3: failing setWebhook, getUpdates queue, /__cron).

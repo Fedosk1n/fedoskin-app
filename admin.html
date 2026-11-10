@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 27</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 28</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -481,6 +481,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         </ol>
         <div class="row" id="tgLinkRow" hidden style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-accent" id="tgOpen" target="_blank" rel="noopener">Открыть бота в Telegram</a></div>
         <p class="hint" id="tgErr" style="color:#FF8A6B;margin:8px 0 0"></p>
+        <div class="hint" id="tgPull" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.35);line-height:1.6"></div>
         <p class="hint" style="margin:10px 0 0">Как отвечать: в Telegram смахните сообщение клиента влево (или «Ответить») и пишите — текст, фото, видео. Бот поставит 👍, когда ответ дойдёт до клиента.</p>
       </div>
       <div class="card" id="rvOld" hidden style="margin-top:12px;border-color:var(--accent)">
@@ -1060,6 +1061,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!cfg.pushUrl) { st.textContent = 'сервер не подключён'; return; }
     try {
       const r = await pushApi('/tg/status');
+      const pull = $('#tgPull'); pull.hidden = !(r.mode === 'pull' && r.owner);
+      if (r.mode === 'pull' && r.owner) pull.innerHTML = r.cron
+        ? '<b>Запасной режим</b>: Telegram не может достучаться до вашего сервера, поэтому сервер сам забирает ваши ответы — раз в минуту, а когда у клиента открыт чат, через несколько секунд. Всё работает ✓'
+        : '<b>Запасной режим</b>: Telegram не может достучаться до вашего сервера, поэтому сервер сам забирает ваши ответы. Пока у клиента открыт чат — ответ появится через несколько секунд. <b>Чтобы ответ приходил и уведомлением, когда приложение закрыто, добавьте расписание (один раз, 1 минута):</b><br>Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Settings</b> → <b>Trigger Events</b> (или «Triggers») → <b>Add</b> → <b>Cron Triggers</b> → <b>Every minute</b> (или впишите <code>* * * * *</code>) → <b>Add</b>. Через пару минут нажмите «Проверить».';
       if (r.owner && r.hook) { st.textContent = 'работает ✓'; st.classList.add('ok'); $('#tgOk').hidden = false; $('#tgOk').textContent = 'Чат включён: сообщения клиентов приходят вам в Telegram от @' + r.bot + '. В приложении у клиентов есть кнопка «Написать в чат».'; $('#tgSteps').hidden = true; $('#tgLinkRow').hidden = true; }
       else { st.textContent = r.owner ? 'нажмите «Подключить»' : 'шаг 4: Подключить → Start'; st.classList.remove('ok'); $('#tgOk').hidden = true; $('#tgSteps').hidden = false; if (r.hookErr) err.textContent = 'Telegram: ' + r.hookErr; }
     } catch (e) {
@@ -1076,7 +1081,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     try {
       const r = await pushApi('/tg/setup', {});
       $('#tgOpen').href = r.link; $('#tgLinkRow').hidden = false;
-      toast('Готово — откройте бота и нажмите Start');
+      toast('Готово — откройте бота и нажмите Start, потом «Проверить»');
     } catch (e) { $('#tgErr').textContent = /no-token/.test(e.message) ? 'Сервер не видит ключ бота — проверьте шаг 2 (имя TG_TOKEN, тип Secret, Deploy).' : /not found/.test(e.message) ? 'Сначала обновите код сервера (шаг 3).' : 'Не получилось: ' + e.message; }
     b.disabled = false; b.textContent = 'Подключить';
   });
