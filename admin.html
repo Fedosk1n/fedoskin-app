@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 34</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 35</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -1114,7 +1114,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       else {
         const ok = r.parsed && r.parsed.ru;
         out.style.color = ok ? '' : '#FF8A6B';
-        out.textContent = 'Клиент пишет: ' + r.sample + '\nВам придёт: ' + (ok ? '🇷🇺 ' + r.parsed.ru + '  (язык: ' + r.parsed.lang + ')' : 'перевод не разобран. Ответ переводчика: ' + r.raw) + '\n\nВы пишете: Привет! Пришли видео сбоку, посмотрю где теряешь скорость.\nКлиент получит: ' + (r.back || '—');
+        out.textContent = 'Клиент пишет: ' + r.sample + '\nВам придёт: ' + (ok ? '🇷🇺 ' + r.parsed.ru + '  (язык: ' + r.parsed.lang + ')' : 'перевод не разобран' + (r.raw ? '. Ответ переводчика: ' + r.raw : '')) + '\n\nВы пишете: Привет! Пришли видео сбоку, посмотрю где теряешь скорость.\nКлиент получит: ' + (r.back || '—') + (r.model ? '\n\nПереводит: ' + r.model.split('/').pop() : '');
       }
     } catch (e) { out.style.color = '#FF8A6B'; out.textContent = /not found/.test(e.message) ? 'Сначала обновите код сервера (кнопка «Скопировать код сервера» выше).' : 'Ошибка: ' + e.message; }
     b.disabled = false; b.textContent = 'Проверить переводчик';

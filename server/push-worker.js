@@ -674,22 +674,56 @@ const CHAT_HINT = '\n\n↩️ Чтобы ответить клиенту — с�
 const TR_MODEL = '@cf/google/gemma-3-12b-it';
 const LANG_EN = { ru: 'Russian', en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', it: 'Italian', pl: 'Polish', nl: 'Dutch', tr: 'Turkish', uk: 'Ukrainian', ar: 'Arabic', id: 'Indonesian', vi: 'Vietnamese', th: 'Thai', sv: 'Swedish', fi: 'Finnish', ro: 'Romanian', cs: 'Czech', he: 'Hebrew', hi: 'Hindi', kk: 'Kazakh', ky: 'Kyrgyz', uz: 'Uzbek' };
 const TR_RULES = 'This is a private chat between a breakdance (breaking) coach and his student. Keep breaking move names in English as dancers say them (windmill, flare, airflare, headspin, swipes, turtle, munchmill, 1990, 2000, freeze, chair freeze, toprock, footwork, 6-step, 3-step, CC, kick-out, godown, powermove, handstand, baby freeze). Keep names, emojis, links, numbers and line breaks. Keep the tone: casual stays casual, slang stays slang. Never add explanations, quotes or notes.';
+// Models are tried in order; the first that answers is remembered (tgs 'trModel'), refused ones are skipped for a day
+// (tgs 'trBad'). Live 10.11.2026: gemma answered «5018: This account is not allowed to access» on the owner's account.
+const TR_MODELS = ['@cf/mistralai/mistral-small-3.1-24b-instruct', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/google/gemma-3-12b-it', '@cf/meta/llama-3.1-8b-instruct-fp8-fast'];
+const M2M = '@cf/meta/m2m100-1.2b';
 async function aiRun(env, system, user) {
-  const r = await env.AI.run(TR_MODEL, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: 1200, temperature: 0.2 });
-  // models answer either {response} or the OpenAI shape {choices:[{message:{content}}]}
-  let out = r && (r.response ?? r.result?.response ?? r.choices?.[0]?.message?.content ?? r.output_text);
-  if (out && typeof out === 'object') out = out.content || JSON.stringify(out);
-  out = String(out || '').replace(/^```[a-z]*\s*|```\s*$/g, '').trim();
-  if (!out) throw new Error('empty answer: ' + JSON.stringify(r).slice(0, 160));
+  const db = env.DB; await schema(db);
+  let bad = {}; try { bad = JSON.parse((await tgGet(db, 'trBad')) || '{}') || {}; } catch (_) {}
+  const pref = await tgGet(db, 'trModel');
+  const order = [...new Set([pref, ...TR_MODELS].filter(m => m && TR_MODELS.includes(m)))].filter(m => !(bad[m] > Date.now() - 864e5));
+  const errs = [];
+  for (const model of order.length ? order : TR_MODELS) {
+    let r;
+    try { r = await env.AI.run(model, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: 1200, temperature: 0.2 }); }
+    catch (e) {
+      const msg = String(e && e.message || e); errs.push(model.split('/').pop() + ': ' + msg.slice(0, 90));
+      if (/5018|not allowed|5007|no such model|not found|deprecat/i.test(msg)) { bad[model] = Date.now(); await tgSet(db, 'trBad', JSON.stringify(bad)); continue; }
+      throw new Error(msg);
+    }
+    // models answer either {response} or the OpenAI shape {choices:[{message:{content}}]}
+    let out = r && (r.response ?? r.result?.response ?? r.choices?.[0]?.message?.content ?? r.output_text);
+    if (out && typeof out === 'object') out = out.content || JSON.stringify(out);
+    out = String(out || '').replace(/^```[a-z]*\s*|```\s*$/g, '').trim();
+    if (!out) { errs.push(model + ': empty'); continue; }
+    if (pref !== model) await tgSet(db, 'trModel', model);
+    aiRun.model = model;
+    return out;
+  }
+  throw new Error('no model: ' + errs.join(' · '));
+}
+// last resort: the translation-only model (no language detection — the caller passes the languages)
+async function m2m(env, text, from, to) {
+  const r = await env.AI.run(M2M, { text, source_lang: from, target_lang: to });
+  const out = String((r && (r.translated_text || r.result?.translated_text)) || '').trim();
+  if (!out) throw new Error('m2m empty');
+  aiRun.model = M2M;
   return out;
 }
 async function trErr(env, e, raw) { try { await tgSet(env.DB, 'trErr', (new Date().toISOString().slice(0, 16) + ' ' + String(e && e.message || e) + (raw ? ' | ' + raw : '')).slice(0, 300)); } catch (_) {} }
 // client → coach: {lang (ISO code the client wrote in), ru (Russian translation, '' when the text is already Russian)}
-async function trIn(env, text) {
+async function trIn(env, text, hint) {
   if (!env.AI || !text || !/\p{L}/u.test(text)) return null;
   let out = '';
   try {
-    out = await aiRun(env, 'You translate messages into Russian. ' + TR_RULES + ' Answer in exactly this format: the first line is the ISO 639-1 code of the language the message is written in (for example en, es, pt), the second line is exactly ---, then the Russian translation. If the message is already in Russian, write ru, then ---, then nothing.', text);
+    try { out = await aiRun(env, 'You translate messages into Russian. ' + TR_RULES + ' Answer in exactly this format: the first line is the ISO 639-1 code of the language the message is written in (for example en, es, pt), the second line is exactly ---, then the Russian translation. If the message is already in Russian, write ru, then ---, then nothing.', text); }
+    catch (e) {
+      if (!/^no model/.test(e.message)) throw e;
+      if (/[А-Яа-яЁё]/.test(text)) return { lang: 'ru', ru: '' };
+      const from = hint && hint !== 'ru' ? hint : 'en';
+      return { lang: from, ru: await m2m(env, text, from, 'ru') };
+    }
     // lenient: «es», «**es**», «Language: es», then a line of dashes; no dashes ⇒ the whole answer is the translation
     const clean = out.replace(/\*\*/g, '');
     const m = /^\s*(?:[A-Za-z ]*:\s*)?([a-z]{2})\b[^\n]*\n\s*-{3,}\s*\n?([\s\S]*)$/i.exec(clean);
@@ -701,10 +735,11 @@ async function trIn(env, text) {
   } catch (e) { await trErr(env, e, out.slice(0, 120)); return null; }
 }
 async function trOut(env, text, lang) {
-  return aiRun(env, 'Translate the coach\'s message from Russian into ' + (LANG_EN[lang] || lang) + '. ' + TR_RULES + ' Write it the way the coach would say it to his student in that language. Output only the translation.', text);
+  try { return await aiRun(env, 'Translate the coach\'s message from Russian into ' + (LANG_EN[lang] || lang) + '. ' + TR_RULES + ' Write it the way the coach would say it to his student in that language. Output only the translation.', text); }
+  catch (e) { if (/^no model/.test(e.message)) return m2m(env, text, 'ru', lang); throw e; }
 }
 async function trNote(env, t, text) { // remember the client's language; return the line(s) the coach sees under the original
-  const r = await trIn(env, text);
+  const r = await trIn(env, text, (await tgGet(env.DB, 'tl:' + t.id)) || t.lang);
   if (!r) return '';
   if (r.lang && r.lang !== 'ru') await tgSet(env.DB, 'tl:' + t.id, r.lang);
   return r.ru ? '\n\n🇷🇺 ' + r.ru : '';
@@ -959,8 +994,8 @@ async function tgAdmin(req, env, path, json) {
     const b = await req.json().catch(() => ({}));
     const sample = String(b.text || 'Hola coach, no puedo hacer más de una vuelta y media de flare y me duelen las muñecas').slice(0, 500);
     const res = { ok: true, sample };
-    try { res.raw = await aiRun(env, 'You translate messages into Russian. ' + TR_RULES + ' Answer in exactly this format: the first line is the ISO 639-1 code of the language the message is written in (for example en, es, pt), the second line is exactly ---, then the Russian translation. If the message is already in Russian, write ru, then ---, then nothing.', sample); } catch (e) { res.ok = false; res.error = String(e && e.message || e); return json(res); }
-    res.parsed = await trIn(env, sample);
+    try { res.parsed = await trIn(env, sample, 'es'); res.model = aiRun.model; } catch (e) { res.ok = false; res.error = String(e && e.message || e); return json(res); }
+    if (!res.parsed) { res.ok = false; res.error = (await tgGet(env.DB, 'trErr')) || 'no answer'; return json(res); }
     try { res.back = await trOut(env, 'Привет! Пришли видео сбоку, посмотрю где теряешь скорость.', (res.parsed && res.parsed.lang) || 'es'); } catch (e) { res.ok = false; res.error = 'back: ' + String(e && e.message || e); }
     if (res.ok && res.parsed) await tgSet(env.DB, 'trErr', '');
     return json(res);
