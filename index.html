@@ -140,7 +140,10 @@ p{margin:0}
 .rvitem.flash{animation:rvflash 1.4s ease}
 @keyframes rvflash{0%,40%{background:rgba(227,196,122,.09)}100%{background:transparent}}
 /* chat with the coach (09.11.2026): the client writes here, the coach answers from Telegram */
-#chat{display:flex;flex-direction:column;padding:0;overflow:hidden}
+/* fixed to the screen (owner 10.11.2026 iPhone screenshot: in the home-screen app the chat sat ~60 pt lower and the
+   input bar ended up below the drawn area — «некуда вводить текст»). chFit() only shrinks it while the keyboard is open. */
+#chat{display:flex;flex-direction:column;padding:0;overflow:hidden;position:fixed;top:0;bottom:0;left:0;right:0;margin:0 auto;max-width:inherit;height:auto;z-index:6;background:var(--bg)}
+#chat.kb .chatbar{padding-bottom:8px}
 #chat[hidden]{display:none}
 body.chatmode .tabs{display:none}
 .chathead{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:var(--bg)}
@@ -3521,7 +3524,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   function chGrow(){ const t = $('#chatText'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight + 2) + 'px'; }
   // the phone keyboard: keep the bar right above it (iPhone moves the page instead of resizing it)
-  function chFit(){ const vv = window.visualViewport; if (!vv || $('#chat').hidden) { $('#chat').style.height = ''; return; } $('#chat').style.height = vv.height + 'px'; if (vv.offsetTop) window.scrollTo(0, 0); }
+  function chFit(){
+    const c = $('#chat'), vv = window.visualViewport;
+    const kb = !!vv && !c.hidden && vv.height < window.innerHeight - 120; // keyboard open (iPhone moves the page instead of resizing it)
+    c.classList.toggle('kb', kb);
+    if (!kb) { c.style.height = ''; c.style.top = ''; c.style.bottom = ''; return; }
+    c.style.top = vv.offsetTop + 'px'; c.style.bottom = 'auto'; c.style.height = vv.height + 'px';
+  }
   if (window.visualViewport) { visualViewport.addEventListener('resize', chFit); visualViewport.addEventListener('scroll', chFit); }
   $('#chatText').addEventListener('input', chGrow);
   function chNeedName(){

@@ -490,6 +490,9 @@
   Owner answers by REPLYING to a client's message (text/photo/video) ⇒ saved + web push + 👍 reaction; a non-reply gets a
   hint. Client media URLs are signed (/chat/m/<key>?s=). 30 messages/hour per thread. No reply-time promise in the chat
   header (owner removed those). Tested with a fake Telegram API (node:sqlite D1, in-memory R2/KV). Admin «версия 26».
+  iPhone home-screen fix (owner 10.11.2026 screenshot «некуда вводить текст»: the chat sat ~60 pt lower and the input bar
+  fell below the drawn area): `#chat` is now position:fixed to the whole screen; `chFit()` only moves/shrinks it to the
+  visualViewport while the keyboard is open (`.kb`, vv.height < innerHeight − 120).
   Pull mode (10.11.2026, live setup failed: setWebhook «bad webhook: Failed to resolve host» — Telegram couldn't resolve
   fedoskin-push.fedosk1n.workers.dev although public DNS answers fine): /tg/setup falls back to deleteWebhook + D1 table
   `tgs` (mode hook|pull, off, lock, cron); `tgPull()` = getUpdates → `tgUpdate()` (the same handler the webhook uses), offset
