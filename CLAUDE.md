@@ -511,3 +511,11 @@
   'notop' (so «Проверить» makes the next client message retry at once); admin `#tgTop` shows it. Admin «версия 30».
   Live 10.11 11:49–11:51: owner's first messages came without topics (cause unknown yet — threaded mode maybe switched on
   after the first try, cached 10 min); his Reply on the header message worked (👍).
+  Translator (owner 10.11.2026 «оригинальный текст, затем перевод… я пишу на своём языке, ему приходит только на его»):
+  Workers AI binding `AI` (owner adds: worker → Settings → Bindings → Workers AI, name AI), model @cf/google/gemma-3-12b-it
+  (free 10k neurons/day ≈ 400+ short messages). Client text/caption → `trNote()`: model returns «<iso>\n---\n<Russian>»;
+  the coach sees original + «🇷🇺 перевод»; the detected language is kept in tgs 'tl:<thread>' (fallback app language).
+  Coach's text with Cyrillic → `trOut()` into that language; the client gets ONLY the translation (also in the push); the bot
+  answers in the topic «↪️ Клиент получил (англ): …». «!» at the start = send as is. Translator error ⇒ NOT sent + warning.
+  Russian clients: nothing translated. Glossary: move names stay English (TR_RULES). No binding ⇒ as before. /tg/status
+  `ai`; admin `#tgAi` = status or setup steps. Admin «версия 31». Tested with a fake AI (srv3); real gemma output untested.

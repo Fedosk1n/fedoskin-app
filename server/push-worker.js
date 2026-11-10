@@ -666,6 +666,40 @@ function chatHead(t) {
   return '💬 ' + (t.name || 'Без имени') + (t.country ? ' ' + flag(t.country) : '') + (t.svc ? ' · ' + (SVC_RU[t.svc] || t.svc) : '') + ' · ' + (LANG_RU[t.lang] || t.lang) + ' · #' + t.id.slice(0, 5);
 }
 const CHAT_HINT = '\n\n↩️ Чтобы ответить клиенту — смахните это сообщение влево (или «Ответить») и пишите. Можно фото и видео.';
+// ----- translator (owner 10.11.2026 «чтобы был его оригинальный текст, затем перевод… я пишу на своём языке, ему приходит
+// только на его языке»): Cloudflare Workers AI, binding `AI` (Settings → Bindings → Workers AI). The client's text goes
+// to the coach as the original + a Russian translation; the coach's Russian goes to the client translated into the language
+// the client writes in (detected, kept in tgs 'tl:<thread>'; fallback = the app language). «!» at the start = send as is.
+// Free plan: 10 000 neurons/day ≈ 400+ short messages with gemma-3-12b. No AI binding ⇒ everything as before.
+const TR_MODEL = '@cf/google/gemma-3-12b-it';
+const LANG_EN = { ru: 'Russian', en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French', de: 'German', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', it: 'Italian', pl: 'Polish', nl: 'Dutch', tr: 'Turkish', uk: 'Ukrainian', ar: 'Arabic', id: 'Indonesian', vi: 'Vietnamese', th: 'Thai', sv: 'Swedish', fi: 'Finnish', ro: 'Romanian', cs: 'Czech', he: 'Hebrew', hi: 'Hindi', kk: 'Kazakh', ky: 'Kyrgyz', uz: 'Uzbek' };
+const TR_RULES = 'This is a private chat between a breakdance (breaking) coach and his student. Keep breaking move names in English as dancers say them (windmill, flare, airflare, headspin, swipes, turtle, munchmill, 1990, 2000, freeze, chair freeze, toprock, footwork, 6-step, 3-step, CC, kick-out, godown, powermove, handstand, baby freeze). Keep names, emojis, links, numbers and line breaks. Keep the tone: casual stays casual, slang stays slang. Never add explanations, quotes or notes.';
+async function aiRun(env, system, user) {
+  const r = await env.AI.run(TR_MODEL, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: 1200, temperature: 0.2 });
+  const out = String((r && (r.response ?? r.result?.response)) || '').trim();
+  if (!out) throw new Error('empty');
+  return out;
+}
+// client → coach: {lang (ISO code the client wrote in), ru (Russian translation, '' when the text is already Russian)}
+async function trIn(env, text) {
+  if (!env.AI || !text || !/\p{L}/u.test(text)) return null;
+  try {
+    const out = await aiRun(env, 'You translate messages into Russian. ' + TR_RULES + ' Answer in exactly this format: the first line is the ISO 639-1 code of the language the message is written in (for example en, es, pt), the second line is exactly ---, then the Russian translation. If the message is already in Russian, write ru, then ---, then nothing.', text);
+    const m = /^\s*([a-z]{2})\s*\n-{3,}\s*\n?([\s\S]*)$/i.exec(out);
+    if (!m) return null;
+    const lang = m[1].toLowerCase(), ru = m[2].trim();
+    return { lang, ru: lang === 'ru' || ru === text.trim() ? '' : ru };
+  } catch (e) { return null; }
+}
+async function trOut(env, text, lang) {
+  return aiRun(env, 'Translate the coach\'s message from Russian into ' + (LANG_EN[lang] || lang) + '. ' + TR_RULES + ' Write it the way the coach would say it to his student in that language. Output only the translation.', text);
+}
+async function trNote(env, t, text) { // remember the client's language; return the line(s) the coach sees under the original
+  const r = await trIn(env, text);
+  if (!r) return '';
+  if (r.lang && r.lang !== 'ru') await tgSet(env.DB, 'tl:' + t.id, r.lang);
+  return r.ru ? '\n\n🇷🇺 ' + r.ru : '';
+}
 // Topics (owner 10.11.2026 «от всех клиентов в один общий чат — неудобно»): with «Threaded mode» on for the bot (BotFather →
 // mini app → Bot Settings), every client gets a topic of his own in the coach's chat with the bot (Bot API 9.4
 // createForumTopic in private chats); the coach just writes in that topic. Topic ids in D1 chat_top. Topics off ⇒ the
@@ -708,7 +742,9 @@ async function chatSend(req, env, json) {
   const now = Date.now();
   const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, t) VALUES (?, 'in', 'text', ?, ?)").bind(t.id, text, now).run();
   await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
-  try { await chatToOwner(env, t, (owner, top) => tg(env, 'sendMessage', top ? { chat_id: owner, message_thread_id: top, text: text.slice(0, 4096) } : { chat_id: owner, text: (chatHead(t) + '\n\n' + text + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
+  await schema(env.DB);
+  const tr = await trNote(env, t, text);
+  try { await chatToOwner(env, t, (owner, top) => tg(env, 'sendMessage', top ? { chat_id: owner, message_thread_id: top, text: (text + tr).slice(0, 4096) } : { chat_id: owner, text: (chatHead(t) + '\n\n' + text + tr + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
   catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); } // kept; Telegram was not reachable
   return json({ ok: true, n: r.meta && r.meta.last_row_id });
 }
@@ -731,9 +767,11 @@ async function chatFile(req, env, json) {
   const cap = String(q.cap || '').slice(0, 900), now = Date.now();
   const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'in', ?, ?, ?, ?)").bind(t.id, kind, cap, key, now).run();
   await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
+  await schema(env.DB);
+  const tr = cap ? await trNote(env, t, cap) : '';
   try {
     await chatToOwner(env, t, async (owner, top) => {
-      const head = top ? cap : chatHead(t) + (cap ? '\n\n' + cap : '') + (t.fresh ? CHAT_HINT : '');
+      const head = top ? cap + tr : chatHead(t) + (cap ? '\n\n' + cap + tr : '') + (t.fresh ? CHAT_HINT : '');
       const big = kind === 'photo' ? buf.byteLength > 9.5 * 1048576 : buf.byteLength > 49 * 1048576;
       if (big) {
         const link = new URL(req.url).origin + '/chat/m/' + key + '?s=' + await chatSign(env, key, 30);
@@ -802,7 +840,18 @@ async function tgUpdate(env, m) {
     if (!map) { await tg(env, 'sendMessage', { chat_id: from, ...inTop, text: top ? '⚠️ Эта тема не связана с клиентом. Откройте тему с именем клиента и напишите ответ там.' : '⚠️ Не понял, кому это. Напишите в теме клиента (или смахните его сообщение влево — «Ответить») и отправьте ответ ещё раз.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
     const t = await env.DB.prepare('SELECT * FROM chat_thr WHERE id = ?').bind(map.thr).first();
     if (!t) return json({ ok: true });
-    let kind = 'text', media = '', text = m.text || m.caption || '';
+    let kind = 'text', media = '', text = m.text || m.caption || '', sentTr = '';
+    const inT = m.message_thread_id ? { message_thread_id: m.message_thread_id } : {};
+    // the coach writes in Russian ⇒ the client gets his own language only («!» at the start = as is)
+    if (text.startsWith('!')) text = text.slice(1).trim();
+    else if (env.AI && text && /[А-Яа-яЁё]/.test(text)) {
+      await schema(env.DB);
+      const tl = (await tgGet(env.DB, 'tl:' + t.id)) || t.lang || 'en';
+      if (tl !== 'ru') {
+        try { text = await trOut(env, text, tl); sentTr = (LANG_RU[tl] || tl); }
+        catch (e) { await tg(env, 'sendMessage', { chat_id: from, ...inT, text: '⚠️ Переводчик сейчас не ответил — сообщение НЕ отправлено. Отправьте его ещё раз. Чтобы отправить без перевода, начните с «!».', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+      }
+    }
     const file = m.photo ? m.photo[m.photo.length - 1] : m.video || m.animation || (m.document && /^(image|video)\//.test(m.document.mime_type || '') ? m.document : null);
     if (file) {
       const mime = m.photo ? 'image/jpeg' : (file.mime_type || 'video/mp4');
@@ -826,6 +875,7 @@ async function tgUpdate(env, m) {
       pushed = !!(res && res.ok);
       if (res && (res.status === 404 || res.status === 410)) await env.DB.prepare('UPDATE chat_thr SET push = NULL WHERE id = ?').bind(t.id).run();
     }
+    if (sentTr) await tg(env, 'sendMessage', { chat_id: from, ...inT, text: '↪️ Клиент получил (' + sentTr + '): ' + text.slice(0, 3800), reply_to_message_id: m.message_id }).catch(() => {});
     try { await tg(env, 'setMessageReaction', { chat_id: from, message_id: m.message_id, reaction: [{ type: 'emoji', emoji: '👍' }] }); }
     catch (_) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '✓ Доставлено', reply_to_message_id: m.message_id }).catch(() => {}); }
     if (!pushed && !t.push) await env.PUSH.get('tg:nopush:' + t.id).then(async seen => { if (!seen) { await env.PUSH.put('tg:nopush:' + t.id, '1', { expirationTtl: 30 * 86400 }); await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: 'ℹ️ У этого клиента не включены уведомления — он увидит ответ, когда откроет чат в приложении.' }).catch(() => {}); } });
@@ -864,16 +914,16 @@ async function tgAdmin(req, env, path, json) {
     if (me.err) return json({ error: 'token: ' + me.err }, 409);
     await schema(env.DB);
     // topics: what Telegram says about the bot + the last failure; «Проверить» lets the next client message try again at once
-    const topics = { on: !!me.has_topics_enabled, err: (await tgGet(env.DB, 'notopErr')) || '' };
+    const topics = { on: !!me.has_topics_enabled, err: (await tgGet(env.DB, 'notopErr')) || '' }, ai = !!env.AI;
     await tgSet(env.DB, 'notop', 0);
     const mode = await tgGet(env.DB, 'mode');
     if (mode === 'pull') {
       await tgPull(env, 0).catch(() => {});
       const cron = parseInt(await tgGet(env.DB, 'cron')) || 0;
-      return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: true, mode, cron: cron && Date.now() - cron < 5 * 60e3, topics });
+      return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: true, mode, cron: cron && Date.now() - cron < 5 * 60e3, topics, ai });
     }
     const info = await tg(env, 'getWebhookInfo').catch(() => ({}));
-    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '', mode: 'hook', topics });
+    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '', mode: 'hook', topics, ai });
   }
   // /tg/setup: point the webhook here, make a one-time binding link for the coach's own Telegram
   const me = await tg(env, 'getMe');
