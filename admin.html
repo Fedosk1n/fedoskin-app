@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 31</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 32</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -485,7 +485,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <div class="hint" id="tgAi" hidden style="margin:10px 0 0;line-height:1.6"></div>
         <div class="hint" id="tgPull" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.35);line-height:1.6"></div>
         <div class="hint" style="margin:10px 0 0;line-height:1.6"><b>У каждого клиента — своя тема</b> (как отдельный чат внутри бота). Включите один раз: <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> → кнопка <b>Open</b> (мини-приложение) → ваш бот → <b>Bot Settings</b> → <b>Threaded mode</b> — включить. Новые клиенты сразу попадут в свои темы с их именем.</div>
-        <p class="hint" style="margin:8px 0 0">Как отвечать: откройте тему клиента и просто пишите — текст, фото, видео. Без тем — смахните сообщение клиента влево («Ответить»). Бот поставит 👍, когда ответ дойдёт до клиента.</p>
+        <div class="hint" style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2);line-height:1.65"><b>Памятка</b> (в боте — команда <b>/help</b>)
+          <ul style="margin:6px 0 0;padding-left:18px">
+            <li>Откройте тему клиента и просто пишите — текст, фото, видео. Без тем — смахните сообщение клиента влево («Ответить»).</li>
+            <li>🌐 Пишите по-русски — клиент получит перевод на свой язык; бот покажет, что ушло («↪️ Клиент получил…»).</li>
+            <li><b>«!»</b> в начале сообщения — отправить <b>как есть, без перевода</b> (ссылка, фраза на английском). Знак «!» клиент не увидит.</li>
+            <li>👍 под вашим сообщением — ответ дошёл до клиента.</li>
+          </ul></div>
       </div>
       <div class="card" id="rvOld" hidden style="margin-top:12px;border-color:var(--accent)">
         <h2 style="margin:0">Нужно обновить код сервера</h2>

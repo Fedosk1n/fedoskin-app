@@ -715,7 +715,7 @@ async function chatTopic(env, t, owner) {
     const top = r.message_thread_id;
     await env.DB.prepare('INSERT OR REPLACE INTO chat_top (thr, top) VALUES (?, ?)').bind(t.id, top).run();
     await tgSet(env.DB, 'notopErr', '');
-    await tg(env, 'sendMessage', { chat_id: owner, message_thread_id: top, text: 'Новый клиент: ' + chatHead(t).replace(/^💬 /, '') + '\n\nПишите ответ прямо в этой теме — текст, фото, видео. Он придёт клиенту в приложение.' }).catch(() => {});
+    await tg(env, 'sendMessage', { chat_id: owner, message_thread_id: top, text: 'Новый клиент: ' + chatHead(t).replace(/^💬 /, '') + '\n\nПишите ответ прямо в этой теме — текст, фото, видео. Он придёт клиенту в приложение.' + (env.AI && t.lang !== 'ru' ? '\n\n🌐 Пишите по-русски — клиент получит перевод на свой язык. Без перевода (ссылка, фраза на английском) — начните сообщение с «!».' : '') + '\n\nПамятка — /help' }).catch(() => {});
     return top;
   } catch (e) { await tgSet(env.DB, 'notop', Date.now()); await tgSet(env.DB, 'notopErr', String(e && e.message || e).slice(0, 200)); return 0; }
 }
@@ -817,6 +817,13 @@ async function tgHook(req, env, json) {
   return json({ ok: true });
 }
 // one message to the bot (from the webhook or from getUpdates in the pull mode)
+const TG_HELP = 'Памятка: как отвечать клиентам\n\n' +
+  '• У каждого клиента своя тема с его именем. Откройте её и пишите — текст, фото, видео. Ответ придёт клиенту в приложение.\n' +
+  '• Без тем: смахните сообщение клиента влево («Ответить») и пишите.\n' +
+  '• 🌐 Перевод: сообщение клиента приходит оригиналом, ниже — перевод 🇷🇺. Вы пишете по-русски — клиент получает только на своём языке, а бот показывает, что ушло («↪️ Клиент получил…»).\n' +
+  '• «!» в начале сообщения — отправить как есть, без перевода (ссылка, фраза на английском). Сам знак «!» клиент не увидит.\n' +
+  '• 👍 под вашим сообщением — ответ дошёл до клиента.\n' +
+  '• Видео до 20 МБ (больше бот Telegram не заберёт — сожмите или пришлите ссылку).';
 async function tgUpdate(env, m) {
   const json = () => null;
   if (!m || !m.chat) return;
@@ -832,6 +839,7 @@ async function tgUpdate(env, m) {
       return json({ ok: true });
     }
     if (from !== owner) return json({ ok: true }); // only the coach talks to clients through the bot
+    if (/^\/(help|pamyatka|памятка)(?:[\s@]|$)/i.test(m.text || '')) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: TG_HELP }); return json({ ok: true }); }
     await schema(env.DB);
     const top = m.message_thread_id || 0, inTop = top ? { message_thread_id: top } : {};
     let map = top ? await env.DB.prepare('SELECT thr FROM chat_top WHERE top = ?').bind(top).first() : null;
@@ -875,7 +883,10 @@ async function tgUpdate(env, m) {
       pushed = !!(res && res.ok);
       if (res && (res.status === 404 || res.status === 410)) await env.DB.prepare('UPDATE chat_thr SET push = NULL WHERE id = ?').bind(t.id).run();
     }
-    if (sentTr) await tg(env, 'sendMessage', { chat_id: from, ...inT, text: '↪️ Клиент получил (' + sentTr + '): ' + text.slice(0, 3800), reply_to_message_id: m.message_id }).catch(() => {});
+    if (sentTr) {
+      const first = !(await tgGet(env.DB, 'trhint:' + t.id)); if (first) await tgSet(env.DB, 'trhint:' + t.id, 1);
+      await tg(env, 'sendMessage', { chat_id: from, ...inT, text: '↪️ Клиент получил (' + sentTr + '): ' + text.slice(0, 3800) + (first ? '\n\nБез перевода — начните сообщение с «!». Памятка — /help' : ''), reply_to_message_id: m.message_id }).catch(() => {});
+    }
     try { await tg(env, 'setMessageReaction', { chat_id: from, message_id: m.message_id, reaction: [{ type: 'emoji', emoji: '👍' }] }); }
     catch (_) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '✓ Доставлено', reply_to_message_id: m.message_id }).catch(() => {}); }
     if (!pushed && !t.push) await env.PUSH.get('tg:nopush:' + t.id).then(async seen => { if (!seen) { await env.PUSH.put('tg:nopush:' + t.id, '1', { expirationTtl: 30 * 86400 }); await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: 'ℹ️ У этого клиента не включены уведомления — он увидит ответ, когда откроет чат в приложении.' }).catch(() => {}); } });
@@ -913,6 +924,7 @@ async function tgAdmin(req, env, path, json) {
     const me = await tg(env, 'getMe').catch(e => ({ err: e.message }));
     if (me.err) return json({ error: 'token: ' + me.err }, 409);
     await schema(env.DB);
+    if (!(await tgGet(env.DB, 'cmds'))) { await tg(env, 'setMyCommands', { commands: [{ command: 'help', description: 'Памятка: как отвечать клиентам' }] }).then(() => tgSet(env.DB, 'cmds', 1)).catch(() => {}); }
     // topics: what Telegram says about the bot + the last failure; «Проверить» lets the next client message try again at once
     const topics = { on: !!me.has_topics_enabled, err: (await tgGet(env.DB, 'notopErr')) || '' }, ai = !!env.AI;
     await tgSet(env.DB, 'notop', 0);

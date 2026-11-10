@@ -519,3 +519,7 @@
   answers in the topic «↪️ Клиент получил (англ): …». «!» at the start = send as is. Translator error ⇒ NOT sent + warning.
   Russian clients: nothing translated. Glossary: move names stay English (TR_RULES). No binding ⇒ as before. /tg/status
   `ai`; admin `#tgAi` = status or setup steps. Admin «версия 31». Tested with a fake AI (srv3); real gemma output untested.
+  Hints (owner 10.11.2026 «сделай подсказку в админку или в бота» about «!»): bot command /help (also /памятка; menu set
+  once via setMyCommands from /tg/status, tgs 'cmds') = `TG_HELP`; a new topic's intro mentions translation + «!» + /help;
+  the first «↪️ Клиент получил» per thread adds «Без перевода — начните с «!»» (tgs 'trhint:<thr>'). Admin card: always
+  visible «Памятка» box. Admin «версия 32».
