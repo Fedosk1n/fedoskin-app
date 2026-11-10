@@ -383,7 +383,7 @@
   «Победа!» + confetti / «Поражение», «Судьи: 2 : 1», «Реванш» / «Закрыть»; «Пропустить» jumps to the judges. Incoming:
   `btInbox()` 4 s after start, on Profile, on push ⇒ sheet `#btCallSheet` «{name} вызывает тебя на батл!» → «Смотреть
   батл» / «Позже» (both mark seen); never over a lesson/sheet (re-checked in go()). Profile hero card `#btScore`. Server
-  code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo.
+  code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo; the link `?battle=demo` shows one on any phone (no server).
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give

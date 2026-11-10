@@ -4345,7 +4345,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (r.ok) localStorage.setItem('fedoskin-bt-push', tag);
     } catch (_) {}
   }
-  window.fedoskinBattle = (la, lb, win, side) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3 }, b: { id: '2', name: 'Ana', lvl: lb || 6 }, seed: 7, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
+  window.fedoskinBattle = (la, lb, win, side) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: 7, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 
   if (LB_URL) {
     setTimeout(() => btInbox(false), 4000);
@@ -4966,7 +4966,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
-    if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
+    if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
+    else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
     if (rvc && /^[a-z0-9]{10}$/.test(rvc)) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openReviewForm(rvc), 300); }
   } catch (_) {}
