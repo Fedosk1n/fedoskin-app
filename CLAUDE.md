@@ -364,6 +364,9 @@
   (old look flashes into the new, rays, vibration, «Поделиться в сторис» → openStory) — `lvlCheck()` never over a lesson /
   sheet / story, not in the first 2.5 s, re-checked by go() after leaving the lesson; celebrated level in `fedoskin-lvl`
   (first run with the new levels just saves the current one — old 11-level users silently get the new, lower level).
+  v2 detailed outfits (owner 10.11 «детальнее… заморачиваются над шмотками»): `fit` per level {hat, top, pants, shoe} — sneakers in
+  profile (tread, midsole, toe cap, overlays, eyelets, laces, high-top strap), caps with panels/eyelets/flat brim + sticker, beanie,
+  bucket hat, backwards cap with snap strap, rib collars/cuffs, zips, patches, rope chain; mirrored halves via `MIR()`.
   Leaderboard rows: `heroMini()` bust + level badge from the row's minutes (replaced the preset avatar there). Story card
   and the 1080×1920 PNG show the hero + «Уровень N · name». `window.fedoskinLevelUp(a,b)` / `fedoskinStoryImage()` for checks.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
