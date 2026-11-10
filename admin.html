@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 29</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 30</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -481,6 +481,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         </ol>
         <div class="row" id="tgLinkRow" hidden style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-accent" id="tgOpen" target="_blank" rel="noopener">Открыть бота в Telegram</a></div>
         <p class="hint" id="tgErr" style="color:#FF8A6B;margin:8px 0 0"></p>
+        <p class="hint" id="tgTop" hidden style="margin:10px 0 0"></p>
         <div class="hint" id="tgPull" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.35);line-height:1.6"></div>
         <div class="hint" style="margin:10px 0 0;line-height:1.6"><b>У каждого клиента — своя тема</b> (как отдельный чат внутри бота). Включите один раз: <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> → кнопка <b>Open</b> (мини-приложение) → ваш бот → <b>Bot Settings</b> → <b>Threaded mode</b> — включить. Новые клиенты сразу попадут в свои темы с их именем.</div>
         <p class="hint" style="margin:8px 0 0">Как отвечать: откройте тему клиента и просто пишите — текст, фото, видео. Без тем — смахните сообщение клиента влево («Ответить»). Бот поставит 👍, когда ответ дойдёт до клиента.</p>
@@ -1062,6 +1063,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!cfg.pushUrl) { st.textContent = 'сервер не подключён'; return; }
     try {
       const r = await pushApi('/tg/status');
+      const tp = $('#tgTop'); tp.hidden = !(r.owner && r.topics);
+      if (r.topics) {
+        tp.style.color = r.topics.on && !r.topics.err ? '#3BD16F' : '#FF8A6B';
+        tp.textContent = !r.topics.on ? 'Темы у бота выключены — все клиенты приходят в один чат. Включите Threaded mode (как ниже) и нажмите «Проверить».'
+          : r.topics.err ? 'Темы включены, но Telegram не дал создать тему: ' + r.topics.err + '. Следующее сообщение клиента попробует снова.'
+          : 'Темы включены ✓ Каждый новый клиент получит свою тему.';
+      }
       const pull = $('#tgPull'); pull.hidden = !(r.mode === 'pull' && r.owner);
       if (r.mode === 'pull' && r.owner) pull.innerHTML = r.cron
         ? '<b>Запасной режим</b>: Telegram не может достучаться до вашего сервера, поэтому сервер сам забирает ваши ответы — раз в минуту, а когда у клиента открыт чат, через несколько секунд. Всё работает ✓'

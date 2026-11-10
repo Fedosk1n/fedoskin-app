@@ -507,3 +507,7 @@
   media go there without the header; the owner just writes in the topic (tgUpdate maps message_thread_id → thread, then
   falls back to Reply mapping). Deleted topic ⇒ recreated on the next client message. createForumTopic failing (mode off)
   ⇒ old single chat with header + «Reply», retried after 10 min (tgs 'notop'). Admin «версия 29»: card explains enabling.
+  /tg/status returns `topics {on: getMe.has_topics_enabled, err: last createForumTopic error (tgs 'notopErr')}` and resets
+  'notop' (so «Проверить» makes the next client message retry at once); admin `#tgTop` shows it. Admin «версия 30».
+  Live 10.11 11:49–11:51: owner's first messages came without topics (cause unknown yet — threaded mode maybe switched on
+  after the first try, cached 10 min); his Reply on the header message worked (👍).

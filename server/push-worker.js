@@ -680,9 +680,10 @@ async function chatTopic(env, t, owner) {
     const r = await tg(env, 'createForumTopic', { chat_id: owner, name: topicName(t) });
     const top = r.message_thread_id;
     await env.DB.prepare('INSERT OR REPLACE INTO chat_top (thr, top) VALUES (?, ?)').bind(t.id, top).run();
+    await tgSet(env.DB, 'notopErr', '');
     await tg(env, 'sendMessage', { chat_id: owner, message_thread_id: top, text: 'Новый клиент: ' + chatHead(t).replace(/^💬 /, '') + '\n\nПишите ответ прямо в этой теме — текст, фото, видео. Он придёт клиенту в приложение.' }).catch(() => {});
     return top;
-  } catch (e) { await tgSet(env.DB, 'notop', Date.now()); return 0; }
+  } catch (e) { await tgSet(env.DB, 'notop', Date.now()); await tgSet(env.DB, 'notopErr', String(e && e.message || e).slice(0, 200)); return 0; }
 }
 async function chatToOwner(env, t, send) {
   const owner = await env.PUSH.get('tg:owner');
@@ -862,14 +863,17 @@ async function tgAdmin(req, env, path, json) {
     const me = await tg(env, 'getMe').catch(e => ({ err: e.message }));
     if (me.err) return json({ error: 'token: ' + me.err }, 409);
     await schema(env.DB);
+    // topics: what Telegram says about the bot + the last failure; «Проверить» lets the next client message try again at once
+    const topics = { on: !!me.has_topics_enabled, err: (await tgGet(env.DB, 'notopErr')) || '' };
+    await tgSet(env.DB, 'notop', 0);
     const mode = await tgGet(env.DB, 'mode');
     if (mode === 'pull') {
       await tgPull(env, 0).catch(() => {});
       const cron = parseInt(await tgGet(env.DB, 'cron')) || 0;
-      return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: true, mode, cron: cron && Date.now() - cron < 5 * 60e3 });
+      return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: true, mode, cron: cron && Date.now() - cron < 5 * 60e3, topics });
     }
     const info = await tg(env, 'getWebhookInfo').catch(() => ({}));
-    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '', mode: 'hook' });
+    return json({ bot: me.username, owner: !!(await env.PUSH.get('tg:owner')), hook: !!(info.url && info.url.endsWith('/tg/hook')), hookErr: info.last_error_message || '', mode: 'hook', topics });
   }
   // /tg/setup: point the webhook here, make a one-time binding link for the coach's own Telegram
   const me = await tg(env, 'getMe');
