@@ -383,7 +383,18 @@
   «Победа!» + confetti / «Поражение», «Судьи: 2 : 1», «Реванш» / «Закрыть»; «Пропустить» jumps to the judges. Incoming:
   `btInbox()` 4 s after start, on Profile, on push ⇒ sheet `#btCallSheet` «{name} вызывает тебя на батл!» → «Смотреть
   батл» / «Позже» (both mark seen); never over a lesson/sheet (re-checked in go()). Profile hero card `#btScore`. Server
-  code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo. Tested:
+  code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo.
+  Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
+  `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
+  same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give
+  nothing): server-side wallet = 10 × wins + 20 × full hours of the rating's minutes − prices of owned items. `HERO.SHOP` in
+  hero.js (10 items, one per slot: neon laces 80, fingerless gloves 100, cardboard 100, knee pads 120, bandana 150 (replaces
+  the hat), graffiti wall bg 200, night city bg 200, red kicks 250, boombox 300, fire aura 500) — prices repeated in the
+  worker `SHOP`, keep equal. D1 `hero_own (id, item)`, `hero_eq (id, eq JSON)`; POST /hero/buy {item} (402 if short),
+  /hero/eq {eq} (only owned, one per slot); /bt/inbox returns pts/earned/owned/eq/rest; /lb rows + battle sides carry `eq`.
+  App: `HERO.svg(level, {acc})`; `myEq` (`fedoskin-eq` copy) drawn in profile, level-up, story card + PNG, battles,
+  leaderboard busts; profile row `#shopRow` (⭐ points) → sheet `#shopSheet` (preview of each item on my hero; Купить ·
+  ⭐ N / не хватает / Надеть / Снять; buying wears it). Tested:
   worker on node:sqlite (auth, limits, self, inbox/seen, lb scores), app flow with mocked server (iPhone en).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,

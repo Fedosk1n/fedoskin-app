@@ -17,6 +17,20 @@
   // background ring colour per level
   const RING = ['#3A3A3F', '#5A4636', '#7A4A26', '#B4541C', '#E2611A', '#E58A2A', '#E7B23C', '#F2CC55'];
 
+  // accessories shop (owner 10.11.2026: points for battle wins and lesson hours, never for money). One item per slot;
+  // names are Russian i18n keys. Prices are repeated in server/push-worker.js (SHOP) — keep them equal.
+  const SHOP = [
+    { id: 'neon', slot: 'laces', price: 80, name: 'Неоновые шнурки' },
+    { id: 'gloves', slot: 'hands', price: 100, name: 'Перчатки без пальцев' },
+    { id: 'cardboard', slot: 'floor', price: 100, name: 'Картонка для брейка' },
+    { id: 'knee', slot: 'knees', price: 120, name: 'Наколенники' },
+    { id: 'bandana', slot: 'head', price: 150, name: 'Бандана' },
+    { id: 'wall', slot: 'bg', price: 200, name: 'Фон: граффити-стена' },
+    { id: 'city', slot: 'bg', price: 200, name: 'Фон: ночной город' },
+    { id: 'red', slot: 'kicks', price: 250, name: 'Красные кроссовки' },
+    { id: 'box', slot: 'item', price: 300, name: 'Бумбокс' },
+    { id: 'fire', slot: 'fx', price: 500, name: 'Огненная аура' },
+  ];
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
   const OR = '#E2611A', OR_D = '#B44812', BLK = '#18181B', BLK2 = '#232328', WH = '#F2EFE8', WH_D = '#D6D1C6';
   function levelFor(mins){ let l = 1; for (let i = 0; i < LEVELS.length; i++) if (mins >= LEVELS[i]) l = i + 1; return l; }
@@ -26,6 +40,7 @@
     const id = 'h' + L + (opt.uid || '');
     const GOLD = 'url(#' + id + 'gold)';
     const o = [];
+    const acc = new Set(Array.isArray(opt.acc) ? opt.acc : []), has = k => acc.has(k);
     const P = (d, fill, ex) => o.push('<path d="' + d + '" fill="' + (fill || 'none') + '"' + (ex || '') + '/>');
     const S = (w) => ' stroke="' + INK + '" stroke-width="' + (w || 2.2) + '" stroke-linejoin="round" stroke-linecap="round"';
     const LN = (d, col, w, ex) => o.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"' + (ex || '') + '/>');
@@ -33,7 +48,7 @@
 
     // ---- the outfit of this level ----
     const fit = {
-      hat: [null, null, 'cap', 'cap', 'beanie', 'bucket', 'capBack', 'capGold', 'capGold'][L],
+      hat: has('bandana') ? 'bandana' : [null, null, 'cap', 'cap', 'beanie', 'bucket', 'capBack', 'capGold', 'capGold'][L],
       top: [null, 'tee', 'tee', 'teeBig', 'track', 'track', 'bomber', 'trackGold', 'trackGold'][L],
       pants: [null, 'jeans', 'jeans', 'trackp', 'trackp', 'trackp', 'wind', 'trackpGold', 'trackpGold'][L],
       shoe: [null, 'canvas', 'leather', 'leather', 'runner', 'runner', 'high', 'highGold', 'highGold'][L],
@@ -44,10 +59,28 @@
     o.push('<defs><radialGradient id="' + id + 'g" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="' + RING[L - 1] + '" stop-opacity=".55"/><stop offset="1" stop-color="' + RING[L - 1] + '" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + id + 'gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE9A0"/><stop offset=".45" stop-color="#E7B23C"/><stop offset="1" stop-color="#A8741A"/></linearGradient>' +
       '<linearGradient id="' + id + 'sh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".08"/></linearGradient>' +
+      '<radialGradient id="' + id + 'fire" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="#FFE38A"/><stop offset=".45" stop-color="#FF8A1F"/><stop offset="1" stop-color="#E2361A" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + id + 'lens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A3A44"/><stop offset="1" stop-color="#08080A"/></linearGradient></defs>');
 
     // ---- background ----
-    if (opt.bg !== false) {
+    if (opt.bg !== false && has('wall')) {
+      o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="#3A2A24"/>');
+      for (let y = 8, r = 0; y < 230; y += 11, r++) { LN('M4 ' + y + ' H196', 'rgba(0,0,0,.35)', 1.4); for (let x = 4 + (r % 2 ? 0 : 12); x < 196; x += 24) LN('M' + x + ' ' + y + ' v11', 'rgba(0,0,0,.3)', 1.2); }
+      P('M18 70 Q30 40 52 56 Q60 34 82 48 Q92 30 112 44 Q132 28 150 46 Q174 40 182 66 Q190 92 166 98 Q150 116 128 100 Q104 118 86 100 Q62 114 46 98 Q20 104 18 70 Z', '#3D8BFF', ' opacity=".55" stroke="#0E0E10" stroke-width="3"');
+      LN('M34 76 Q48 60 60 78 Q72 96 84 74 M104 70 Q118 56 128 76 Q138 94 152 72', '#F2EFE8', 5, ' opacity=".7"');
+      LN('M60 100 v14 M128 100 v18 M152 96 v10', '#3D8BFF', 3, ' opacity=".55"');
+      P('M150 20 l4 9 9 1 -7 6 2 9 -8 -5 -8 5 2 -9 -7 -6 9 -1Z', '#F2CC55', ' opacity=".7"');
+      o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="url(#' + id + 'g)"/>');
+      o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
+    } else if (opt.bg !== false && has('city')) {
+      o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="#141A33"/>');
+      o.push('<circle cx="150" cy="40" r="14" fill="#F2EFE8" opacity=".9"/><circle cx="155" cy="36" r="12" fill="#141A33"/>');
+      [[20, 30], [60, 70], [110, 22], [176, 76], [36, 90]].forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.2" fill="#fff" opacity=".7"/>'));
+      const bl = [[4, 120, 26], [30, 96, 22], [52, 132, 18], [70, 84, 24], [94, 110, 20], [114, 74, 26], [140, 104, 22], [162, 90, 34]];
+      bl.forEach(b => { o.push('<rect x="' + b[0] + '" y="' + b[1] + '" width="' + b[2] + '" height="' + (234 - b[1]) + '" fill="#0A0D1C"/>'); for (let y = b[1] + 6; y < 200; y += 10) for (let x = b[0] + 4; x < b[0] + b[2] - 3; x += 7) if ((x * 7 + y * 3) % 5 < 2) o.push('<rect x="' + x + '" y="' + y + '" width="3" height="4" fill="#F2CC55" opacity=".65"/>'); });
+      o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="url(#' + id + 'g)" opacity=".7"/>');
+      o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
+    } else if (opt.bg !== false) {
       if (L >= 8) {
         let r = '';
         for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; r += '<path d="M100 118 L' + (100 + 98 * Math.cos(a - .09)).toFixed(1) + ' ' + (118 + 98 * Math.sin(a - .09)).toFixed(1) + ' L' + (100 + 98 * Math.cos(a + .09)).toFixed(1) + ' ' + (118 + 98 * Math.sin(a + .09)).toFixed(1) + 'Z"/>'; }
@@ -57,8 +90,20 @@
       o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
     }
 
-    // ---- boombox (7+), behind the right leg ----
-    if (L >= 7) {
+    // ---- fire aura (shop) ----
+    if (has('fire')) {
+      P('M40 232 Q34 196 52 176 Q50 196 62 200 Q58 170 80 150 Q78 178 92 184 Q94 160 108 146 Q110 172 122 178 Q128 160 144 156 Q138 182 150 192 Q158 178 164 172 Q170 200 160 232 Z', 'url(#' + id + 'fire)', ' opacity=".9"');
+      P('M60 232 Q58 210 70 198 Q72 214 84 216 Q86 196 100 186 Q102 206 114 210 Q120 196 132 194 Q138 214 140 232 Z', '#FFD25A', ' opacity=".55"');
+    }
+    // ---- cardboard (shop): flattened box under the feet ----
+    if (has('cardboard')) {
+      P('M30 222 L170 222 L184 236 L16 236 Z', '#B98A4E', S(1.8));
+      LN('M58 222 L50 236 M142 222 L150 236', 'rgba(0,0,0,.25)', 1.2);
+      P('M92 222 L108 222 L110 236 L90 236 Z', '#D6B98A', ' opacity=".8"');
+      LN('M26 229 H40 M160 229 H174', 'rgba(0,0,0,.25)', 1);
+    }
+    // ---- boombox (7+ or bought), behind the right leg ----
+    if (L >= 7 || has('box')) {
       o.push('<g transform="translate(146 194)">');
       P('M6 0 V-7 Q6 -10 9 -10 H39 Q42 -10 42 -7 V0', 'none', ' stroke="' + INK + '" stroke-width="3.2"');
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V30 Q48 33 45 33 H3 Q0 33 0 30 Z', '#2B2B31', S(2));
@@ -71,11 +116,12 @@
     // ---- sneakers (profile, toes out) ----
     const shoe = () => {
       const t = fit.shoe, hi = t === 'high' || t === 'highGold';
-      const up = { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t];
-      const ov = { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t];
+      const up = has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t];
+      const ov = has('red') ? (t === 'highGold' ? GOLD : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t];
       const mid = { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: GOLD }[t];
       const out = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
-      const lace = { canvas: WH, leather: WH, runner: WH, high: WH, highGold: '#E7B23C' }[t];
+      let lace = { canvas: WH, leather: WH, runner: WH, high: WH, highGold: '#E7B23C' }[t];
+      if (has('neon')) lace = '#B6FF3B';
       o.push('<g transform="translate(103 230) scale(1.18)">');
       // outsole + tread
       P('M-1 0 H40 Q46 0 46 -4 V-6 H-1 Z', out, S(2));
@@ -136,6 +182,10 @@
       }
     };
     pants(); MIR(pants);
+    if (has('knee')) {
+      const kp = () => { P('M73 168 Q85 164 97 168 L97 184 Q85 188 73 184 Z', '#141416', S(1.8)); P('M78 171 Q85 169 92 171 L92 181 Q85 183 78 181 Z', OR, S(1)); LN('M75 176 H95', 'rgba(255,255,255,.18)', 1); };
+      kp(); MIR(kp);
+    }
     if (fit.pants === 'jeans') { LN('M100 147 V168 Q101 172 104 170', '#2D4A72', 1.6); LN('M103 147 V166', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"'); }
 
     // ---- belt of the champion (8) sits on the waist later ----
@@ -170,6 +220,7 @@
       // hand
       P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', SKIN, S());
       LN('M54 157 Q57 159 61 158', SKIN_D, 1.2);
+      if (has('gloves')) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', '#141416', S(1.6)); LN('M53 154 H64', OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     };
     arm(0);
@@ -180,6 +231,7 @@
       P('M138 44 L152 46 L151 54 L137 52 Z', cuffCol, S(1.6));
       P('M137 44 Q135 30 142 27 Q152 25 155 31 Q157 38 152 45 Z', SKIN, S());
       LN('M140 33 Q146 31 152 33 M140 38 Q146 36 152 38', SKIN_D, 1.2);
+      if (has('gloves')) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', '#141416', S(1.6)); LN('M139 40 H153', OR, 1.2); }
       o.push('<rect x="139" y="28" width="6" height="3.6" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     } else MIR(() => arm(1));
 
@@ -292,6 +344,12 @@
     }
     // ---- hats ----
     const hat = fit.hat;
+    if (hat === 'bandana') {
+      P('M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z', '#C8102E', S());
+      [[86, 30], [100, 26], [114, 30], [92, 40], [108, 40], [80, 40], [120, 40]].forEach(p => P('M' + p[0] + ' ' + p[1] + ' q3 -3 5 0 q-1 4 -5 3 q-2 -1 0 -3Z', WH, ' opacity=".85"'));
+      LN('M78 46 Q100 40 122 46', WH, 1.2, ' stroke-dasharray="2 2"');
+      P('M122 40 Q132 40 136 46 Q130 46 126 44 Q130 52 128 58 Q122 50 121 44 Z', '#C8102E', S(1.6));
+    }
     if (hat === 'cap' || hat === 'capGold' || hat === 'capBack') {
       const crown = hat === 'capGold' ? GOLD : hat === 'capBack' ? BLK : (L >= 3 ? BLK : BLK);
       const front = hat === 'capGold' ? GOLD : hat === 'capBack' ? OR : (L >= 3 ? OR : BLK);
@@ -333,7 +391,7 @@
       o.push('<circle cx="86" cy="34" r="1" fill="#9A968E"/><circle cx="114" cy="34" r="1" fill="#9A968E"/>');
     }
     // ---- face ----
-    const capped = hat === 'cap' || hat === 'capGold' || hat === 'bucket';
+    const capped = hat === 'cap' || hat === 'capGold' || hat === 'bucket' || hat === 'bandana';
     if (capped) P('M80 57 Q100 51 120 57 Q100 55 80 60 Z', SKIN_D, ' opacity=".45"'); // brim shadow
     if (L >= 5) {
       const gold = L >= 7, fr = gold ? GOLD : '#111114';
@@ -359,5 +417,5 @@
     o.push('</svg>');
     return o.join('');
   }
-  window.HERO = { LEVELS, NAMES, PERKS, RING, levelFor, svg };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, levelFor, svg };
 })();

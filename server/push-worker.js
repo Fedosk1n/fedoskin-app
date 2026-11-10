@@ -89,7 +89,7 @@ export default {
       if (path === '/tg/hook' && req.method === 'POST') return await tgHook(req, env, json);
       if (path === '/rv/submit' && req.method === 'POST') return await rvSubmit(req, env, json);
       // hero battles (10.11.2026): challenge anyone from the rating, the judges decide at random
-      if (path.startsWith('/bt/') && req.method === 'POST') return await battle(req, env, path, json);
+      if ((path.startsWith('/bt/') || path.startsWith('/hero/')) && req.method === 'POST') return await battle(req, env, path, json);
       if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list' && path !== '/tg/status') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
@@ -372,7 +372,9 @@ async function leaderboard(req, env, json) {
       if (ids.length) {
         const rs = await env.DB.prepare('SELECT id, w, l FROM bt_score WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
         const sc = {}; (rs.results || []).forEach(r => { sc[r.id] = [r.w, r.l]; });
-        [out.world.top, out.city ? out.city.top : []].forEach(list => list.forEach(r => { if (sc[r.id]) r.bt = sc[r.id]; }));
+        const eqs = await env.DB.prepare('SELECT id, eq FROM hero_eq WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
+        const eq = {}; (eqs.results || []).forEach(r => { try { eq[r.id] = JSON.parse(r.eq); } catch (_) {} });
+        [out.world.top, out.city ? out.city.top : []].forEach(list => list.forEach(r => { if (sc[r.id]) r.bt = sc[r.id]; if (eq[r.id] && eq[r.id].length) r.eq = eq[r.id]; }));
         out.bt = true; if (sc[me]) out.mine = sc[me];
       }
     } catch (_) {}
@@ -405,14 +407,27 @@ async function leaderboard(req, env, json) {
 // ----- hero battles (10.11.2026) -----
 // Just for fun: a phone from the rating challenges another one, three judges vote at random (a higher hero level gives a
 // slightly better chance), the result is stored and the other phone sees the same battle (same seed) when it opens the app.
-// Auth = the rating's own id + secret. Limits: 15 challenges a day per phone, 3 a day against the same person; the
-// challenged phone gets at most one push per 6 hours.
+// Auth = the rating's own id + secret. Limits (owner 10.11.2026): one challenge per 30 minutes per phone («твой би-бой
+// отдыхает»), 3 a day against the same person; the challenged phone gets at most one push per 6 hours.
+// Points (owner 10.11.2026, for accessories only, never sold for money): +10 per battle win (losses give nothing),
+// +20 per full hour of lessons (the rating's minutes); spent = sum of bought items' prices.
 const HERO_LEVELS = [0, 60, 240, 600, 1200, 2100, 3600, 6000];
+const BT_REST = 30 * 60e3;
+// must match HERO.SHOP in hero.js: id → [slot, price]
+const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500] };
+const PTS_WIN = 10, PTS_HOUR = 20;
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
 const BT_TITLE = { ru: 'Батл!', en: 'Battle!', es: '¡Batalla!', pt: 'Batalha!', fr: 'Battle !', de: 'Battle!', ja: 'バトル！', ko: '배틀!', zh: '斗舞！' };
 const BT_BODY = { ru: '{n} вызывает тебя на батл — смотри, кто победил', en: '{n} challenged you to a battle — see who won', es: '{n} te retó a una batalla: mira quién ganó', pt: '{n} te desafiou para uma batalha — veja quem venceu', fr: '{n} te défie en battle — regarde qui a gagné', de: '{n} fordert dich zum Battle heraus — schau, wer gewonnen hat', ja: '{n}からバトルの挑戦！勝者をチェック', ko: '{n}님이 배틀을 신청했어요 — 누가 이겼는지 확인하세요', zh: '{n}向你发起斗舞——快看谁赢了' };
-function btPack(r) {
-  return { n: r.n, a: { id: r.a, name: r.na, lvl: r.la }, b: { id: r.b, name: r.nb, lvl: r.lb }, seed: r.seed, votes: JSON.parse(r.votes || '[]'), win: r.win, t: r.t };
+function btPack(r, eq) {
+  eq = eq || {};
+  return { n: r.n, a: { id: r.a, name: r.na, lvl: r.la, eq: eq[r.a] || [] }, b: { id: r.b, name: r.nb, lvl: r.lb, eq: eq[r.b] || [] }, seed: r.seed, votes: JSON.parse(r.votes || '[]'), win: r.win, t: r.t };
+}
+async function heroEq(db, ids) {
+  const out = {}; if (!ids.length) return out;
+  const rs = await db.prepare('SELECT id, eq FROM hero_eq WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
+  (rs.results || []).forEach(r => { try { out[r.id] = JSON.parse(r.eq) || []; } catch (_) {} });
+  return out;
 }
 async function battle(req, env, path, json) {
   if (!env.DB) return json({ error: 'nodb' }, 409);
@@ -424,12 +439,25 @@ async function battle(req, env, path, json) {
   if (!me || me.h !== await hash('lb:' + secret)) return json({ error: 'not in rating' }, 403);
   const db = env.DB, now = Date.now();
   const score = async x => (await db.prepare('SELECT w, l FROM bt_score WHERE id = ?').bind(x).first()) || { w: 0, l: 0 };
+  const lastCall = async () => { const r = await db.prepare('SELECT MAX(t) AS t FROM bt WHERE a = ?').bind(id).first(); return r && r.t || 0; };
+  const restLeft = async () => Math.max(0, (await lastCall()) + BT_REST - now);
+  const wallet = async () => {
+    const sc = await score(id), own = await db.prepare('SELECT item FROM hero_own WHERE id = ?').bind(id).all();
+    const owned = (own.results || []).map(r => r.item).filter(k => SHOP[k]);
+    const earned = sc.w * PTS_WIN + Math.floor((me.m || 0) / 60) * PTS_HOUR;
+    const spent = owned.reduce((n, k) => n + SHOP[k][1], 0);
+    const eqr = await db.prepare('SELECT eq FROM hero_eq WHERE id = ?').bind(id).first();
+    let eq = []; try { eq = JSON.parse(eqr && eqr.eq || '[]'); } catch (_) {}
+    return { pts: Math.max(0, earned - spent), earned, owned, eq, score: sc };
+  };
   if (path === '/bt/call') {
     const to = String(b.to || ''), op = board[to];
     if (!op || to === id) return json({ error: 'gone' }, 404);
     const day = now - 864e5;
-    const c = await db.prepare('SELECT COUNT(*) AS n, SUM(CASE WHEN b = ? THEN 1 ELSE 0 END) AS same FROM bt WHERE a = ? AND t > ?').bind(to, id, day).first();
-    if ((c && c.n || 0) >= 15 || (c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
+    const rest = await restLeft();
+    if (rest > 0) return json({ error: 'rest', rest }, 429);
+    const c = await db.prepare('SELECT COUNT(*) AS same FROM bt WHERE a = ? AND b = ? AND t > ?').bind(id, to, day).first();
+    if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
     const la = heroLevel(me.m), lb = heroLevel(op.m);
     const p = Math.max(.3, Math.min(.7, .5 + .05 * (la - lb)));
     const votes = [0, 1, 2].map(() => Math.random() < p ? 'a' : 'b');
@@ -450,15 +478,33 @@ async function battle(req, env, path, json) {
         if (res && (res.status === 404 || res.status === 410)) await db.prepare('DELETE FROM bt_sub WHERE id = ?').bind(to).run();
       }
     } catch (_) {}
-    return json({ ok: true, battle: btPack({ n, a: id, b: to, la, lb, na, nb, seed, votes: JSON.stringify(votes), win, t: now }), score: await score(id) });
+    return json({ ok: true, battle: btPack({ n, a: id, b: to, la, lb, na, nb, seed, votes: JSON.stringify(votes), win, t: now }, await heroEq(db, [id, to])), score: await score(id), rest: BT_REST, pts: (await wallet()).pts });
   }
   if (path === '/bt/inbox') {
-    const news = await db.prepare('SELECT * FROM bt WHERE b = ? AND seen = 0 ORDER BY n DESC LIMIT 5').bind(id).all();
-    return json({ ok: true, news: (news.results || []).map(btPack), score: await score(id) });
+    const news = (await db.prepare('SELECT * FROM bt WHERE b = ? AND seen = 0 ORDER BY n DESC LIMIT 5').bind(id).all()).results || [];
+    const eq = await heroEq(db, [...new Set(news.map(r => r.a).concat(id))]);
+    const w = await wallet();
+    return json({ ok: true, news: news.map(r => btPack(r, eq)), score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq });
   }
   if (path === '/bt/seen') {
     await db.prepare('UPDATE bt SET seen = 1 WHERE b = ? AND n <= ?').bind(id, Math.floor(+b.n || 0)).run();
     return json({ ok: true });
+  }
+  if (path === '/hero/buy') {
+    const item = String(b.item || '');
+    if (!SHOP[item]) return json({ error: 'item' }, 400);
+    const w = await wallet();
+    if (w.owned.includes(item)) return json({ ok: true, ...w });
+    if (w.pts < SHOP[item][1]) return json({ error: 'points', pts: w.pts }, 402);
+    await db.prepare('INSERT OR IGNORE INTO hero_own (id, item, t) VALUES (?, ?, ?)').bind(id, item, now).run();
+    return json({ ok: true, ...(await wallet()) });
+  }
+  if (path === '/hero/eq') {
+    const w = await wallet(), slots = {};
+    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; }); // one per slot
+    const eq = Object.values(slots);
+    await db.prepare('INSERT INTO hero_eq (id, eq) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET eq = excluded.eq').bind(id, JSON.stringify(eq)).run();
+    return json({ ok: true, eq });
   }
   if (path === '/bt/sub') {
     const s = b.sub || {};
@@ -502,6 +548,9 @@ function schema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS bt_a ON bt (a, t)'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_score (id TEXT PRIMARY KEY, w INTEGER NOT NULL DEFAULT 0, l INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_sub (id TEXT PRIMARY KEY, sub TEXT, lang TEXT) WITHOUT ROWID'),
+    // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_eq (id TEXT PRIMARY KEY, eq TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });

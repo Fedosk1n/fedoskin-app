@@ -309,6 +309,21 @@ body.chatmode .tabs{display:none}
 #stAvatar svg{display:block;width:58px;height:auto}
 .btscore{font-size:12px;font-weight:700;color:var(--soft)}
 .btscore b{color:var(--accent)}
+.btrest{margin-top:10px;padding:12px 14px;border-radius:14px;background:#17171A;border:1px solid #26262A;display:flex;flex-direction:column;gap:7px}
+.btrest b{font-size:13px} .btrest span#btRestT{font-size:12px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
+.btrest .bar{display:block;height:6px;border-radius:3px;background:#26262B;overflow:hidden} .btrest .bar i{display:block;height:6px;background:linear-gradient(90deg,#3D8BFF,#E2611A);transition:width .6s ease}
+.btrest small{font-size:11px;color:var(--muted)}
+.shoprow{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);color:inherit;font:inherit;cursor:pointer;text-align:left}
+.shoprow b{font-size:14px} .shoprow small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.pts{flex:none;font-weight:800;color:#F2CC55;font-size:15px} .pts.big{font-size:18px}
+.shopgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;max-height:60dvh;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
+.shopit{border-radius:16px;background:#1A1A1D;border:1px solid #26262A;padding:6px 8px 10px;display:flex;flex-direction:column;gap:6px;text-align:center}
+.shopit.on{border-color:var(--accent);background:#21160F}
+.shopit svg{display:block;width:100%;height:auto}
+.shopit b{font-size:12.5px;line-height:1.25;min-height:2.5em;display:flex;align-items:center;justify-content:center}
+.shopit button{height:34px;border-radius:12px;border:none;font:800 12.5px var(--body);cursor:pointer;background:var(--accent);color:#0B0B0C}
+.shopit button.own{background:#26262B;color:var(--fg)} .shopit button.worn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.shopit button[disabled]{background:#26262B;color:var(--muted);cursor:default}
 .btbtn{flex:none;display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 12px var(--body);letter-spacing:.3px;text-transform:uppercase;cursor:pointer}
 .btbtn svg{width:13px;height:13px}
 .btbtn[disabled]{opacity:.45}
@@ -1078,6 +1093,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="more">Все образы →</span>
     </span>
   </button>
+  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>Очки — за победы в батлах и часы уроков</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stViews">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
@@ -1108,6 +1124,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="stack" style="gap:2px;flex:1;min-width:0"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" id="myMins" style="font-size:12px"></span></span>
     </div>
     <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
+    <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b>Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 30 минут</small></div>
     <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
     <p class="muted" id="btHint" style="font-size:12px;line-height:1.45;margin:10px 0 0" hidden>Нажми «Батл» у любого из рейтинга — ваши человечки сразятся, а судьи решат, кто круче</p>
     <label class="row" style="gap:12px;margin-top:14px;font-size:14px;cursor:pointer"><input type="checkbox" id="rankShow" style="width:20px;height:20px;accent-color:var(--accent)"><span>Показывать меня в рейтинге</span></label>
@@ -1330,6 +1347,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="btns"><button class="btn btn-ghost" id="lvlUpOk" type="button" style="flex:1">Круто!</button><button class="btn btn-accent" id="lvlUpShare" type="button" style="flex:2">Поделиться в сторис</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="shopSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Магазин</h2><span class="pts big">⭐ <b id="shopPts">0</b></span></div>
+    <p class="muted" style="margin-top:6px;font-size:12px;line-height:1.45">+10 очков за победу в батле · +20 за каждый час уроков. Аксессуары — только для красоты, на батлы не влияют.</p>
+    <div class="shopgrid" id="shopGrid"></div>
+  </div>
+</div>
 <div class="sheet-bg btl" id="battle" hidden>
   <div class="btlbox" role="dialog" aria-modal="true" aria-label="Батл">
     <div class="bthead"><span class="nm l" id="btNa"></span><span class="vs">VS</span><span class="nm r" id="btNb"></span></div>
@@ -1344,7 +1369,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </div>
     <div class="judges" id="btJudges"><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div></div>
     <div class="btres" id="btRes" hidden><b id="btResT"></b><span id="btResS"></span></div>
-    <div class="btbtns"><button class="btn btn-ghost" id="btSkip" type="button">Пропустить</button><button class="btn btn-ghost" id="btClose" type="button" hidden>Закрыть</button><button class="btn btn-accent" id="btAgain" type="button" hidden>Реванш</button></div>
+    <div class="btbtns"><button class="btn btn-ghost" id="btSkip" type="button">Пропустить</button><button class="btn btn-ghost" id="btClose" type="button" hidden>Закрыть</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="btCallSheet" hidden>
@@ -1397,7 +1422,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=3"></script>
+<script src="hero.js?v=4"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -3210,7 +3235,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let rankScope = 'world';
   function openStory(){
     const st = statsView();
-    $('#stAvatar').innerHTML = HERO.svg(st.level, {uid: 's'});
+    $('#stAvatar').innerHTML = HERO.svg(st.level, {uid: 's', acc: myEq});
     $('#stLvl').textContent = T('Уровень {n}', {n: st.level}) + ' · ' + T(HERO.NAMES[st.level - 1]);
     $('#stPlace').textContent = st.mins;
     $('#stWhere').textContent = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
@@ -3263,7 +3288,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try { const lg = await loadImg('logo.png'); const lw = 380, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 160, lw, lh); } catch (_) {}
     // the hero of the person's level (owner 10.11.2026)
     const stv = statsView();
-    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c'}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
+    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c', acc: myEq}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
     // nick + alpha badge
     const nick = (prof.nick || T('Брейкер')).toUpperCase();
     g.font = fitFont(nick, 76, W - 160, DISP); g.fillStyle = '#F2EFE8'; g.textAlign = 'center'; g.fillText(nick, W / 2, 890);
@@ -3926,14 +3951,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lvlTitle').textContent = T(HERO.NAMES[v.level - 1]);
     $('#lvlBar').style.width = v.pct + '%';
     $('#lvlHint').textContent = v.next ? T('Ещё {t} тренировок — и новый образ: {perk}', {t: hmFmt(v.left), perk: T(HERO.PERKS[v.level])}) : T('Максимальный уровень — ты легенда');
-    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p'}); }
+    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myEq}); }
     lvlCheck();
     renderProgress();
   }
   // ===== the hero: gallery of looks + «level up» screen =====
+  // accessories this phone wears (bought in the shop with points; the server keeps the real list, this is the copy)
+  let myEq = []; try { myEq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
+  function setMyEq(eq){ myEq = Array.isArray(eq) ? eq : []; try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (!$('#profile').hidden) renderStats(); }
   let heroDrawn = 0;
   function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
-  function heroMini(level, uid){ return '<span class="heromini"><i style="background:' + HERO.RING[level - 1] + '40">' + HERO.svg(level, {bust: true, bg: false, uid}) + '</i><b>' + level + '</b></span>'; }
+  function heroMini(level, uid, acc){ return '<span class="heromini"><i style="background:' + HERO.RING[level - 1] + '40">' + HERO.svg(level, {bust: true, bg: false, uid, acc}) + '</i><b>' + level + '</b></span>'; }
   function openHeroes(){
     const v = statsView(), box = $('#heroGrid'); box.innerHTML = '';
     HERO.LEVELS.forEach((need, i) => {
@@ -3965,7 +3993,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const from = lvlSeen; lvlSave(l); showLvlUp(from, l);
   }
   function showLvlUp(from, to){
-    $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo'}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un'});
+    $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo', acc: myEq}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un', acc: myEq});
     $('#lvlUpName').textContent = T('Уровень {n}', {n: to}) + ' · ' + T(HERO.NAMES[to - 1]);
     $('#lvlUpPerk').textContent = T('Открыто: {perk}', {perk: T(HERO.PERKS[to - 1])});
     const box = $('#lvlUp'); box.hidden = false;
@@ -4106,20 +4134,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!lbShow) say(T('Ты скрыт из рейтинга — другие тебя не видят.'));
     else if (!part || !part.place) say(statsView().mins < 1 ? T('Посмотри любой урок хотя бы минуту — и появишься в рейтинге.') : T('Твоё место появится через пару минут.'));
     else say('');
-    $('#btHint').hidden = !lbData.bt;
+    $('#btHint').hidden = !lbData.bt || BT.rest > Date.now(); btPaintRest();
     if (lbData.mine) btPaintScore({w: lbData.mine[0], l: lbData.mine[1]});
     if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
     part.top.forEach((r, i) => {
       const me = r.id === prof.id;
       const li = document.createElement('li'); li.className = 'row';
       li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
-      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i) +
+      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i, me ? myEq : (r.eq || [])) +
         '<span class="stack" style="gap:2px;flex:1;min-width:0"><span class="nm" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted ct" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></span>' +
         '<span class="muted mn" style="font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap"></span>';
       li.querySelector('.nm').textContent = (me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}))) + ' ';
       const a = document.createElement('span'); a.className = 'alphamini'; a.title = T('Альфа-тестер'); a.textContent = 'α'; li.querySelector('.nm').appendChild(a);
       li.querySelector('.ct').textContent = [r.c, rankScope === 'world' ? r.co : '', r.bt ? '🏆 ' + r.bt[0] + '–' + r.bt[1] : ''].filter(Boolean).join(' · ');
-      if (lbData.bt && !me) { // battles (10.11.2026): server knows them
+      if (lbData.bt && !me && BT.rest <= Date.now()) { // battles (10.11.2026): server knows them; none while «resting»
         const bb = document.createElement('button'); bb.type = 'button'; bb.className = 'btbtn';
         bb.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>';
         bb.appendChild(document.createTextNode(T('Батл')));
@@ -4135,7 +4163,63 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // A tap on «Батл» in the rating asks the server for a battle: three judges vote at random there (a higher level gives a
   // slightly better chance), wins and losses are counted. The other phone gets a push (if notifications are on) and sees
   // the same battle (same seed ⇒ same moves) next time it opens the app. Both see themselves on the left.
-  const BT = { news: [], busy: false, run: 0, cur: null };
+  const BT = { news: [], busy: false, run: 0, cur: null, rest: 0, wallet: null };
+  try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
+  const BT_REST = 30 * 60e3;
+  function btSetRest(ms){ BT.rest = Date.now() + Math.max(0, ms || 0); try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} btPaintRest(); }
+  // «твой би-бой отдыхает» (owner 10.11.2026): one battle per 30 minutes; the bar fills up while he rests
+  function btPaintRest(){
+    const left = BT.rest - Date.now(), box = $('#btRest');
+    if (left <= 0 || !lbData || !lbData.bt) { if (!box.hidden) { box.hidden = true; renderLeaders(); } return; }
+    box.hidden = false;
+    $('#btRestT').textContent = T('ещё {t}', { t: hmFmt(left / 60e3) });
+    $('#btRestBar').style.width = Math.min(100, Math.max(2, 100 * (1 - left / BT_REST))).toFixed(1) + '%';
+  }
+  setInterval(() => { if (!$('#profile').hidden) btPaintRest(); }, 15e3);
+  // points + the shop (points only for battle wins and lesson hours, never for money)
+  function btWallet(w){
+    if (!w || typeof w.pts !== 'number') return;
+    BT.wallet = Object.assign(BT.wallet || {}, w);
+    $('#shopRow').hidden = false; $('#ptsN').textContent = nfmt(w.pts);
+    if (Array.isArray(w.eq) && JSON.stringify(w.eq) !== JSON.stringify(myEq)) setMyEq(w.eq);
+    if (!$('#shopSheet').hidden) shopPaint();
+  }
+  function shopPaint(){
+    const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level, box = $('#shopGrid');
+    $('#shopPts').textContent = nfmt(w.pts);
+    box.innerHTML = '';
+    HERO.SHOP.forEach(it => {
+      const own = (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
+      const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '');
+      const keep = myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; });
+      d.innerHTML = HERO.svg(lvl, { uid: 'sh' + it.id, acc: keep.concat(it.id) }) + '<b></b><button type="button"></button>';
+      d.querySelector('b').textContent = T(it.name);
+      const btn = d.querySelector('button');
+      if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
+      else if (own) { btn.className = 'own'; btn.textContent = T('Надеть'); btn.onclick = () => shopWear(keep.concat(it.id)); }
+      else if (w.pts >= it.price) { btn.textContent = T('Купить · ⭐ {n}', { n: it.price }); btn.onclick = () => shopBuy(it, btn); }
+      else { btn.disabled = true; btn.textContent = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts }); }
+      box.appendChild(d);
+    });
+  }
+  async function shopBuy(it, btn){
+    btn.disabled = true;
+    try {
+      const r = await btPost('/hero/buy', { item: it.id }), j = await r.json().catch(() => ({}));
+      if (j.ok) { btWallet(j); toast(T('Куплено: {name}', { name: T(it.name) })); await shopWear(myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; }).concat(it.id)); }
+      else if (r.status === 402) { btWallet({ pts: j.pts }); toast(T('Не хватает очков')); }
+      else toast(T('Не получилось. Проверь интернет.'));
+    } catch (_) { toast(T('Не получилось. Проверь интернет.')); }
+    shopPaint();
+  }
+  async function shopWear(eq){
+    const before = myEq; setMyEq(eq); shopPaint();
+    try { const r = await btPost('/hero/eq', { eq }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
+    catch (_) { setMyEq(before); toast(T('Не получилось. Проверь интернет.')); }
+    shopPaint(); if (lbData) renderLeaders();
+  }
+  $('#shopRow').addEventListener('click', () => { shopPaint(); $('#shopSheet').hidden = false; btInbox(false); });
+  $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') $('#shopSheet').hidden = true; });
   const btPost = (path, body) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})) });
   function btPaintScore(sc){
     if (!sc || (!sc.w && !sc.l)) return;
@@ -4148,11 +4232,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (btn) btn.disabled = true;
     try {
       const res = await btPost('/bt/call', { to: r.id }), j = await res.json().catch(() => ({}));
-      if (res.status === 429) toast(T('На сегодня батлов хватит — приходи завтра'));
+      if (res.status === 429 && j.error === 'rest') { btSetRest(j.rest); toast(T('Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt(j.rest / 60e3) })); }
+      else if (res.status === 429) toast(T('С этим человеком на сегодня хватит — выбери другого'));
       else if (res.status === 404 && j.error === 'gone') toast(T('Этого человека больше нет в рейтинге'));
       else if (res.status === 404 || res.status === 409) toast(T('Батлы скоро заработают'));
       else if (res.status === 403) { toast(T('Твоё место появится через пару минут — тогда можно батлить')); lbSend(0); }
-      else if (j.ok) { btPaintScore(j.score); btPlay(j.battle, 'a', r); }
+      else if (j.ok) { btPaintScore(j.score); btWallet({ pts: j.pts }); btSetRest(j.rest || BT_REST); renderLeaders(); btPlay(j.battle, 'a', r); }
       else toast(T('Батл не получился. Проверь интернет.'));
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
@@ -4170,13 +4255,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#btNa').innerHTML = ''; $('#btNb').innerHTML = '';
     const nm = (el, p, mine) => { el.append(mine ? (prof.nick || T('Ты')) : p.name); const sm = document.createElement('small'); sm.textContent = T('Ур. {n}', { n: p.lvl }) + ' · ' + T(HERO.NAMES[p.lvl - 1]); el.appendChild(sm); };
     nm($('#btNa'), me, true); nm($('#btNb'), them, false);
-    A.querySelector('.mv').innerHTML = HERO.svg(me.lvl, { uid: 'ba', bg: false });
-    B.querySelector('.mv').innerHTML = HERO.svg(them.lvl, { uid: 'bb', bg: false });
+    A.querySelector('.mv').innerHTML = HERO.svg(me.lvl, { uid: 'ba', bg: false, acc: side === 'a' ? myEq : (me.eq || myEq) });
+    B.querySelector('.mv').innerHTML = HERO.svg(them.lvl, { uid: 'bb', bg: false, acc: them.eq || [] });
     [A, B].forEach(f => { f.className = 'fighter ' + (f === A ? 'l' : 'r') + ' idle'; });
     $('#btCrowd').innerHTML = '<i></i>'.repeat(13); $('#btCrowd').querySelectorAll('i').forEach((i, k) => { i.style.animationDelay = (-(k * 0.13) % 0.5).toFixed(2) + 's'; });
     $('#btConf').innerHTML = '';
     $('#btJudges').querySelectorAll('.card').forEach(c => { c.className = 'card'; });
-    $('#btRes').hidden = true; $('#btSkip').hidden = false; $('#btClose').hidden = true; $('#btAgain').hidden = true;
+    $('#btRes').hidden = true; $('#btSkip').hidden = false; $('#btClose').hidden = true;
     $('#battle').hidden = false;
     const rnd = mulberry(bt.seed || 1);
     const shout = (left) => { const s = $('#btShout'); s.textContent = BT_SHOUTS[Math.floor(rnd() * BT_SHOUTS.length)]; s.style.left = left ? '14%' : ''; s.style.right = left ? '' : '14%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
@@ -4195,7 +4280,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win');
         const t = $('#btResT'); t.textContent = won ? T('Победа!') : T('Поражение'); t.className = won ? 'win' : 'lose';
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
-        $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false; $('#btAgain').hidden = !(BT.cur.opp && BT.cur.opp.id);
+        $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
         $('#btCrowd').classList.add('hype');
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
       }, 350 + votes.length * 650 + 300);
@@ -4223,7 +4308,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#btSkip').addEventListener('click', () => BT.finish && BT.finish());
   $('#btClose').addEventListener('click', () => { BT.run++; $('#battle').hidden = true; setTimeout(btShowNews, 600); });
-  $('#btAgain').addEventListener('click', () => { const o = BT.cur && BT.cur.opp; BT.run++; $('#battle').hidden = true; if (o && o.id) setTimeout(() => btCall(o, null), 350); });
   new MutationObserver(() => { if ($('#battle').hidden) { BT.run++; $('#btCrowd').classList.remove('hype'); } }).observe($('#battle'), { attributes: true, attributeFilter: ['hidden'] });
   // battles somebody started against this phone
   async function btInbox(now){
@@ -4231,7 +4315,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     BT.busy = true;
     try {
       const res = await btPost('/bt/inbox'), j = await res.json().catch(() => ({}));
-      if (j.ok) { btPaintScore(j.score); BT.news = (j.news || []).slice().reverse(); btLinkPush(); }
+      if (j.ok) { btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} } btWallet(j); BT.news = (j.news || []).slice().reverse(); btLinkPush(); if (lbData) renderLeaders(); }
     } catch (_) {}
     BT.busy = false;
     btShowNews(now);
@@ -4241,7 +4325,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
     if (busy) return;
     const bt = BT.news[0];
-    $('#btCallA').innerHTML = HERO.svg(bt.b.lvl, { uid: 'ca', bg: false }); $('#btCallB').innerHTML = HERO.svg(bt.a.lvl, { uid: 'cb', bg: false });
+    $('#btCallA').innerHTML = HERO.svg(bt.b.lvl, { uid: 'ca', bg: false, acc: myEq }); $('#btCallB').innerHTML = HERO.svg(bt.a.lvl, { uid: 'cb', bg: false, acc: bt.a.eq || [] });
     $('#btCallT').textContent = T('{name} вызывает тебя на батл!', { name: bt.a.name });
     $('#btCallSheet').hidden = false;
   }
