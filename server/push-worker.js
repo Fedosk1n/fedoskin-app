@@ -413,6 +413,7 @@ function schema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS chat_msg_thr ON chat_msg (thr, n)'),
     db.prepare('CREATE TABLE IF NOT EXISTS chat_map (tg INTEGER PRIMARY KEY, thr TEXT NOT NULL)'),
     db.prepare('CREATE TABLE IF NOT EXISTS tgs (k TEXT PRIMARY KEY, v TEXT) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS chat_top (thr TEXT PRIMARY KEY, top INTEGER NOT NULL) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
@@ -665,9 +666,34 @@ function chatHead(t) {
   return '💬 ' + (t.name || 'Без имени') + (t.country ? ' ' + flag(t.country) : '') + (t.svc ? ' · ' + (SVC_RU[t.svc] || t.svc) : '') + ' · ' + (LANG_RU[t.lang] || t.lang) + ' · #' + t.id.slice(0, 5);
 }
 const CHAT_HINT = '\n\n↩️ Чтобы ответить клиенту — смахните это сообщение влево (или «Ответить») и пишите. Можно фото и видео.';
+// Topics (owner 10.11.2026 «от всех клиентов в один общий чат — неудобно»): with «Threaded mode» on for the bot (BotFather →
+// mini app → Bot Settings), every client gets a topic of his own in the coach's chat with the bot (Bot API 9.4
+// createForumTopic in private chats); the coach just writes in that topic. Topic ids in D1 chat_top. Topics off ⇒ the
+// old single chat where the coach answers with «Reply». A failed attempt is remembered for 10 min (tgs 'notop').
+const topicName = t => ((t.name || 'Без имени') + (t.country ? ' ' + flag(t.country) : '') + (t.svc ? ' · ' + (SVC_RU[t.svc] || t.svc) : '')).slice(0, 120);
+async function chatTopic(env, t, owner) {
+  const row = await env.DB.prepare('SELECT top FROM chat_top WHERE thr = ?').bind(t.id).first();
+  if (row) return row.top;
+  const no = parseInt(await tgGet(env.DB, 'notop')) || 0;
+  if (Date.now() - no < 10 * 60e3) return 0;
+  try {
+    const r = await tg(env, 'createForumTopic', { chat_id: owner, name: topicName(t) });
+    const top = r.message_thread_id;
+    await env.DB.prepare('INSERT OR REPLACE INTO chat_top (thr, top) VALUES (?, ?)').bind(t.id, top).run();
+    await tg(env, 'sendMessage', { chat_id: owner, message_thread_id: top, text: 'Новый клиент: ' + chatHead(t).replace(/^💬 /, '') + '\n\nПишите ответ прямо в этой теме — текст, фото, видео. Он придёт клиенту в приложение.' }).catch(() => {});
+    return top;
+  } catch (e) { await tgSet(env.DB, 'notop', Date.now()); return 0; }
+}
 async function chatToOwner(env, t, send) {
   const owner = await env.PUSH.get('tg:owner');
-  const m = await send(owner);
+  await schema(env.DB);
+  let top = await chatTopic(env, t, owner), m;
+  try { m = await send(owner, top); }
+  catch (e) {
+    if (!top || !/thread|topic/i.test(e.message)) throw e;
+    await env.DB.prepare('DELETE FROM chat_top WHERE thr = ?').bind(t.id).run(); // the coach deleted the topic ⇒ a new one
+    top = await chatTopic(env, t, owner); m = await send(owner, top);
+  }
   if (m && m.message_id) await env.DB.prepare('INSERT OR REPLACE INTO chat_map (tg, thr) VALUES (?, ?)').bind(m.message_id, t.id).run();
 }
 async function chatSend(req, env, json) {
@@ -681,7 +707,7 @@ async function chatSend(req, env, json) {
   const now = Date.now();
   const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, t) VALUES (?, 'in', 'text', ?, ?)").bind(t.id, text, now).run();
   await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
-  try { await chatToOwner(env, t, owner => tg(env, 'sendMessage', { chat_id: owner, text: (chatHead(t) + '\n\n' + text + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
+  try { await chatToOwner(env, t, (owner, top) => tg(env, 'sendMessage', top ? { chat_id: owner, message_thread_id: top, text: text.slice(0, 4096) } : { chat_id: owner, text: (chatHead(t) + '\n\n' + text + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
   catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); } // kept; Telegram was not reachable
   return json({ ok: true, n: r.meta && r.meta.last_row_id });
 }
@@ -704,15 +730,15 @@ async function chatFile(req, env, json) {
   const cap = String(q.cap || '').slice(0, 900), now = Date.now();
   const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'in', ?, ?, ?, ?)").bind(t.id, kind, cap, key, now).run();
   await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
-  const head = chatHead(t) + (cap ? '\n\n' + cap : '') + (t.fresh ? CHAT_HINT : '');
   try {
-    await chatToOwner(env, t, async owner => {
+    await chatToOwner(env, t, async (owner, top) => {
+      const head = top ? cap : chatHead(t) + (cap ? '\n\n' + cap : '') + (t.fresh ? CHAT_HINT : '');
       const big = kind === 'photo' ? buf.byteLength > 9.5 * 1048576 : buf.byteLength > 49 * 1048576;
       if (big) {
         const link = new URL(req.url).origin + '/chat/m/' + key + '?s=' + await chatSign(env, key, 30);
-        return tg(env, 'sendMessage', { chat_id: owner, text: (head + '\n\n📎 ' + (kind === 'photo' ? 'Фото' : 'Видео') + ' (' + (buf.byteLength / 1048576).toFixed(0) + ' МБ — больше лимита Telegram): ' + link).slice(0, 4096) });
+        return tg(env, 'sendMessage', { chat_id: owner, ...(top ? { message_thread_id: top } : {}), text: ((head ? head + '\n\n' : '') + '📎 ' + (kind === 'photo' ? 'Фото' : 'Видео') + ' (' + (buf.byteLength / 1048576).toFixed(0) + ' МБ — больше лимита Telegram): ' + link).slice(0, 4096) });
       }
-      const f = new FormData(); f.append('chat_id', owner); f.append('caption', head.slice(0, 1024));
+      const f = new FormData(); f.append('chat_id', owner); if (top) f.append('message_thread_id', String(top)); if (head) f.append('caption', head.slice(0, 1024));
       f.append(kind === 'photo' ? 'photo' : 'video', new Blob([buf], { type: ct }), 'file.' + ext);
       if (kind === 'video') f.append('supports_streaming', 'true');
       return tg(env, kind === 'photo' ? 'sendPhoto' : 'sendVideo', f);
@@ -768,9 +794,11 @@ async function tgUpdate(env, m) {
     }
     if (from !== owner) return json({ ok: true }); // only the coach talks to clients through the bot
     await schema(env.DB);
+    const top = m.message_thread_id || 0, inTop = top ? { message_thread_id: top } : {};
+    let map = top ? await env.DB.prepare('SELECT thr FROM chat_top WHERE top = ?').bind(top).first() : null;
     const rep = m.reply_to_message && m.reply_to_message.message_id;
-    const map = rep ? await env.DB.prepare('SELECT thr FROM chat_map WHERE tg = ?').bind(rep).first() : null;
-    if (!map) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Не понял, кому это. Смахните влево сообщение клиента (или «Ответить» на нём) и напишите ответ ещё раз.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+    if (!map && rep) map = await env.DB.prepare('SELECT thr FROM chat_map WHERE tg = ?').bind(rep).first();
+    if (!map) { await tg(env, 'sendMessage', { chat_id: from, ...inTop, text: top ? '⚠️ Эта тема не связана с клиентом. Откройте тему с именем клиента и напишите ответ там.' : '⚠️ Не понял, кому это. Напишите в теме клиента (или смахните его сообщение влево — «Ответить») и отправьте ответ ещё раз.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
     const t = await env.DB.prepare('SELECT * FROM chat_thr WHERE id = ?').bind(map.thr).first();
     if (!t) return json({ ok: true });
     let kind = 'text', media = '', text = m.text || m.caption || '';
@@ -778,15 +806,15 @@ async function tgUpdate(env, m) {
     if (file) {
       const mime = m.photo ? 'image/jpeg' : (file.mime_type || 'video/mp4');
       kind = mime.startsWith('image/') ? 'photo' : 'video';
-      if ((file.file_size || 0) > 20 * 1048576) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Файл больше 20 МБ — бот Telegram не может его забрать. Сожмите видео или пришлите ссылку.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
-      if (!env.VIDEOS) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Нет хранилища R2 — фото и видео пока не отправить, только текст.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+      if ((file.file_size || 0) > 20 * 1048576) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '⚠️ Файл больше 20 МБ — бот Telegram не может его забрать. Сожмите видео или пришлите ссылку.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+      if (!env.VIDEOS) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '⚠️ Нет хранилища R2 — фото и видео пока не отправить, только текст.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
       const f = await tg(env, 'getFile', { file_id: file.file_id });
       const r = await fetch('https://api.telegram.org/file/bot' + env.TG_TOKEN + '/' + f.file_path);
       if (!r.ok) throw new Error('download ' + r.status);
       const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/quicktime': 'mov', 'video/webm': 'webm' }[mime] || (kind === 'photo' ? 'jpg' : 'mp4');
       media = 'chat/' + t.id + '/' + rvCode(12) + '.' + ext;
       await env.VIDEOS.put(media, await r.arrayBuffer(), { httpMetadata: { contentType: mime } });
-    } else if (!text) { await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Такое пока не передаётся — отправьте текст, фото или видео.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
+    } else if (!text) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '⚠️ Такое пока не передаётся — отправьте текст, фото или видео.', reply_to_message_id: m.message_id }); return json({ ok: true }); }
     const now = Date.now();
     await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'out', ?, ?, ?, ?)").bind(t.id, kind, text.slice(0, 4000), media || null, now).run();
     await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
@@ -798,10 +826,10 @@ async function tgUpdate(env, m) {
       if (res && (res.status === 404 || res.status === 410)) await env.DB.prepare('UPDATE chat_thr SET push = NULL WHERE id = ?').bind(t.id).run();
     }
     try { await tg(env, 'setMessageReaction', { chat_id: from, message_id: m.message_id, reaction: [{ type: 'emoji', emoji: '👍' }] }); }
-    catch (_) { await tg(env, 'sendMessage', { chat_id: from, text: '✓ Доставлено', reply_to_message_id: m.message_id }).catch(() => {}); }
-    if (!pushed && !t.push) await env.PUSH.get('tg:nopush:' + t.id).then(async seen => { if (!seen) { await env.PUSH.put('tg:nopush:' + t.id, '1', { expirationTtl: 30 * 86400 }); await tg(env, 'sendMessage', { chat_id: from, text: 'ℹ️ У этого клиента не включены уведомления — он увидит ответ, когда откроет чат в приложении.' }).catch(() => {}); } });
+    catch (_) { await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '✓ Доставлено', reply_to_message_id: m.message_id }).catch(() => {}); }
+    if (!pushed && !t.push) await env.PUSH.get('tg:nopush:' + t.id).then(async seen => { if (!seen) { await env.PUSH.put('tg:nopush:' + t.id, '1', { expirationTtl: 30 * 86400 }); await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: 'ℹ️ У этого клиента не включены уведомления — он увидит ответ, когда откроет чат в приложении.' }).catch(() => {}); } });
   } catch (e) {
-    await tg(env, 'sendMessage', { chat_id: from, text: '⚠️ Не получилось доставить: ' + String(e && e.message || e).slice(0, 200), reply_to_message_id: m.message_id }).catch(() => {});
+    await tg(env, 'sendMessage', { chat_id: from, ...(m.message_thread_id ? { message_thread_id: m.message_thread_id } : {}), text: '⚠️ Не получилось доставить: ' + String(e && e.message || e).slice(0, 200), reply_to_message_id: m.message_id }).catch(() => {});
   }
 }
 // ----- pull mode (10.11.2026): Telegram answered setWebhook with «bad webhook: Failed to resolve host» — its servers

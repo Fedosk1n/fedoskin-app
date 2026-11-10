@@ -498,3 +498,9 @@
   owner after Start) and from the Cron trigger (`scheduled()`, owner adds «* * * * *» in Cloudflare; status `cron` = a tick
   within 5 min). Without cron, a closed app gets the reply (and push) only on the next pull. Admin «версия 28»: `#tgPull`
   explains the mode + cron steps. Tested on a fake Telegram (srv3: failing setWebhook, getUpdates queue, /__cron).
+  Topics (owner 10.11.2026 «от всех клиентов в один общий чат — неудобно»): with BotFather → Open (mini app) → bot → Bot
+  Settings → «Threaded mode» on, `chatTopic()` creates one topic per client in the owner's bot chat (Bot API 9.4
+  createForumTopic in private chats; name «Mike 🇺🇸 · service»; D1 `chat_top (thr, top)`) + an intro message; client texts /
+  media go there without the header; the owner just writes in the topic (tgUpdate maps message_thread_id → thread, then
+  falls back to Reply mapping). Deleted topic ⇒ recreated on the next client message. createForumTopic failing (mode off)
+  ⇒ old single chat with header + «Reply», retried after 10 min (tgs 'notop'). Admin «версия 29»: card explains enabling.
