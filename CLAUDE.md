@@ -354,6 +354,18 @@
   riding the edge; full = ready (pop + vibrate). Release ⇒ `.spin`: `icons/logo-paint.png` (orange-filled logo, made with
   PIL) rises through the letters from the bottom (clip-path loop 1.24 s) while the logo nods on a beat (0.62 s); ≥ 0.82 s,
   ≤ 4 s; `.done` = fully orange + pop ⇒ `reloadClean()`. Only transform/opacity/clip-path animate (60 fps in tests).
+- The b-boy hero + levels (owner 10.11.2026 «человечек в хип-хоп стиле… промежутки значительно шире»; chose 8 levels up to
+  100 h, flat cartoon, shown in profile / level-up screen / leaderboard / story): `hero.js` (`window.HERO`: LEVELS minutes
+  [0, 60, 240, 600, 1200, 2100, 3600, 6000], NAMES + PERKS = Russian i18n keys, RING colours, `levelFor(mins)`,
+  `svg(level, {uid, bust, bg, size})` — our own character, no brands; each level adds clothes: cap+kicks → black tee+track
+  pants → orange track jacket+headphones → chain+shades → black bomber+high-tops → gold+boombox → champion belt, rays, fist
+  up). index.html: `LEVELS = HERO.LEVELS`; profile `#heroCard` (hero + level + name + bar + «Ещё {t} тренировок — и новый
+  образ: {perk}», `hmFmt`) → sheet `#heroSheet` gallery (locked = black silhouette + «Через {t}»); `#lvlUp` level-up screen
+  (old look flashes into the new, rays, vibration, «Поделиться в сторис» → openStory) — `lvlCheck()` never over a lesson /
+  sheet / story, not in the first 2.5 s, re-checked by go() after leaving the lesson; celebrated level in `fedoskin-lvl`
+  (first run with the new levels just saves the current one — old 11-level users silently get the new, lower level).
+  Leaderboard rows: `heroMini()` bust + level badge from the row's minutes (replaced the preset avatar there). Story card
+  and the 1080×1920 PNG show the hero + «Уровень N · name». `window.fedoskinLevelUp(a,b)` / `fedoskinStoryImage()` for checks.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.

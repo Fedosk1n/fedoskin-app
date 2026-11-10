@@ -263,6 +263,51 @@ body.chatmode .tabs{display:none}
 .st-stats span{display:flex;flex-direction:column;gap:2px;padding:10px 4px;border-radius:12px;background:rgba(242,239,232,.06)}
 .st-stats b{font-size:24px;font-weight:400;line-height:1}
 .st-stats i{font-style:normal;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+/* the b-boy hero (owner 10.11.2026): his outfit gets fresher with every level — hero.js draws him */
+.herocard{display:flex;gap:12px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;margin-top:12px;padding:10px 16px 14px 6px;border-radius:18px;border:1px solid var(--line)}
+.heroimg{flex:none;width:118px;display:block}
+.heroimg svg{display:block;width:100%;height:auto}
+.herotx{flex:1;min-width:0;gap:4px}
+.herotx .lvl{font-size:26px;line-height:1;color:var(--accent)}
+.herotx .ttl{font-weight:700;font-size:15px}
+.herotx .more{font-size:12px;font-weight:700;color:var(--accent);margin-top:2px}
+.lvlbar{margin-top:8px;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;display:block}
+.lvlbar i{display:block;height:8px;background:var(--accent);transition:width .4s ease}
+.herogrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px;max-height:62dvh;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
+.herolook{border-radius:16px;background:#1A1A1D;border:1px solid #26262A;padding:6px 8px 10px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.herolook svg{display:block;width:100%;height:auto}
+.herolook.lock svg{filter:brightness(0);opacity:.55}
+.herolook.cur{border-color:var(--accent);background:#21160F}
+.herolook b{font-size:13px}
+.herolook small{font-size:11px;color:var(--muted)}
+.herolook.cur small{color:var(--accent);font-weight:700}
+.heromini{position:relative;flex:none;width:40px;height:40px;display:block}
+.heromini i{display:block;width:40px;height:40px;border-radius:50%;overflow:hidden;background:#1C1C1F}
+.heromini svg{display:block;width:40px;height:40px}
+.heromini b{position:absolute;right:-4px;bottom:-3px;border:2px solid var(--bg);min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--accent);color:#0B0B0C;font-size:10px;line-height:15px;text-align:center}
+.lvlup{align-items:center;background:rgba(8,8,9,.94);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:70;overflow:hidden}
+.lvlup .box{width:min(360px,calc(100% - 32px));text-align:center;display:flex;flex-direction:column;align-items:center}
+.lvlup .kick{font-family:var(--display);font-size:46px;line-height:1;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;animation:lvkick .5s cubic-bezier(.2,1.6,.4,1) both}
+.lvlup .lvstage{position:relative;width:min(230px,58vw);aspect-ratio:200/240;margin-top:10px}
+.lvlup .lvstage>span{position:absolute;inset:0}
+.lvlup .lvstage svg{width:100%;height:100%;display:block}
+.lvlup .lvstage>.rays{left:50%;top:46%;right:auto;bottom:auto;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;
+  background:repeating-conic-gradient(rgba(226,97,26,.22) 0 9deg, transparent 9deg 30deg);-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:lvspin 9s linear infinite}
+.lvlup .old{animation:lvout .55s ease .35s both}
+.lvlup .new{animation:lvin .6s cubic-bezier(.2,1.5,.4,1) .75s both}
+.lvlup .lvstage>.flash{left:50%;top:45%;right:auto;bottom:auto;width:30px;height:30px;margin:-15px;border-radius:50%;background:#FFE7C2;animation:lvflash .7s ease-out .6s both}
+.lvlup .nm{font-family:var(--display);font-size:26px;line-height:1.1;text-transform:uppercase;margin-top:4px;animation:lvfade .4s ease 1.1s both}
+.lvlup .pk{color:var(--soft);font-size:14px;margin-top:6px;animation:lvfade .4s ease 1.25s both}
+.lvlup .btns{display:flex;gap:10px;width:100%;margin-top:20px;animation:lvfade .4s ease 1.4s both}
+@keyframes lvkick{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes lvspin{to{transform:rotate(360deg)}}
+@keyframes lvout{to{opacity:0;transform:scale(.85);filter:brightness(3)}}
+@keyframes lvin{from{opacity:0;transform:scale(.6) translateY(20px)}to{opacity:1;transform:none}}
+@keyframes lvflash{0%{transform:scale(0);opacity:1}100%{transform:scale(14);opacity:0}}
+@keyframes lvfade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.lvlup *{animation-duration:.01s!important;animation-delay:0s!important}.lvlup .rays{animation:none}}
+#stAvatar svg{display:block;width:58px;height:auto}
+.st-lvl{font-size:12px;font-weight:800;letter-spacing:.6px;color:var(--accent);text-transform:uppercase}
 .st-link{align-self:center;margin-top:8px;padding:5px 12px;border-radius:999px;border:1px solid var(--accent);background:rgba(242,239,232,.08);font-size:11px;font-weight:700;color:var(--fg);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-cta{margin-top:14px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--soft)}
 /* search + save */
@@ -953,14 +998,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA</span>
     <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600">Ты альфа-тестер. Когда приложение станет платным, получишь месяц подписки бесплатно, а значок и аватар «Альфа» останутся у тебя навсегда.</p>
   </div>
-  <div class="card" style="margin-top:12px;padding:16px;border-radius:18px">
-    <div class="row" style="justify-content:space-between;align-items:baseline">
+  <button class="card herocard" id="heroCard" type="button">
+    <span class="heroimg" id="heroImg" aria-hidden="true"></span>
+    <span class="stack herotx">
       <span class="label">Твой уровень</span>
-      <span class="d" id="lvlName" style="font-size:26px;color:var(--accent)">Уровень 1</span>
-    </div>
-    <div aria-hidden="true" style="margin-top:12px;height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden"><div id="lvlBar" style="width:0%;height:8px;background:var(--accent);transition:width .4s ease"></div></div>
-    <p class="muted" id="lvlHint" style="margin-top:8px;font-size:12px"></p>
-  </div>
+      <span class="d lvl" id="lvlName">Уровень 1</span>
+      <span class="ttl" id="lvlTitle"></span>
+      <span class="lvlbar" aria-hidden="true"><i id="lvlBar" style="width:0%"></i></span>
+      <span class="muted" id="lvlHint" style="font-size:12px;line-height:1.35"></span>
+      <span class="more">Все образы →</span>
+    </span>
+  </button>
 
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stViews">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
@@ -1195,6 +1243,23 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </div>
 
+<div class="sheet-bg" id="heroSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="heroTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="heroTitle" style="font-size:24px">Образы</h2>
+    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4">Смотри уроки — и твой герой будет прокачиваться</p>
+    <div class="herogrid" id="heroGrid"></div>
+  </div>
+</div>
+<div class="sheet-bg lvlup" id="lvlUp" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="lvlUpT">
+    <span class="kick" id="lvlUpT">Новый уровень!</span>
+    <div class="lvstage"><span class="rays"></span><span class="old" id="lvlUpOld"></span><span class="flash"></span><span class="new" id="lvlUpNew"></span></div>
+    <span class="nm" id="lvlUpName"></span>
+    <span class="pk" id="lvlUpPerk"></span>
+    <div class="btns"><button class="btn btn-ghost" id="lvlUpOk" type="button" style="flex:1">Круто!</button><button class="btn btn-accent" id="lvlUpShare" type="button" style="flex:2">Поделиться в сторис</button></div>
+  </div>
+</div>
 <div class="story-bg" id="story" hidden role="dialog" aria-modal="true" aria-label="Карточка для сторис">
   <div class="story-wrap">
     <div class="story" id="storyCard">
@@ -1202,10 +1267,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="stack" style="align-items:center;gap:10px;margin-top:auto">
         <span id="stAvatar"></span>
         <span class="d" id="stNick" style="font-size:20px"></span>
+        <span class="st-lvl" id="stLvl"></span>
         <span class="alphabadge">α АЛЬФА-ТЕСТЕР</span>
       </div>
       <div class="stack" style="align-items:center;margin-top:14px">
-        <span class="d" id="stPlace" style="font-size:96px;line-height:.9;color:var(--accent)">0</span>
+        <span class="d" id="stPlace" style="font-size:74px;line-height:.9;color:var(--accent)">0</span>
         <span id="stWhere" style="font-size:13px;font-weight:600;text-align:center;margin-top:6px">минут тренировок в Fedoskin</span>
       </div>
       <div class="st-stats">
@@ -1235,6 +1301,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
+<script src="hero.js?v=1"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -3046,8 +3113,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   let rankScope = 'world';
   function openStory(){
-    $('#stAvatar').innerHTML = avatarHTML(myAvatar, 72);
     const st = statsView();
+    $('#stAvatar').innerHTML = HERO.svg(st.level, {uid: 's'});
+    $('#stLvl').textContent = T('Уровень {n}', {n: st.level}) + ' · ' + T(HERO.NAMES[st.level - 1]);
     $('#stPlace').textContent = st.mins;
     $('#stWhere').textContent = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
     $('#stNick').textContent = prof.nick || T('Брейкер');
@@ -3081,6 +3149,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#lessonShare').addEventListener('click', () => { if (curLesson) shareLink(APP_LINK + '/?lesson=' + encodeURIComponent(curLesson.id) + '&from=share', T('Смотри урок «{name}» в приложении Fedoskin team', { name: curLesson.name })); });
   let storyFile = null, storyPrep = null;
   const loadImg = src => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = src; });
+  window.fedoskinStoryImage = () => storyImage(); // for checking the picture by hand
   async function storyImage(){
     const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
@@ -3095,22 +3164,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const fitFont = (text, size, max, fam, weight) => { let s = size; g.font = (weight || '') + ' ' + s + 'px ' + fam; while (g.measureText(text).width > max && s > 20) { s -= 4; g.font = (weight || '') + ' ' + s + 'px ' + fam; } return g.font; };
     const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
     // logo
-    try { const lg = await loadImg('logo.png'); const lw = 420, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 230, lw, lh); } catch (_) {}
-    // avatar
-    const a = byId(myAvatar), R = 105, cy = 700;
-    const m = /linear-gradient\((\d+)deg\s*,\s*([^,]+),\s*([^)]+)\)/.exec(a.bg);
-    if (m) { const lgr = g.createLinearGradient(W / 2 - R, cy - R, W / 2 + R, cy + R); lgr.addColorStop(0, m[2].trim()); lgr.addColorStop(1, m[3].trim()); g.fillStyle = lgr; } else g.fillStyle = a.bg;
-    g.beginPath(); g.arc(W / 2, cy, R, 0, Math.PI * 2); g.fill();
-    if (a.bg === '#1F1F22') { g.strokeStyle = '#2A2A2D'; g.lineWidth = 4; g.stroke(); }
-    try {
-      const S = Math.round(R * 2 * 0.55), svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + S + '" height="' + S + '" fill="none" stroke="' + a.fg + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="' + a.fg + '">' + a.d.replace(/currentColor/g, a.fg) + '</svg>';
-      const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)); g.drawImage(im, W / 2 - S / 2, cy - S / 2, S, S);
-    } catch (_) {}
+    try { const lg = await loadImg('logo.png'); const lw = 380, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 160, lw, lh); } catch (_) {}
+    // the hero of the person's level (owner 10.11.2026)
+    const stv = statsView();
+    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c'}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
     // nick + alpha badge
     const nick = (prof.nick || T('Брейкер')).toUpperCase();
     g.font = fitFont(nick, 76, W - 160, DISP); g.fillStyle = '#F2EFE8'; g.textAlign = 'center'; g.fillText(nick, W / 2, 890);
     const badge = T('α АЛЬФА-ТЕСТЕР'); g.font = '800 34px ' + BODY; const bw = g.measureText(badge).width + 48;
     g.fillStyle = '#E2611A'; rr(W / 2 - bw / 2, 920, bw, 58, 14); g.fill(); centre(badge, 961, '800 34px ' + BODY, '#0B0B0C');
+    const lvt = (T('Уровень {n}', {n: stv.level}) + ' · ' + T(HERO.NAMES[stv.level - 1])).toUpperCase();
+    g.font = fitFont(lvt, 40, W - 160, BODY, 800); g.fillStyle = '#E2611A'; g.textAlign = 'center'; g.fillText(lvt, W / 2, 1040);
     // minutes
     const st = statsView();
     g.font = fitFont(String(st.mins), 300, W - 120, DISP); g.fillStyle = '#E2611A'; g.fillText(String(st.mins), W / 2, 1290);
@@ -3176,6 +3240,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function go(id){
     if (id === 'profile') setTimeout(() => { try { stRender(); } catch (_) {} }, 0);
     if (id !== 'lesson' && watchedNow && installWanted) setTimeout(() => { try { installAfterLesson(); } catch (_) {} }, 700);
+    if (id !== 'lesson') setTimeout(() => { try { lvlCheck(); } catch (_) {} }, 900);
     if (id === 'home' && newRowDirty) { newRowDirty = false; setTimeout(() => { try { paintNewRow(); } catch (_) {} }, 0); }
     // interest in online services (07.11.2026): the tab opened by the person — not the start-up restore, not «back» from a service
     if (id === 'review' && performance.now() > 2500) {
@@ -3741,7 +3806,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function toast(msg){ const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 2200); }
 
   // ===== real stats (stored on this device) =====
-  const LEVELS = [0, 5, 15, 30, 60, 120, 240, 480, 960, 1920, 3840]; // minutes needed for each level
+  const LEVELS = HERO.LEVELS; // minutes needed for each level — 8 levels up to 100 h (owner 10.11.2026: «промежутки значительно шире»)
   const todayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   let stats = { sec: 0, views: 0, watched: {}, last: '', streak: 0 };
   try { const raw = JSON.parse(localStorage.getItem('fedoskin-stats') || 'null'); if (raw && typeof raw === 'object') stats = Object.assign(stats, raw); } catch (_) {}
@@ -3762,10 +3827,61 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const v = statsView();
     $('#stViews').textContent = v.views; $('#stMins').textContent = v.mins; $('#stStreak').textContent = v.streak;
     $('#lvlName').textContent = T('Уровень {n}', {n: v.level});
+    $('#lvlTitle').textContent = T(HERO.NAMES[v.level - 1]);
     $('#lvlBar').style.width = v.pct + '%';
-    $('#lvlHint').textContent = v.next ? T('Ещё {n} мин. тренировок до уровня {next}', {n: v.left, next: v.level + 1}) : T('Максимальный уровень — ты легенда');
+    $('#lvlHint').textContent = v.next ? T('Ещё {t} тренировок — и новый образ: {perk}', {t: hmFmt(v.left), perk: T(HERO.PERKS[v.level])}) : T('Максимальный уровень — ты легенда');
+    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p'}); }
+    lvlCheck();
     renderProgress();
   }
+  // ===== the hero: gallery of looks + «level up» screen =====
+  let heroDrawn = 0;
+  function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
+  function heroMini(level, uid){ return '<span class="heromini"><i style="background:' + HERO.RING[level - 1] + '40">' + HERO.svg(level, {bust: true, bg: false, uid}) + '</i><b>' + level + '</b></span>'; }
+  function openHeroes(){
+    const v = statsView(), box = $('#heroGrid'); box.innerHTML = '';
+    HERO.LEVELS.forEach((need, i) => {
+      const l = i + 1, d = document.createElement('div');
+      d.className = 'herolook' + (l > v.level ? ' lock' : '') + (l === v.level ? ' cur' : '');
+      d.innerHTML = HERO.svg(l, {uid: 'g' + l}) + '<b></b><small></small>';
+      d.querySelector('b').textContent = T('Ур. {n}', {n: l}) + ' · ' + T(HERO.NAMES[i]);
+      d.querySelector('small').textContent = l === v.level ? T('Сейчас') : l < v.level ? T('Открыт') : T('Через {t}', {t: hmFmt(need - stats.sec / 60)});
+      box.appendChild(d);
+    });
+    $('#heroSheet').hidden = false;
+    const cur = box.querySelector('.cur'); if (cur) setTimeout(() => cur.scrollIntoView({block: 'nearest'}), 50);
+  }
+  $('#heroCard').addEventListener('click', openHeroes);
+  $('#heroSheet').addEventListener('click', e => { if (e.target.id === 'heroSheet') $('#heroSheet').hidden = true; });
+  // the level the person has already celebrated; on the first start with the new levels it is just taken as is
+  let lvlSeen = 0;
+  try { lvlSeen = +localStorage.getItem('fedoskin-lvl') || 0; } catch (_) {}
+  function lvlSave(l){ lvlSeen = l; try { localStorage.setItem('fedoskin-lvl', String(l)); } catch (_) {} }
+  // shown only when nothing else is on screen — never over a playing lesson (go() checks again after leaving it)
+  let lvlWait = 0;
+  function lvlCheck(){
+    if (performance.now() < 2500) { if (!lvlWait) lvlWait = setTimeout(() => { lvlWait = 0; lvlCheck(); }, 2600 - performance.now()); return; } // let the start-up settle first
+    const l = statsView().level;
+    if (!lvlSeen) { lvlSave(l); return; }
+    if (l <= lvlSeen) return;
+    const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
+    if (busy) return;
+    const from = lvlSeen; lvlSave(l); showLvlUp(from, l);
+  }
+  function showLvlUp(from, to){
+    $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo'}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un'});
+    $('#lvlUpName').textContent = T('Уровень {n}', {n: to}) + ' · ' + T(HERO.NAMES[to - 1]);
+    $('#lvlUpPerk').textContent = T('Открыто: {perk}', {perk: T(HERO.PERKS[to - 1])});
+    const box = $('#lvlUp'); box.hidden = false;
+    box.querySelectorAll('.box *').forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+    if (navigator.vibrate) setTimeout(() => { try { navigator.vibrate([20, 60, 40]); } catch (_) {} }, 750);
+    heroDrawn = 0; if (!$('#profile').hidden) renderStats();
+  }
+  window.fedoskinLevelUp = (a, b) => showLvlUp(a || 1, b || 2); // for checking the screen by hand
+  $('#lvlUpOk').addEventListener('click', () => { $('#lvlUp').hidden = true; });
+  $('#lvlUpShare').addEventListener('click', () => { $('#lvlUp').hidden = true; setTimeout(openStory, 350); });
+  $('#lvlUp').addEventListener('click', e => { if (e.target.id === 'lvlUp') $('#lvlUp').hidden = true; });
+
   let sessionSec = 0, sessionCounted = false, lastLessonId = null;
   setInterval(() => {
     // count only real playback of a lesson video, with the app on screen
@@ -3899,7 +4015,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const me = r.id === prof.id;
       const li = document.createElement('li'); li.className = 'row';
       li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
-      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + avatarHTML(me ? myAvatar : r.a, 40) +
+      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i) +
         '<span class="stack" style="gap:2px;flex:1;min-width:0"><span class="nm" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted ct" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></span>' +
         '<span class="muted mn" style="font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap"></span>';
       li.querySelector('.nm').textContent = (me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}))) + ' ';
