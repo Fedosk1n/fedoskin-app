@@ -407,6 +407,28 @@ t('Новый уровень!', 'Level up!', '¡Subiste de nivel!', 'Subiu de n�
 t('Открыто: {perk}', 'Unlocked: {perk}', 'Desbloqueado: {perk}', 'Desbloqueado: {perk}', 'Débloqué : {perk}', 'Freigeschaltet: {perk}', '解放：{perk}', '해제: {perk}', '已解锁：{perk}')
 t('Круто!', 'Nice!', '¡Genial!', 'Massa!', 'Trop bien !', 'Stark!', 'やった！', '좋아요!', '太棒了！')
 
+# ---- hero battles (10.11.2026) ----
+t('Батл', 'Battle', 'Batalla', 'Batalha', 'Battle', 'Battle', 'バトル', '배틀', '斗舞')
+t('Победы: {w} · Поражения: {l}', 'Wins: {w} · Losses: {l}', 'Victorias: {w} · Derrotas: {l}', 'Vitórias: {w} · Derrotas: {l}', 'Victoires : {w} · Défaites : {l}', 'Siege: {w} · Niederlagen: {l}', '勝ち: {w} · 負け: {l}', '승: {w} · 패: {l}', '胜: {w} · 负: {l}')
+t('Включи «Показывать меня в рейтинге», чтобы батлить', 'Turn on “Show me in the ranking” to battle', 'Activa «Mostrarme en el ranking» para batallar', 'Ative “Mostrar-me no ranking” para batalhar', 'Active « Me montrer dans le classement » pour faire des battles', 'Aktiviere „Mich im Ranking zeigen“, um zu battlen', '「ランキングに表示」をオンにするとバトルできます', '배틀하려면 “랭킹에 나를 표시”를 켜세요', '打开“在排行榜中显示我”才能斗舞')
+t('На сегодня батлов хватит — приходи завтра', 'That’s enough battles for today — come back tomorrow', 'Suficientes batallas por hoy, vuelve mañana', 'Chega de batalhas por hoje — volte amanhã', 'Assez de battles pour aujourd’hui — reviens demain', 'Genug Battles für heute — komm morgen wieder', '今日のバトルはここまで。また明日！', '오늘 배틀은 여기까지 — 내일 또 와요', '今天的斗舞够多啦，明天再来')
+t('Этого человека больше нет в рейтинге', 'This person is no longer in the ranking', 'Esta persona ya no está en el ranking', 'Essa pessoa não está mais no ranking', 'Cette personne n’est plus dans le classement', 'Diese Person ist nicht mehr im Ranking', 'この人はランキングにいません', '이 사람은 더 이상 랭킹에 없어요', '此人已不在排行榜中')
+t('Батлы скоро заработают', 'Battles are coming soon', 'Las batallas llegarán pronto', 'As batalhas chegam em breve', 'Les battles arrivent bientôt', 'Battles kommen bald', 'バトルはもうすぐ', '배틀이 곧 열려요', '斗舞即将上线')
+t('Твоё место появится через пару минут — тогда можно батлить', 'Your spot will show up in a couple of minutes — then you can battle', 'Tu lugar aparecerá en un par de minutos y podrás batallar', 'Seu lugar aparece em alguns minutos — aí dá para batalhar', 'Ta place apparaîtra dans quelques minutes — tu pourras alors faire des battles', 'Dein Platz erscheint in ein paar Minuten — dann kannst du battlen', '数分であなたの順位が表示されます。その後バトルできます', '몇 분 뒤 순위가 나타나면 배틀할 수 있어요', '几分钟后你的名次会出现，然后就能斗舞')
+t('Батл не получился. Проверь интернет.', 'The battle didn’t start. Check your internet.', 'La batalla no empezó. Revisa tu internet.', 'A batalha não começou. Verifique a internet.', 'La battle n’a pas démarré. Vérifie ta connexion.', 'Das Battle hat nicht geklappt. Prüfe dein Internet.', 'バトルを開始できませんでした。通信を確認してください。', '배틀을 시작하지 못했어요. 인터넷을 확인하세요.', '斗舞没开始，请检查网络。')
+t('Победа!', 'Victory!', '¡Victoria!', 'Vitória!', 'Victoire !', 'Sieg!', '勝利！', '승리!', '胜利！')
+t('Поражение', 'Defeat', 'Derrota', 'Derrota', 'Défaite', 'Niederlage', '敗北', '패배', '失败')
+t('Судьи: {a} : {b}', 'Judges: {a} : {b}', 'Jueces: {a} : {b}', 'Jurados: {a} : {b}', 'Juges : {a} : {b}', 'Jury: {a} : {b}', 'ジャッジ: {a} : {b}', '심사위원: {a} : {b}', '裁判：{a} : {b}')
+t('Раунд {n}', 'Round {n}', 'Ronda {n}', 'Round {n}', 'Round {n}', 'Runde {n}', 'ラウンド {n}', '라운드 {n}', '第{n}回合')
+t('Судьи', 'Judges', 'Jueces', 'Jurados', 'Juges', 'Jury', 'ジャッジ', '심사위원', '裁判')
+t('Судья', 'Judge', 'Juez', 'Jurado', 'Juge', 'Juror', 'ジャッジ', '심사', '裁判')
+t('Пропустить', 'Skip', 'Saltar', 'Pular', 'Passer', 'Überspringen', 'スキップ', '건너뛰기', '跳过')
+t('Реванш', 'Rematch', 'Revancha', 'Revanche', 'Revanche', 'Revanche', 'リベンジ', '재대결', '再战')
+t('{name} вызывает тебя на батл!', '{name} challenges you to a battle!', '¡{name} te reta a una batalla!', '{name} te desafia para uma batalha!', '{name} te défie en battle !', '{name} fordert dich zum Battle heraus!', '{name}からバトルの挑戦！', '{name}님이 배틀을 신청했어요!', '{name}向你发起斗舞！')
+t('Судьи уже решили — смотри, кто победил', 'The judges have decided — see who won', 'Los jueces ya decidieron: mira quién ganó', 'Os jurados já decidiram — veja quem venceu', 'Les juges ont tranché — regarde qui a gagné', 'Die Jury hat entschieden — schau, wer gewonnen hat', 'ジャッジの判定が出ました。勝者をチェック', '심사 결과가 나왔어요 — 누가 이겼는지 보세요', '裁判已经判定——快看谁赢了')
+t('Смотреть батл', 'Watch the battle', 'Ver la batalla', 'Ver a batalha', 'Voir la battle', 'Battle ansehen', 'バトルを見る', '배틀 보기', '观看斗舞')
+t('Нажми «Батл» у любого из рейтинга — ваши человечки сразятся, а судьи решат, кто круче', 'Tap “Battle” next to anyone in the ranking — your heroes face off and the judges decide who’s doper', 'Toca «Batalla» junto a cualquiera del ranking: sus personajes se enfrentan y los jueces deciden quién es mejor', 'Toque em “Batalha” ao lado de alguém do ranking — os personagens se enfrentam e os jurados decidem quem é melhor', 'Appuie sur « Battle » à côté de n’importe qui du classement — vos persos s’affrontent et les juges décident', 'Tippe bei jemandem im Ranking auf „Battle“ — eure Figuren treten an und die Jury entscheidet', 'ランキングの誰かの「バトル」をタップ。キャラ同士が対決し、ジャッジが勝者を決めます', '랭킹에서 아무나 “배틀”을 누르면 캐릭터끼리 맞붙고 심사위원이 승자를 정해요', '点排行榜里任何人旁边的“斗舞”，你们的角色会对决，裁判决定谁更强')
+
 # ---- online services tab (long texts live in their own file) ----
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))

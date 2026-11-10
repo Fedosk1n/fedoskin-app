@@ -369,6 +369,22 @@
   bucket hat, backwards cap with snap strap, rib collars/cuffs, zips, patches, rope chain; mirrored halves via `MIR()`.
   Leaderboard rows: `heroMini()` bust + level badge from the row's minutes (replaced the preset avatar there). Story card
   and the 1080×1920 PNG show the hero + «Уровень N · name». `window.fedoskinLevelUp(a,b)` / `fedoskinStoryImage()` for checks.
+- Hero battles (owner 10.11.2026 «батлить друг с другом… ради интерактива»; audience = kids / bored viewers for reach;
+  wins will later give points to buy hero accessories): leaderboard rows (only when `/lb` answers `bt: true`) get a «Батл»
+  button `.btbtn` + «🏆 w–l» after the city. `btCall()` → worker POST /bt/call {id, secret = the rating's, to} (text/plain):
+  both must be in the KV board; 3 judges vote at random, p(challenger) = 0.5 + 0.05·(level diff) clamped .3–.7; limits 15
+  a day per phone, 3 a day vs the same person (429 ⇒ toast); D1 `bt` (n, a, b, la, lb, na, nb, seed, votes, win, t, seen),
+  `bt_score (id, w, l)`, `bt_sub (id, sub, lang)`; the challenged phone gets a push at most once per 6 h (sw.js `battle` ⇒
+  `?battle=1` / message open-battle). /bt/inbox → unseen battles + score; /bt/seen {n} marks n ≤ given; /bt/sub links the
+  phone's push subscription (`btLinkPush`, once per endpoint+language in `fedoskin-bt-push`). /lb GET adds `bt` [w, l] per
+  row + `mine`. App: `btPlay(battle, side)` = overlay `#battle` (.sheet-bg ⇒ history step): this phone always on the LEFT
+  (orange), opponent right (blue); seed (mulberry32) picks moves/shouts so both phones see the same show: 2 rounds × 2
+  turns (toprock .6 s + one of spin/mill/head/freeze/flare 1.9 s, crowd shouts), then 3 judges flip cards one by one,
+  «Победа!» + confetti / «Поражение», «Судьи: 2 : 1», «Реванш» / «Закрыть»; «Пропустить» jumps to the judges. Incoming:
+  `btInbox()` 4 s after start, on Profile, on push ⇒ sheet `#btCallSheet` «{name} вызывает тебя на батл!» → «Смотреть
+  батл» / «Позже» (both mark seen); never over a lesson/sheet (re-checked in go()). Profile hero card `#btScore`. Server
+  code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo. Tested:
+  worker on node:sqlite (auth, limits, self, inbox/seen, lb scores), app flow with mocked server (iPhone en).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.

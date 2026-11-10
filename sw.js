@@ -177,8 +177,8 @@ self.addEventListener('push', e => {
       icon: 'icons/icon2-192.png',
       badge: 'icons/icon2-192.png',
       tag: msg.tag || 'new-lesson',
-      renotify: !!msg.chat,
-      data: { id: msg.id || '', chat: msg.chat ? 1 : 0 }
+      renotify: !!(msg.chat || msg.battle),
+      data: { id: msg.id || '', chat: msg.chat ? 1 : 0, battle: msg.battle ? 1 : 0 }
     });
   })());
 });
@@ -188,13 +188,14 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const id = (e.notification.data && e.notification.data.id) || '';
   const chat = !!(e.notification.data && e.notification.data.chat); // the coach answered in the chat (09.11.2026)
-  const url = new URL('./' + (chat ? '?chat=1' : id ? '?lesson=' + encodeURIComponent(id) : ''), self.registration.scope).href;
+  const battle = !!(e.notification.data && e.notification.data.battle); // somebody challenged this phone (10.11.2026)
+  const url = new URL('./' + (battle ? '?battle=1' : chat ? '?chat=1' : id ? '?lesson=' + encodeURIComponent(id) : ''), self.registration.scope).href;
   e.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const w of wins) {
       if (w.url.startsWith(self.registration.scope)) {
         await w.focus();
-        try { w.postMessage(chat ? { type: 'open-chat' } : { type: 'open-lesson', id }); return; } catch (_) {}
+        try { w.postMessage(battle ? { type: 'open-battle' } : chat ? { type: 'open-chat' } : { type: 'open-lesson', id }); return; } catch (_) {}
       }
     }
     await self.clients.openWindow(url);
