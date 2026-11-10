@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 36</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 37</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -580,6 +580,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
             <div class="svf" id="svFunnel"></div>
             <h3 style="margin:16px 0 4px">По услугам</h3>
             <div style="overflow-x:auto"><table class="srct" id="svTable"></table></div>
+            <p class="small" style="font-weight:700;margin:16px 0 6px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">По странам</p>
+            <div style="overflow-x:auto"><table class="srct" id="svCountry"></table></div>
             <h3 style="margin:16px 0 0">Открыли вкладку по дням (людей)</h3>
             <div class="svspark" id="svSpark"></div><div class="svx"><span id="svX0"></span><span>сегодня</span></div>
             <p class="hint" style="margin-top:10px" id="svNote"></p>
@@ -2291,6 +2293,16 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#svTable').innerHTML = list.length ? '<tr><th>Услуга</th><th>Открыли</th><th>Написали</th><th>%</th></tr>' + list.map(r =>
       '<tr><td>' + escS(r.name) + '</td><td><b>' + nf(r.op) + '</b> <span class="hint">чел.</span><div class="hint">' + nf(r.ot) + ' раз</div></td><td><b>' + nf(r.wp) + '</b> <span class="hint">чел.</span></td><td>' + pct(r.wp, r.op) + '</td></tr>').join('')
       : '<tr><td class="hint">Пока никто не открывал услуги за этот период.</td></tr>';
+    // by country (owner 10.11.2026): people who opened the tab / a service page / wrote, same period
+    const CO = S.countries && S.countries[svPer];
+    if (!CO) $('#svCountry').innerHTML = '<tr><td class="hint">Обновите код сервера — появится разбивка по странам.</td></tr>';
+    else {
+      const byC = {}; CO.forEach(([cc, e, n]) => { (byC[cc] = byC[cc] || { sv: 0, so: 0, tg: 0 })[e] = n; });
+      const cs = Object.keys(byC).sort((a, b) => (byC[b].sv - byC[a].sv) || (byC[b].tg - byC[a].tg) || (byC[b].so - byC[a].so));
+      $('#svCountry').innerHTML = cs.length ? '<tr><th>Страна</th><th>Вкладка</th><th>Услуга</th><th>Написали</th></tr>' + cs.map(cc => { const r = byC[cc];
+        return '<tr><td>' + flag(cc) + escS(ccName(cc)) + '</td><td><b>' + nf(r.sv) + '</b></td><td><b>' + nf(r.so) + '</b></td><td><b>' + nf(r.tg) + '</b>' + (r.sv ? '<div class="hint">' + pct(r.tg, r.sv) + '</div>' : '') + '</td></tr>'; }).join('')
+        : '<tr><td class="hint">Пока никто не заходил за этот период.</td></tr>';
+    }
     // 14 days of people who opened the tab
     const byDay = {}; S.days.forEach(([d, k, n]) => { if (k === 'u:sv') byDay[d] = n; });
     const end = new Date(j.day + 'T12:00:00Z'), days = []; for (let i = 13; i >= 0; i--) days.push(new Date(end - i * 864e5).toISOString().slice(0, 10));

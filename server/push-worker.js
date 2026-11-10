@@ -743,7 +743,7 @@ async function visits(env, json) {
   const db = env.DB;
   await schema(db);
   const day = mskDay();
-  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted, svDays, svAll, pT, p7, pA, svSince] = await db.batch([
+  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted, svDays, svAll, pT, p7, pA, svSince, coT, co7, coA] = await db.batch([
     db.prepare('SELECT visits, uniq, fresh, app FROM hits WHERE day = ?').bind(day),
     db.prepare('SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(app), 0) AS app, MIN(day) AS since FROM hits'),
     db.prepare('SELECT COUNT(*) AS n FROM devices'),
@@ -760,6 +760,10 @@ async function visits(env, json) {
     db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu WHERE day >= ? GROUP BY e').bind(dayAgo(6)),
     db.prepare('SELECT e, COUNT(DISTINCT id) AS n FROM evu GROUP BY e'),
     db.prepare('SELECT MIN(day) AS since FROM evu'),
+    // the same people by country (owner 10.11.2026): country = where the phone was first seen (devices)
+    db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') AND v.day = ? GROUP BY co, v.e").bind(day),
+    db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') AND v.day >= ? GROUP BY co, v.e").bind(dayAgo(6)),
+    db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
   return json({ bt: 1, // this server knows battles, points and the shop (admin uses it to ask for a code update)
@@ -775,7 +779,8 @@ async function visits(env, json) {
     // online services interest (07.11.2026): taps per day/kind (30 days), taps all time, distinct people today / 7 days / all
     svc: { days: svDays.results.map(r => [r.day, r.kind, r.n]), all: svAll.results.map(r => [r.kind, r.n]),
       people: { today: pT.results.map(r => [r.e, r.n]), d7: p7.results.map(r => [r.e, r.n]), all: pA.results.map(r => [r.e, r.n]) },
-      since: (svSince.results[0] || {}).since || null },
+      since: (svSince.results[0] || {}).since || null,
+      countries: { today: coT.results.map(r => [r.co, r.e, r.n]), d7: co7.results.map(r => [r.co, r.e, r.n]), all: coA.results.map(r => [r.co, r.e, r.n]) } },
   });
 }
 
