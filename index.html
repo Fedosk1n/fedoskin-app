@@ -309,6 +309,11 @@ body.chatmode .tabs{display:none}
 #stAvatar svg{display:block;width:58px;height:auto}
 .btscore{font-size:12px;font-weight:700;color:var(--soft)}
 .btscore b{color:var(--accent)}
+.bttools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.bttools .btn{min-height:44px;font-size:14px;gap:6px}
+.bttools .btn svg{width:16px;height:16px}
+.btsearch{grid-column:1/-1;display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-radius:12px;background:#131315;border:1px solid var(--line);color:var(--muted)}
+.btsearch svg{width:16px;height:16px;flex:none} .btsearch input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--fg);font:16px var(--body)}
 .btrest{margin-top:10px;padding:12px 14px;border-radius:14px;background:#17171A;border:1px solid #26262A;display:flex;flex-direction:column;gap:7px}
 .btrest b{font-size:13px} .btrest span#btRestT{font-size:12px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
 .btrest .bar{display:block;height:6px;border-radius:3px;background:#26262B;overflow:hidden} .btrest .bar i{display:block;height:6px;background:linear-gradient(90deg,#3D8BFF,#E2611A);transition:width .6s ease}
@@ -1119,6 +1124,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </div>
     <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
     <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b>Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 30 минут</small></div>
+    <div class="bttools" id="btTools" hidden>
+      <button class="btn btn-accent" id="btFind" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Найти соперника</button>
+      <button class="btn btn-ghost" id="btFriend" type="button">Вызвать друга</button>
+      <label class="btsearch"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lbQ" type="search" maxlength="20" placeholder="Найти по нику" autocomplete="off" enterkeyhint="search"></label>
+    </div>
     <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
     <p class="muted" id="btHint" style="font-size:12px;line-height:1.45;margin:10px 0 0" hidden>Нажми «Батл» у любого из рейтинга — ваши человечки сразятся, а судьи решат, кто круче</p>
     <label class="row" style="gap:12px;margin-top:14px;font-size:14px;cursor:pointer"><input type="checkbox" id="rankShow" style="width:20px;height:20px;accent-color:var(--accent)"><span>Показывать меня в рейтинге</span></label>
@@ -1367,6 +1377,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="judges" id="btJudges"><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div></div>
     <div class="btres" id="btRes" hidden><b id="btResT"></b><span id="btResS"></span></div>
     <div class="btbtns"><button class="btn btn-ghost" id="btSkip" type="button">Пропустить</button><button class="btn btn-ghost" id="btClose" type="button" hidden>Закрыть</button></div>
+  </div>
+</div>
+<div class="sheet-bg" id="vsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vsT" style="text-align:center">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px"></div>
+    <div class="row" style="justify-content:center;gap:10px;align-items:flex-end"><span id="vsA" style="width:90px"></span><span class="d" style="font-size:26px;margin-bottom:40px">VS</span><span id="vsB" style="width:90px"></span></div>
+    <h2 id="vsT" style="font-size:22px;margin-top:6px"></h2>
+    <p class="muted" id="vsM" style="margin-top:6px;font-size:13px"></p>
+    <div class="row" style="gap:10px;margin-top:16px"><button class="btn btn-ghost" id="vsLater" type="button" style="flex:1">Позже</button><button class="btn btn-accent" id="vsGo" type="button" style="flex:2">Принять вызов</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="btCallSheet" hidden>
@@ -4095,10 +4114,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let lbSent = {}; try { lbSent = JSON.parse(localStorage.getItem('fedoskin-lb-sent') || '{}') || {}; } catch (_) {}
   const nfmt = n => Number(n || 0).toLocaleString(LANG === 'ru' ? 'ru-RU' : undefined);
   function lbPayload(){ const v = statsView(); return {id: prof.id, secret: lbSecret, nick: prof.nick, city: prof.city, country: prof.country, av: myAvatar, m: v.mins, v: v.views, s: v.streak}; }
-  async function lbSend(minGap){
+  async function lbSend(minGap, force){
     if (!LB_URL || !lbShow) return;
     const p = lbPayload(), sig = [p.m, p.v, p.s, p.nick, p.city, p.country, p.av].join('|');
-    if (p.m < 1) return; // nothing watched yet — don't fill the ranking with zeros
+    if (p.m < 1 && !force) return; // nothing watched yet — don't fill the ranking with zeros
     if (sig === lbSent.sig || Date.now() - (lbSent.t || 0) < (minGap || 0)) return;
     try {
       const r = await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p), keepalive: true});
@@ -4132,13 +4151,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else if (!part || !part.place) say(statsView().mins < 1 ? T('Посмотри любой урок хотя бы минуту — и появишься в рейтинге.') : T('Твоё место появится через пару минут.'));
     else say('');
     $('#btHint').hidden = !lbData.bt || BT.rest > Date.now(); btPaintRest();
+    $('#btTools').hidden = !lbData.big; $('#btFind').disabled = BT.rest > Date.now();
     if (lbData.mine) btPaintScore({w: lbData.mine[0], l: lbData.mine[1]});
-    if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
-    part.top.forEach((r, i) => {
+    const srch = LBQ.q.length >= 2 ? LBQ.res : null;
+    if (srch) { say(LBQ.busy ? T('Ищу…') : srch.length ? '' : T('Никого не нашли')); }
+    else if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
+    (srch || part.top).forEach((r, i) => {
       const me = r.id === prof.id;
       const li = document.createElement('li'); li.className = 'row';
       li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
-      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + (i === 0 || me ? 'var(--accent)' : 'var(--muted)') + '">#' + (i + 1) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i, me ? myEq : (r.eq || [])) +
+      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + ((i === 0 && !srch) || me ? 'var(--accent)' : 'var(--muted)') + '">' + (srch ? '' : '#' + (i + 1)) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i, me ? myEq : (r.eq || [])) +
         '<span class="stack" style="gap:2px;flex:1;min-width:0"><span class="nm" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted ct" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></span>' +
         '<span class="muted mn" style="font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap"></span>';
       li.querySelector('.nm').textContent = (me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}))) + ' ';
@@ -4160,6 +4182,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // A tap on «Батл» in the rating asks the server for a battle: three judges vote at random there (a higher level gives a
   // slightly better chance), wins and losses are counted. The other phone gets a push (if notifications are on) and sees
   // the same battle (same seed ⇒ same moves) next time it opens the app. Both see themselves on the left.
+  // search by nick (owner 10.11.2026): 2+ letters ⇒ the server's matches replace the list (same rows, same «Батл»)
+  const LBQ = { q: '', res: [], busy: false, n: 0 };
+  let lbqT = 0;
+  $('#lbQ').addEventListener('input', () => {
+    LBQ.q = $('#lbQ').value.trim(); clearTimeout(lbqT);
+    if (LBQ.q.length < 2) { LBQ.res = []; renderLeaders(); return; }
+    LBQ.busy = true; renderLeaders();
+    lbqT = setTimeout(async () => {
+      const n = ++LBQ.n;
+      try { const r = await fetch(LB_URL + '/lb/search?' + new URLSearchParams({ q: LBQ.q, id: prof.id }), { cache: 'no-store' }); const j = await r.json(); if (n === LBQ.n) LBQ.res = j.top || []; }
+      catch (_) { if (n === LBQ.n) LBQ.res = []; }
+      if (n === LBQ.n) { LBQ.busy = false; renderLeaders(); }
+    }, 350);
+  });
   const BT = { news: [], busy: false, run: 0, cur: null, rest: 0, wallet: null };
   try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
   const BT_REST = 30 * 60e3;
@@ -4228,7 +4264,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!lbShow) { toast(T('Включи «Показывать меня в рейтинге», чтобы батлить')); return; }
     if (btn) btn.disabled = true;
     try {
-      const res = await btPost('/bt/call', { to: r.id }), j = await res.json().catch(() => ({}));
+      const res = r ? await btPost('/bt/call', { to: r.id }) : await btPost('/bt/find'), j = await res.json().catch(() => ({}));
+      if (!r && res.status === 404 && j.error === 'nobody') { toast(T('Пока не с кем батлить — загляни чуть позже')); if (btn) btn.disabled = false; return; }
+      if (!r && j.ok) r = { id: j.battle.b.id };
       if (res.status === 429 && j.error === 'rest') { btSetRest(j.rest); toast(T('Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt(j.rest / 60e3) })); }
       else if (res.status === 429) toast(T('С этим человеком на сегодня хватит — выбери другого'));
       else if (res.status === 404 && j.error === 'gone') toast(T('Этого человека больше нет в рейтинге'));
@@ -4339,6 +4377,34 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     requestAnimationFrame(frame);
   }
   $('#btSkip').addEventListener('click', () => BT.finish && BT.finish());
+  $('#btFind').addEventListener('click', () => btCall(null, $('#btFind')));
+  // «Вызвать друга» (owner 10.11.2026): a link with this phone's id; the friend opens it and takes the challenge
+  $('#btFriend').addEventListener('click', () => shareLink(APP_LINK + '/?vs=' + encodeURIComponent(prof.id) + '&from=battle', T('Вызываю тебя на брейк-батл в Fedoskin team! Чей би-бой круче?')));
+  async function vsOpen(id){
+    if (!LB_URL || !/^\d{6,9}$/.test(id) || id === prof.id) return;
+    try {
+      const r = await fetch(LB_URL + '/lb/who?id=' + encodeURIComponent(id), { cache: 'no-store' });
+      if (!r.ok) { toast(T(r.status === 404 ? 'Этого человека больше нет в рейтинге' : 'Батлы скоро заработают')); return; }
+      const w = await r.json();
+      VS.who = w;
+      $('#vsA').innerHTML = HERO.svg(statsView().level, { uid: 'va', bg: false, acc: myEq }); $('#vsB').innerHTML = HERO.svg(w.lvl || 1, { uid: 'vb', bg: false, acc: w.eq || [] });
+      $('#vsT').textContent = T('{name} вызывает тебя на батл!', { name: w.n || T('Брейкер {id}', { id: String(w.id).slice(-4) }) });
+      $('#vsM').textContent = T('Ур. {n}', { n: w.lvl || 1 }) + ' · ' + T(HERO.NAMES[(w.lvl || 1) - 1]) + (w.co ? ' · ' + w.co : '');
+      const show = () => { const busy = !$('#lesson').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden); if (busy) return setTimeout(show, 1500); $('#vsSheet').hidden = false; };
+      show();
+    } catch (_) {}
+  }
+  const VS = { who: null };
+  $('#vsLater').addEventListener('click', () => { $('#vsSheet').hidden = true; });
+  $('#vsSheet').addEventListener('click', e => { if (e.target.id === 'vsSheet') $('#vsSheet').hidden = true; });
+  $('#vsGo').addEventListener('click', async () => {
+    const w = VS.who; if (!w) return;
+    const btn = $('#vsGo'); btn.disabled = true;
+    if (!lbShow) { lbShow = true; try { localStorage.setItem('fedoskin-lb-show', '1'); } catch (_) {} }
+    lbSent = {}; await lbSend(0, true); // join the rating even before the first full minute — the challenge was personal
+    $('#vsSheet').hidden = true; btn.disabled = false;
+    setTimeout(() => btCall({ id: w.id }, null), 350);
+  });
   $('#btClose').addEventListener('click', () => { BT.run++; $('#battle').hidden = true; setTimeout(btShowNews, 600); });
   new MutationObserver(() => { if ($('#battle').hidden) { BT.run++; $('#btCrowd').classList.remove('hype'); } }).observe($('#battle'), { attributes: true, attributeFilter: ['hidden'] });
   // battles somebody started against this phone
@@ -4998,6 +5064,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
+    const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
     if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
     else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)

@@ -407,6 +407,18 @@
   ⭐ N / не хватает / Надеть / Снять; buying wears it). Tested:
   worker on node:sqlite (auth, limits, self, inbox/seen, lb scores), app flow with mocked server (iPhone en).
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
+- Rating moved to D1 (owner 10.11.2026 «сотни тысяч пользователей… все захотят батлить»; also a friend «много смотрел, а в
+  рейтинге нет» — the single KV key was read-modify-written by everyone: lost updates between edge locations + KV free plan's
+  1000 writes/day ⇒ people silently missing): D1 table `lb` (id, n, nl lower-case nick, c, cn normalised city, co, a, m, v, s,
+  h, f, t, lvl, rk random, hid) with indexes (hid, m DESC, f) / (cn, hid, m DESC, f) / (lvl, rk) / (nl); place = 1 + COUNT of
+  better rows; hiding sets hid = 1 (row kept for points/battles). `lbMigrate()` copies the old KV board once (flag KV
+  `lb:mig`; the KV key stays as a backup); no DB ⇒ old `leaderboardKV`. GET /lb adds `big: 1`. New: POST /bt/find (random
+  active phone (30 d) of level ±1…any via (lvl, rk ≥ random) not met today, then the normal /bt/call), GET /lb/search?q=
+  (nick prefix, 20 rows, visible only), GET /lb/who?id= (name, level, eq for a friend's link). App (only when `big`): tools
+  `#btTools` — «Найти соперника» `#btFind` (btCall(null)), «Вызвать друга» `#btFriend` (shareLink `?vs=<my id>&from=battle`),
+  search `#lbQ` (results replace the list via `LBQ`); `?vs=` ⇒ `vsOpen()` sheet `#vsSheet` «{name} вызывает тебя на батл!» →
+  «Принять вызов» turns «show me» on, `lbSend(0, true)` (joins even with < 1 min) and battles that id. Owner chose nick search
+  despite my child-safety note (only nick/level/country shown, as in the rating). D1 at large scale needs Workers Paid ($5/mo).
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
 - iPhone home-screen app (iOS 26, WebKit 301108): the viewport is short by the status bar and nothing is drawn below it.

@@ -457,6 +457,16 @@ t('Красные кроссовки', 'Red kicks', 'Tenis rojos', 'Tênis verme
 t('Бумбокс', 'Boombox', 'Boombox', 'Boombox', 'Boombox', 'Boombox', 'ラジカセ', '붐박스', '收音机')
 t('Огненная аура', 'Fire aura', 'Aura de fuego', 'Aura de fogo', 'Aura de feu', 'Feuer-Aura', '炎のオーラ', '불꽃 오라', '火焰光环')
 
+# ---- finding opponents (10.11.2026) ----
+t('Найти соперника', 'Find an opponent', 'Buscar rival', 'Achar oponente', 'Trouver un adversaire', 'Gegner finden', '対戦相手を探す', '상대 찾기', '寻找对手')
+t('Вызвать друга', 'Challenge a friend', 'Retar a un amigo', 'Desafiar um amigo', 'Défier un ami', 'Freund herausfordern', '友だちに挑戦', '친구에게 도전', '挑战好友')
+t('Найти по нику', 'Search by nickname', 'Buscar por apodo', 'Buscar por apelido', 'Chercher par pseudo', 'Nach Nickname suchen', 'ニックネームで検索', '닉네임으로 찾기', '按昵称搜索')
+t('Ищу…', 'Searching…', 'Buscando…', 'Buscando…', 'Recherche…', 'Suche…', '検索中…', '찾는 중…', '搜索中…')
+t('Никого не нашли', 'Nobody found', 'No encontramos a nadie', 'Ninguém encontrado', 'Personne trouvé', 'Niemand gefunden', '見つかりませんでした', '아무도 없어요', '没找到')
+t('Пока не с кем батлить — загляни чуть позже', 'No one to battle right now — check back a bit later', 'Ahora no hay con quién batallar, vuelve en un rato', 'Ninguém para batalhar agora — volte daqui a pouco', 'Personne pour une battle pour l’instant — reviens un peu plus tard', 'Gerade niemand zum Battlen — schau später wieder rein', '今は対戦相手がいません。少ししてからまた来てね', '지금은 배틀할 상대가 없어요 — 조금 뒤에 다시 와요', '现在没人可以斗舞，稍后再来')
+t('Вызываю тебя на брейк-батл в Fedoskin team! Чей би-бой круче?', 'I challenge you to a breaking battle in Fedoskin team! Whose b-boy is doper?', '¡Te reto a una batalla de breaking en Fedoskin team! ¿El b-boy de quién es mejor?', 'Te desafio para uma batalha de breaking no Fedoskin team! Qual b-boy é mais brabo?', 'Je te défie en battle de break sur Fedoskin team ! Quel b-boy est le plus chaud ?', 'Ich fordere dich zum Breaking-Battle in Fedoskin team heraus! Wessen B-Boy ist krasser?', 'Fedoskin teamでブレイキングバトルを挑むよ！どっちのBボーイが上？', 'Fedoskin team에서 브레이킹 배틀 신청! 누구 비보이가 더 멋질까?', '在 Fedoskin team 向你发起霹雳舞斗舞！谁的 B-boy 更强？')
+t('Принять вызов', 'Accept the challenge', 'Aceptar el reto', 'Aceitar o desafio', 'Relever le défi', 'Herausforderung annehmen', '挑戦を受ける', '도전 수락', '接受挑战')
+
 # ---- online services tab (long texts live in their own file) ----
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))

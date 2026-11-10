@@ -75,6 +75,8 @@ export default {
       if (path === '/key') return json({ key: (await vapid(env)).pub });
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
       if (path === '/lb') return await leaderboard(req, env, json);
+      if (path === '/lb/search' && req.method === 'GET') return await lbSearch(req, env, json);
+      if (path === '/lb/who' && req.method === 'GET') return await lbWho(req, env, json);
       if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
       if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
       // reviews from paying clients (09.11.2026): the link check and the form are public, the code itself is the key
@@ -353,7 +355,95 @@ async function sendPush(rec, payload, keys) {
 const LB_START = Date.UTC(2026, 9, 28); // alpha start: nobody can have more minutes than have passed since then
 const clean = (x, n) => String(x || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 const normCity = c => clean(c, 30).toLowerCase().replace(/ё/g, 'е');
+// ----- the rating in D1 (10.11.2026: «у нас будут сотни тысяч пользователей») -----
+// One row per phone; ranks are counted with indexes (no whole-board reads). The old single KV key `lb` is copied in once
+// (KV flag lb:mig) and kept untouched as a backup. hid = 1: the person hid from the rating (kept for points/battles).
+const LB_COLS = 'id, n, c, co, a, m, v, s, f, lvl';
+async function lbMigrate(env) {
+  if (await env.PUSH.get('lb:mig')) return;
+  const board = JSON.parse((await env.PUSH.get('lb')) || '{}'), db = env.DB, rows = Object.entries(board);
+  for (let i = 0; i < rows.length; i += 50) {
+    await db.batch(rows.slice(i, i + 50).map(([id, r]) => db.prepare('INSERT OR IGNORE INTO lb (id, n, nl, c, cn, co, a, m, v, s, h, f, t, lvl, rk, hid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)')
+      .bind(id, r.n || '', (r.n || '').toLowerCase(), r.c || '', normCity(r.c), r.co || '', r.a || 'alpha', r.m || 0, r.v || 0, r.s || 0, r.h, r.f || Date.now(), r.t || Date.now(), heroLevel(r.m || 0), Math.floor(Math.random() * 1e9))));
+  }
+  await env.PUSH.put('lb:mig', String(rows.length));
+}
+async function lbRow(db, id) { return await db.prepare('SELECT * FROM lb WHERE id = ?').bind(id).first(); }
 async function leaderboard(req, env, json) {
+  if (!env.DB) return await leaderboardKV(req, env, json);
+  const db = env.DB; await schema(db); await lbMigrate(env);
+  if (req.method === 'GET') {
+    const q = new URL(req.url).searchParams;
+    const me = String(q.get('id') || ''), city = normCity(q.get('city'));
+    const mine = me ? await lbRow(db, me) : null;
+    const pack = async (where, args) => {
+      const top = (await db.prepare('SELECT ' + LB_COLS + ' FROM lb WHERE hid = 0' + where + ' ORDER BY m DESC, f ASC LIMIT 50').bind(...args).all()).results || [];
+      const total = (await db.prepare('SELECT COUNT(*) AS n FROM lb WHERE hid = 0' + where).bind(...args).first()).n;
+      let place = 0;
+      if (mine && !mine.hid && (!where || mine.cn === city)) place = 1 + (await db.prepare('SELECT COUNT(*) AS n FROM lb WHERE hid = 0' + where + ' AND (m > ? OR (m = ? AND f < ?))').bind(...args, mine.m, mine.m, mine.f).first()).n;
+      return { total, place, top: top.map(r => ({ id: r.id, n: r.n, c: r.c, co: r.co, a: r.a, m: r.m, v: r.v, s: r.s })) };
+    };
+    const out = { world: await pack('', []), city: city ? await pack(' AND cn = ?', [city]) : null, big: 1 };
+    await lbExtras(db, out, [...out.world.top, ...(out.city ? out.city.top : [])], me);
+    return json(out);
+  }
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+  const b = await req.json();
+  const id = String(b.id || '');
+  if (!/^\d{6,9}$/.test(id) || !/^[0-9a-f]{32}$/.test(String(b.secret || ''))) return json({ error: 'bad id' }, 400);
+  const h = await hash('lb:' + b.secret), old = await lbRow(db, id), now = Date.now();
+  if (old && old.h !== h) return json({ error: 'this id belongs to another phone' }, 403);
+  if (b.hide) { if (old) await db.prepare('UPDATE lb SET hid = 1 WHERE id = ?').bind(id).run(); return json({ ok: true, hidden: true }); }
+  const num = (x, max) => Math.max(0, Math.min(max, Math.floor(+x || 0)));
+  const sinceStart = Math.max(0, Math.floor((now - LB_START) / 60000));
+  let m = num(b.m, Math.min(sinceStart, 300));
+  if (old) m = Math.max(old.m, Math.min(m, old.m + Math.ceil((now - old.t) / 60000) + 2));
+  const n = clean(b.nick, 20), c = clean(b.city, 30), co = clean(b.country, 30), a = clean(b.av, 16) || 'alpha';
+  const v = Math.min(num(b.v, 1e6), m * 12 + 5), st = Math.min(num(b.s, 3650), Math.ceil((now - LB_START) / 864e5) + 1);
+  const same = old && !old.hid && old.m === m && old.v === v && old.s === st && old.n === n && old.c === c && old.co === co && old.a === a;
+  if (!(same && now - old.t < 6 * 3600e3)) {
+    await db.prepare('INSERT INTO lb (id, n, nl, c, cn, co, a, m, v, s, h, f, t, lvl, rk, hid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) ' +
+      'ON CONFLICT(id) DO UPDATE SET n = excluded.n, nl = excluded.nl, c = excluded.c, cn = excluded.cn, co = excluded.co, a = excluded.a, m = excluded.m, v = excluded.v, s = excluded.s, t = excluded.t, lvl = excluded.lvl, hid = 0')
+      .bind(id, n, n.toLowerCase(), c, normCity(c), co, a, m, v, st, h, now, now, heroLevel(m), Math.floor(Math.random() * 1e9)).run();
+  }
+  return json({ ok: true, m });
+}
+// search by nick (owner 10.11.2026) — prefix of the name, visible people only, 20 rows
+async function lbSearch(req, env, json) {
+  if (!env.DB) return json({ error: 'nodb' }, 409);
+  const db = env.DB; await schema(db); await lbMigrate(env);
+  const q = clean(new URL(req.url).searchParams.get('q'), 20).toLowerCase(), me = String(new URL(req.url).searchParams.get('id') || '');
+  if (q.length < 2) return json({ top: [] });
+  const hi = q.slice(0, -1) + String.fromCharCode(q.charCodeAt(q.length - 1) + 1);
+  const rows = ((await db.prepare('SELECT ' + LB_COLS + ' FROM lb WHERE nl >= ? AND nl < ? AND hid = 0 ORDER BY m DESC LIMIT 20').bind(q, hi).all()).results || [])
+    .map(r => ({ id: r.id, n: r.n, c: r.c, co: r.co, a: r.a, m: r.m }));
+  const out = { top: rows }; await lbExtras(db, out, rows, me);
+  return json(out);
+}
+// who is behind a friend's battle link (?vs=<id>)
+async function lbWho(req, env, json) {
+  if (!env.DB) return json({ error: 'nodb' }, 409);
+  const db = env.DB; await schema(db); await lbMigrate(env);
+  const r = await lbRow(db, String(new URL(req.url).searchParams.get('id') || ''));
+  if (!r || r.hid) return json({ error: 'gone' }, 404);
+  const out = { id: r.id, n: r.n, co: r.co, m: r.m, lvl: heroLevel(r.m) }; const tmp = [out]; await lbExtras(db, {}, tmp, '');
+  return json(out);
+}
+// battle scores + accessories of the rows shown
+async function lbExtras(db, out, rows, me) {
+  try {
+    const ids = [...new Set(rows.map(r => r.id).concat(me ? [me] : []))];
+    if (!ids.length) { out.bt = true; return; }
+    const qs = ids.map(() => '?').join(',');
+    const rs = await db.prepare('SELECT id, w, l FROM bt_score WHERE id IN (' + qs + ')').bind(...ids).all();
+    const sc = {}; (rs.results || []).forEach(r => { sc[r.id] = [r.w, r.l]; });
+    const eqs = await db.prepare('SELECT id, eq FROM hero_eq WHERE id IN (' + qs + ')').bind(...ids).all();
+    const eq = {}; (eqs.results || []).forEach(r => { try { eq[r.id] = JSON.parse(r.eq); } catch (_) {} });
+    rows.forEach(r => { if (sc[r.id]) r.bt = sc[r.id]; if (eq[r.id] && eq[r.id].length) r.eq = eq[r.id]; });
+    out.bt = true; if (sc[me]) out.mine = sc[me];
+  } catch (_) {}
+}
+async function leaderboardKV(req, env, json) {
   const board = JSON.parse((await env.PUSH.get('lb')) || '{}');
   if (req.method === 'GET') {
     const q = new URL(req.url).searchParams;
@@ -435,9 +525,9 @@ async function battle(req, env, path, json) {
   const b = JSON.parse((await req.text()) || '{}');
   const id = String(b.id || ''), secret = String(b.secret || '');
   if (!/^\d{6,9}$/.test(id) || !/^[0-9a-f]{32}$/.test(secret)) return json({ error: 'bad id' }, 400);
-  const board = JSON.parse((await env.PUSH.get('lb')) || '{}'), me = board[id];
-  if (!me || me.h !== await hash('lb:' + secret)) return json({ error: 'not in rating' }, 403);
-  const db = env.DB, now = Date.now();
+  await lbMigrate(env);
+  const db = env.DB, now = Date.now(), me = await lbRow(db, id);
+  if (!me || me.hid || me.h !== await hash('lb:' + secret)) return json({ error: 'not in rating' }, 403);
   const score = async x => (await db.prepare('SELECT w, l FROM bt_score WHERE id = ?').bind(x).first()) || { w: 0, l: 0 };
   const lastCall = async () => { const r = await db.prepare('SELECT MAX(t) AS t FROM bt WHERE a = ?').bind(id).first(); return r && r.t || 0; };
   const restLeft = async () => Math.max(0, (await lastCall()) + BT_REST - now);
@@ -450,9 +540,25 @@ async function battle(req, env, path, json) {
     let eq = []; try { eq = JSON.parse(eqr && eqr.eq || '[]'); } catch (_) {}
     return { pts: Math.max(0, earned - spent), earned, owned, eq, score: sc };
   };
+  // «Найти соперника» (10.11.2026): a random active phone of about the same level the caller hasn't met today
+  if (path === '/bt/find') {
+    const myL = heroLevel(me.m), met = new Set(((await db.prepare('SELECT b FROM bt WHERE a = ? AND t > ?').bind(id, now - 864e5).all()).results || []).map(r => r.b));
+    const ok = r => r && r.id !== id && !r.hid && !met.has(r.id) && r.t > now - 30 * 864e5;
+    const levels = [myL, myL - 1, myL + 1, myL - 2, myL + 2, 1, 2, 3, 4, 5, 6, 7, 8].filter((x, i, a) => x >= 1 && x <= 8 && a.indexOf(x) === i);
+    let found = null;
+    for (const L of levels) {
+      const r0 = Math.floor(Math.random() * 1e9);
+      const a = ((await db.prepare('SELECT id, hid, t FROM lb WHERE lvl = ? AND rk >= ? ORDER BY rk LIMIT 12').bind(L, r0).all()).results || []).concat(
+        ((await db.prepare('SELECT id, hid, t FROM lb WHERE lvl = ? AND rk < ? ORDER BY rk LIMIT 12').bind(L, r0).all()).results || []));
+      const good = a.filter(ok);
+      if (good.length) { found = good[Math.floor(Math.random() * good.length)]; break; }
+    }
+    if (!found) return json({ error: 'nobody' }, 404);
+    b.to = found.id; path = '/bt/call';
+  }
   if (path === '/bt/call') {
-    const to = String(b.to || ''), op = board[to];
-    if (!op || to === id) return json({ error: 'gone' }, 404);
+    const to = String(b.to || ''), op = await lbRow(db, to);
+    if (!op || op.hid || to === id) return json({ error: 'gone' }, 404);
     const day = now - 864e5;
     const rest = await restLeft();
     if (rest > 0) return json({ error: 'rest', rest }, 429);
@@ -546,6 +652,12 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS bt (n INTEGER PRIMARY KEY AUTOINCREMENT, a TEXT NOT NULL, b TEXT NOT NULL, la INTEGER, lb INTEGER, na TEXT, nb TEXT, seed INTEGER, votes TEXT, win TEXT, t INTEGER, seen INTEGER NOT NULL DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_b ON bt (b, seen)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_a ON bt (a, t)'),
+    // the rating (10.11.2026, moved from one KV key so it can hold hundreds of thousands of phones)
+    db.prepare('CREATE TABLE IF NOT EXISTS lb (id TEXT PRIMARY KEY, n TEXT, nl TEXT, c TEXT, cn TEXT, co TEXT, a TEXT, m INTEGER NOT NULL DEFAULT 0, v INTEGER, s INTEGER, h TEXT, f INTEGER, t INTEGER, lvl INTEGER, rk INTEGER, hid INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
+    db.prepare('CREATE INDEX IF NOT EXISTS lb_m ON lb (hid, m DESC, f)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS lb_cm ON lb (cn, hid, m DESC, f)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS lb_rk ON lb (lvl, rk)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS lb_nl ON lb (nl)'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_score (id TEXT PRIMARY KEY, w INTEGER NOT NULL DEFAULT 0, l INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_sub (id TEXT PRIMARY KEY, sub TEXT, lang TEXT) WITHOUT ROWID'),
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
