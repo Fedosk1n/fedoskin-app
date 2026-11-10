@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 35</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 36</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -545,10 +545,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       </div>
     </div>
     <div data-pane="stats" hidden>
-      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></div>
+      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><span class="row" style="gap:6px"><button class="btn btn-sm" id="visCopyTop" type="button">Скопировать код сервера</button><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></span></div>
       <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
       <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
-        <b style="font-size:15px">Обновите код сервера — включатся «Откуда приходят люди» и «Интерес к онлайн-услугам»</b>
+        <b style="font-size:15px">Обновите код сервера — включатся новые функции (батлы человечков, очки, магазин аксессуаров, статистика)</b>
         <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
           <li>Нажмите <button class="btn btn-sm btn-accent" id="wkCopy" style="margin:2px 0;min-height:32px">Скопировать код сервера</button></li>
           <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
@@ -2249,7 +2249,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNew').hidden = !!(j.sources && j.svc); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
+    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
@@ -2334,6 +2334,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#svCopy').addEventListener('click', () => $('#visCopy').click());
   $('#wkCopy').addEventListener('click', () => $('#visCopy').click());
+  $('#visCopyTop').addEventListener('click', () => $('#visCopy').click());
   $('#visRefresh').addEventListener('click', async () => {
     const btn = $('#visRefresh'), lbl = btn.querySelector('span');
     if (btn.classList.contains('busy')) return;

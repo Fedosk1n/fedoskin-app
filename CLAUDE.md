@@ -584,4 +584,4 @@
   Live 12:22: «5018: This account is not allowed to access @cf/google/gemma-3-12b-it» ⇒ `TR_MODELS` chain (mistral-small-3.1
   → llama-3.3-70b → gemma-3-12b → llama-3.1-8b-fp8-fast), first that answers is kept in tgs 'trModel', refused ones (5018 /
   not found) skipped for 24 h in 'trBad'; all refused ⇒ m2m100-1.2b (no detection: thread language / 'en' as source).
-  /tg/trtest returns `model`; admin shows «Переводит: …». Admin «версия 35».
+  /tg/trtest returns `model`; admin shows «Переводит: …». Admin «версия 35». 10.11.2026 (owner: no copy button on «Статистика»): always-visible «Скопировать код сервера» `#visCopyTop` next to «Обновить»; /visits returns `bt: 1` and the `#wkNew` banner also shows when the server lacks it (battles/points/shop). Admin «версия 36».

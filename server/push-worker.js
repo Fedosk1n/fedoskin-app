@@ -650,7 +650,8 @@ async function visits(env, json) {
     db.prepare('SELECT MIN(day) AS since FROM evu'),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({
+  return json({ bt: 1, // this server knows battles, points and the shop (admin uses it to ask for a code update)
+
     day,
     today: t,
     all: { visits: a.visits || 0, app: a.app || 0, uniq: (devs.results[0] || {}).n || 0, since: a.since || day },
