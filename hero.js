@@ -519,5 +519,68 @@
     win: { dur: .9, f: u => { const s = Math.abs(Math.sin(u * Math.PI)); return { root: { y: -22 * s }, shL: 150, elL: 15, shR: 150, elR: 15, hipL: 8 + 10 * s, hipR: 8 + 10 * s, kneeL: -10 * s, kneeR: -10 * s, head: -6 }; } },
     lose: { dur: 1.6, f: u => ({ root: { y: 3 }, head: 18 + 2 * Math.sin(u * TAU), shL: -6, elL: -10, shR: -6, elR: -10, torso: 3 }) },
   };
+  // v3 (owner 10.11.2026 «больше деталей, больше вариаций»): more toprocks, power moves, freezes, taunts, reactions
+  const up = x => Math.max(0, x), PI = Math.PI;
+  Object.assign(MOVES, {
+    walk: { dur: .9, f: u => { const e = ss(0, 1, u), s = Math.sin(u * TAU * 2.5) * (1 - ss(.8, 1, u));
+      return { root: { x: -150 * (1 - e), y: -3 * Math.abs(s) }, hipL: 5 + 14 * up(s), hipR: 5 + 14 * up(-s), kneeL: -10 * up(s), kneeR: -10 * up(-s), shL: 10 + 14 * s, shR: 10 - 14 * s, elL: -18, elR: -18, torso: 3 * s, head: -2 * s }; } },
+    // ---- toprock variants ----
+    kickstep: { dur: 1.0, f: u => { const s = Math.sin(u * TAU * 2), a = up(s), b = up(-s);
+      return { root: { y: -7 * Math.abs(s), x: 3 * s }, torso: -7 * s, head: 4 * s, hipL: 6 + 46 * a, kneeL: -6 * a, ankL: -18 * a, hipR: 6 + 46 * b, kneeR: -6 * b, ankR: -18 * b,
+        shL: 18 + 62 * b, elL: -50 + 30 * b, shR: 18 + 62 * a, elR: -50 + 30 * a }; } },
+    salsa: { dur: 1.0, f: u => { const s = Math.sin(u * TAU * 2), a = up(s), b = up(-s);
+      return { root: { x: 15 * s, y: -3 * Math.abs(s) }, torso: 6 * s, head: -5 * s, hipL: 10 + 12 * b, kneeL: -14 * b, hipR: 10 + 12 * a, kneeR: -14 * a,
+        shL: 34 + 28 * s, elL: -64, shR: 34 - 28 * s, elR: -64 }; } },
+    indian: { dur: 1.0, f: u => { const s = Math.sin(u * TAU * 2), a = up(s), b = up(-s), o = Math.abs(s);
+      return { root: { y: -6 * o, x: 5 * s, sx: 1 - .1 * o }, torso: 5 * s, head: -4 * s, hipL: 6 - 20 * a, kneeL: 14 * a, hipR: 6 - 20 * b, kneeR: 14 * b,
+        shL: 24 + 58 * o, elL: -34 + 24 * o, shR: 24 + 58 * o, elR: -34 + 24 * o }; } },
+    // ---- power / footwork ----
+    airflare: { dur: 1.8, f: u => { const k = env(u, .18, .82), th = ss(.18, .82, u) * TAU * 2, sn = Math.sin(th);
+      return { root: { y: 26 * k - 24 * k * Math.abs(sn), r: 150 * k + th * 180 / PI, px: 100, py: 120 }, hipL: 52 * k, hipR: 52 * k, kneeL: -6 * k, kneeR: -6 * k,
+        shL: 165 * k, elL: 6 * k, shR: 165 * k, elR: 6 * k, head: 12 * k * sn }; } },
+    swipe: { dur: 1.5, f: u => { const k = env(u, .2, .8), sp = ss(.2, .8, u) * 360, sn = Math.sin(u * TAU * 1.5);
+      return { root: { y: 38 * k, r: sp, px: 100, py: 135 }, torso: 10 * k * sn, hipL: k * (40 + 36 * sn), hipR: k * (40 - 36 * sn), kneeL: -22 * k, kneeR: -22 * k,
+        shL: 125 * k, elL: 10 * k, shR: 70 * k, elR: 20 * k, head: 10 * k * sn }; } },
+    ninety: { dur: 1.7, f: u => { const k = env(u, .2, .82), th = ss(.2, .82, u) * TAU * 3, c = Math.cos(th);
+      return { root: { y: 196 * k, r: 180 * k, sx: (1 - k) + k * c, px: 100, py: 30 }, hipL: 5 * k, hipR: 5 * k, kneeL: -24 * k, kneeR: -8 * k,
+        shR: 177 * k, elR: 0, shL: 88 * k, elL: 12 * k, head: 6 * k }; } },
+    backflip: { dur: 1.3, f: u => { const h = Math.sin(ss(.12, .9, u) * PI), cr = ss(0, .12, u) * (1 - ss(.12, .22, u)) + ss(.86, .93, u) * (1 - ss(.93, 1, u)),
+        t = ss(.28, .45, u) * (1 - ss(.62, .8, u)), arm = ss(.06, .22, u) * (1 - ss(.82, 1, u));
+      return { root: { y: -84 * h + 16 * cr, r: -360 * ss(.24, .8, u), px: 100, py: 140, sy: 1 - .1 * cr }, hipL: 40 * t + 8 * cr, hipR: 40 * t + 8 * cr, kneeL: -112 * t - 20 * cr, kneeR: -112 * t - 20 * cr,
+        shL: 160 * arm * (1 - t) + 34 * t, elL: 40 * t, shR: 160 * arm * (1 - t) + 34 * t, elR: 40 * t, head: -8 * arm }; } },
+    ccs: { dur: 1.6, f: u => { const k = env(u, .15, .85), s = Math.sin(ss(.12, .88, u) * TAU * 3), a = up(s), b = up(-s);
+      return { root: { y: 48 * k, x: 7 * k * s }, torso: 13 * k * s, head: -8 * k * s, hipL: k * (55 + 13 * a), kneeL: -125 * k * (1 - a), ankL: 30 * k * (1 - a), hipR: k * (55 + 13 * b), kneeR: -125 * k * (1 - b), ankR: 30 * k * (1 - b),
+        shL: k * (-8 + 46 * b), elL: 0, shR: k * (-8 + 46 * a), elR: 0 }; } },
+    // ---- freezes ----
+    handstand: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .32 ? Math.sin(u * 280) * 1.6 : 0;
+      return { root: { y: 198 * k, r: 180 * k + w, px: 100, py: 30 }, shL: 176 * k, shR: 176 * k, elL: 0, elR: 0, hipL: 52 * k, kneeL: -78 * k, hipR: 12 * k, kneeR: 0, head: -4 * k }; } },
+    hollowback: { dur: 1.5, f: u => { const k = ss(0, .24, u) * (1 - ss(.8, 1, u)), w = u > .24 && u < .34 ? Math.sin(u * 280) * 1.4 : 0;
+      return { root: { y: 196 * k, r: 180 * k + w, px: 100, py: 30 }, torso: -24 * k, shL: 170 * k, shR: 170 * k, elL: 8 * k, elR: 8 * k, hipL: 34 * k, kneeL: -50 * k, hipR: -6 * k, kneeR: 28 * k, head: 18 * k }; } },
+    headstand: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .32 ? Math.sin(u * 280) * 1.5 : 0;
+      return { root: { y: 205 * k, r: 180 * k + w, px: 100, py: 26 }, hipL: 58 * k, kneeL: -112 * k, hipR: 58 * k, kneeR: -112 * k, ankL: 20 * k, ankR: 20 * k, shL: 55 * k, elL: 70 * k, shR: 55 * k, elR: 70 * k }; } },
+    airchair: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .3 ? Math.sin(u * 300) * 1.5 : 0;
+      return { root: { y: 44 * k, x: 10 * k + w, r: -72 * k, px: 70, py: 150 }, shR: 172 * k, elR: 0, shL: -22 * k, elL: -104 * k, hipL: 30 * k, kneeL: -18 * k, hipR: 72 * k, kneeR: -96 * k, ankR: 24 * k, head: 26 * k }; } },
+    // ---- taunts ----
+    brush: { dur: 1.1, f: u => { const k = env(u, .2, .85), f = Math.sin(u * TAU * 4);
+      return { root: { y: -2 * k * Math.abs(f) }, shR: 34 * k, elR: k * (142 + 12 * f), shL: -32 * k, elL: -110 * k, head: -9 * k, torso: -4 * k, hipL: 5 * k, hipR: 5 * k }; } },
+    comehere: { dur: 1.1, f: u => { const k = env(u, .2, .85), f = Math.sin(u * TAU * 3);
+      return { root: { y: -3 * k * Math.abs(f) }, shL: 56 * k, shR: 56 * k, elL: k * (74 + 34 * f), elR: k * (74 + 34 * f), head: 6 * k * f, hipL: 8 * k, hipR: 8 * k }; } },
+    // ---- the one who watches ----
+    bounce: { dur: .6, f: u => { const b = Math.abs(Math.sin(u * PI));
+      return { root: { y: 5 * b }, hipL: 6 + 5 * b, hipR: 6 + 5 * b, kneeL: -10 * b, kneeR: -10 * b, shL: 8, shR: 8, elL: -22 - 12 * b, elR: -22 - 12 * b, head: 4 * b }; } },
+    clap: { dur: .5, f: u => { const c = Math.abs(Math.sin(u * PI));
+      return { shL: 16, shR: 16, elL: -104 + 22 * c, elR: -104 + 22 * c, head: 3 * c, hipL: 4, hipR: 4 }; } },
+    nah: { dur: 1.0, f: u => { const s = Math.sin(u * TAU * 2);
+      return { shR: 78, elR: 46 + 30 * s, shL: -32, elL: -116, head: 8 * s, torso: -3, hipL: 5, hipR: 5 }; } },
+    shock: { dur: .9, f: u => { const k = env(u, .2, .8);
+      return { root: { x: -7 * k, y: -3 * k }, shL: 150 * k, shR: 150 * k, elL: 118 * k, elR: 118 * k, head: -9 * k, torso: -5 * k, hipL: 8 * k, hipR: 8 * k }; } },
+    // ---- endings ----
+    win2: { dur: .8, f: u => { const s = Math.abs(Math.sin(u * PI));
+      return { root: { y: -12 * s }, shR: 162, elR: 92 - 84 * s, shL: -22, elL: -100, head: -5, hipL: 8, hipR: 8 + 14 * s, kneeR: -30 * s }; } },
+    win3: { dur: 1.0, f: u => { const p = MOVES.toprock.f(u), s = Math.sin(u * TAU * 2);
+      return Object.assign(p, { shL: 150 + 16 * s, elL: 14, shR: 150 - 16 * s, elR: 14 }); } },
+    lose2: { dur: 1.6, f: u => ({ root: { y: 3 }, shR: 26, elR: 152, shL: -6, elL: -10, head: 20 + 2 * Math.sin(u * TAU), torso: 4 }) },
+    lose3: { dur: .7, f: u => { const c = Math.abs(Math.sin(u * PI)); return { shL: 16, shR: 16, elL: -104 + 22 * c, elR: -104 + 22 * c, head: 8 + 4 * c, hipL: 4, hipR: 4 }; } },
+  });
   window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose };
 })();

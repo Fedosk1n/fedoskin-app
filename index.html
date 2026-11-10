@@ -358,6 +358,31 @@ body.chatmode .tabs{display:none}
 .fighter.dim{filter:brightness(.55) saturate(.7)}
 .fighter.lose{filter:grayscale(.85) brightness(.55)}
 .btfx{position:absolute;inset:0;pointer-events:none}
+.btfx .star{position:absolute;bottom:38%;width:10px;height:10px;margin:-5px;background:#FFE38A;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:starfx .7s ease-out both}
+@keyframes starfx{0%{transform:translate(0,0) scale(.4);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1.5) rotate(120deg);opacity:0}}
+.btfx .camfl{position:absolute;bottom:5%;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 14px 7px rgba(255,255,255,.75);opacity:0;animation:camfl .32s ease-out both}
+@keyframes camfl{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(.6)}}
+.arena.flash:after{content:"";position:absolute;inset:0;background:#fff;pointer-events:none;z-index:5;animation:arflash .45s ease-out both}
+@keyframes arflash{0%{opacity:.5}100%{opacity:0}}
+.arena.on-l .spot.r,.arena.on-r .spot.l{opacity:.2}
+.arena.on-l .spot.l,.arena.on-r .spot.r{opacity:1.6;filter:brightness(1.7)}
+.spk{position:absolute;bottom:33%;width:11%;aspect-ratio:1/1.9;border-radius:6px;background:radial-gradient(circle at 50% 28%,#2a2a30 0 17%,#0b0b0d 18% 26%,transparent 27%),radial-gradient(circle at 50% 68%,#2a2a30 0 26%,#0b0b0d 27% 37%,transparent 38%),#141417;border:1px solid #26262b;opacity:.8;animation:spk .5s ease-in-out infinite alternate}
+.spk.l{left:1.5%} .spk.r{right:1.5%}
+@keyframes spk{from{transform:scale(1)}to{transform:scale(1.035)}}
+.btmove{position:absolute;top:13%;font-family:var(--display);font-size:17px;letter-spacing:.6px;line-height:1;color:#0B0B0C;background:var(--accent);padding:5px 10px 4px;border-radius:8px;opacity:0;z-index:3;white-space:nowrap;pointer-events:none}
+.btmove.l{left:7%} .btmove.r{right:7%;background:#3D8BFF}
+.btmove.show{animation:mvcap 1.5s ease both}
+@keyframes mvcap{0%{opacity:0;transform:translateY(8px) scale(.8)}12%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}
+.fighter.fire:before{content:"";position:absolute;left:-6%;right:-6%;bottom:-3%;height:46%;border-radius:50% 50% 30% 30%;background:radial-gradient(60% 100% at 50% 100%,rgba(255,227,138,.75),rgba(255,138,31,.5) 45%,rgba(226,54,26,0) 75%);animation:fireb .28s ease-in-out infinite alternate;pointer-events:none}
+@keyframes fireb{from{transform:scaleY(.9) scaleX(1.03)}to{transform:scaleY(1.1) scaleX(.97)}}
+.fighter.cardb .shd{left:-6%;right:-6%;bottom:-4%;height:9%;border-radius:3px;background:#B98A4E;border:1.5px solid #0E0E10;transform:perspective(60px) rotateX(40deg)!important}
+.crowd i{position:relative}
+.crowd.hype i:nth-child(odd):before,.crowd.hype i:nth-child(odd):after{content:"";position:absolute;bottom:55%;width:24%;height:95%;background:#060607;border-radius:4px}
+.crowd.hype i:nth-child(odd):before{left:-14%;transform:rotate(-20deg)} .crowd.hype i:nth-child(odd):after{right:-14%;transform:rotate(20deg)}
+.judges svg{transition:transform .35s ease}
+.judges.wl svg{transform:rotate(-9deg) translateX(-2px)} .judges.wr svg{transform:rotate(9deg) translateX(2px)}
+.judges.think svg{animation:jthink .5s ease-in-out infinite alternate}
+@keyframes jthink{from{transform:translateY(0)}to{transform:translateY(-3px)}}
 .btfx .puff{position:absolute;bottom:11%;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:rgba(214,190,160,.55);animation:puff .8s ease-out both}
 @keyframes puff{0%{transform:scale(.3) translateY(0);opacity:.9}100%{transform:scale(2.6) translateY(-14px);opacity:0}}
 .arena.shake{animation:shake .35s linear}
@@ -1364,7 +1389,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="bthead"><span class="nm l" id="btNa"></span><span class="vs">VS</span><span class="nm r" id="btNb"></span></div>
     <div class="arena" id="btArena">
       <div class="spot l"></div><div class="spot r"></div>
+      <div class="spk l"></div><div class="spk r"></div>
       <div class="btround" id="btRound"></div>
+      <div class="btmove" id="btMove"></div>
       <div class="btcam" id="btCam">
         <div class="fighter l" id="btA"><span class="spinfx"></span><span class="shd"></span><div class="mv"></div></div>
         <div class="fighter r" id="btB"><span class="spinfx"></span><span class="shd"></span><div class="mv"></div></div>
@@ -1438,7 +1465,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=5"></script>
+<script src="hero.js?v=6"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -4284,7 +4311,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the cartoon (owner 10.11.2026 «конечности отдельно… мульт на 12 секунд»): both heroes are rigs (hero.js rig mode)
   // driven frame by frame on one timeline. Round 1: each does toprock + a power move; round 2: a power move + a
   // finisher (freeze or a «burn» at the opponent). Camera follows the dancer, dust on landings, spin rings, crowd.
-  const BT_POWER = ['windmill', 'headspin', 'flare', 'sixstep', 'backspin'];
+  // v3 (owner 10.11.2026 «больше деталей, больше вариаций»): the seed now picks a toprock, moves from a pool that grows
+  // with the hero's level, a freeze or a taunt, and how the other one reacts; poses cross-fade, time slows on freezes.
+  const BT_TOP = ['toprock', 'kickstep', 'salsa', 'indian'];
+  const BT_POOL = l => ['sixstep', 'ccs', 'backspin', 'swipe'].concat(l >= 3 ? ['windmill', 'backflip'] : [], l >= 5 ? ['headspin', 'flare', 'airflare', 'ninety'] : []);
+  const BT_FRZ = l => ['freeze', 'headstand'].concat(l >= 3 ? ['handstand', 'airchair'] : [], l >= 5 ? ['hollowback'] : []);
+  const BT_TAUNT = { burn: 'BURN!', brush: 'TOO EASY!', comehere: 'COME ON!' };
+  const BT_REACT = ['idle', 'bounce', 'clap', 'nah'];
+  const BT_SPIN = ['windmill', 'headspin', 'flare', 'airflare', 'ninety', 'backspin', 'swipe', 'sixstep'];
+  const BT_NAME = { toprock: 'TOPROCK', kickstep: 'KICK STEP', salsa: 'SALSA STEP', indian: 'INDIAN STEP', sixstep: '6-STEP', ccs: 'CC', backspin: 'BACKSPIN', swipe: 'SWIPE',
+    windmill: 'WINDMILL', backflip: 'BACKFLIP', headspin: 'HEADSPIN', flare: 'FLARE', airflare: 'AIRFLARE', ninety: '1990', freeze: 'BABY FREEZE', headstand: 'HEADSTAND FREEZE',
+    handstand: 'HANDSTAND FREEZE', airchair: 'AIRCHAIR', hollowback: 'HOLLOWBACK' };
   function btPlay(bt, side, opp){
     const run = ++BT.run, me = bt[side], them = bt[side === 'a' ? 'b' : 'a'];
     BT.cur = { bt, side, opp: opp || { id: them.id } };
@@ -4292,89 +4329,119 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#btNa').innerHTML = ''; $('#btNb').innerHTML = '';
     const nm = (el, p, mine) => { el.append(mine ? (prof.nick || T('Ты')) : p.name); const sm = document.createElement('small'); sm.textContent = T('Ур. {n}', { n: p.lvl }) + ' · ' + T(HERO.NAMES[p.lvl - 1]); el.appendChild(sm); };
     nm($('#btNa'), me, true); nm($('#btNb'), them, false);
-    A.querySelector('.mv').innerHTML = HERO.svg(me.lvl, { uid: 'ba', rig: true, acc: side === 'a' ? myEq : (me.eq || myEq) });
-    B.querySelector('.mv').innerHTML = HERO.svg(them.lvl, { uid: 'bb', rig: true, acc: them.eq || [] });
+    const eqA = side === 'a' ? myEq : (me.eq || myEq), eqB = them.eq || [];
+    A.querySelector('.mv').innerHTML = HERO.svg(me.lvl, { uid: 'ba', rig: true, acc: eqA });
+    B.querySelector('.mv').innerHTML = HERO.svg(them.lvl, { uid: 'bb', rig: true, acc: eqB });
     const JA = HERO.rigJoints(A.querySelector('svg')), JB = HERO.rigJoints(B.querySelector('svg'));
-    [A, B].forEach(f => { f.className = 'fighter ' + (f === A ? 'l' : 'r'); });
+    [[A, eqA, 'l'], [B, eqB, 'r']].forEach(([f, eq, sd]) => { f.className = 'fighter ' + sd + (eq.includes('fire') ? ' fire' : '') + (eq.includes('cardboard') ? ' cardb' : ''); });
     $('#btCrowd').innerHTML = '<i></i>'.repeat(13); $('#btCrowd').querySelectorAll('i').forEach((i, k) => { i.style.animationDelay = (-(k * 0.13) % 0.5).toFixed(2) + 's'; });
     $('#btCrowd').classList.remove('hype');
     $('#btConf').innerHTML = ''; $('#btFx').innerHTML = '';
-    $('#btJudges').querySelectorAll('.card').forEach(c => { c.className = 'card'; });
+    $('#btJudges').className = 'judges'; $('#btJudges').querySelectorAll('.card').forEach(c => { c.className = 'card'; });
     $('#btRes').hidden = true; $('#btSkip').hidden = false; $('#btClose').hidden = true;
     $('#battle').hidden = false;
-    const rnd = mulberry(bt.seed || 1);
-    const arena = $('#btArena'), cam = $('#btCam');
-    cam.style.transform = '';
-    const shout = (left, txt) => { const s = $('#btShout'); s.textContent = txt || BT_SHOUTS[Math.floor(rnd() * BT_SHOUTS.length)]; s.style.left = left ? '10%' : ''; s.style.right = left ? '' : '10%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
+    const rnd = mulberry(bt.seed || 1), pick = a => a[Math.floor(rnd() * a.length)];
+    const arena = $('#btArena'), cam = $('#btCam'), fx = $('#btFx');
+    cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake');
+    const shout = (left, txt) => { const s = $('#btShout'); s.textContent = txt; s.style.left = left ? '10%' : ''; s.style.right = left ? '' : '10%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
+    const caption = (left, txt) => { const c = $('#btMove'); if (!txt) return; c.textContent = txt; c.className = 'btmove ' + (left ? 'l' : 'r'); void c.offsetWidth; c.classList.add('show'); };
     const round = t => { const r = $('#btRound'); r.textContent = t; r.classList.remove('show'); void r.offsetWidth; r.classList.add('show'); };
-    const puff = left => { const fx = $('#btFx'); for (let k = 0; k < 5; k++) { const d = document.createElement('i'); d.className = 'puff'; d.style.left = ((left ? 22 : 78) + (k - 2) * 5) + '%'; d.style.animationDelay = (k * .03) + 's'; fx.appendChild(d); setTimeout(() => d.remove(), 900); } };
-    const shake = () => { arena.classList.remove('shake'); void arena.offsetWidth; arena.classList.add('shake'); };
-    const camOn = left => { cam.style.transform = left == null ? '' : 'scale(1.1) translateX(' + (left ? 7 : -7) + '%)'; };
-    const ring = (f, on) => f.classList.toggle('spin', on);
-    // the timeline: segments per fighter + one-shot events; challenger goes first, «me» is always on the left
-    const firstLeft = side === 'a', seg = { A: [], B: [] }, ev = [];
-    let t = .7;
-    ev.push([.15, () => round(T('Раунд {n}', { n: 1 }))]);
+    const puff = left => { for (let k = 0; k < 5; k++) { const d = document.createElement('i'); d.className = 'puff'; d.style.left = ((left ? 24 : 76) + (k - 2) * 5) + '%'; d.style.animationDelay = (k * .03) + 's'; fx.appendChild(d); setTimeout(() => d.remove(), 900); } };
+    const stars = left => { for (let k = 0; k < 8; k++) { const d = document.createElement('i'), a = k / 8 * Math.PI * 2; d.className = 'star'; d.style.left = (left ? 26 : 74) + '%'; d.style.setProperty('--dx', (Math.cos(a) * 70).toFixed(0) + 'px'); d.style.setProperty('--dy', (Math.sin(a) * 70 - 20).toFixed(0) + 'px'); fx.appendChild(d); setTimeout(() => d.remove(), 800); } };
+    const flashes = () => { for (let k = 0; k < 4; k++) { const d = document.createElement('i'); d.className = 'camfl'; d.style.left = (8 + Math.random() * 84).toFixed(0) + '%'; d.style.animationDelay = (Math.random() * .5).toFixed(2) + 's'; fx.appendChild(d); setTimeout(() => d.remove(), 1100); } };
+    const re = (el, c) => { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };
+    const camOn = (left, z) => { cam.style.transform = left == null ? '' : 'scale(' + (z || 1.1) + ') translateX(' + (left ? 7 : -7) + '%)'; };
+    const hype = on => { $('#btCrowd').classList.toggle('hype', on); if (on) flashes(); };
+    // ---- the timeline (virtual seconds): segments per fighter [start, dur, move, loop] + one-shot events ----
+    const firstLeft = side === 'a', seg = { A: [[0, .9, 'walk']], B: [[0, .9, 'walk']] }, ev = [], used = { A: [], B: [] };
+    let rate = 1, t = 1.0;
+    ev.push([.1, () => round(T('Раунд {n}', { n: 1 }))]);
     for (let r = 1; r <= 2; r++) {
-      if (r === 2) ev.push([t - .35, () => round(T('Раунд {n}', { n: 2 }))]);
+      if (r === 2) ev.push([t - .3, () => round(T('Раунд {n}', { n: 2 }))]);
       for (const leftTurn of [firstLeft, !firstLeft]) {
-        const who = leftTurn ? 'A' : 'B', f = leftTurn ? A : B;
-        const power = BT_POWER[Math.floor(rnd() * BT_POWER.length)];
-        const parts = r === 1 ? ['toprock', power] : [power, rnd() < .5 ? 'freeze' : 'burn'];
-        const t0 = t;
-        ev.push([t0, () => { camOn(leftTurn); A.classList.toggle('dim', !leftTurn); B.classList.toggle('dim', leftTurn); }]);
+        const who = leftTurn ? 'A' : 'B', other = leftTurn ? 'B' : 'A', f = leftTurn ? A : B, lvl = leftTurn ? me.lvl : them.lvl;
+        const power = pick(BT_POOL(lvl).filter(m => !used[who].includes(m))); used[who].push(power);
+        const parts = r === 1 ? [pick(BT_TOP), power] : [power, rnd() < .65 ? pick(BT_FRZ(lvl)) : pick(Object.keys(BT_TAUNT))];
+        const react = pick(BT_REACT), shock = rnd() < .5, cry = pick(BT_SHOUTS), t0 = t;
+        ev.push([t0, () => { camOn(leftTurn); A.classList.toggle('dim', !leftTurn); B.classList.toggle('dim', leftTurn); arena.classList.toggle('on-l', leftTurn); arena.classList.toggle('on-r', !leftTurn); $('#btJudges').className = 'judges ' + (leftTurn ? 'wl' : 'wr'); }]);
         parts.forEach(mv => {
-          const d = HERO.MOVES[mv].dur * (mv === 'toprock' ? .8 : mv === 'freeze' ? .85 : 1);
-          seg[who].push([t, d, mv]);
-          if (BT_POWER.includes(mv)) {
-            ev.push([t + d * .18, () => { puff(leftTurn); ring(f, true); }]);
-            ev.push([t + d * .8, () => { ring(f, false); $('#btCrowd').classList.add('hype'); shout(!leftTurn); }]);
-            ev.push([t + d, () => $('#btCrowd').classList.remove('hype')]);
+          const d = HERO.MOVES[mv].dur * (BT_TOP.includes(mv) ? .75 : 1), s0 = t;
+          seg[who].push([s0, d, mv]);
+          ev.push([s0 + .03, () => caption(leftTurn, BT_NAME[mv])]);
+          if (BT_SPIN.includes(mv)) {
+            ev.push([s0 + d * .18, () => { puff(leftTurn); f.classList.add('spin'); }]);
+            ev.push([s0 + d * .8, () => { f.classList.remove('spin'); hype(true); shout(!leftTurn, cry); }]);
+            ev.push([s0 + d, () => hype(false)]);
+          } else if (mv === 'backflip') {
+            ev.push([s0 + d * .44, () => { rate = .45; camOn(leftTurn, 1.2); }]); ev.push([s0 + d * .58, () => { rate = 1; camOn(leftTurn); }]);
+            ev.push([s0 + d * .9, () => { puff(leftTurn); re(arena, 'shake'); hype(true); shout(!leftTurn, cry); }]); ev.push([s0 + d + .1, () => hype(false)]);
+          } else if (mv === 'ccs') {
+            ev.push([s0 + d * .2, () => puff(leftTurn)]); ev.push([s0 + d * .8, () => { hype(true); shout(!leftTurn, cry); }]); ev.push([s0 + d, () => hype(false)]);
+          } else if (BT_TAUNT[mv]) ev.push([s0 + d * .3, () => shout(!leftTurn, BT_TAUNT[mv])]);
+          else if (!BT_TOP.includes(mv)) { // a freeze: hit, flash, stars — and time slows for a moment
+            ev.push([s0 + d * .23, () => { rate = .3; camOn(leftTurn, 1.22); re(arena, 'shake'); re(arena, 'flash'); stars(leftTurn); puff(leftTurn); hype(true); shout(!leftTurn, 'FREEZE!'); if (navigator.vibrate) try { navigator.vibrate(18); } catch (_) {} }]);
+            ev.push([s0 + d * .23 + .2, () => { rate = 1; camOn(leftTurn); }]); ev.push([s0 + d * .8, () => hype(false)]);
           }
-          if (mv === 'freeze') ev.push([t + d * .22, () => { shake(); puff(leftTurn); shout(!leftTurn, 'FREEZE!'); }]);
-          if (mv === 'burn') ev.push([t + d * .3, () => shout(!leftTurn, 'BURN!')]);
           t += d;
         });
+        // the other one watches: a looped reaction, sometimes a «whoa» at the end
+        if (shock) { seg[other].push([t0, t - t0 - .9, react, 1]); seg[other].push([t - .9, .9, 'shock']); } else seg[other].push([t0, t - t0, react, 1]);
         t += .12;
       }
     }
-    const END = t + .2;
-    ev.push([t, () => { camOn(null); A.classList.remove('dim'); B.classList.remove('dim'); round(T('Судьи')); }]);
+    const END = t + .2, winMv = pick(['win', 'win2', 'win3']), loseMv = pick(['lose', 'lose2', 'lose3']);
+    ev.push([t, () => { camOn(null); A.classList.remove('dim'); B.classList.remove('dim'); arena.classList.remove('on-l', 'on-r'); $('#btJudges').className = 'judges think'; round(T('Судьи')); }]);
     ev.sort((x, y) => x[0] - y[0]);
-    let evAt = 0, start = performance.now(), ending = null; // ending = {won} after the judges
-    const poseAt = (who, T0) => {
-      if (ending) { const mv = (who === 'A') === ending.won ? 'win' : 'lose', M = HERO.MOVES[mv]; return M.f((T0 % M.dur) / M.dur); }
-      for (const [s0, d, mv] of seg[who]) if (T0 >= s0 && T0 < s0 + d) return HERO.MOVES[mv].f((T0 - s0) / d);
-      const M = HERO.MOVES.idle, off = who === 'A' ? 0 : .37; return M.f(((T0 / M.dur) + off) % 1);
+    let evAt = 0, vt = 0, last = performance.now(), ending = null;
+    // which move a fighter is in at time T0 (+ a key to notice the change and cross-fade from the last pose)
+    const target = (who, T0) => {
+      if (ending) { const mv = (who === 'A') === ending.won ? winMv : loseMv, M = HERO.MOVES[mv]; return [mv, M.f((T0 % M.dur) / M.dur)]; }
+      for (const [s0, d, mv, loop] of seg[who]) if (T0 >= s0 && T0 < s0 + d) { const M = HERO.MOVES[mv]; return [mv + s0, M.f(loop ? ((T0 - s0) / M.dur) % 1 : (T0 - s0) / d)]; }
+      const M = HERO.MOVES.idle; return ['idle', M.f(((T0 / M.dur) + (who === 'A' ? 0 : .37)) % 1)];
+    };
+    const JOINTS = ['torso', 'head', 'shL', 'elL', 'shR', 'elR', 'hipL', 'kneeL', 'ankL', 'hipR', 'kneeR', 'ankR'];
+    const mix = (a, b, k) => { if (k >= 1 || !a) return b; const o = {}, ra = a.root || {}, rb = b.root || {};
+      JOINTS.forEach(j => { o[j] = (a[j] || 0) + ((b[j] || 0) - (a[j] || 0)) * k; });
+      const L = (x, y, d) => { x = x == null ? d : x; y = y == null ? d : y; return x + (y - x) * k; };
+      o.root = { x: L(ra.x, rb.x, 0), y: L(ra.y, rb.y, 0), r: L(ra.r, rb.r, 0), sx: L(ra.sx, rb.sx, 1), sy: L(ra.sy, rb.sy, 1), px: rb.px, py: rb.py }; return o; };
+    const st = { A: { key: '', from: null, at: 0, pose: null, shd: 1 }, B: { key: '', from: null, at: 0, pose: null, shd: 1 } };
+    const drive = (who, J, el) => {
+      const S = st[who], [key, p] = target(who, vt);
+      if (key !== S.key) { S.from = S.key ? S.pose : null; S.at = vt; S.key = key; }
+      const k = S.from ? Math.min(1, (vt - S.at) / .16) : 1, pose = mix(S.from, p, k * k * (3 - 2 * k));
+      S.pose = pose; HERO.setPose(J, pose);
+      const y = (pose.root && pose.root.y) || 0, sh = y < 0 ? Math.max(.45, 1 + y / 150) : y > 30 ? 1.25 : 1; // the shadow: small in the air, wide on the floor
+      if (Math.abs(sh - S.shd) > .03) { S.shd = sh; el.querySelector('.shd').style.transform = 'scaleX(' + sh.toFixed(2) + ')'; }
     };
     const finish = () => {
       if (BT.finRun === run) return; BT.finRun = run;
-      evAt = ev.length; camOn(null); A.classList.remove('dim', 'spin'); B.classList.remove('dim', 'spin');
+      evAt = ev.length; rate = 1; camOn(null); A.classList.remove('dim', 'spin'); B.classList.remove('dim', 'spin'); arena.classList.remove('on-l', 'on-r'); hype(false);
+      $('#btJudges').className = 'judges think';
       const votes = bt.votes || [];
       const cards = $('#btJudges').querySelectorAll('.card');
       votes.forEach((v, k) => setTimeout(() => { if (run !== BT.run) return; cards[k].className = 'card ' + (v === side ? 'l' : 'r'); if (navigator.vibrate) try { navigator.vibrate(12); } catch (_) {} }, 300 + k * 550));
       setTimeout(() => {
         if (run !== BT.run) return;
         const won = bt.win === side, mine = votes.filter(v => v === side).length;
-        ending = { won, t: (performance.now() - start) / 1000 };
-        A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win');
+        ending = { won }; $('#btJudges').className = 'judges';
+        A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win'); arena.classList.add(won ? 'on-l' : 'on-r');
         const tt = $('#btResT'); tt.textContent = won ? T('Победа!') : T('Поражение'); tt.className = won ? 'win' : 'lose';
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
-        $('#btCrowd').classList.add('hype');
+        hype(true);
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
       }, 300 + votes.length * 550 + 250);
     };
-    BT.finish = () => { start = performance.now() - END * 1000; finish(); };
-    const frame = () => {
+    BT.finish = () => { vt = Math.max(vt, END); finish(); };
+    const frame = now => {
       if (run !== BT.run || $('#battle').hidden) return;
-      const T0 = (performance.now() - start) / 1000;
-      while (evAt < ev.length && ev[evAt][0] <= T0) { try { ev[evAt][1](); } catch (_) {} evAt++; }
-      HERO.setPose(JA, poseAt('A', T0)); HERO.setPose(JB, poseAt('B', T0));
-      if (T0 >= END && !ending) finish();
+      vt += Math.min(.1, (now - last) / 1000) * rate; last = now;
+      while (evAt < ev.length && ev[evAt][0] <= vt) { try { ev[evAt][1](); } catch (_) {} evAt++; }
+      drive('A', JA, A); drive('B', JB, B);
+      if (vt >= END && !ending) finish();
       requestAnimationFrame(frame);
     };
-    requestAnimationFrame(frame);
+    requestAnimationFrame(now => { last = now; frame(now); });
   }
   $('#btSkip').addEventListener('click', () => BT.finish && BT.finish());
   $('#btFind').addEventListener('click', () => btCall(null, $('#btFind')));
@@ -4443,7 +4510,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (r.ok) localStorage.setItem('fedoskin-bt-push', tag);
     } catch (_) {}
   }
-  window.fedoskinBattle = (la, lb, win, side) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: 7, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
+  window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 
   if (LB_URL) {
     setTimeout(() => btInbox(false), 4000);

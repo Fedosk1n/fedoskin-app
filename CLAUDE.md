@@ -394,6 +394,18 @@
   rAF sets both rigs every frame; events: camera `#btCam` zoom toward the dancer, other one dimmed, spin ring `.spinfx`,
   dust `.puff`, arena shake + «FREEZE!», crowd hype + shouts; after the verdict win/lose loops. Right fighter = CSS
   scaleX(-1). Headless ~30 fps with both rigs.
+  Cartoon v3 (owner 10.11.2026 «больше деталей, больше вариаций»): 34 moves in `HERO.MOVES` — walk-in, toprocks (toprock,
+  kickstep, salsa, indian), power/footwork (sixstep, ccs, backspin, swipe, windmill, backflip, headspin, flare, airflare,
+  ninety), freezes (freeze = baby, headstand, handstand, airchair, hollowback), taunts (burn, brush, comehere), watcher loops
+  (idle, bounce, clap, nah) + shock, endings win/win2/win3, lose/lose2/lose3 (lose3 = respectful clap). Pools grow with the
+  hero's level (`BT_POOL`/`BT_FRZ`: lvl 3 adds windmill/backflip/handstand/airchair, lvl 5 headspin/flare/airflare/1990/
+  hollowback); a dancer never repeats a power move. Timeline in VIRTUAL time `vt` (`rate` < 1 = slow motion on freezes and at
+  the backflip's top); poses cross-fade 0.16 s when a fighter's segment changes (`mix`); all random picks are made from the
+  seed while building the timeline (same show on both phones). Details: move-name chip `#btMove` (international names),
+  speakers `.spk`, spotlight follows (`.arena.on-l/.on-r`), white flash + stars + shake + vibration on a freeze, camera
+  flashes + raised hands in the crowd on hype, shadow shrinks in the air, judges lean toward the dancer (`.judges.wl/.wr`,
+  `.think`), fire aura / cardboard accessories as CSS on the fighter (`.fire`, `.cardb`). `fedoskinBattle(la, lb, win, side,
+  seed)`; `?battle=demo` uses a random seed.
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give
