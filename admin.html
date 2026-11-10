@@ -266,7 +266,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 33</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 34</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -485,6 +485,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" id="tgCopy2" type="button">Скопировать код сервера</button><button class="btn btn-sm btn-ghost" id="tgCheck2" type="button">Проверить</button></div>
         <p class="hint" id="tgTop" hidden style="margin:10px 0 0"></p>
         <div class="hint" id="tgAi" hidden style="margin:10px 0 0;line-height:1.6"></div>
+        <div id="tgTrBox" hidden style="margin:8px 0 0"><button class="btn btn-sm" id="tgTrTest" type="button">Проверить переводчик</button><div class="hint" id="tgTrOut" style="margin:8px 0 0;white-space:pre-wrap;line-height:1.55"></div></div>
         <div class="hint" id="tgPull" hidden style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.35);line-height:1.6"></div>
         <div class="hint" style="margin:10px 0 0;line-height:1.6"><b>У каждого клиента — своя тема</b> (как отдельный чат внутри бота). Включите один раз: <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> → кнопка <b>Open</b> (мини-приложение) → ваш бот → <b>Bot Settings</b> → <b>Threaded mode</b> — включить. Новые клиенты сразу попадут в свои темы с их именем.</div>
         <div class="hint" style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2);line-height:1.65"><b>Памятка</b> (в боте — команда <b>/help</b>)
@@ -1072,18 +1073,21 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (!cfg.pushUrl) { st.textContent = 'сервер не подключён'; return; }
     try {
       const r = await pushApi('/tg/status');
-      $('#tgOld').hidden = !(r.owner && r.ai === undefined); // a server older than this admin doesn't report topics / translator
+      $('#tgOld').hidden = !(r.owner && (r.ai === undefined || (r.ai && r.trErr === undefined))); // a server older than this admin doesn't report topics / translator
       const tp = $('#tgTop'); tp.hidden = !(r.owner && r.topics);
       if (r.topics) {
         tp.style.color = r.topics.on && !r.topics.err ? '#3BD16F' : '#FF8A6B';
         tp.textContent = !r.topics.on ? 'Темы у бота выключены — все клиенты приходят в один чат. Включите Threaded mode (как ниже) и нажмите «Проверить».'
-          : r.topics.err ? 'Темы включены, но Telegram не дал создать тему: ' + r.topics.err + '. Следующее сообщение клиента попробует снова.'
+          : /WRONG_HOME/.test(r.topics.err) ? 'Темы включены, но у Telegram сейчас сбой: с 9 ноября боты не могут создавать темы (у всех ботов, ошибка BOT_TOPIC_WRONG_HOME). Пока клиенты приходят в общий чат с подписью — отвечайте через «Ответить». Бот сам пробует снова раз в 6 часов; «Проверить» — попробовать на следующем сообщении.'
+        : r.topics.err ? 'Темы включены, но Telegram не дал создать тему: ' + r.topics.err + '. Следующее сообщение клиента попробует снова.'
           : 'Темы включены ✓ Каждый новый клиент получит свою тему.';
       }
       const ai = $('#tgAi'); ai.hidden = !r.owner || r.ai === undefined;
       ai.innerHTML = r.ai
         ? '<span style="color:#3BD16F">Переводчик включён ✓</span> Сообщение клиента приходит вам оригиналом и ниже переводом 🇷🇺. Вы пишете по-русски — клиент получает только на своём языке, а бот покажет вам, что именно ушло. Чтобы отправить без перевода (например, ссылку или фразу на английском), начните сообщение с <b>!</b>'
         : '<b>Переводчик</b> (бесплатно, один раз, 1 минута): Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Settings</b> → <b>Bindings</b> → <b>Add binding</b> → <b>Workers AI</b> → имя <b>AI</b> → <b>Add binding</b> (Deploy). Потом нажмите «Проверить». Тогда сообщения клиентов будут приходить с переводом на русский, а ваши ответы — уходить клиенту на его языке.';
+      $('#tgTrBox').hidden = !(r.owner && r.ai);
+      if (r.ai && r.trErr && !$('#tgTrOut').dataset.done) { $('#tgTrOut').style.color = '#FF8A6B'; $('#tgTrOut').textContent = 'Последняя ошибка переводчика: ' + r.trErr; }
       const pull = $('#tgPull'); pull.hidden = !(r.mode === 'pull' && r.owner);
       if (r.mode === 'pull' && r.owner) pull.innerHTML = r.cron
         ? '<b>Запасной режим</b>: Telegram не может достучаться до вашего сервера, поэтому сервер сам забирает ваши ответы — раз в минуту, а когда у клиента открыт чат, через несколько секунд. Всё работает ✓'
@@ -1101,6 +1105,20 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#tgCheck').addEventListener('click', tgStatus);
   $('#tgCheck2').addEventListener('click', async () => { const b = $('#tgCheck2'); b.disabled = true; b.textContent = 'Проверяю…'; await tgStatus(); b.disabled = false; b.textContent = 'Проверить'; toast('Проверено'); });
   $('#tgCopy2').addEventListener('click', () => $('#visCopy').click());
+  $('#tgTrTest').addEventListener('click', async () => {
+    const b = $('#tgTrTest'), out = $('#tgTrOut'); b.disabled = true; b.textContent = 'Перевожу…'; out.dataset.done = '1'; out.style.color = ''; out.textContent = '';
+    try {
+      const r = await pushApi('/tg/trtest', {});
+      if (r.error === 'no-ai') out.textContent = 'Сервер не видит переводчик — добавьте привязку Workers AI с именем AI и нажмите Deploy.';
+      else if (!r.ok) { out.style.color = '#FF8A6B'; out.textContent = 'Ошибка: ' + r.error + (r.raw ? '\nОтвет переводчика: ' + r.raw : ''); }
+      else {
+        const ok = r.parsed && r.parsed.ru;
+        out.style.color = ok ? '' : '#FF8A6B';
+        out.textContent = 'Клиент пишет: ' + r.sample + '\nВам придёт: ' + (ok ? '🇷🇺 ' + r.parsed.ru + '  (язык: ' + r.parsed.lang + ')' : 'перевод не разобран. Ответ переводчика: ' + r.raw) + '\n\nВы пишете: Привет! Пришли видео сбоку, посмотрю где теряешь скорость.\nКлиент получит: ' + (r.back || '—');
+      }
+    } catch (e) { out.style.color = '#FF8A6B'; out.textContent = /not found/.test(e.message) ? 'Сначала обновите код сервера (кнопка «Скопировать код сервера» выше).' : 'Ошибка: ' + e.message; }
+    b.disabled = false; b.textContent = 'Проверить переводчик';
+  });
   $('#tgSetup').addEventListener('click', async () => {
     const b = $('#tgSetup'); b.disabled = true; b.textContent = 'Подключаю…'; $('#tgErr').textContent = '';
     try {

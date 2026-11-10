@@ -523,3 +523,9 @@
   once via setMyCommands from /tg/status, tgs 'cmds') = `TG_HELP`; a new topic's intro mentions translation + «!» + /help;
   the first «↪️ Клиент получил» per thread adds «Без перевода — начните с «!»» (tgs 'trhint:<thr>'). Admin card: always
   visible «Памятка» box. Admin «версия 32».
+  Live 10.11 12:16: topics fail with «BOT_TOPIC_WRONG_HOME» = Telegram-wide outage since 09.11 ~15:00 UTC
+  (github.com/tdlib/telegram-bot-api/issues/944, open) ⇒ fallback to the single chat works; on WRONG_HOME the retry waits
+  6 h (refused tries may leave ghost topic notices); admin explains it. Translation did not show (cause unknown) ⇒ aiRun
+  accepts {response} and OpenAI {choices}, strips ``` fences; trIn parses leniently («**es**», «Language: es»); errors go to
+  tgs 'trErr' (status `trErr`); admin «Проверить переводчик» → POST /tg/trtest (raw answer + parsed + reply direction).
+  Admin «версия 34» (banner «Код сервера устарел» also when the server lacks `trErr`).
