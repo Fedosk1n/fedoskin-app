@@ -384,6 +384,16 @@
   `btInbox()` 4 s after start, on Profile, on push ⇒ sheet `#btCallSheet` «{name} вызывает тебя на батл!» → «Смотреть
   батл» / «Позже» (both mark seen); never over a lesson/sheet (re-checked in go()). Profile hero card `#btScore`. Server
   code must be updated by the owner (copy server code). `window.fedoskinBattle(la, lb, win, side)` replays a demo; the link `?battle=demo` shows one on any phone (no server).
+  Cartoon v2 (owner 10.11.2026 «конечности отдельно… мульт на 12 секунд»): `HERO.svg(level, {rig: true})` = the same drawing cut
+  into joint groups (`data-j`/`data-p` pivots: root, torso, head, shL/elL/shR/elR, hipL/kneeL/ankL/hipR/kneeR/ankR; pants and
+  sleeves split at knee/elbow with clipPaths + a filler ellipse/circle; static output byte-identical — checked). `HERO.setPose
+  (HERO.rigJoints(svg), pose)` sets rotate() per joint (limb angles «outward-positive», right side mirrored) + root
+  translate/rotate/scale about (px, py). `HERO.MOVES` {dur, f(u)}: idle (crossed arms, nod), toprock, windmill, headspin,
+  flare, sixstep, backspin, freeze, burn (points at the opponent), win, lose — each starts/ends standing. btPlay builds one
+  timeline from the seed: round 1 = toprock + power, round 2 = power + freeze|burn, challenger first (~12 s), then judges;
+  rAF sets both rigs every frame; events: camera `#btCam` zoom toward the dancer, other one dimmed, spin ring `.spinfx`,
+  dust `.puff`, arena shake + «FREEZE!», crowd hype + shouts; after the verdict win/lose loops. Right fighter = CSS
+  scaleX(-1). Headless ~30 fps with both rigs.
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give

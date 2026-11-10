@@ -45,6 +45,8 @@
     const S = (w) => ' stroke="' + INK + '" stroke-width="' + (w || 2.2) + '" stroke-linejoin="round" stroke-linecap="round"';
     const LN = (d, col, w, ex) => o.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"' + (ex || '') + '/>');
     const MIR = (fn) => { o.push('<g transform="translate(200 0) scale(-1 1)">'); fn(); o.push('</g>'); };
+    // rig mode (battle animation, 10.11.2026): the same drawing, cut into limbs that turn around their joints
+    const rig = !!opt.rig, cap = fn => { const n = o.length; fn(); return o.splice(n).join(''); };
 
     // ---- the outfit of this level ----
     const fit = {
@@ -63,7 +65,7 @@
       '<linearGradient id="' + id + 'lens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A3A44"/><stop offset="1" stop-color="#08080A"/></linearGradient></defs>');
 
     // ---- background ----
-    if (opt.bg !== false && has('wall')) {
+    if (rig) { /* no background, floor or props in the rig */ } else if (opt.bg !== false && has('wall')) {
       o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="#3A2A24"/>');
       for (let y = 8, r = 0; y < 230; y += 11, r++) { LN('M4 ' + y + ' H196', 'rgba(0,0,0,.35)', 1.4); for (let x = 4 + (r % 2 ? 0 : 12); x < 196; x += 24) LN('M' + x + ' ' + y + ' v11', 'rgba(0,0,0,.3)', 1.2); }
       P('M18 70 Q30 40 52 56 Q60 34 82 48 Q92 30 112 44 Q132 28 150 46 Q174 40 182 66 Q190 92 166 98 Q150 116 128 100 Q104 118 86 100 Q62 114 46 98 Q20 104 18 70 Z', '#3D8BFF', ' opacity=".55" stroke="#0E0E10" stroke-width="3"');
@@ -91,19 +93,19 @@
     }
 
     // ---- fire aura (shop) ----
-    if (has('fire')) {
+    if (has('fire') && !rig) {
       P('M40 232 Q34 196 52 176 Q50 196 62 200 Q58 170 80 150 Q78 178 92 184 Q94 160 108 146 Q110 172 122 178 Q128 160 144 156 Q138 182 150 192 Q158 178 164 172 Q170 200 160 232 Z', 'url(#' + id + 'fire)', ' opacity=".9"');
       P('M60 232 Q58 210 70 198 Q72 214 84 216 Q86 196 100 186 Q102 206 114 210 Q120 196 132 194 Q138 214 140 232 Z', '#FFD25A', ' opacity=".55"');
     }
     // ---- cardboard (shop): flattened box under the feet ----
-    if (has('cardboard')) {
+    if (has('cardboard') && !rig) {
       P('M30 222 L170 222 L184 236 L16 236 Z', '#B98A4E', S(1.8));
       LN('M58 222 L50 236 M142 222 L150 236', 'rgba(0,0,0,.25)', 1.2);
       P('M92 222 L108 222 L110 236 L90 236 Z', '#D6B98A', ' opacity=".8"');
       LN('M26 229 H40 M160 229 H174', 'rgba(0,0,0,.25)', 1);
     }
     // ---- boombox (7+ or bought), behind the right leg ----
-    if (L >= 7 || has('box')) {
+    if ((L >= 7 || has('box')) && !rig) {
       o.push('<g transform="translate(146 194)">');
       P('M6 0 V-7 Q6 -10 9 -10 H39 Q42 -10 42 -7 V0', 'none', ' stroke="' + INK + '" stroke-width="3.2"');
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V30 Q48 33 45 33 H3 Q0 33 0 30 Z', '#2B2B31', S(2));
@@ -155,7 +157,8 @@
       LN(hi ? 'M2 -14 Q16 -15 28 -15' : 'M2 -14 Q16 -15 28 -15', 'rgba(0,0,0,.25)', .9, ' stroke-dasharray="1.6 1.6"');
       o.push('</g>');
     };
-    shoe(); MIR(shoe);
+    const SH_R = cap(shoe), SH_L = cap(() => MIR(shoe));
+    if (!rig) o.push(SH_R, SH_L);
 
     // ---- pants ----
     const pants = () => {
@@ -181,13 +184,18 @@
         if (t === 'wind') { LN('M80 156 Q83 172 81 180', 'rgba(255,255,255,.14)', 2.2); LN('M74 ' + (hem - 9) + ' L74 ' + (hem - 20), '#9A968E', 1.4); }
       }
     };
-    pants(); MIR(pants);
+    const PA_L = cap(pants), PA_R = cap(() => MIR(pants));
+    if (!rig) o.push(PA_L, PA_R);
+    let KN_L = '', KN_R = '';
     if (has('knee')) {
       const kp = () => { P('M73 168 Q85 164 97 168 L97 184 Q85 188 73 184 Z', '#141416', S(1.8)); P('M78 171 Q85 169 92 171 L92 181 Q85 183 78 181 Z', OR, S(1)); LN('M75 176 H95', 'rgba(255,255,255,.18)', 1); };
-      kp(); MIR(kp);
+      KN_L = cap(kp); KN_R = cap(() => MIR(kp));
+      if (!rig) o.push(KN_L, KN_R);
     }
+    const FLY0 = o.length;
     if (fit.pants === 'jeans') { LN('M100 147 V168 Q101 172 104 170', '#2D4A72', 1.6); LN('M103 147 V166', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"'); }
 
+    const FLY = rig ? o.splice(FLY0).join('') : '';
     // ---- belt of the champion (8) sits on the waist later ----
 
     // ---- arms (behind the torso) ----
@@ -223,8 +231,9 @@
       if (has('gloves')) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', '#141416', S(1.6)); LN('M53 154 H64', OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     };
-    arm(0);
-    if (L >= 8) {
+    const AR_L = cap(() => arm(0)), AR_R = rig ? cap(() => MIR(() => arm(1))) : '';
+    if (!rig) o.push(AR_L);
+    if (rig) { /* both arms come from arm() */ } else if (L >= 8) {
       // right arm up — fist in the air (sleeve, cuff, fist)
       P('M129 92 Q143 88 148 72 L151 48 L139 46 L137 70 L127 98 Z', sleeveCol, S());
       LN('M146 72 L149 49', GOLD, 2.2);
@@ -236,6 +245,7 @@
     } else MIR(() => arm(1));
 
     // ---- torso ----
+    const TO0 = o.length;
     const top = fit.top;
     if (top === 'tee' || top === 'teeBig') {
       const big = top === 'teeBig', col = big ? BLK : '#8E8E95';
@@ -329,7 +339,9 @@
       } else o.push('<circle cx="100" cy="111.5" r="3" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".8"/>');
     }
 
+    const TORSO = rig ? o.splice(TO0).join('') : '';
     // ---- head ----
+    const HE0 = o.length;
     o.push('<circle cx="77" cy="56" r="6" fill="' + SKIN + '" stroke="' + INK + '" stroke-width="2"/><circle cx="123" cy="56" r="6" fill="' + SKIN + '" stroke="' + INK + '" stroke-width="2"/>');
     LN('M76 54 Q78 57 76 59 M124 54 Q122 57 124 59', SKIN_D, 1.2);
     if (L >= 6) o.push('<circle cx="76" cy="61" r="1.7" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".5"/>'); // stud earring
@@ -412,10 +424,100 @@
     else LN('M93 74 Q100 75 107 73', INK, 2.2);
     if (L >= 4) LN('M88 66 h0 M112 66 h0', SKIN_L, 0); // (cheek highlight placeholder kept tiny)
 
+    if (rig) {
+      const HEAD = o.splice(HE0).join('');
+      const elY = fit.top === 'teeBig' ? 126 : 120, elX = fit.top === 'teeBig' ? 60 : 61;
+      const pCol = { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[fit.pants];
+      const eCol = longSleeve ? sleeveCol : SKIN;
+      o.push('<defs><clipPath id="' + id + 'cT" clipPathUnits="userSpaceOnUse"><rect x="-50" y="-50" width="300" height="229"/></clipPath>' +
+        '<clipPath id="' + id + 'cB" clipPathUnits="userSpaceOnUse"><rect x="-50" y="176" width="300" height="120"/></clipPath>' +
+        '<clipPath id="' + id + 'aT" clipPathUnits="userSpaceOnUse"><rect x="-50" y="-50" width="300" height="' + (elY + 51) + '"/></clipPath>' +
+        '<clipPath id="' + id + 'aB" clipPathUnits="userSpaceOnUse"><rect x="-50" y="' + (elY - 2) + '" width="300" height="200"/></clipPath></defs>');
+      const J = (name, px, py, inner) => '<g data-j="' + name + '" data-p="' + px + ' ' + py + '">' + inner + '</g>';
+      const leg = (sd, PA, KN, SH, x) => J('hip' + sd, x, 150, '<g clip-path="url(#' + id + 'cT)">' + PA + '</g>' +
+        J('knee' + sd, x, 178, '<ellipse cx="' + x + '" cy="178" rx="13" ry="6" fill="' + pCol + '"/><g clip-path="url(#' + id + 'cB)">' + PA + '</g>' + KN + J('ank' + sd, x + (sd === 'L' ? 1 : -1), 214, SH)));
+      const armJ = (sd, AR, sx, ex) => J('sh' + sd, sx, 96, '<g clip-path="url(#' + id + 'aT)">' + AR + '</g>' +
+        J('el' + sd, ex, elY, '<circle cx="' + ex + '" cy="' + elY + '" r="6.5" fill="' + eCol + '"/><g clip-path="url(#' + id + 'aB)">' + AR + '</g>'));
+      o.push('<g data-j="root">' + leg('R', PA_R, KN_R, SH_R, 115) + leg('L', PA_L, KN_L, SH_L, 85) +
+        J('torso', 100, 148, FLY + TORSO + J('head', 100, 84, HEAD) + armJ('R', AR_R, 131, 200 - elX) + armJ('L', AR_L, 69, elX)) + '</g>');
+      o.push('</svg>');
+      return o.join('');
+    }
     // ---- sparkles (8) ----
     if (L >= 8) o.push('<g fill="#FFE38A"><path d="M40 40 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3Z"/><path d="M170 100 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2Z"/><path d="M34 120 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2Z"/><path d="M168 30 l1.6 3.6 3.6 1.6 -3.6 1.6 -1.6 3.6 -1.6 -3.6 -3.6 -1.6 3.6 -1.6Z"/></g>');
     o.push('</svg>');
     return o.join('');
   }
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, levelFor, svg };
+  // ===== battle animation (10.11.2026, owner: «чтобы конечности отдельно шевелились… мульт на 12 секунд») =====
+  // A pose = joint angles in degrees. Limbs use «outward-positive» angles (left: clockwise, right: mirrored), so one
+  // number describes both sides. root = {x, y, r, sx, sy, px, py}: move/turn/squash the whole body around (px, py).
+  const SIDE = { shL: 1, elL: 1, hipL: 1, kneeL: 1, ankL: 1, shR: -1, elR: -1, hipR: -1, kneeR: -1, ankR: -1, torso: 1, head: 1 };
+  function rigJoints(svgEl){
+    const j = {};
+    svgEl.querySelectorAll('[data-j]').forEach(g => { const p = (g.getAttribute('data-p') || '0 0').split(' ').map(Number); j[g.getAttribute('data-j')] = { g, p }; });
+    return j;
+  }
+  const f2 = n => (Math.round(n * 100) / 100);
+  function setPose(j, ps){
+    ps = ps || {};
+    for (const k in SIDE) { const J = j[k]; if (!J) continue; const a = (ps[k] || 0) * SIDE[k]; J.g.setAttribute('transform', a ? 'rotate(' + f2(a) + ' ' + J.p[0] + ' ' + J.p[1] + ')' : ''); }
+    const R = ps.root || {}, J = j.root; if (!J) return;
+    const px = R.px == null ? 100 : R.px, py = R.py == null ? 150 : R.py;
+    const sx = R.sx == null ? 1 : R.sx, sy = R.sy == null ? 1 : R.sy;
+    J.g.setAttribute('transform', 'translate(' + f2(R.x || 0) + ' ' + f2(R.y || 0) + ') rotate(' + f2(R.r || 0) + ' ' + px + ' ' + py + ') translate(' + px + ' ' + py + ') scale(' + f2(Math.abs(sx) < .08 ? (sx < 0 ? -.08 : .08) : sx) + ' ' + f2(sy) + ') translate(' + (-px) + ' ' + (-py) + ')');
+  }
+  const cl = (x, a, b) => Math.max(a, Math.min(b, x));
+  const ss = (a, b, u) => { const t = cl((u - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const env = (u, a, b) => ss(0, a, u) * (1 - ss(b, 1, u)); // in over [0,a], out over [b,1]
+  const TAU = Math.PI * 2;
+  // every move: duration (s) + pose at u ∈ [0, 1]; each starts and ends standing, so moves chain freely
+  const MOVES = {
+    idle: { dur: 1.2, f: u => { const s = Math.sin(u * TAU); return { root: { y: 1.5 * s }, shL: -32, elL: -118, shR: -32, elR: -112, head: 3 * Math.sin(u * TAU * 2), torso: -1.5 * s, hipL: 4, hipR: 4 }; } },
+    toprock: { dur: 1.0, f: u => {
+      const s = Math.sin(u * TAU * 2), a = Math.max(0, s), b = Math.max(0, -s);
+      return { root: { y: -6 * Math.abs(s), x: 6 * s }, torso: 7 * s, head: -5 * s,
+        hipL: 10 - 30 * a, kneeL: 22 * a, ankL: -8 * a, hipR: 10 - 30 * b, kneeR: 22 * b, ankR: -8 * b,
+        shL: 16 + 22 * b, elL: -78 + 30 * b, shR: 16 + 22 * a, elR: -78 + 30 * a };
+    } },
+    windmill: { dur: 1.7, f: u => {
+      const k = env(u, .18, .82), sp = ss(.15, .85, u) * 720, c = Math.cos(sp * Math.PI / 180);
+      return { root: { y: 62 * k, r: 90 * k + sp, sy: 1 - .25 * k, px: 100, py: 130 }, torso: 0,
+        hipL: 62 * k, hipR: 62 * k, kneeL: -6 * k, kneeR: -6 * k, shL: 95 * k, elL: 10 * k, shR: 95 * k, elR: 10 * k, head: 15 * k * c };
+    } },
+    headspin: { dur: 1.8, f: u => {
+      const k = env(u, .2, .82), th = ss(.2, .82, u) * TAU * 4, c = Math.cos(th);
+      return { root: { y: 205 * k, r: 180 * k, sx: (1 - k) + k * c, px: 100, py: 26 },
+        hipL: 26 * k, hipR: 26 * k, kneeL: -10 * k, kneeR: -10 * k, ankL: 20 * k, ankR: 20 * k, shL: 55 * k, elL: 70 * k, shR: 55 * k, elR: 70 * k };
+    } },
+    flare: { dur: 1.7, f: u => {
+      const k = env(u, .2, .82), th = ss(.2, .82, u) * TAU * 3, sn = Math.sin(th), c = Math.cos(th);
+      return { root: { y: 40 * k - 6 * k * Math.abs(sn), r: 10 * k * sn, sx: (1 - k) + k * c, px: 100, py: 120 },
+        hipL: k * (70 + 40 * sn), hipR: k * (70 - 40 * sn), kneeL: -5 * k, kneeR: -5 * k,
+        shL: -12 * k, elL: 0, shR: -12 * k, elR: 0, torso: -6 * k * sn };
+    } },
+    sixstep: { dur: 1.6, f: u => {
+      const k = env(u, .15, .85), th = ss(.12, .88, u) * TAU * 2, sn = Math.sin(th), c = Math.cos(th);
+      return { root: { y: 44 * k, sx: (1 - k) + k * (c >= 0 ? 1 : -1) * Math.max(.6, Math.abs(c)), px: 100, py: 150 },
+        hipL: k * (68 + 20 * sn), kneeL: -k * (120 + 20 * sn), ankL: 40 * k, hipR: k * (68 - 20 * sn), kneeR: -k * (120 - 20 * sn), ankR: 40 * k,
+        shL: -10 * k + 30 * k * Math.max(0, sn), elL: 10 * k, shR: -10 * k + 30 * k * Math.max(0, -sn), elR: 10 * k, torso: 8 * k * sn };
+    } },
+    backspin: { dur: 1.6, f: u => {
+      const k = env(u, .2, .82), th = ss(.2, .82, u) * TAU * 3, c = Math.cos(th);
+      return { root: { y: 70 * k, r: -90 * k, sx: (1 - k) + k * c, px: 100, py: 140 },
+        hipL: -30 * k, kneeL: 100 * k, hipR: -30 * k, kneeR: 100 * k, shL: -40 * k, elL: -100 * k, shR: -40 * k, elR: -100 * k, head: -10 * k };
+    } },
+    freeze: { dur: 1.4, f: u => {
+      const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), sh = u > .22 && u < .3 ? Math.sin(u * 300) * 1.5 : 0;
+      return { root: { y: 58 * k, x: 12 * k + sh, r: -104 * k, px: 70, py: 150 },
+        shR: 175 * k, elR: 0, shL: 70 * k, elL: 60 * k, hipL: 85 * k, kneeL: -110 * k, ankL: 30 * k, hipR: 25 * k, kneeR: -70 * k, ankR: 20 * k, head: 22 * k };
+    } },
+    burn: { dur: 1.1, f: u => {
+      const k = env(u, .2, .85), s = Math.sin(u * TAU * 3);
+      return { root: { y: -3 * k * Math.abs(s) }, shR: 92 * k, elR: 4 * k, shL: -38 * k, elL: -105 * k, head: 10 * k, torso: 5 * k,
+        hipL: 6 * k, hipR: 6 * k };
+    } },
+    win: { dur: .9, f: u => { const s = Math.abs(Math.sin(u * Math.PI)); return { root: { y: -22 * s }, shL: 150, elL: 15, shR: 150, elR: 15, hipL: 8 + 10 * s, hipR: 8 + 10 * s, kneeL: -10 * s, kneeR: -10 * s, head: -6 }; } },
+    lose: { dur: 1.6, f: u => ({ root: { y: 3 }, head: 18 + 2 * Math.sin(u * TAU), shL: -6, elL: -10, shR: -6, elR: -10, torso: 3 }) },
+  };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose };
 })();
