@@ -3316,7 +3316,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Choice in 'fedoskin-subs': 'off' or a language; nothing chosen ⇒ the app's language, off for Russian (the lessons are Russian).
   var SUBS = window.LESSON_SUBS || {};
   var subsCues = null, subsFor = null, subsIdx = 0, subsShown = null;
-  function subsInfo(l){ const x = l && SUBS && SUBS[l.id]; return x && (!x.ks || x.ks === (l.ks || '')) ? x : null; }
+  function subsInfo(l){ const x = l && SUBS && SUBS[l.id]; return x && (!x.ks || x.ks === (l.ks || '')) && (!x.r2 || x.r2 === (l.r2 || '')) ? x : null; } // R2 lessons: same file name
   // The choice is remembered together with the app language it was made in: after switching the app to another
   // language the subtitles follow the new language again (owner 04.11: «субтитры того языка, на котором говорит пользователь»).
   // Old plain values ('en', 'off' — saved before this rule) are ignored.

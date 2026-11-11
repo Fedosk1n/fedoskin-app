@@ -91,6 +91,22 @@ window.LESSON_SUBS = {
   ],
   "v": 1
  },
+ "pw-reverse-1990": {
+  "ks": "",
+  "r2": "pw-reverse-1990-jun24gi0.mp4",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "pw-swipes-flare": {
   "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a",
   "langs": [
@@ -153,6 +169,22 @@ window.LESSON_SUBS = {
  },
  "tn-flare-to-airflare-to-flare": {
   "ks": "262fa2a3-9675-40ac-8b20-5092475a3192",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
+ "tr-airchair": {
+  "ks": "",
+  "r2": "tr-airchair-ke4ejzel.mp4",
   "langs": [
    "ru",
    "en",

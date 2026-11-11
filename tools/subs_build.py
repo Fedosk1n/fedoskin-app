@@ -1,7 +1,7 @@
 # Subtitles for long lessons (owner 03.11.2026).
 #
 #  1. Speech → Russian words with times: Whisper large-v3-turbo (word timestamps) ran in the owner's Chrome on his GPU
-#     (transformers.js, WebGPU) over the Kinescope HLS audio; the raw words are in subs/raw/<id>.json  [[from, to, word], …]
+#     (transformers.js, WebGPU) over the Kinescope HLS audio (or the R2 file's audio); the raw words are in subs/raw/<id>.json  [[from, to, word], …]
 #  2. python3 tools/subs_build.py cues  → subs/work/<id>.ru.json: words grouped into readable cues [[from, to, text], …]
 #     (Claude then proofreads the Russian and writes the 8 translations into subs/work/<id>.tr.json:
 #      {"ru": [...], "en": [...], …} — one line per cue, same order)
@@ -81,8 +81,10 @@ def cmd_build():
         for c in cues:
             c[1] = round(min(c[1], c[0] + max(1.6, 1.0 + 0.075 * len(c[2]['ru']))), 2)
         ks = (L.get(lid) or {}).get('ks', '')
-        json.dump({'ks': ks, 'cues': cues}, open(os.path.join(ROOT, 'subs', lid + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-        index[lid] = {'ks': ks, 'langs': langs, 'v': 1}
+        r2 = '' if ks else (L.get(lid) or {}).get('r2', '')  # an R2 lesson: tie the subtitles to its file (a new upload = new name)
+        head = {'ks': ks, 'r2': r2} if r2 else {'ks': ks}
+        json.dump(dict(head, cues=cues), open(os.path.join(ROOT, 'subs', lid + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+        index[lid] = dict(head, langs=langs, v=1)
         print(lid, len(cues), 'cues', ','.join(langs))
     with open(os.path.join(ROOT, 'subs.js'), 'w', encoding='utf-8') as o:
         o.write('// Субтитры уроков: id урока → {ks: видео в Kinescope, langs: языки, v: версия}. Тексты — subs/<id>.json.\n')
