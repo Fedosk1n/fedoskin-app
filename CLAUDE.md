@@ -418,6 +418,19 @@
   leaderboard busts; profile row `#shopRow` (⭐ points) → sheet `#shopSheet` (preview of each item on my hero; Купить ·
   ⭐ N / не хватает / Надеть / Снять; buying wears it). Tested:
   worker on node:sqlite (auth, limits, self, inbox/seen, lb scores), app flow with mocked server (iPhone en).
+- Rhythm battle, step 1 of 4 (owner 10.11.2026 «что-то похожее на настоящую игру» → chose option 1: a game on the current
+  heroes, not a rebuild; plan = Project doc `claude/fedoskin-rhythm-battle-plan.md`): `rhythm.js` (`?v=1`, `window.RB`) — overlay
+  `#rbGame` (.sheet-bg ⇒ history step; inner HTML + CSS built by rhythm.js). Setup «Собери связку»: 3 rows (TOPROCK / POWER /
+  FREEZE) of ≤3 cards by hero level (`NEED`, next locked one as a teaser), difficulty 1–3 (`DIFF`, ×1 / 1.35 / 1.7), tapped card
+  previews on the hero. Round = 100 BPM: count-in 4 beats, toprock 8, power 12, freeze 4 (big «FRZ» note on beat 3, ×3), ~19 s.
+  Beat = WebAudio synth (kick/snare/hat/bass/stab), the whole round scheduled at once; clock = performance.now tied to the audio
+  clock minus output latency; one-button taps anywhere (pointerdown on the box, `data-nt` = not a tap): PERFECT ±80 ms, GOOD
+  ±160 ms, stray tap or miss breaks the combo (hero stumbles); score = base × difficulty × combo (≤ +60 %) × (1 + 1 %·level);
+  `notesFor(picks, seed)` / `maxScore()` are deterministic (server will check scores). Missed big note ⇒ no freeze (shock).
+  Now only a trial vs the computer: `?battle=play` / `window.fedoskinRhythm(level, oppLevel)` — NOT yet linked to real battles
+  (next: cards/effects polish, server /bt/call with the round + /bt/play, moves unlocked by watching lessons). Sound mute
+  `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
+  heard by Claude and iPhone audio latency is untested — ask the owner how it feels.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
 - Rating moved to D1 (owner 10.11.2026 «сотни тысяч пользователей… все захотят батлить»; also a friend «много смотрел, а в
   рейтинге нет» — the single KV key was read-modify-written by everyone: lost updates between edge locations + KV free plan's

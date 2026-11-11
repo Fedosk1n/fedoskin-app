@@ -1406,6 +1406,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="btbtns"><button class="btn btn-ghost" id="btSkip" type="button">Пропустить</button><button class="btn btn-ghost" id="btClose" type="button" hidden>Закрыть</button></div>
   </div>
 </div>
+<div class="sheet-bg btl rb" id="rbGame" hidden><div class="btlbox" role="dialog" aria-modal="true" aria-label="Ритм-батл"></div></div>
 <div class="sheet-bg" id="vsSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vsT" style="text-align:center">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px"></div>
@@ -1466,6 +1467,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=6"></script>
+<script src="rhythm.js?v=1"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -4510,6 +4512,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (r.ok) localStorage.setItem('fedoskin-bt-push', tag);
     } catch (_) {}
   }
+  // rhythm battle, step 1 (owner 10.11.2026 «похожее на настоящую игру»): a playable round against the computer — rhythm.js
+  RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN });
+  window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myEq, oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 
   if (LB_URL) {
@@ -5132,6 +5137,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
+    if (qs.get('battle') === 'play') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRhythm(), 800); } // the rhythm game trial, no server
     if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
     else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
