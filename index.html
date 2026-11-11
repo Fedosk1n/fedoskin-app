@@ -2428,10 +2428,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // iPhone/iPad: our stream player (hls.js on ManagedMediaSource, iOS 17.1+) instead of Apple's own — needed to keep the
   // pieces. If it fails there (error, or time runs but no picture), Apple's own player takes over and this phone stays on
   // it for a week.
-  const MMS_OFF = 'fedoskin-mms-off';
+  const MMS_OFF = 'fedoskin-mms-off', MMS_FIX = 1794408300000;
   function mmsOk(){
     if (!window.ManagedMediaSource) return false;
-    try { const t = +localStorage.getItem(MMS_OFF) || 0; if (t && Date.now() - t < 7 * 864e5) return false; } catch (_) {}
+    // a switch-off from before the 11.11.2026 17:45 memory fixes doesn't count (the owner tests the fixed player once more;
+    // if the app is closed again, the safety net switches it off anew)
+    try { const t = +localStorage.getItem(MMS_OFF) || 0; if (t > MMS_FIX && Date.now() - t < 7 * 864e5) return false; } catch (_) {}
     return true;
   }
   function hlsCan(){ return !isApple || mmsOk(); }
@@ -3003,7 +3005,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (fcW) return fcW;
     try {
       if (!window.Worker || !window.OffscreenCanvas || !window.createImageBitmap) throw new Error('old');
-      fcW = new Worker('fc-worker.js', { type: 'module' });
+      fcW = new Worker('fc-worker.js?v=2', { type: 'module' });
       fcW.onmessage = fcMsg; fcW.onerror = () => { fcW = false; };
     } catch (_) { fcW = false; }
     return fcW || null;
@@ -3070,6 +3072,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // capture what plays on screen
   function fcCapture(el, mt){
     if (el !== av || scrub || fcCapBusy || !curLesson || fcOwn || el.seeking || document.hidden) return;
+    // iPhone/iPad with our stream player (hls.js on ManagedMediaSource, since 11.11.2026): no copying of the picture — the
+    // owner's iPhone closed the app twice ~0:35–1:00 into a 9-min lesson, and this copying every second was new there
+    if (isApple && el === vid && hls) return;
     const c = fcFor(curLesson, true); if (c.no[el.id] || (c.built && !curLesson.ks)) return;
     const k = Math.round(mt / c.step); if (Math.abs(mt - k * c.step) > Math.min(0.05, c.step / 2)) return;
     const vh = Math.min(el.videoWidth, el.videoHeight); if (!vh) return;
@@ -5778,7 +5783,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     setInterval(() => {
       if (!curLesson || $('#lesson').hidden || document.hidden) { clear(); return; }
       if (!P.playing) return;
-      try { localStorage.setItem(RUN, JSON.stringify({ id: curLesson.id, t: Math.floor(av.currentTime || P.t || 0), ts: Date.now(), m: !!(isApple && hls) })); } catch (_) {}
+      try { localStorage.setItem(RUN, JSON.stringify({ id: curLesson.id, t: Math.floor(av.currentTime || P.t || 0), ts: Date.now(), m: !!(isApple && hls), r: curList ? curList.map(x => x.id) : null })); } catch (_) {}
     }, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
     window.addEventListener('pagehide', clear);
@@ -5788,7 +5793,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (Date.now() - last < 600e3 || (startState && startState.s === 'lesson')) return;
     try { localStorage.setItem(REC, String(Date.now())); } catch (_) {}
     const l = BY_ID[r.id];
-    openSection(l.sec); openLesson(l.id);
+    const row = Array.isArray(r.r) ? r.r.map(id => BY_ID[id]).filter(Boolean) : null; // opened from «Новые уроки» ⇒ the same row again
+    if (row && row.includes(l)) openLesson(l.id, { list: row }); else { openSection(l.sec); openLesson(l.id); }
     if (r.t > 3) {
       const at = r.t, done = () => { [vid, vin].forEach(el => el.removeEventListener('playing', on)); };
       const on = () => { done(); if (curLesson === l) setTimeout(() => { if (curLesson === l) seekTo(at); }, 150); };

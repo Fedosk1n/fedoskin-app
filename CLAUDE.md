@@ -630,6 +630,12 @@
   m ⇒ MMS_OFF (Apple's own player for 7 days), the lesson reopens and seeks to t on `playing`, toast «Приложение
   перезапустилось — продолжаем с M:SS»; not again within 10 min (`fedoskin-run-rec`). Tested with CDP Page.crash (Android UA:
   resumed 0:23; iPhone UA: mms-off set). The real cause on the phone is not confirmed — ask the owner if it happens again.
+  Happened again 17:43 (crash ~0:35, the safety net reopened the lesson — worked). Next suspect = on-screen frame capture,
+  new on iPhone with MMS (native HLS refused the copy, R2 lessons are short): createImageBitmap every ~1 s + fc-worker made a
+  NEW OffscreenCanvas per frame (graphics memory freed late). Now fc-worker reuses one canvas; fcCapture skips `vid` on
+  Apple while hls.js drives it (intro still captured). MMS_OFF values older than `MMS_FIX` (17:45) are ignored, so the
+  owner's phone tries the fixed MMS player once more; a new crash sets MMS_OFF anew. The run note also keeps the row
+  (`r` = curList ids) ⇒ reopened «Новые уроки · урок n из m».
   Owner confirmed on his real iPhone 11.11.2026 13:07: «проверил все работает» (Baby love repeat with our MMS player).
   Load bar for Kinescope lessons (owner 11.11.2026 13:19 screenshot «скачался, но полоска глючит» — it showed only the player's
   ~30 s buffer with holes where he had scrubbed): `KS_HAVE` (ks → Set of saved piece keys; filled once per lesson by

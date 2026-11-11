@@ -19,11 +19,15 @@ self.onmessage = e => {
   else if (m.cmd === 'build') build(m);
 };
 
+// one canvas for all captured frames (owner 11.11.2026, iPhone closed the app ~0:35–1:00 into a long lesson: a new canvas
+// per frame = a new piece of graphics memory every second, which the phone gives back only later)
+let capCan = null;
 async function frame(m){
   const bmp = m.bmp;
   try {
     const [w, h] = fit(bmp.width, bmp.height, m.max || 720);
-    const c = new OffscreenCanvas(w, h);
+    if (!capCan) capCan = new OffscreenCanvas(w, h); else if (capCan.width !== w || capCan.height !== h) { capCan.width = w; capCan.height = h; }
+    const c = capCan;
     c.getContext('2d').drawImage(bmp, 0, 0, w, h);
     const blob = await c.convertToBlob({ type: 'image/jpeg', quality: m.q || 0.8 });
     self.postMessage({ key: m.key, k: m.k, t: m.t, h: Math.min(w, h), blob });
