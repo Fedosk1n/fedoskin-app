@@ -453,6 +453,8 @@
   rim, bass wave/filter, chords: lo-fi keys + vinyl crackle, funk horn stabs, raw amen-like ghosts). `BEAT`/`TRAVEL` are set
   per round in start(); `notesFor/maxScore(…, beat)` and the result carry the beat id; the computer is a bit weaker on harder
   beats. `RB._render(beat[, bars])` renders a beat offline → loudness per second (check: all four ~0.1–0.2 RMS). rhythm.js `?v=3`.
+  Entry point (owner 11.11.2026 «Добавь… где батл можно играть руками или на авто»): tab «Батлы» → card `#rbOpen`
+  «Ритм-батл» (`.rbcard`, above «Магазин») → `window.fedoskinRhythm()` (setup: «Начать батл» = tap yourself / «Играть на авто»).
   Now only a trial vs the computer: `?battle=play` / `window.fedoskinRhythm(level, oppLevel)` — NOT yet linked to real battles
   (next: cards/effects polish, server /bt/call with the round + /bt/play, moves unlocked by watching lessons). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never

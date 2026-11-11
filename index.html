@@ -326,6 +326,11 @@ body.chatmode .tabs{display:none}
 .btrest small{font-size:11px;color:var(--muted)}
 .shoprow{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;border:1px solid var(--line);color:inherit;font:inherit;cursor:pointer;text-align:left}
 .shoprow b{font-size:14px} .shoprow small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.rbcard{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;border:1px solid rgba(226,97,26,.45);background:linear-gradient(110deg,rgba(226,97,26,.22),rgba(226,97,26,.05) 70%),var(--surface,#151517);color:inherit;font:inherit;cursor:pointer;text-align:left}
+.rbcard b{font-size:15px} .rbcard small{display:block;font-size:12px;line-height:1.35;color:#C9C5BD;margin-top:2px}
+.rbic{flex:none;width:40px;height:40px;border-radius:12px;background:var(--accent);color:var(--on-accent,#0B0B0C);display:flex;align-items:center;justify-content:center}
+.rbic .ico{width:22px;height:22px}
+.rbplay{flex:none;padding:8px 14px;border-radius:12px;background:var(--accent);color:var(--on-accent,#0B0B0C);font-weight:800;font-size:13px}
 .pts{flex:none;font-weight:800;color:#F2CC55;font-size:15px} .pts.big{font-size:18px}
 .shopgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;max-height:60dvh;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
 .shopit{border-radius:16px;background:#1A1A1D;border:1px solid #26262A;padding:6px 8px 10px;display:flex;flex-direction:column;gap:6px;text-align:center}
@@ -1205,6 +1210,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="more">Все образы →</span>
     </span>
   </button>
+  <!-- the rhythm battle (rhythm.js) — play by tapping to the beat or on auto; owner 11.11.2026 «добавь… где батл можно играть руками или на авто» -->
+  <button class="card rbcard" id="rbOpen" type="button"><span class="rbic" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span style="flex:1;text-align:left;min-width:0"><b>Ритм-батл</b><small>Танцуй связку под бит: тапай в такт сам или включи авто</small></span><span class="rbplay">Играть</span></button>
   <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>Очки — за победы в батлах и часы уроков</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
   <div class="sec">
@@ -4914,6 +4921,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   // rhythm battle, step 1 (owner 10.11.2026 «похожее на настоящую игру»): a playable round against the computer — rhythm.js
   RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN });
+  $('#rbOpen').addEventListener('click', () => window.fedoskinRhythm());
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myEq, oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 

@@ -527,6 +527,8 @@ t('Пусто', 'Empty', 'Vacío', 'Vazio', 'Vide', 'Leer', 'なし', '없음', 
 t('Батлы', 'Battles', 'Batallas', 'Batalhas', 'Battles', 'Battles', 'バトル', '배틀', '斗舞')
 t('Показать весь рейтинг ({n})', 'Show full ranking ({n})', 'Ver todo el ranking ({n})', 'Ver ranking completo ({n})', 'Voir tout le classement ({n})', 'Ganze Rangliste zeigen ({n})', 'ランキングをすべて表示（{n}）', '전체 랭킹 보기 ({n})', '查看完整排行榜（{n}）')
 t('Свернуть', 'Show less', 'Mostrar menos', 'Mostrar menos', 'Réduire', 'Weniger anzeigen', '閉じる', '접기', '收起')
+t('Танцуй связку под бит: тапай в такт сам или включи авто', 'Dance a combo to the beat: tap in time yourself or turn on auto', 'Baila un combo al ritmo: toca a tiempo tú mismo o activa el auto', 'Dance uma sequência na batida: toque no tempo você mesmo ou ligue o auto', 'Danse un enchaînement sur le beat : tape en rythme toi-même ou passe en auto', 'Tanz eine Kombi zum Beat: tippe selbst im Takt oder schalte Auto ein', 'ビートに合わせてコンボを踊ろう：自分でタップするか、オートにしよう', '비트에 맞춰 콤보를 춰 봐: 직접 박자에 맞춰 탭하거나 자동으로 해', '跟着节拍跳一套组合：自己按节奏点击，或开启自动')
+t('Играть', 'Play', 'Jugar', 'Jogar', 'Jouer', 'Spielen', 'プレイ', '플레이', '开始')
 
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
