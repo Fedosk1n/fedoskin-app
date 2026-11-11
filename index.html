@@ -1939,6 +1939,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const job = introCur = { u, ac: new AbortController(), got: 0, total: 0 };
     job.p = new Promise((ok, bad) => { job.ok = ok; job.bad = bad; }); job.p.catch(() => {});
     try {
+      // iPhone: a neighbour already saved on the phone opens from there at once — no need to download it into memory
+      if (isApple && swOn() && !/-intro\.mp4$/.test(vKey(u)) && await caches.match(vKey(u), { ignoreSearch: true })) throw new Error('saved');
       const r = await fetch(u, { signal: job.ac.signal });
       if (!r.ok || !r.body) throw new Error('intro');
       job.total = +r.headers.get('content-length') || 0;
@@ -1947,6 +1949,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; if (job.got > MEM_FILE_MAX) throw new Error('too big'); }
       const blob = new Blob(parts, { type: 'video/mp4' }), url = URL.createObjectURL(blob);
       introMem.set(u, url); memSize.set(u, blob.size);
+      keepOnPhone(u, blob);
       primePeek();
       // keep a few in memory; never throw away the one on screen
       const total = () => [...memSize.values()].reduce((a, b) => a + b, 0);
@@ -1956,6 +1959,54 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (introCur === job) { introCur = null; nextIntro(); }
   }
   function abortIntro(j){ j.ac.abort(); }
+  const swOn = () => !!(window.caches && navigator.serviceWorker && navigator.serviceWorker.controller);
+  const vKey = u => { try { const x = new URL(u, location.href); return x.origin + x.pathname; } catch (_) { return ''; } };
+  // iPhone: the lesson's address marked for sw.js when its whole file is already on the phone
+  async function savedSv(u){
+    const r = await caches.match(vKey(u), { ignoreSearch: true });
+    if (!r) throw new Error('not saved');
+    return u + (u.indexOf('?') < 0 ? '?' : '&') + 'sv=1';
+  }
+  // iPhone/iPad (owner 11.11.2026 «чтобы видео автоматически после загрузки оставались загруженными»): there the player
+  // loads the lesson straight from the site (nothing streams through sw.js), so the page itself keeps the whole file in
+  // the same storage as Android does (Cache Storage, the person's limit, oldest out — sw.js trims): from a finished
+  // memory preload of a neighbour, or by its own background download a moment after the lesson starts playing.
+  const KEEP = new Map(); // address -> {got, total, done}
+  let persistAsked = false;
+  async function keepOnPhone(u, blob){
+    if (!isApple || !u || /^blob:/.test(u) || /-intro\.mp4$/.test(vKey(u)) || !swOn()) return;
+    const key = vKey(u); if (!key || KEEP.has(key)) return;
+    const job = { got: 0, total: 0, done: false }; KEEP.set(key, job);
+    try {
+      const lim = await stLimit(); if (!lim) throw 0;
+      const c = await caches.open(VCACHE);
+      if (await c.match(key)) { job.done = true; job.saved = true; return; }
+      let type = 'video/mp4', etag = '', lm = '';
+      if (!blob) {
+        const r = await fetch(u, { cache: 'no-store' });
+        job.total = +r.headers.get('content-length') || 0;
+        if (!r.ok || r.status !== 200 || !r.body || !job.total || job.total > Math.min(lim, KEEP_MAX)) throw 0;
+        type = r.headers.get('content-type') || type; etag = r.headers.get('etag') || ''; lm = r.headers.get('last-modified') || '';
+        const rd = r.body.getReader(), parts = [];
+        for (;;) { const x = await rd.read(); if (x.done) break; parts.push(x.value); job.got += x.value.length; if (job.got > job.total) throw 0; }
+        if (job.got !== job.total) throw 0;
+        blob = new Blob(parts, { type });
+      }
+      if (!blob.size || blob.size > lim) throw 0;
+      job.total = job.got = blob.size;
+      await c.put(key, new Response(blob, { headers: { 'Content-Type': type, 'Content-Length': String(blob.size), 'ETag': etag, 'Last-Modified': lm, 'X-Saved': String(Date.now()) } }));
+      job.done = true; job.saved = true;
+      stPing('limit'); // sw.js trims to the limit (oldest first)
+      if (!persistAsked) { persistAsked = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (_) {} }
+      setTimeout(stRender, 500);
+    } catch (_) { if (!job.done) KEEP.delete(key); }
+  }
+  const KEEP_MAX = 120 * 1048576; // bigger files aren't gathered in memory on a phone
+  // the lesson on screen: saved a moment after it starts playing (later on a slow connection, so the start isn't slowed)
+  vid.addEventListener('playing', () => {
+    const l = curLesson; if (!isApple || !l || l.ks || av !== vid) return;
+    setTimeout(() => { if (curLesson === l) keepOnPhone(fileFor(l)); }, introFast() ? 1500 : 8000);
+  });
   async function fromSaved(u){
     const r = await caches.match(new URL(u, location.href).href, { ignoreSearch: true });
     if (!r) throw new Error('not saved');
@@ -1971,7 +2022,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // that is already well under way, or the network
   function introSource(l){
     // an R2 lesson without a pass yet: get one first (offline the saved copy still plays — sw.js ignores the pass)
-    if (l && !l.ks && l.r2 && R2_BASE && !passFresh()) return { url: fileFor(l), wait: getPass().then(() => fileFor(l)) };
+    if (l && !l.ks && l.r2 && R2_BASE && !passFresh()) {
+      // iPhone: a lesson saved earlier plays from the phone even when the pass can't be renewed (offline)
+      if (isApple && swOn()) return { url: fileFor(l), wait: getPass().then(() => fileFor(l), () => fileFor(l)).then(u => savedSv(u).catch(() => u)) };
+      return { url: fileFor(l), wait: getPass().then(() => fileFor(l)) };
+    }
     if (l && l.r2) getPass().catch(() => {});
     const u = mediaFor(l); if (!u) return null;
     if (introMem.has(u)) return { url: introMem.get(u) };
@@ -1979,9 +2034,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (j && j.total && j.got >= j.total * 0.6) return { wait: j.p, url: u };
     if (j) { abortIntro(j); introCur = null; }
     if (l.ks && !introFast()) return null;
-    // saved on the phone earlier (sw.js keeps watched videos): played from there, no internet needed
-    // (not on iPhone/iPad: a video started from such a saved copy kept showing only its cover there)
-    if (!l.ks && !isApple && window.caches && navigator.serviceWorker && navigator.serviceWorker.controller) return { url: u, wait: fromSaved(u) };
+    // saved on the phone earlier (sw.js keeps watched videos): played from there, no internet needed.
+    // iPhone/iPad: the same address with «sv=1» — sw.js answers it from the saved copy (not a blob: copy — one of those
+    // kept showing only its cover there, 31.10.2026)
+    if (!l.ks && !isApple && swOn()) return { url: u, wait: fromSaved(u) };
+    if (!l.ks && isApple && swOn()) return { url: u, wait: savedSv(u) };
     return { url: u };
   }
   function warmKs(ls, neighbours){
@@ -2279,12 +2336,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const ldKey = l => { try { const u = new URL(fileFor(l), location.href); return u.origin + u.pathname; } catch (_) { return ''; } };
   function swProg(key){
     const c = navigator.serviceWorker && navigator.serviceWorker.controller;
-    if (!key || !c || isApple || !window.MessageChannel) return Promise.resolve(null);
+    if (isApple) return keepProg(key);
+    if (!key || !c || !window.MessageChannel) return Promise.resolve(null);
     return new Promise(res => {
       const ch = new MessageChannel(), t = setTimeout(() => res(null), 800); // an old service worker doesn't answer
       ch.port1.onmessage = e => { clearTimeout(t); res(e.data || null); };
       try { c.postMessage({ type: 'vprog', url: key }, [ch.port2]); } catch (_) { clearTimeout(t); res(null); }
     });
+  }
+  // iPhone: the page's own background save (keepOnPhone), or a copy saved earlier
+  async function keepProg(key){
+    const j = key && KEEP.get(key);
+    if (j && !j.done) return j.total ? { st: 'dl', got: j.got, total: j.total } : null;
+    if (j && j.saved) return { st: 'saved' };
+    try { if (key && swOn() && await caches.match(key)) return { st: 'saved' }; } catch (_) {}
+    return null;
   }
   function ldPaint(segs){
     ['#loadBar', '#fsLoadBar'].forEach(id => {
@@ -2540,7 +2606,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (!pick) throw new Error('no video');
         return new M.CanvasSink(pick, { poolSize: 2 });
       }
-      const source = mem ? new M.BlobSource(await (await fetch(mem)).blob()) : new M.UrlSource(new URL(src.url, location.href).href);
+      let blob = mem ? await (await fetch(mem)).blob() : null;
+      // iPhone: a lesson saved on the phone is read from there, not downloaded again (Android: sw.js answers from it)
+      if (!blob && isApple && swOn()) { try { const r = await caches.match(vKey(src.url), { ignoreSearch: true }); if (r) blob = await r.blob(); } catch (_) {} }
+      const source = blob ? new M.BlobSource(blob) : new M.UrlSource(new URL(src.url, location.href).href);
       const input = new M.Input({ source, formats: M.ALL_FORMATS });
       const track = await input.getPrimaryVideoTrack(); if (!track) throw new Error('no video');
       return new M.CanvasSink(track, { poolSize: 2 });
@@ -2712,7 +2781,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     wdLesson = curLesson;
     const t = el.currentTime;
     // a copy from the phone's memory that won't draw: take the file from the site instead
-    const src = /^blob:/.test(el.currentSrc || el.src) ? new URL(fileFor(curLesson), location.href).href : (el.currentSrc || el.src); if (!src) return;
+    // (and a saved copy on iPhone, «sv=1», that won't draw: the same from the site, not through sw.js)
+    const cur = el.currentSrc || el.src;
+    const src = /^blob:/.test(cur) || /[?&]sv=1/.test(cur) ? new URL(fileFor(curLesson), location.href).href : cur; if (!src) return;
     el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (_) {} if (P.playing) playMain(); }, { once: true });
     setSrc(el, src); el.playbackRate = P.rate;
   }, 500);
@@ -4871,7 +4942,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#installSheet').addEventListener('click', e => { if (e.target.id === 'installSheet') laterInstall(); });
   $('#installItem').addEventListener('click', openInstall);
   // ===== Профиль → «Память на телефоне» (owner 09.11.2026: «кнопку очистить кэш… ограничения как в телеграм, не более 5 ГБ») =====
-  // Watched lessons are kept by sw.js in Cache Storage `fedoskin-video-1` (Android/computers; nothing on Apple). Here the
+  // Watched lessons are kept in Cache Storage `fedoskin-video-1` (Android/computers: by sw.js; iPhone/iPad since 11.11.2026: by the page, keepOnPhone). Here the
   // person sees how much they take and which lessons, picks the limit (written to `fedoskin-vcfg`, read by sw.js; the oldest
   // go first when over it), deletes one lesson or everything. sw.js gets a message so it also forgets its in-memory copies.
   const VCACHE = 'fedoskin-video-1', VCFG = 'fedoskin-vcfg', VLIMIT_KEY = new URL('vlimit.json', location.href).href;
@@ -4908,9 +4979,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const used = list.reduce((a, g) => a + g.size, 0);
     $('#storeState').textContent = used ? stFmt(used) : T('Пусто');
     if ($('#storeSheet').hidden) return;
-    $('#storeIntro').hidden = isApple; $('#storeApple').hidden = !isApple; $('#storeLimitBox').hidden = isApple;
+    $('#storeIntro').hidden = false; $('#storeApple').hidden = true; $('#storeLimitBox').hidden = false; // iPhone keeps videos too since 11.11.2026
     $('#storeUsed').textContent = stFmt(used);
-    $('#storeOf').textContent = isApple ? '' : lim ? T('из {n}', { n: stFmt(lim) }) : T('Видео не хранятся');
+    $('#storeOf').textContent = lim ? T('из {n}', { n: stFmt(lim) }) : T('Видео не хранятся');
     $('#storeFill').style.width = (lim ? Math.min(100, used / lim * 100) : 0) + '%';
     const seg = $('#storeLimits'); seg.innerHTML = '';
     ST_LIMITS.forEach(b => {

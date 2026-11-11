@@ -22,7 +22,7 @@ self.addEventListener('message', e => {
   if (d.type === 'vprog' && d.url && e.ports && e.ports[0]) { e.waitUntil(progress(d.url).then(x => e.ports[0].postMessage(x)).catch(() => {})); return; }
   if (d.type !== 'vcache') return;
   limitP = null;
-  if (d.cmd === 'reset') mem.clear(); else if (d.cmd === 'drop' && d.url) mem.delete(d.url);
+  if (d.cmd === 'reset') { mem.clear(); blobs.clear(); } else if (d.cmd === 'drop' && d.url) { mem.delete(d.url); blobs.delete(d.url); }
   e.waitUntil(trim(null));
 });
 async function trim(keep){
@@ -31,7 +31,7 @@ async function trim(keep){
     for (const k of keys) { const r = await c.match(k); sizes.push([k, +(r && r.headers.get('content-length')) || 0]); }
     let total = sizes.reduce((a, x) => a + x[1], 0), n = sizes.length;
     // the oldest saved go first; the one just saved stays unless it alone is over the limit
-    for (const [k, sz] of sizes) { if (total <= limit && n <= VMAX_FILES) break; if (k.url === keep && sz <= limit) continue; await c.delete(k); mem.delete(k.url); total -= sz; n--; }
+    for (const [k, sz] of sizes) { if (total <= limit && n <= VMAX_FILES) break; if (k.url === keep && sz <= limit) continue; await c.delete(k); mem.delete(k.url); blobs.delete(k.url); total -= sz; n--; }
   } catch (_) {}
 }
 const dl = new Map();   // video address -> download in progress
@@ -45,7 +45,7 @@ async function progress(key){
   const c = await caches.open(VCACHE), hit = await c.match(key);
   if (hit) { const n = +hit.headers.get('content-length') || 0; return { st: 'saved', got: n, total: n }; }
   const f = fin.get(key); if (f) return { st: f.saved ? 'saved' : 'done', got: f.total, total: f.total };
-  return { st: APPLE ? 'off' : 'none' };
+  return { st: 'none' };
 }
 const APPLE = /iPhone|iPad|iPod|Macintosh/.test(self.navigator.userAgent) && !/Chrome|Android/.test(self.navigator.userAgent);
 const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.pathname);
@@ -53,12 +53,38 @@ const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const u = new URL(req.url); if (!isVideo(u) || (u.origin !== location.origin && u.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(u.hostname))) return;
-  // iPhone/iPad/Mac Safari: videos load exactly as before, nothing goes through here (a lesson started from a copy kept
-  // here showed only its cover there)
-  if (APPLE) return;
+  // iPhone/iPad/Mac Safari (owner 11.11.2026 «чтобы видео оставались загруженными»): the page saves a watched lesson
+  // itself (whole file, in the background) and asks for it with «sv=1» only when it is already saved — only those
+  // requests are answered here, from the saved copy; everything else goes to the network exactly as before (a video
+  // streamed through here while still downloading showed only its cover there, 31.10.2026)
+  if (APPLE) { if (u.searchParams.get('sv') === '1') e.respondWith(serveSaved(req, u).catch(() => netNoSv(req, u))); return; }
   e.respondWith(serveVideo(req, u.origin + u.pathname).catch(() => fetch(req)));
 });
 
+// Safari: the saved copy is handed out in pieces straight from the phone's storage (Blob slices — never the whole
+// file in memory)
+const blobs = new Map(); // address -> {blob, meta}: the last couple of saved videos opened
+function netNoSv(req, u){
+  const x = new URL(u.href); x.searchParams.delete('sv');
+  const h = {}, r = req.headers.get('range'); if (r) h.Range = r;
+  return fetch(x.href, { headers: h, mode: 'cors', credentials: 'omit' });
+}
+async function serveSaved(req, u){
+  const key = u.origin + u.pathname;
+  let m = blobs.get(key);
+  if (!m) {
+    const hit = await (await caches.open(VCACHE)).match(key);
+    if (!hit) return netNoSv(req, u);
+    m = { blob: await hit.blob(), meta: { type: hit.headers.get('content-type') || 'video/mp4', etag: hit.headers.get('etag') || '', lm: hit.headers.get('last-modified') || '' } };
+    blobs.delete(key); blobs.set(key, m); while (blobs.size > 2) blobs.delete(blobs.keys().next().value);
+  }
+  recheck(key, m.meta);
+  const total = m.blob.size, type = m.meta.type, range = parseRange(req.headers.get('range'));
+  if (!range) return new Response(m.blob, { status: 200, headers: { 'Content-Type': type, 'Content-Length': String(total), 'Accept-Ranges': 'bytes' } });
+  const a = range.a, b = Math.min(range.b == null ? total - 1 : range.b, total - 1);
+  if (a >= total || b < a) return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */' + total } });
+  return new Response(m.blob.slice(a, b + 1, type), { status: 206, headers: { 'Content-Type': type, 'Content-Length': String(b - a + 1), 'Content-Range': 'bytes ' + a + '-' + b + '/' + total, 'Accept-Ranges': 'bytes' } });
+}
 function parseRange(h){
   const m = /^bytes=(\d+)-(\d*)$/.exec((h || '').trim()); if (!m) return null;
   return { a: +m[1], b: m[2] === '' ? null : +m[2] };
@@ -110,10 +136,10 @@ function recheck(key, meta){
   checked.set(key, Date.now());
   fetch(key, { method: 'HEAD', cache: 'no-store' }).then(async r => {
     // gone from the server (a deleted lesson's video): the saved copy goes too
-    if (r.status === 404 || r.status === 410) { mem.delete(key); const c = await caches.open(VCACHE); await c.delete(key); return; }
+    if (r.status === 404 || r.status === 410) { mem.delete(key); blobs.delete(key); const c = await caches.open(VCACHE); await c.delete(key); return; }
     if (!r.ok) return;
     const et = r.headers.get('etag') || '', lm = r.headers.get('last-modified') || '';
-    if ((et && meta.etag && et !== meta.etag) || (!et && lm && meta.lm && lm !== meta.lm)) { mem.delete(key); const c = await caches.open(VCACHE); await c.delete(key); }
+    if ((et && meta.etag && et !== meta.etag) || (!et && lm && meta.lm && lm !== meta.lm)) { mem.delete(key); blobs.delete(key); const c = await caches.open(VCACHE); await c.delete(key); }
   }).catch(() => {});
 }
 function answer(buf, total, type, range){

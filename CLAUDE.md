@@ -486,6 +486,21 @@
   cross-origin https /v/*.mp4 (and localhost for tests). Tested: worker with an in-memory R2 (ranges, 416, multipart,
   delete, auth), admin upload of a 29 MB file (2 pieces, byte-identical), app playback Android/desktop via SW + frame
   cache, admin strip cutting reads the R2 file by ranges. Admin «версия 24».
+- iPhone/iPad keep watched lessons too (owner 11.11.2026 «чтобы видео автоматически после загрузки оставались
+  загруженными»; until then nothing was saved on Apple). The player there still streams from the network (sw.js never
+  streams a download in progress on Apple — that showed only the cover on 31.10). The PAGE saves the whole file itself
+  (`keepOnPhone(u, blob?)`, `KEEP` map): 1.5 s after `playing` (8 s on a slow link) it fetches fileFor(l) whole (≤ 120 MB,
+  ≤ the person's limit) and `cache.put`s it into `fedoskin-video-1` under the address without the query (same key as
+  Android), + X-Saved; a finished neighbour preload (`nextIntro` blob) is saved the same way; then stPing('limit') ⇒ sw.js
+  trims; `navigator.storage.persist()` asked once. Playing it: `introSource` → `savedSv(u)` = the same address + `sv=1`
+  when saved (also without a pass / offline). sw.js on APPLE answers ONLY `sv=1` requests (`serveSaved`: Blob slices from
+  the cache, 206 ranges; missing ⇒ `netNoSv` = network without sv); everything else on Apple still bypasses sw.js. Old
+  sw.js ⇒ the sv=1 address simply goes to the network (worker ignores sv). Watchdog: a stuck sv=1 source reloads from the
+  network. Saved neighbours are not preloaded into memory again on Apple; fq (full-quality scrubbing) reads the saved
+  blob. Load label on Apple = `keepProg()` (background save progress → «Сохранён на телефоне»). Store sheet now shows
+  limit + list on Apple too (`#storeApple` note hidden, kept). Kinescope lessons (HLS) are NOT saved anywhere — on iPhone
+  native HLS bypasses sw.js entirely. Tested in Chromium with sw.js APPLE forced + iPhone UA and a local mock R2
+  (save, 2nd visit = 0 video downloads, offline + no pass, store sheet) and Android regression; real Safari untested.
 - «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
   `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
   limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache
@@ -493,8 +508,7 @@
   skips files over it (0 = keep nothing), `trim()` drops oldest-saved first (count cap 500); list of saved lessons grouped
   by lesson (`stLesson`: v/<id>.mp4, -intro, or r2 file name) with sizes and × per lesson; «Очистить всё» asks on the same
   button (2nd tap within 4 s, no confirm()). Page changes the cache itself and posts {type:'vcache', cmd: limit|drop|reset}
-  so the SW re-reads the limit and forgets in-memory copies. Apple: nothing is saved there ⇒ note `#storeApple`, limit
-  hidden. sw.js recheck drops a copy whose file is 404/410 on the server. 17 new i18n keys. Tested (Pixel 7 / desktop en /
+  so the SW re-reads the limit and forgets in-memory copies. Apple: since 11.11.2026 saved by the page (see the iPhone note above); `#storeApple` stays hidden. sw.js recheck drops a copy whose file is 404/410 on the server. 17 new i18n keys. Tested (Pixel 7 / desktop en /
   iPhone): sizes, limit 0 ⇒ nothing saved, 500 MB, × on one lesson, clear all, back closes the sheet.
 - Closed video links (owner 09.11.2026 «ссылки на видео открытые… исправь это сейчас»): R2 videos need a pass. Worker
   GET /pass (only when Origin/Referer is https://fedosk1n.github.io or localhost) → {p: "<exp base36>.<HMAC-SHA256 32 chars>",
