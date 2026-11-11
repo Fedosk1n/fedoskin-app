@@ -112,6 +112,12 @@
   prev-lesson swipe and back swipe must not clash). Switching uses `navReplace` → history.replaceState, so back still goes
   to the section in one step; the full-screen mode is kept. Neighbours (next, prev) are warmed first. One-time tip
   `#swHint` (`fedoskin-swipe-tip`).
+  Row playlists (owner 11.11.2026: from «Новые уроки» a swipe said «последний урок раздела» although the row had more): cards
+  know their row (`lessonCard(l, list)`; paintNewRow passes its list) ⇒ `openLesson(id, {list})` sets `curList`; a swipe
+  (navReplace) or a history restore (`{keep:true}`) keeps it, any other open clears it. `lessonList()` = curList or the section —
+  used by swipe neighbours, the peek prime and openLesson (meta «Новые уроки · урок n из m», `#nextHead` «Ещё новые уроки»,
+  near preload). End chip «Это последний/первый из новых уроков»; swipe-down / edge-back labels say just «Назад» (back goes
+  home). Tested: row swipes 1→2→3, last ⇒ chip, a section still walks the section.
   Neighbour preload (31.10): once the lesson plays (+0.6 s, fallback 4 s) its neighbours — next, prev, next+1 — are
   downloaded whole into memory (`introMem`, blob:, serial, max 5, ≤12 MB each): GitHub lessons = the whole mp4
   (`mediaFor`), Kinescope = the intro. Same gate as intros (`introFast`, saveData). GitHub lessons then play from the

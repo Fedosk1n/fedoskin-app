@@ -1066,7 +1066,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   <button class="ctacard" id="ctaCard" type="button"><span class="ct"><b>Не получается? Федоскин поможет</b><span>Попробуй личный коучинг 1‑на‑1 с одним из опытнейших тренеров мира.</span><em>Онлайн-услуги →</em></span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
-  <h2 class="sec" style="margin-bottom:14px">Ещё в разделе</h2>
+  <h2 class="sec" id="nextHead" style="margin-bottom:14px">Ещё в разделе</h2>
   <div id="nextList"></div>
   </div>
 </section>
@@ -1691,7 +1691,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // owner's own order from the admin (CFG.newRow, 10.11.2026); none / nothing left ⇒ the 10 newest by date
     let list = Array.isArray(CFG.newRow) ? CFG.newRow.map(id => BY_ID[id]).filter(Boolean) : [];
     if (!list.length) list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
-    row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l)));
+    row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l, list)));
     $('#newHome').hidden = !list.length;
   }
   function lessonRow(l, opts){
@@ -1777,7 +1777,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     } catch (_) {}
     freshBusy = false;
   }
-  function lessonCard(l){
+  // `list` = the row the card sits in (owner 11.11.2026: from «Новые уроки» a swipe goes along THAT row, not the section)
+  function lessonCard(l, list){
     const b = document.createElement('button');
     b.className = 'lcard';
     b.innerHTML = '<span class="lcover"><video muted loop playsinline preload="metadata" aria-hidden="true"></video><span class="ldur"></span></span><span class="lname"></span>';
@@ -1792,7 +1793,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
     b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
     b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
-    b.addEventListener('click', () => openLesson(l.id));
+    b.addEventListener('click', () => openLesson(l.id, list ? { list } : null));
     return b;
   }
   function openSection(name){
@@ -2565,17 +2566,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   vid.addEventListener('error', () => { const s = vid.getAttribute('src') || ''; if (vpnLesson && curLesson === vpnLesson && R2_BASE && s.indexOf(R2_BASE + '/') === 0) vpnShow(); });
   $('#vpnX').addEventListener('click', e => { e.stopPropagation(); vpnOff = true; vpnHide(); });
   ['pointerdown', 'touchstart', 'click'].forEach(ev => vpnChip.addEventListener(ev, e => e.stopPropagation()));
-  function openLesson(id){
+  // the lessons a swipe walks through: the row the lesson was opened from («Новые уроки»), else its section
+  let curList = null;
+  const lessonList = () => curList && curLesson && curList.includes(curLesson) ? curList : inSec(curSection);
+  function openLesson(id, opts){
     { const c = document.getElementById('ctaChip'); if (c) c.classList.remove('show'); }
     const l = BY_ID[id]; if (!l) return;
+    opts = opts || {};
+    if (opts.list && opts.list.includes(l)) curList = opts.list.slice();
+    else if (!(navReplace || opts.keep) || !(curList && curList.includes(l))) curList = null; // a swipe keeps the row
     curSection = l.sec; curLesson = l;
     markSeen(l.id);
     goal('lesson', {lesson: l.name, section: l.sec});
-    const list = inSec(l.sec), n = list.indexOf(l) + 1;
+    const inRow = !!curList, list = inRow ? curList : inSec(l.sec), n = list.indexOf(l) + 1;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
     $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
-    $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: l.sec, n, m: list.length, dur: fmtD(l.dur)});
+    $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: inRow ? T('Новые уроки') : l.sec, n, m: list.length, dur: fmtD(l.dur)});
+    $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : T('Ещё в разделе');
     $('#badgeOwn').hidden = true;
     loadSubs(l);
     setLoop(null);
@@ -2592,7 +2600,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
     nl.className = list.length > 1 ? 'lgrid' : '';
-    list.forEach(x => { if (x !== l) nl.appendChild(lessonCard(x)); });
+    list.forEach(x => { if (x !== l) nl.appendChild(lessonCard(x, inRow ? list : null)); });
     if (list.length < 2) nl.innerHTML = '<p class="muted" style="padding:12px 0;font-size:14px">' + T('Другие уроки раздела скоро появятся.') + '</p>';
     vertAuto = true;
     if (isVertVideo()) enterVert();
@@ -2700,7 +2708,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const EDGE_BACK = 24;
   (function lessonSwipe(){
     let sx = 0, sy = 0, t0 = 0, dx = 0, dy = 0, vy = 0, pT = 0, w = 1, mode = 0, nb = null, dir = 0, rot = false; // mode: 0 idle, 1 deciding, 2 swiping
-    const neighbours = () => { const list = inSec(curSection), i = list.indexOf(curLesson); return { prev: list[i - 1] || null, next: list[i + 1] || null }; };
+    const neighbours = () => { const list = lessonList(), i = list.indexOf(curLesson); return { prev: list[i - 1] || null, next: list[i + 1] || null }; };
     // how far the finger has to go: the same on a phone and on a big iPad (a share of the screen was 200+ px on iPad)
     const SIDE_GO = () => Math.min(w * 0.25, 100), PULL_GO = h => Math.min(h * 0.18, 100);
     const pt = t => rot ? { x: t.clientY, y: -t.clientX } : { x: t.clientX, y: t.clientY }; // sideways picture (fs-rot): its «sideways» is the screen's up/down
@@ -2725,7 +2733,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           if (my < 0 && !rot && document.body.classList.contains('fs-vert')) { mode = 3; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullLabel b').textContent = '↑'; $('#pullText').textContent = T('Подробнее'); }
           // down while watching full screen (any: vertical, only-video, landscape, sideways picture) = back to the section
           // (owner 11.11.2026 «при свайпе вниз… возврат в раздел»); on the lesson page up/down stays the page's scroll
-          else if (my > 0 && document.body.classList.contains('fsmode')) { mode = 4; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullLabel b').textContent = '↓'; $('#pullText').textContent = T('Назад к разделу') + (curSection ? ' ' + curSection : ''); }
+          else if (my > 0 && document.body.classList.contains('fsmode')) { mode = 4; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullLabel b').textContent = '↓'; $('#pullText').textContent = curList ? T('Назад') : T('Назад к разделу') + (curSection ? ' ' + curSection : ''); } // opened from «Новые уроки» ⇒ back goes home
           else { mode = 0; return; }
         }
       }
@@ -2753,7 +2761,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           $('#swPeekName').textContent = nb.name;
         } else {
           $('#swPeek').style.backgroundImage = 'none';
-          $('#swEnd').textContent = dir > 0 ? T('Это последний урок раздела') : T('Это первый урок раздела');
+          $('#swEnd').textContent = curList ? (dir > 0 ? T('Это последний из новых уроков') : T('Это первый из новых уроков')) : dir > 0 ? T('Это последний урок раздела') : T('Это первый урок раздела');
           $('#swEnd').classList.add('on');
         }
         hideSwipeHint();
@@ -2832,7 +2840,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the next lesson's first frame, decoded in advance in the hidden sliding picture
   function primePeek(){
     if (!curLesson || stage.classList.contains('swiping') || stage.classList.contains('peekhold')) return;
-    const list = inSec(curSection), nx = list[list.indexOf(curLesson) + 1], mem = nx && introMem.get(mediaFor(nx));
+    const list = lessonList(), nx = list[list.indexOf(curLesson) + 1], mem = nx && introMem.get(mediaFor(nx));
     const pv = $('#swPeekVid');
     if (mem && pv.getAttribute('src') !== mem) { pv.src = mem; try { pv.load(); } catch (_) {} }
   }
@@ -5286,7 +5294,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (document.body.classList.contains('fsmode') && !st.fs) { const v = vertFs; exitFs(); if (!v) return; }
     restoring = true;
     try {
-      if (st.s === 'lesson' && st.lid && BY_ID[st.lid]) { if (!(curLesson && curLesson.id === st.lid && !$('#lesson').hidden)) openLesson(st.lid); }
+      if (st.s === 'lesson' && st.lid && BY_ID[st.lid]) { if (!(curLesson && curLesson.id === st.lid && !$('#lesson').hidden)) openLesson(st.lid, { keep: true }); }
       else if (st.s === 'section' && st.sec) openSection(st.sec);
       else go(st.s || 'home');
     } finally { restoring = false; }
@@ -5305,9 +5313,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     lab.innerHTML = '<b></b><i></i>'; document.body.appendChild(lab);
     const setLab = () => {
       const fromLesson = !openOverlay() && !$('#lesson').hidden && curLesson, toPage = history.state && history.state.fs;
-      lab.querySelector('b').textContent = '← ' + (fromLesson && !toPage ? T('Назад к разделу') : T('Назад'));
-      lab.querySelector('i').textContent = fromLesson ? (toPage ? curLesson.name : curSection) : '';
-      lab.querySelector('i').hidden = !fromLesson;
+      const rowBack = fromLesson && !toPage && curList; // opened from «Новые уроки»: back goes home, not to a section
+      lab.querySelector('b').textContent = '← ' + (fromLesson && !toPage && !rowBack ? T('Назад к разделу') : T('Назад'));
+      lab.querySelector('i').textContent = fromLesson && !rowBack ? (toPage ? curLesson.name : curSection) : '';
+      lab.querySelector('i').hidden = !fromLesson || rowBack;
     };
     document.addEventListener('touchstart', e => {
       if (navDepth <= 0 || blocked() || e.touches.length !== 1) return;
