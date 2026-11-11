@@ -2033,6 +2033,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const j = introCur && introCur.u === u ? introCur : null;
     if (j && j.total && j.got >= j.total * 0.6) return { wait: j.p, url: u };
     if (j) { abortIntro(j); introCur = null; }
+    if (l.ks && ksSaved[l.ks] && (hlsCan() || !isApple)) return null; // its pieces are on the phone: the stream itself starts at once
     if (l.ks && !introFast()) return null;
     // saved on the phone earlier (sw.js keeps watched videos): played from there, no internet needed.
     // iPhone/iPad: the same address with «sv=1» — sw.js answers it from the saved copy (not a blob: copy — one of those
@@ -2049,7 +2050,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     (async () => { for (const l of todo) { if (gen !== warmGen) return; await warmOne(l); } })();
   }
   // Android etc.: get the stream player ready in the background right after start, not on the first tap
-  if (!isApple && LESSONS.some(l => l.ks)) setTimeout(() => { loadHlsLib().catch(() => {}); }, 1200);
+  if ((!isApple || mmsOk()) && LESSONS.some(l => l.ks)) setTimeout(() => { loadHlsLib().catch(() => {}); }, 1200);
   // ===== instant start =====
   // For Kinescope lessons the first 5 seconds also live on GitHub as a plain mp4 (v/<id>-intro.mp4, copied from the
   // stream's own 480p rendition, ~2 MB). It starts at once in #vin on top. Meanwhile the
@@ -2201,18 +2202,154 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (introOn) { vid.removeAttribute('src'); vid.load(); streamDefer = () => loadStream(ks); }
     else loadStream(ks);
   }
+  // ===== Kinescope lessons kept on the phone piece by piece (owner 11.11.2026 «Делаем» — after «чтобы видео оставались
+  // загруженными» and «в чём проблема сохранить по кускам на айфон?») =====
+  // Kinescope gives each quality as ONE fMP4 file on its CDN; the stream's 4-second pieces (video and the separate sound)
+  // are byte ranges of it, addressed by a stable path + a short changing token (`kcd`). Our own hls.js loaders look a piece
+  // up in the phone's storage first (Cache Storage `fedoskin-video-1`, the person's limit, sw.js trims the oldest) under
+  // «<app>/__ks/<ks id><file path>@<start>-<end>» — no host, no token — and keep every piece that comes from the network.
+  // Playlists: network first (fresh tokens), the saved copy only when the network fails (offline). A lesson with saved
+  // pieces opens in the quality they were saved in (ABR capped there, so it doesn't switch to pieces it doesn't have).
+  // Works wherever hls.js plays: Android/computers, and iPhone/iPad with iOS 17.1+ (ManagedMediaSource) — see mmsOk().
+  const KS_SAVED = 'fedoskin-kss'; // ks id -> {h: height of the saved quality, t}
+  let ksSaved = {}; try { ksSaved = JSON.parse(localStorage.getItem(KS_SAVED) || '{}') || {}; } catch (_) {}
+  function ksNote(ks, h){
+    const was = ksSaved[ks]; if (was && was.h === h && Date.now() - was.t < 6e4) return;
+    ksSaved[ks] = { h: h || (was && was.h) || 0, t: Date.now() };
+    try { localStorage.setItem(KS_SAVED, JSON.stringify(ksSaved)); } catch (_) {}
+  }
+  function ksForget(ks){ if (ks) delete ksSaved[ks]; else ksSaved = {}; try { localStorage.setItem(KS_SAVED, JSON.stringify(ksSaved)); } catch (_) {} }
+  const KS_ROOT = new URL('__ks/', location.href).href;
+  function ksPieceKey(ks, url, a, b){ try { return KS_ROOT + ks + new URL(url).pathname + (a != null && b ? '@' + a + '-' + b : ''); } catch (_) { return ''; } }
+  function ksListKey(ks, url){
+    try { const x = new URL(url), q = new URLSearchParams(); [...x.searchParams.keys()].sort().forEach(k => { if (!/^(kcd|token|sign|sig|exp|expires)$/i.test(k)) q.set(k, x.searchParams.get(k)); }); return KS_ROOT + ks + '/pl' + x.pathname + (q.toString() ? '?' + q : ''); } catch (_) { return ''; }
+  }
+  let ksLimP = null, ksLimT = 0;
+  const ksLimit = () => { if (!ksLimP || Date.now() - ksLimT > 3e4) { ksLimT = Date.now(); ksLimP = stLimit(); } return ksLimP; };
+  let ksPutQ = Promise.resolve(), ksAdded = 0, ksPingT = 0;
+  function ksPut(key, body, type, onDone){
+    if (!key || !window.caches) return;
+    ksPutQ = ksPutQ.then(async () => {
+      if (!(await ksLimit())) return; // «Не хранить»
+      const c = await caches.open(VCACHE);
+      await c.put(key, new Response(body, { headers: { 'Content-Type': type, 'Content-Length': String(body.size), 'X-Saved': String(Date.now()) } }));
+      ksAdded += body.size; if (onDone) onDone();
+      // let sw.js trim to the limit now and then (not after every 4-second piece)
+      if (ksAdded > 24 * 1048576 || !ksPingT) { ksAdded = 0; clearTimeout(ksPingT); ksPingT = setTimeout(() => { ksPingT = 0; stPing('limit'); }, 15000); stPing('limit'); }
+      if (!persistAsked) { persistAsked = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (_) {} }
+    }).catch(() => {});
+  }
+  async function ksGet(key, text){
+    if (!key || !window.caches) return null;
+    try { const r = await (await caches.open(VCACHE)).match(key); return r ? (text ? await r.text() : await r.arrayBuffer()) : null; } catch (_) { return null; }
+  }
+  // hls.js loaders for one lesson (ks): fragments from the phone when saved, else network + keep; playlists network-first
+  function ksLoaders(Hls, ks, env){
+    const Base = Hls.DefaultConfig.loader;
+    const fake = (st, bytes) => { const t = performance.now(); st.loading.start = t; st.loading.first = t; st.loading.end = t + 1; st.loaded = st.total = bytes; };
+    class F extends Base {
+      abort(){ this._ab = true; super.abort(); }
+      load(ctx, cfg, cbs){
+        const key = ksPieceKey(ks, ctx.url, ctx.rangeStart, ctx.rangeEnd), frag = ctx.frag;
+        const net = () => {
+          if (this._ab) return;
+          super.load(ctx, cfg, Object.assign({}, cbs, { onSuccess: (resp, st, c2, nd) => {
+            let b = null; try { if (resp && resp.data && resp.data.byteLength) b = new Blob([resp.data]); } catch (_) {} // copied before hls.js hands the buffer to its worker
+            cbs.onSuccess(resp, st, c2, nd);
+            if (b) ksPut(key, b, 'video/mp4', () => { if (frag && frag.type === 'main' && env.hls && env.hls.levels && env.hls.levels[frag.level]) { const lv = env.hls.levels[frag.level]; ksNote(ks, Math.min(lv.width || 1e4, lv.height || 1e4)); } });
+          } }));
+        };
+        ksGet(key).then(buf => {
+          if (this._ab) return;
+          if (!buf) return net();
+          if (frag) frag._fromPhone = true;
+          fake(this.stats, buf.byteLength);
+          cbs.onSuccess({ url: ctx.url, data: buf, code: 200 }, this.stats, ctx, null);
+        }, net);
+      }
+    }
+    class Pl extends Base {
+      abort(){ this._ab = true; super.abort(); }
+      load(ctx, cfg, cbs){
+        const key = ksListKey(ks, ctx.url);
+        let settled = false;
+        const fromPhone = (why, a, b, c) => ksGet(key, true).then(txt => {
+          if (this._ab) return;
+          if (txt) { fake(this.stats, txt.length); cbs.onSuccess({ url: ctx.url, data: txt, code: 200 }, this.stats, ctx, null); }
+          else if (why === 'timeout') cbs.onTimeout(a, b, c); else cbs.onError(a, b, c);
+        });
+        super.load(ctx, cfg, Object.assign({}, cbs, {
+          onSuccess: (resp, st, c2, nd) => { settled = true; if (resp && typeof resp.data === 'string') ksPut(key, new Blob([resp.data], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl'); cbs.onSuccess(resp, st, c2, nd); },
+          onError: (a, b, c) => { if (!settled) { settled = true; fromPhone('error', a, b, c); } },
+          onTimeout: (a, b, c) => { if (!settled) { settled = true; fromPhone('timeout', a, b, c); } }
+        }));
+      }
+    }
+    return { fLoader: F, pLoader: Pl };
+  }
+  // A lesson that started with its 5-second intro never streams its first seconds — keep those pieces too (else the
+  // saved lesson can't start offline: a saved lesson opens without the intro)
+  function ksSaveHead(ks){
+    if (!hls || !window.fetch) return;
+    const lists = [];
+    try { const lv = hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : hls.loadLevel]; if (lv && lv.details) lists.push(lv.details); } catch (_) {}
+    try { const at = hls.audioTracks && hls.audioTracks[hls.audioTrack]; if (at && at.details) lists.push(at.details); } catch (_) {}
+    lists.forEach(d => (d.fragments || []).filter(f => f.start < 6).forEach(async f => {
+      const a = f.byteRangeStartOffset, b = f.byteRangeEndOffset, key = ksPieceKey(ks, f.url, a, b);
+      if (!key || await ksGet(key)) return;
+      try {
+        const r = await fetch(f.url, { mode: 'cors', credentials: 'omit', headers: b ? { Range: 'bytes=' + a + '-' + (b - 1) } : {} });
+        if (r.ok) ksPut(key, await r.blob(), 'video/mp4');
+      } catch (_) {}
+    }));
+  }
+  // iPhone/iPad: our stream player (hls.js on ManagedMediaSource, iOS 17.1+) instead of Apple's own — needed to keep the
+  // pieces. If it fails there (error, or time runs but no picture), Apple's own player takes over and this phone stays on
+  // it for a week.
+  const MMS_OFF = 'fedoskin-mms-off';
+  function mmsOk(){
+    if (!window.ManagedMediaSource) return false;
+    try { const t = +localStorage.getItem(MMS_OFF) || 0; if (t && Date.now() - t < 7 * 864e5) return false; } catch (_) {}
+    return true;
+  }
+  function hlsCan(){ return !isApple || mmsOk(); }
+  // keep the lesson's first seconds too (see ksSaveHead), once the stream has played a moment
+  let headFor = null;
+  vid.addEventListener('playing', () => {
+    const l = curLesson; if (!l || !l.ks || !hls || headFor === l) return;
+    headFor = l; setTimeout(() => { if (curLesson === l && hls) ksSaveHead(l.ks); }, 3000);
+  });
+  // iPhone with our stream player: time runs but no picture for 2.5 s ⇒ Apple's own player (see toNative)
+  setInterval(() => {
+    if (!isApple || !hls || !curLesson || !curLesson.ks || av !== vid || !P.playing || scrub || document.hidden) return;
+    if (vid.paused || vid.seeking || vid.readyState < 3 || vid.currentTime < 1 || !vid.requestVideoFrameCallback) return;
+    if (performance.now() - Math.max(lastFrameAt, playingAt) > 2500) toNative('noframes');
+  }, 700);
+  function toNative(why){
+    if (!isApple || !curLesson || !curLesson.ks || !vid.canPlayType('application/vnd.apple.mpegurl')) return false;
+    try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
+    const at = vid.currentTime || pendingStart || 0, ks = curLesson.ks;
+    dropHls(); vid._ksToken = null; ksPending = false;
+    pendingStart = at > 0.2 ? at : null;
+    vid.src = ksUrl(ks); vid.playbackRate = P.rate;
+    if (P.playing && av === vid) playMain();
+    return true;
+  }
   function loadStream(ks){
     const url = ksUrl(ks);
-    if (isApple && vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; vid.playbackRate = P.rate; if (P.playing && av === vid) playMain(); return; }
+    if (isApple && vid.canPlayType('application/vnd.apple.mpegurl') && !mmsOk()) { vid.src = url; vid.playbackRate = P.rate; if (P.playing && av === vid) playMain(); return; }
     vid.removeAttribute('src'); vid.load();
     const token = vid._ksToken = {};
+    const saved = ksSaved[ks] && ksSaved[ks].h; // pieces of this lesson are on the phone, in this quality
     ksPending = true;
     loadHlsLib().then(Hls => {
       if (vid._ksToken !== token) return; // user already opened another lesson
       ksPending = false;
-      if (!Hls.isSupported()) { if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing && av === vid) playMain(); } else streamFailed(); return; }
+      if (!Hls.isSupported()) { if (isApple) try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
+        if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing && av === vid) playMain(); } else streamFailed(); return; }
       // start with 720p or lower: the first piece downloads fast, then hls.js raises the quality by itself
-      hls = new Hls({ capLevelToPlayerSize: true, autoStartLoad: false, startFragPrefetch: true, maxBufferLength: 30 });
+      const env = {};
+      hls = env.hls = new Hls(Object.assign({ capLevelToPlayerSize: !saved, autoStartLoad: false, startFragPrefetch: true, maxBufferLength: 30 }, window.caches ? ksLoaders(Hls, ks, env) : {}));
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         // start in the quality the remembered internet speed allows (480p when unknown), never above 720p;
         // after that hls.js adjusts it by itself. (After an intro the picture may get sharper at the switch —
@@ -2230,16 +2367,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         else pick((x, side) => side <= INTRO_Q);
         if (start < 0) { let lo = Infinity; lv.forEach((x, i) => { if ((x.bitrate || 0) < lo) { lo = x.bitrate || 0; start = i; } }); }
         if (start < 0) start = 0;
+        // saved on the phone: that quality, and no higher (its pieces are here)
+        if (saved) { const i = lv.findIndex(x => Math.min(x.width || 1e4, x.height || 1e4) === saved); if (i >= 0) { start = i; try { hls.autoLevelCapping = i; } catch (_) {} } }
         try { hls.startLevel = start; } catch (_) {}
         hls.startLoad(pendingStart != null ? pendingStart : -1);
       });
       hls.on(Hls.Events.FRAG_LOADED, (_, d) => {
-        const st = d && d.frag && d.frag.stats; if (!st || !st.loading) return;
+        const st = d && d.frag && d.frag.stats; if (!st || !st.loading || d.frag._fromPhone) return; // pieces from the phone say nothing about the internet
         noteSpeed(st.loaded || st.total, (st.loading.end || 0) - (st.loading.first || st.loading.start || 0));
       });
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d || !d.fatal) return;
-        if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); return; }
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !(isApple && hls._recovered)) { hls._recovered = true; hls.recoverMediaError(); return; }
+        // only a playback problem moves this iPhone to Apple's own player — no internet is not one (that would switch off
+        // keeping lessons for a week)
+        if (isApple && d.type !== Hls.ErrorTypes.NETWORK_ERROR && toNative('error')) return;
         dropHls(); streamFailed();
       });
       hls.loadSource(url);
@@ -4952,21 +5094,33 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const stFmt = b => b < 1024 * 1048576 ? T('{n} МБ', { n: stNum(b ? Math.max(1, Math.round(b / 1048576)) : 0, 0) }) : T('{n} ГБ', { n: stNum(b / 1073741824, 1) });
   function stPing(cmd, url){ try { const c = navigator.serviceWorker && navigator.serviceWorker.controller; if (c) c.postMessage({ type: 'vcache', cmd, url }); } catch (_) {} }
   async function stLimit(){ try { const r = await (await caches.open(VCFG)).match(VLIMIT_KEY); const j = r && await r.json(); return j && typeof j.limit === 'number' && j.limit >= 0 ? j.limit : ST_DEFAULT; } catch (_) { return ST_DEFAULT; } }
-  function stLesson(url){ let f = ''; try { f = new URL(url).pathname.split('/').pop(); } catch (_) {} return ALL_LESSONS.find(x => x.r2 && x.r2 === f) || ALL_LESSONS.find(x => f === x.id + '.mp4' || f === x.id + '-intro.mp4') || null; }
+  function stLesson(url){
+    // a Kinescope lesson's saved pieces: «<app>/__ks/<ks id>/…»
+    if (url.indexOf(KS_ROOT) === 0) { const ks = url.slice(KS_ROOT.length).split('/')[0]; return ALL_LESSONS.find(x => x.ks === ks) || null; }
+    let f = ''; try { f = new URL(url).pathname.split('/').pop(); } catch (_) {} return ALL_LESSONS.find(x => x.r2 && x.r2 === f) || ALL_LESSONS.find(x => f === x.id + '.mp4' || f === x.id + '-intro.mp4') || null; }
   // saved files grouped by lesson (a Kinescope lesson may have only its 5-second start), newest first
   async function stList(){
     const out = new Map(); if (!window.caches) return [];
     try {
       const c = await caches.open(VCACHE);
-      for (const k of await c.keys()) {
-        const r = await c.match(k); const size = +(r && r.headers.get('content-length')) || 0, t = +(r && r.headers.get('x-saved')) || 0;
+      // one pass (a long Kinescope lesson is a few hundred saved pieces): keys() and matchAll() list in the same order
+      const keys = await c.keys(), all = await c.matchAll(), same = all.length === keys.length;
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i], r = same ? all[i] : await c.match(k); const size = +(r && r.headers.get('content-length')) || 0, t = +(r && r.headers.get('x-saved')) || 0;
         const l = stLesson(k.url), key = l ? l.id : k.url, g = out.get(key) || { l, size: 0, urls: [], t: 0 };
         g.size += size; g.urls.push(k.url); g.t = Math.max(g.t, t); out.set(key, g);
       }
     } catch (_) {}
     return [...out.values()].sort((a, b) => b.t - a.t);
   }
-  async function stDrop(urls){ try { const c = await caches.open(VCACHE); for (const u of urls) { await c.delete(u); stPing('drop', u); } } catch (_) {} }
+  async function stDrop(urls){
+    try {
+      const c = await caches.open(VCACHE);
+      for (const u of urls) { await c.delete(u); if (u.indexOf(KS_ROOT) !== 0) stPing('drop', u); }
+      urls.forEach(u => { if (u.indexOf(KS_ROOT) === 0) ksForget(u.slice(KS_ROOT.length).split('/')[0]); });
+      stPing('limit');
+    } catch (_) {}
+  }
   async function stTrim(limit){
     const list = (await stList()).slice().reverse(); // oldest first
     let total = list.reduce((a, g) => a + g.size, 0);
@@ -4977,6 +5131,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   async function stRender(){
     const [list, lim] = await Promise.all([stList(), stLimit()]);
     const used = list.reduce((a, g) => a + g.size, 0);
+    // a Kinescope lesson whose pieces are all gone (trimmed, cleared): no longer counts as saved
+    Object.keys(ksSaved).forEach(ks => { if (!list.some(g => g.l && g.l.ks === ks)) ksForget(ks); });
     $('#storeState').textContent = used ? stFmt(used) : T('Пусто');
     if ($('#storeSheet').hidden) return;
     $('#storeIntro').hidden = false; $('#storeApple').hidden = true; $('#storeLimitBox').hidden = false; // iPhone keeps videos too since 11.11.2026
@@ -5018,6 +5174,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     stDisarm();
     const used = (await stList()).reduce((a, g) => a + g.size, 0);
     try { await caches.delete(VCACHE); } catch (_) {}
+    ksForget(); KEEP.clear();
     stPing('reset');
     toast(T('Освобождено {n}', { n: stFmt(used) }));
     stRender();

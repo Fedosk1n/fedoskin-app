@@ -8,7 +8,7 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 // scrubbing all read that one download (before, each of them fetched the file separately). Ready files stay in the
 // phone's storage (up to the limit the person picked in the app, 1 GB by default), so a lesson opened again plays without the internet. If a video was replaced on
 // the site, its saved copy is noticed (checked at most once an hour) and dropped.
-const VCACHE = 'fedoskin-video-1', VMAX_FILES = 500, AHEAD_PASS = 3 * 1048576;
+const VCACHE = 'fedoskin-video-1', VMAX_FILES = 40000, AHEAD_PASS = 3 * 1048576;
 // How much the saved videos may take — the person picks it in the app (Профиль → «Память на телефоне», owner 09.11.2026,
 // «как в Телеграм»): 0 = don't keep videos, else bytes; kept as a small JSON entry in its own cache, which the page writes.
 const VCFG = 'fedoskin-vcfg', VLIMIT_KEY = new URL('vlimit.json', self.registration.scope).href, VLIMIT_DEFAULT = 1024 * 1048576;
@@ -22,18 +22,26 @@ self.addEventListener('message', e => {
   if (d.type === 'vprog' && d.url && e.ports && e.ports[0]) { e.waitUntil(progress(d.url).then(x => e.ports[0].postMessage(x)).catch(() => {})); return; }
   if (d.type !== 'vcache') return;
   limitP = null;
-  if (d.cmd === 'reset') { mem.clear(); blobs.clear(); } else if (d.cmd === 'drop' && d.url) { mem.delete(d.url); blobs.delete(d.url); }
+  if (d.cmd === 'reset') { mem.clear(); blobs.clear(); sizeOf.clear(); } else if (d.cmd === 'drop' && d.url) { mem.delete(d.url); blobs.delete(d.url); }
   e.waitUntil(trim(null));
 });
 async function trim(keep){
   try {
+    // Kinescope lessons are saved as hundreds of small pieces (11.11.2026): sizes read in one pass, remembered
     const limit = await getLimit(), c = await caches.open(VCACHE), keys = await c.keys(); const sizes = [];
-    for (const k of keys) { const r = await c.match(k); sizes.push([k, +(r && r.headers.get('content-length')) || 0]); }
+    let all = null;
+    if (keys.some(k => !sizeOf.has(k.url))) { all = await c.matchAll(); if (all.length !== keys.length) all = null; }
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i]; let sz = sizeOf.get(k.url);
+      if (sz == null) { const r = all ? all[i] : await c.match(k); sz = +(r && r.headers.get('content-length')) || 0; sizeOf.set(k.url, sz); }
+      sizes.push([k, sz]);
+    }
     let total = sizes.reduce((a, x) => a + x[1], 0), n = sizes.length;
     // the oldest saved go first; the one just saved stays unless it alone is over the limit
-    for (const [k, sz] of sizes) { if (total <= limit && n <= VMAX_FILES) break; if (k.url === keep && sz <= limit) continue; await c.delete(k); mem.delete(k.url); blobs.delete(k.url); total -= sz; n--; }
+    for (const [k, sz] of sizes) { if (total <= limit && n <= VMAX_FILES) break; if (k.url === keep && sz <= limit) continue; await c.delete(k); mem.delete(k.url); blobs.delete(k.url); sizeOf.delete(k.url); total -= sz; n--; }
   } catch (_) {}
 }
+const sizeOf = new Map(); // saved entry -> its size (for trimming)
 const dl = new Map();   // video address -> download in progress
 const mem = new Map();  // the last couple of saved videos, ready in memory
 const checked = new Map();

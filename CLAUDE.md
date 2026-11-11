@@ -498,9 +498,31 @@
   sw.js ⇒ the sv=1 address simply goes to the network (worker ignores sv). Watchdog: a stuck sv=1 source reloads from the
   network. Saved neighbours are not preloaded into memory again on Apple; fq (full-quality scrubbing) reads the saved
   blob. Load label on Apple = `keepProg()` (background save progress → «Сохранён на телефоне»). Store sheet now shows
-  limit + list on Apple too (`#storeApple` note hidden, kept). Kinescope lessons (HLS) are NOT saved anywhere — on iPhone
-  native HLS bypasses sw.js entirely. Tested in Chromium with sw.js APPLE forced + iPhone UA and a local mock R2
+  limit + list on Apple too (`#storeApple` note hidden, kept). Kinescope lessons: see the next note. Tested in Chromium with sw.js APPLE forced + iPhone UA and a local mock R2
   (save, 2nd visit = 0 video downloads, offline + no pass, store sheet) and Android regression; real Safari untested.
+- Kinescope lessons kept piece by piece (owner 11.11.2026 «Делаем»): real Kinescope HLS (checked in the owner's Chrome
+  11.11): master → media.m3u8?quality=&type=(&lang=) per quality + a separate audio playlist; each quality is ONE fMP4 file
+  on `edge-<pop>.kinescopecdn.net/<uuid>/videos/<uuid>/assets/<uuid>/0/<n>/<q>.mp4?kcd=<16-char token>`, EXT-X-MAP + 4-s
+  pieces as EXT-X-BYTERANGE; paths stable across fetches, only kcd changes. `ksLoaders(Hls, ks, env)` = hls.js fLoader/pLoader
+  subclasses of Hls.DefaultConfig.loader: a fragment is looked up in `fedoskin-video-1` under `<app>/__ks/<ks><path>@<a>-<b>`
+  (`ksPieceKey`, rangeEnd exclusive as in hls.js) → served from the phone (fake stats, `frag._fromPhone` ⇒ no noteSpeed),
+  else network + `ksPut` (Blob copied BEFORE onSuccess — hls.js transfers the buffer to its worker). Playlists network-first,
+  saved copy (`ksListKey`, query without kcd/token-like keys) only on error/timeout ⇒ offline works. `ksSaved`
+  (`fedoskin-kss`: ks → {h = short side of the saved quality}) ⇒ next open: startLevel = that quality + autoLevelCapping,
+  capLevelToPlayerSize off, NO intro (introSource returns null). With an intro the stream starts at 5 s ⇒ `ksSaveHead()`
+  (3 s after the stream plays) fetches the pieces with start < 6 s of the current video + audio playlists. ksPut is serial;
+  stPing('limit') at most every 15 s / 24 MB; sw.js trim keeps a `sizeOf` map + one matchAll pass, VMAX_FILES 40000.
+  Store sheet groups `__ks/<ks>/…` by lesson (stLesson), stList uses keys()+matchAll() (same order), deleting/clearing
+  forgets ksSaved; stRender drops ksSaved entries with no pieces left.
+  iPhone/iPad: hls.js on ManagedMediaSource when `mmsOk()` (window.ManagedMediaSource = iOS 17.1+, and not
+  `fedoskin-mms-off` within 7 days); hls.js 1.5.20 handles MMS + disableRemotePlayback itself; the lib is preloaded on
+  Apple too then. `toNative()` = Apple's own player at the same moment + sets fedoskin-mms-off: on a fatal NON-network hls
+  error (media error after one recoverMediaError), or time running with no rVFC frame for 2.5 s (700 ms interval), or
+  !Hls.isSupported(). Network errors never switch (offline must not disable saving). Old iOS ⇒ native as before.
+  Tested in Chromium with a fake Kinescope (ffmpeg single_file fmp4 byterange HLS, 480/720 + separate audio, changing kcd,
+  /tmp/tst/ksmock.js): Android + iPhone UA with MediaSource aliased as ManagedMediaSource — 1st view saves all pieces,
+  2nd view 0 CDN requests (also after seeking), offline plays, intro start saves 0–4 s, fallback to native on no frames;
+  network failure doesn't switch. Real iPhone MMS never tested by Claude.
 - «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
   `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
   limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache
