@@ -617,5 +617,21 @@
       return { root: { y: 198 * k, r: 180 * k + 6 * k + w + br, px: 100, py: 30 }, torso: -40 * k, shR: 178 * k, elR: 0, shL: 92 * k, elL: 4 * k,
         hipL: 46 * k, kneeL: -92 * k, ankL: 30 * k, hipR: -12 * k, kneeR: 64 * k, ankR: 20 * k, head: 24 * k }; } },
   });
+  // ---- even rarer, «mythic» moves (owner 11.11.2026: «ещё 3 с вероятностью 0,5 %… красный фон и слегка трясущийся экран») ----
+  Object.assign(MOVES, {
+    // SPIN — jackhammer: on ONE hand, body folded, hopping round and round on that hand
+    rjack: { dur: 2.8, f: u => { const k = env(u, .14, .86), sp = ss(.14, .84, u), th = sp * TAU * 7, c = Math.cos(th), hop = Math.abs(Math.sin(th)) * k;
+      return { root: { y: 112 * k - 26 * hop, r: 128 * k, sx: (1 - k) + k * c, px: 100, py: 96 }, torso: 24 * k, shR: 150 * k, elR: 0, shL: 70 * k, elL: 60 * k,
+        hipL: 96 * k, kneeL: -30 * k, hipR: 84 * k, kneeR: -40 * k, ankL: 10 * k, ankR: 10 * k, head: -16 * k }; } },
+    // ACROBATICS — corkscrew: a layout flip with a full twist, very high, arms hugged in for the twist
+    rcork: { dur: 2.0, f: u => { const a = ss(.1, .84, u), h = Math.sin(a * PI), cr = ss(0, .1, u) * (1 - ss(.1, .18, u)) + ss(.82, .88, u) * (1 - ss(.9, 1, u)),
+        tw = ss(.24, .7, u), arm = ss(.04, .16, u) * (1 - ss(.24, .3, u)), hug = ss(.24, .3, u) * (1 - ss(.7, .78, u)), sx = Math.cos(tw * TAU);
+      return { root: { y: -170 * h + 22 * cr, r: -360 * ss(.2, .78, u), sx, px: 100, py: 130, sy: 1 - .14 * cr }, hipL: 6 + 10 * cr, hipR: 6 + 10 * cr, kneeL: -26 * cr, kneeR: -26 * cr,
+        shL: 160 * arm + 18 * hug + 30 * (1 - arm - hug) * ss(.78, .9, u), elL: -130 * hug, shR: 160 * arm + 18 * hug + 30 * (1 - arm - hug) * ss(.78, .9, u), elR: -130 * hug, head: -6 * arm }; } },
+    // STANCE — planche («superman»): the whole body flat in the air, held only by the straight arms, long hold
+    rplanche: { dur: 2.7, f: u => { const k = ss(0, .22, u) * (1 - ss(.84, 1, u)), w = u > .22 && u < .32 ? Math.sin(u * 300) * 1.4 : 0, br = Math.sin(u * TAU * 2) * .7 * k;
+      return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
+        hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
+  });
   window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose };
 })();

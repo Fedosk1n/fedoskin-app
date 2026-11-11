@@ -468,6 +468,14 @@
   решил батл — такое бывает 1 раз из 100». Demo: `?battle=rare` / `rare1` / `rare2` / `rare3` (`window.fedoskinRare(k)`). hero.js `?v=8`.
   Tested: 2 M seeds ⇒ 1.007 %, sides/kinds even; worker on node:sqlite with a forced rare seed ⇒ votes bbb; demos ru 390×844.
   The owner must update the server code for the 1 % to happen in real battles.
+  Mythic tier (owner 11.11.2026 «ещё 3 с вероятностью 0,5 %… красный фон и слегка трясущийся экран… вибрацию»): btRare also returns
+  {myth: true} when x % 200 === 1 (disjoint from x % 100 === 0; worker formula updated the same way) ⇒ BT_MYTH rjack (JACKHAMMER:
+  folded on one hand, hopping round, red spin ring), rcork (CORKSCREW: very high layout flip with a full twist, arms hugged),
+  rplanche (PLANCHE: body flat in the air on straight arms, long hold). Arena `.legend.myth`: red spotlight + red-tinted floor,
+  inset red glow, continuous tremble `mythq` (also after the peak shake: `.arena.myth.shake` chains both; off for reduced
+  motion), red banner «MYTHIC MOVE», red glow `.fighter.red`, red rain, «INSANE!/MYTHIC!/IMPOSSIBLE!», vibration patterns at
+  start / peak / end (Android only — iPhone Safari has no vibration API), result line «Мифический приём {move} решил батл —
+  такое бывает 1 раз из 200». Demos `?battle=rare4|5|6`. Measured on 4 M seeds: legendary 1.00 %, mythic 0.50 %. hero.js `?v=9`.
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give

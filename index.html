@@ -425,6 +425,17 @@ body.chatmode .tabs{display:none}
 .btlegend.long b{font-size:17px}
 @keyframes legend{0%{opacity:0;transform:scale(.6)}10%{opacity:1;transform:scale(1.08)}16%{transform:none}82%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
 .btresr{display:block;font-style:normal;font-size:12px;font-weight:700;color:#F2CC55;margin-top:6px}
+/* mythic (0.5 %): red light, the whole arena trembles slightly, red banner and glow */
+.arena.myth{animation:mythq .09s linear infinite;box-shadow:inset 0 0 60px rgba(255,40,40,.35)}
+@keyframes mythq{0%{transform:translate(0,0)}25%{transform:translate(1.4px,-1px)}50%{transform:translate(-1.2px,1.2px)}75%{transform:translate(1px,1px)}100%{transform:translate(-1px,-1.2px)}}
+.arena.myth:before{filter:brightness(.5) sepia(1) hue-rotate(-30deg) saturate(3)}
+.arena.legend.myth.on-l .spot.l,.arena.legend.myth.on-r .spot.r{background:radial-gradient(50% 100% at 50% 0,rgba(255,50,40,.5),transparent 72%)}
+.fighter.red{filter:drop-shadow(0 0 12px rgba(255,50,40,.85))}
+.fighter.red .spinfx{border-color:rgba(255,70,60,.95);border-style:solid;box-shadow:0 0 16px rgba(255,40,40,.7)}
+.btlegend.myth small{color:#FF6B5C}
+.btlegend.myth b{color:#fff;background:linear-gradient(180deg,#FF5A4A,#D71920 55%,#8E0A10);box-shadow:0 0 26px rgba(255,40,40,.7)}
+.btresr.myth{color:#FF6B5C}
+@media (prefers-reduced-motion:reduce){.arena.myth{animation:none}}
 @keyframes mvcap{0%{opacity:0;transform:translateY(8px) scale(.8)}12%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}
 .fighter.fire:before{content:"";position:absolute;left:-6%;right:-6%;bottom:-3%;height:46%;border-radius:50% 50% 30% 30%;background:radial-gradient(60% 100% at 50% 100%,rgba(255,227,138,.75),rgba(255,138,31,.5) 45%,rgba(226,54,26,0) 75%);animation:fireb .28s ease-in-out infinite alternate;pointer-events:none}
 @keyframes fireb{from{transform:scaleY(.9) scaleX(1.03)}to{transform:scaleY(1.1) scaleX(.97)}}
@@ -440,6 +451,7 @@ body.chatmode .tabs{display:none}
 @keyframes puff{0%{transform:scale(.3) translateY(0);opacity:.9}100%{transform:scale(2.6) translateY(-14px);opacity:0}}
 .arena.shake{animation:shake .35s linear}
 @keyframes shake{0%,100%{transform:none}20%{transform:translate(-5px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}80%{transform:translate(3px,-1px)}}
+.arena.myth.shake{animation:shake .35s linear,mythq .09s linear .35s infinite} /* the big hit, then the trembling goes on */
 @keyframes winjump{from{transform:translateY(0) scale(1)}to{transform:translateY(-14px) scale(1.06)}}
 @keyframes rnd{0%{opacity:0;transform:scale(1.6)}20%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
 @keyframes vspop{from{transform:scale(.2);opacity:0}to{transform:none;opacity:1}}
@@ -1558,7 +1570,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=8"></script>
+<script src="hero.js?v=9"></script>
 <script src="rhythm.js?v=5"></script>
 <script src="vendor/qr.js"></script>
 <script>
@@ -4903,14 +4915,18 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Rare battle-deciding moves (owner 11.11.2026: 1 % of auto battles, decisive; 3 kinds — spin / acrobatics / stance).
   // Decided by the battle's seed with the SAME formula as the server (push-worker.js btRare — keep equal): the server then
   // gives all three judges to that dancer. An older server doesn't know it ⇒ shown only if the result agrees.
-  const BT_RARE = ['r2000', 'rflip', 'rhollow'];
+  // + «mythic» ones (owner 11.11.2026): 1 seed in 200, red light, the screen trembles, vibration.
+  const BT_RARE = ['r2000', 'rflip', 'rhollow'], BT_MYTH = ['rjack', 'rcork', 'rplanche'];
   function btRare(seed){
     let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
     x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
-    if (x % 100 !== 0) return null;
-    return { side: (x >>> 8) & 1 ? 'b' : 'a', mv: BT_RARE[(x >>> 9) % 3] };
+    const side = (x >>> 8) & 1 ? 'b' : 'a';
+    if (x % 100 === 0) return { side, mv: BT_RARE[(x >>> 9) % 3] };
+    if (x % 200 === 1) return { side, mv: BT_MYTH[(x >>> 9) % 3], myth: true };
+    return null;
   }
-  Object.assign(BT_NAME, { r2000: '2000', rflip: 'DOUBLE BACKFLIP', rhollow: 'ONE-HAND HOLLOWBACK' });
+  Object.assign(BT_NAME, { r2000: '2000', rflip: 'DOUBLE BACKFLIP', rhollow: 'ONE-HAND HOLLOWBACK', rjack: 'JACKHAMMER', rcork: 'CORKSCREW', rplanche: 'PLANCHE' });
+  const btIsRare = mv => BT_RARE.includes(mv) || BT_MYTH.includes(mv);
   function btPlay(bt, side, opp){
     const run = ++BT.run, me = bt[side], them = bt[side === 'a' ? 'b' : 'a'];
     BT.cur = { bt, side, opp: opp || { id: them.id } };
@@ -4931,7 +4947,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#battle').hidden = false;
     const rnd = mulberry(bt.seed || 1), pick = a => a[Math.floor(rnd() * a.length)];
     const arena = $('#btArena'), cam = $('#btCam'), fx = $('#btFx');
-    cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake', 'legend'); $('#btLegend').className = 'btlegend'; $('#btResR').hidden = true; A.classList.remove('gold'); B.classList.remove('gold');
+    cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake', 'legend', 'myth'); $('#btLegend').className = 'btlegend'; $('#btResR').hidden = true; $('#btResR').classList.remove('myth');
     const shout = (left, txt) => { const s = $('#btShout'); s.textContent = txt; s.style.left = left ? '10%' : ''; s.style.right = left ? '' : '10%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
     const caption = (left, txt) => { const c = $('#btMove'); if (!txt) return; c.textContent = txt; c.className = 'btmove ' + (left ? 'l' : 'r'); void c.offsetWidth; c.classList.add('show'); };
     const round = t => { const r = $('#btRound'); r.textContent = t; r.classList.remove('show'); void r.offsetWidth; r.classList.add('show'); };
@@ -4941,8 +4957,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const re = (el, c) => { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };
     const camOn = (left, z) => { cam.style.transform = left == null ? '' : 'scale(' + (z || 1.1) + ') translateX(' + (left ? 7 : -7) + '%)'; };
     const hype = on => { $('#btCrowd').classList.toggle('hype', on); if (on) flashes(); };
-    const legendT = (left, name) => { const c = $('#btLegend'); c.innerHTML = '<small>LEGENDARY MOVE</small><b></b>'; c.querySelector('b').textContent = name; c.className = 'btlegend ' + (left ? 'l' : 'r') + (name.length > 12 ? ' long' : ''); void c.offsetWidth; c.classList.add('show'); };
-    const goldRain = () => { const c = $('#btConf'); for (let k = 0; k < 28; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#F2CC55', '#FFE38A', '#E2A93A'][k % 3]; i.style.animationDelay = (Math.random() * .6).toFixed(2) + 's'; c.appendChild(i); setTimeout(() => i.remove(), 3200); } };
+    const legendT = (left, name, myth) => { const c = $('#btLegend'); c.innerHTML = '<small>' + (myth ? 'MYTHIC MOVE' : 'LEGENDARY MOVE') + '</small><b></b>'; c.querySelector('b').textContent = name; c.className = 'btlegend ' + (left ? 'l' : 'r') + (name.length > 12 ? ' long' : '') + (myth ? ' myth' : ''); void c.offsetWidth; c.classList.add('show'); };
+    const goldRain = myth => { const c = $('#btConf'); for (let k = 0; k < 28; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = (myth ? ['#FF3B3B', '#FF8A5C', '#B3121B'] : ['#F2CC55', '#FFE38A', '#E2A93A'])[k % 3]; i.style.animationDelay = (Math.random() * .6).toFixed(2) + 's'; c.appendChild(i); setTimeout(() => i.remove(), 3200); } };
     // ---- the timeline (virtual seconds): segments per fighter [start, dur, move, loop] + one-shot events ----
     const firstLeft = side === 'a', seg = { A: [[0, .9, 'walk']], B: [[0, .9, 'walk']] }, ev = [], used = { A: [], B: [] };
     let rate = 1, t = 1.0;
@@ -4963,15 +4979,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         parts.forEach(mv => {
           const d = HERO.MOVES[mv].dur * (BT_TOP.includes(mv) ? .75 : 1), s0 = t;
           seg[who].push([s0, d, mv]);
-          if (!BT_RARE.includes(mv)) ev.push([s0 + .03, () => caption(leftTurn, BT_NAME[mv])]); // a rare move has its own gold banner
-          if (BT_RARE.includes(mv)) { // the legendary moment: the arena goes dark, gold light, slow motion at the peak, the crowd explodes
-            const peak = { r2000: .5, rflip: .44, rhollow: .3 }[mv];
-            ev.push([s0, () => { arena.classList.add('legend'); legendT(leftTurn, BT_NAME[mv]); camOn(leftTurn, 1.16); $('#btCrowd').classList.remove('hype'); }]);
-            if (mv === 'r2000') { ev.push([s0 + d * .16, () => { puff(leftTurn); f.classList.add('spin', 'gold'); }]); ev.push([s0 + d * .68, () => f.classList.remove('spin')]); }
-            ev.push([s0 + d * peak, () => { rate = .28; camOn(leftTurn, 1.3); re(arena, 'shake'); re(arena, 'flash'); stars(leftTurn); stars(leftTurn); if (navigator.vibrate) try { navigator.vibrate([25, 40, 60]); } catch (_) {} }]);
+          if (!btIsRare(mv)) ev.push([s0 + .03, () => caption(leftTurn, BT_NAME[mv])]); // a rare move has its own gold banner
+          if (btIsRare(mv)) { // the legendary moment: the arena goes dark, gold light (mythic: red + trembling), slow motion at the peak, the crowd explodes
+            const myth = BT_MYTH.includes(mv), peak = { r2000: .5, rflip: .44, rhollow: .3, rjack: .5, rcork: .46, rplanche: .3 }[mv], glow = myth ? 'red' : 'gold';
+            const buzz = p => { if (navigator.vibrate) try { navigator.vibrate(p); } catch (_) {} };
+            const yell = myth ? ['INSANE!', 'MYTHIC!', 'IMPOSSIBLE!'] : ['UNREAL!', 'LEGEND!', 'NO WAY!'];
+            ev.push([s0, () => { arena.classList.add('legend'); if (myth) { arena.classList.add('myth'); buzz([60, 80, 60, 80, 60]); } legendT(leftTurn, BT_NAME[mv], myth); camOn(leftTurn, 1.16); $('#btCrowd').classList.remove('hype'); f.classList.add(glow); }]);
+            if (mv === 'r2000' || mv === 'rjack') { ev.push([s0 + d * .16, () => { puff(leftTurn); f.classList.add('spin'); }]); ev.push([s0 + d * .8, () => f.classList.remove('spin')]); }
+            ev.push([s0 + d * peak, () => { rate = .28; camOn(leftTurn, 1.3); re(arena, 'shake'); re(arena, 'flash'); stars(leftTurn); stars(leftTurn); buzz(myth ? [120, 50, 160, 50, 220] : [25, 40, 60]); }]);
             ev.push([s0 + d * peak + .32, () => { rate = 1; camOn(leftTurn, 1.16); }]);
-            ev.push([s0 + d * .8, () => { hype(true); goldRain(); shout(!leftTurn, pick(['UNREAL!', 'LEGEND!', 'NO WAY!'])); }]);
-            ev.push([s0 + d + .5, () => { hype(false); arena.classList.remove('legend'); f.classList.remove('gold'); }]);
+            ev.push([s0 + d * .8, () => { hype(true); goldRain(myth); shout(!leftTurn, pick(yell)); if (myth) buzz([40, 40, 40, 40, 90]); }]);
+            ev.push([s0 + d + .5, () => { hype(false); arena.classList.remove('legend', 'myth'); f.classList.remove(glow); }]);
           } else if (BT_SPIN.includes(mv)) {
             ev.push([s0 + d * .18, () => { puff(leftTurn); f.classList.add('spin'); }]);
             ev.push([s0 + d * .8, () => { f.classList.remove('spin'); hype(true); shout(!leftTurn, cry); }]);
@@ -5019,8 +5037,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     };
     const finish = () => {
       if (BT.finRun === run) return; BT.finRun = run;
-      evAt = ev.length; rate = 1; camOn(null); A.classList.remove('dim', 'spin'); B.classList.remove('dim', 'spin'); arena.classList.remove('on-l', 'on-r', 'legend'); hype(false);
-      if (rare) (rareLeft ? A : B).classList.add('gold'); // the legend keeps his gold glow
+      evAt = ev.length; rate = 1; camOn(null); A.classList.remove('dim', 'spin'); B.classList.remove('dim', 'spin'); arena.classList.remove('on-l', 'on-r', 'legend', 'myth'); hype(false);
+      if (rare) (rareLeft ? A : B).classList.add(rare.myth ? 'red' : 'gold'); // the legend keeps his glow
       $('#btJudges').className = 'judges think';
       const votes = bt.votes || [];
       const cards = $('#btJudges').querySelectorAll('.card');
@@ -5032,7 +5050,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win'); arena.classList.add(won ? 'on-l' : 'on-r');
         const tt = $('#btResT'); tt.textContent = won ? T('Победа!') : T('Поражение'); tt.className = won ? 'win' : 'lose';
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
-        if (rare) { const rr = $('#btResR'); rr.textContent = T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.hidden = false; }
+        if (rare) { const rr = $('#btResR'); rr.textContent = rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); rr.hidden = false; }
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
         hype(true);
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
@@ -5175,9 +5193,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // rhythm battle (rhythm.js): every battle starts with a round of it — btStart; fedoskinRhythm = the old trial vs the computer (checks only)
   RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myEq, oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
-  // a demo with a rare move (kind 1–3, 0 = any): finds a seed that gives it, the winner = its dancer
+  // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
   window.fedoskinRare = kind => {
-    const want = kind ? BT_RARE[kind - 1] : null, lvl = statsView().level;
+    const want = kind ? BT_RARE.concat(BT_MYTH)[kind - 1] : null, lvl = statsView().level;
     for (let sd = 1 + Math.floor(Math.random() * 1e6); ; sd++) { const r = btRare(sd); if (r && (!want || r.mv === want)) {
       return btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl, eq: myEq }, b: { id: '2', name: 'Ana', lvl: Math.min(8, lvl + 2), eq: ['bandana', 'gloves'] }, seed: sd, votes: [r.side, r.side, r.side], win: r.side }, 'a', { id: '' }); } }
   };
@@ -5858,7 +5876,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
     if (qs.get('battle') === 'play') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRhythm(), 800); } // the rhythm game trial, no server
-    const rq = /^rare([123])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback)
+    const rq = /^rare([1-6])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback) / mythic: rare4 (jackhammer) / rare5 (corkscrew) / rare6 (planche)
     if (rq) { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRare(rq[1] ? +rq[1] : 0), 800); }
     else if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
     else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone

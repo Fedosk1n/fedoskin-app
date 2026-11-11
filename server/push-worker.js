@@ -554,11 +554,11 @@ const RB_PAT = [null, [[0, 1, 2, 3]],
 const RB_PAT_F = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5]];
 const rbMul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const rbClamp = (x, a, b) => Math.max(a, Math.min(b, x));
-// rare battle-deciding move (11.11.2026) — the SAME formula as btRare in index.html: 1 seed in 100, side 'a' | 'b'
+// rare battle-deciding move (11.11.2026) — the SAME formula as btRare in index.html: 1 + 0.5 seeds in 100, side 'a' | 'b'
 function btRare(seed) {
   let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
   x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
-  return x % 100 === 0 ? ((x >>> 8) & 1 ? 'b' : 'a') : null;
+  return x % 100 === 0 || x % 200 === 1 ? ((x >>> 8) & 1 ? 'b' : 'a') : null; // 1 % legendary + 0.5 % mythic
 }
 function rbNotes(picks, seed, beat) { // only the phase and «big» of each note, in the same order as rhythm.js
   const up = RB_BEATS[beat][1], lv = m => rbClamp(RB_DIFF[m] + up, 1, 3), rnd = rbMul(seed || 1), out = [];
