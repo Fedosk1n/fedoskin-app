@@ -1722,6 +1722,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (first) goal('app_install');
   })();
   const BY_ID = {}; LESSONS.forEach(l => { BY_ID[l.id] = l; });
+  // cover picture + 3-second animation; `cv` grows when the admin re-cuts them (owner 11.11.2026: start the animation later) ⇒ new address, no stale cache
+  const jpgUrl = l => 'v/' + l.id + '.jpg' + (l.cv ? '?c=' + l.cv : '');
+  const pvUrl = l => 'v/' + l.id + '-p3.mp4' + (l.cv ? '?c=' + l.cv : '');
   // "NEW": lesson added in the last 14 days and not opened by this user yet
   const NEW_DAYS = +CFG.newDays || 14, DEFAULT_ADDED = '2026-10-01';
   let seen = [];
@@ -1779,7 +1782,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     b.className = 'list-item res';
     b.innerHTML = '<img class="lthumb" alt="" loading="lazy"><span class="stack" style="gap:4px;flex:1;min-width:0"><span class="nm" style="font-weight:600"></span><span class="muted" style="font-size:12px"></span></span>' +
       (opts.tag === false ? '' : (!ALPHA && isFree(l) ? '<span class="tag" style="background:var(--accent);color:var(--on-accent)">' + T('Бесплатно') + '</span>' : ''));
-    b.querySelector('img').src = 'v/' + l.id + '.jpg';
+    b.querySelector('img').src = jpgUrl(l);
     const nm = b.querySelector('.nm');
     const i = opts.q ? l.name.toLowerCase().indexOf(opts.q.toLowerCase()) : -1;
     if (i >= 0){ nm.append(l.name.slice(0, i)); const m = document.createElement('mark'); m.textContent = l.name.slice(i, i + opts.q.length); nm.append(m, l.name.slice(i + opts.q.length)); }
@@ -1863,8 +1866,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     b.innerHTML = '<span class="lcover"><video muted loop playsinline preload="metadata" aria-hidden="true"></video><span class="ldur"></span></span><span class="lname"></span>';
     const pv = b.querySelector('video');
     pv.muted = true; pv.defaultMuted = true;
-    pv.poster = 'v/' + l.id + '.jpg';
-    if (l.pv !== false) pvSet(pv, 'v/' + l.id + '-p3.mp4');
+    pv.poster = jpgUrl(l);
+    if (l.pv !== false) pvSet(pv, pvUrl(l));
     b.querySelector('.ldur').textContent = fmtD(l.dur);
     b.querySelector('.lname').textContent = l.name;
     if (isNew(l)) { const np = newPill(); np.classList.add('covernew'); b.querySelector('.lcover').appendChild(np); b.classList.add('isnew'); }
@@ -1999,7 +2002,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     clearTimeout(vloadT);
     vload.classList.remove('stall');
     vload.style.backgroundImage = 'none'; // never the lesson's own picture under the animation
-    if (l.pv !== false) { vloadPv.hidden = false; vloadPv.src = 'v/' + l.id + '-p3.mp4'; const r = vloadPv.play(); if (r && r.catch) r.catch(() => {}); }
+    if (l.pv !== false) { vloadPv.hidden = false; vloadPv.src = pvUrl(l); const r = vloadPv.play(); if (r && r.catch) r.catch(() => {}); }
     else { vloadPv.hidden = true; vloadPv.removeAttribute('src'); }
     vload.hidden = false;
   }
@@ -2681,7 +2684,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
     const srcInfo = introSource(l);
-    loadVideo(fileFor(l), 'v/' + l.id + '.jpg', l.ks, srcInfo); fcOwn = false;
+    loadVideo(fileFor(l), jpgUrl(l), l.ks, srcInfo); fcOwn = false;
     vpnArm(l);
     ldStart(l);
     paint();
@@ -2846,7 +2849,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (nb) {
           // its real frame is coming (memory): no cover behind it — the cover's crop differs, and a landscape lesson in the
           // tall vertical view showed a zoomed copy above and below the frame (owner 11.11.2026 screenshot)
-          $('#swPeek').style.backgroundImage = mem ? 'none' : "url('v/" + nb.id + ".jpg')";
+          $('#swPeek').style.backgroundImage = mem ? 'none' : "url('" + jpgUrl(nb) + "')";
           $('#swPeekDir').textContent = dir > 0 ? T('Следующий урок') + ' →' : '← ' + T('Предыдущий урок');
           $('#swPeekName').textContent = nb.name;
         } else {

@@ -100,6 +100,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pt-reset{background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:4px}
 .seg{display:flex;gap:6px;margin-top:14px}.seg button{flex:1}.seg button[aria-pressed="true"]{background:var(--accent);color:#0B0B0C;border-color:var(--accent)}
 .ksbox{margin-top:16px;padding:12px;border:1px solid #222225;border-radius:12px}
+.pvrow{display:flex;gap:12px;margin-top:10px;align-items:flex-start}
+.pvrow figure{margin:0;flex:0 0 108px;text-align:center}
+.pvrow video,.pvrow canvas{width:108px;height:144px;object-fit:cover;border-radius:10px;background:var(--surface-2);display:block}
+.pvrow figcaption{font-size:11px;color:var(--muted);margin-top:4px}
+.pvat{display:flex;align-items:center;gap:10px;margin-top:12px} .pvat input{flex:1;accent-color:var(--accent)} .pvat b{min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.pvbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .grip{flex:0 0 auto;width:40px;height:52px;margin:-6px -4px -6px 0;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--muted);cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 .grip:hover{background:var(--surface-2);color:var(--fg)}
 .grip:focus-visible{outline:2px solid var(--accent)}
@@ -266,7 +272,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 43</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 44</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -674,6 +680,19 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <input type="file" id="eKsFile" accept="video/*,.mov,.mp4" hidden>
       <div class="prog" id="eKsProg" hidden><i id="eKsBar"></i></div>
       <label class="sw" id="eKsDropRow" hidden><input type="checkbox" id="eKsDrop"><span><b>Удалить старую копию видео из GitHub</b><br><span class="hint">Обложка и анимация останутся. Включайте, когда видео из Kinescope уже играет в приложении.</span></span></label>
+    </div>
+    <div class="ksbox" id="pvBox">
+      <b>Анимационная обложка</b>
+      <p class="hint" style="margin:6px 0 0">3 секунды ролика, которые крутятся на обложке. Сдвиньте начало, если в первые секунды ничего не происходит.</p>
+      <div class="pvrow">
+        <figure><video id="pvNow" muted loop playsinline autoplay></video><figcaption id="pvNowCap">Сейчас</figcaption></figure>
+        <figure><canvas id="pvFrame" width="216" height="288"></canvas><figcaption id="pvFrameCap">Новое начало</figcaption></figure>
+      </div>
+      <div class="pvat"><span class="hint" style="margin:0">Начало</span><input type="range" id="pvAt" min="0" max="10" step="0.1" value="0"><b id="pvAtT">0,0 с</b></div>
+      <div class="pvbtns"><button class="btn btn-sm" type="button" id="pvMinus">−0,5 с</button><button class="btn btn-sm" type="button" id="pvPlus">+0,5 с</button><button class="btn btn-sm btn-accent" type="button" id="pvMake">Сделать анимацию</button></div>
+      <label class="sw" style="margin-top:8px"><input type="checkbox" id="pvJpg" checked><span><b>Картинку обложки — с того же кадра</b><br><span class="hint">Картинка видна, пока анимация грузится. С одного кадра — без скачка.</span></span></label>
+      <div class="prog" id="pvProg" hidden><i id="pvBar"></i></div>
+      <p class="hint" id="pvState" style="margin:6px 0 0"></p>
     </div>
     <label class="f"><span>Название</span><input type="text" id="eName"></label>
     <label class="f"><span>Раздел</span><select id="eSec"></select></label>
@@ -1238,8 +1257,9 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const r = R[l.id], u = uploads[l.id];
       if (!r) { items.push('новый урок «' + l.name + '»'); return; }
       const what = [];
-      const rep = !!(u && u.replace);
+      const rep = !!(u && u.replace && !u.pvOnly);
       if (rep) what.push('новое видео');
+      if (u && u.pvOnly) what.push('анимация обложки');
       if (dropGh.includes(l.id)) what.push('удалить старое видео из GitHub');
       if (normL(l) !== normL(r)) {
         if (diff(l.name, r.name)) what.push('название');
@@ -1291,7 +1311,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- lessons list ----------
-  function coverSrc(l){ return uploads[l.id] ? uploads[l.id].coverUrl : 'v/' + l.id + '.jpg?' + (l.added || ''); }
+  function coverSrc(l){ return uploads[l.id] ? uploads[l.id].coverUrl : 'v/' + l.id + '.jpg?' + (l.added || '') + (l.cv ? '.' + l.cv : ''); }
   function renderLessons(){
     const box = $('#lessonList'); box.innerHTML = '';
     const q = $('#lFilter').value.trim().toLowerCase();
@@ -1310,7 +1330,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
         if (ksJobs[l.id] != null) nm.insertAdjacentHTML('beforeend', '<span class="pill up" data-ksjob="' + l.id + '">ЗАГРУЗКА ' + Math.round(ksJobs[l.id] * 100) + '%</span>');
         else if (l.ks || l.r2) nm.insertAdjacentHTML('beforeend', ksPill(l));
-        if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">' + (uploads[l.id].replace ? 'НОВОЕ ВИДЕО — НЕ ОПУБЛИКОВАНО' : 'НЕ ОПУБЛИКОВАН') + '</span>');
+        if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">' + (uploads[l.id].pvOnly ? 'НОВАЯ ОБЛОЖКА — НЕ ОПУБЛИКОВАНА' : uploads[l.id].replace ? 'НОВОЕ ВИДЕО — НЕ ОПУБЛИКОВАНО' : 'НЕ ОПУБЛИКОВАН') + '</span>');
         const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = fmtD(l.dur) + ' · ' + (l.added || '—') + (l.ru ? ' · ' + l.ru : '');
         tx.append(nm, mt);
         tx.addEventListener('click', () => openEdit(l.id));
@@ -1462,6 +1482,115 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     }, 150);
   }
 
+  // ---------- animated cover: start it later (owner 11.11.2026 «сдвигать анимационную обложку… на пару секунд вперёд») ----------
+  // The 3-second -p3.mp4 is cut again from the lesson's own video (Kinescope stream / R2 file / not yet published upload) at
+  // the chosen start: 3:4 crop, 360×480, 30 fps, no sound — like on upload. Optionally the cover jpg from the same frame.
+  // Kept in uploads[id] {pvOnly} until «Опубликовать»; the lesson gets pvAt (the start) and cv (cover version ⇒ new address
+  // in the app, so phones don't show the old cached animation).
+  const PV_LEN = 3;
+  let pvGen = 0, pvInput = null, pvTrack = null, pvSink = null, pvKey = '', pvBusy = false, pvT = 0;
+  const pvFmt = t => t.toFixed(1).replace('.', ',') + ' с';
+  async function pvSrc(l){
+    const M = await mb(), up = uploads[l.id];
+    if (up && up.mp4) return new M.Input({source: new M.BlobSource(up.mp4), formats: M.ALL_FORMATS});
+    if (l.r2 && !r2Pass) await r2GetPass();
+    const url = l.ks ? ksHls(l.ks) : l.r2 ? r2Url(l.r2) : new URL('v/' + l.id + '.mp4', location.href).href;
+    return new M.Input({source: new M.UrlSource(url), formats: M.ALL_FORMATS.concat(l.ks ? (M.HLS_FORMATS || []) : [])});
+  }
+  // the video track to read: the best quality not above 1080 (a 4K Kinescope stream is too heavy for 3 seconds of 360×480)
+  async function pvPick(input){
+    const vts = await input.getVideoTracks(); let pick = null, side = -1;
+    for (const t of vts) { const sd = Math.min(t.displayWidth, t.displayHeight); if (sd <= 1080 && sd > side) { pick = t; side = sd; } }
+    return pick || vts[0] || null;
+  }
+  function pvOpen(l){
+    const g = ++pvGen; pvInput = null; pvTrack = null; pvSink = null; pvKey = '';
+    const up = uploads[l.id], now = $('#pvNow');
+    now.src = up && up.p3 ? URL.createObjectURL(up.p3) : l.pv === false ? '' : 'v/' + l.id + '-p3.mp4?' + (l.cv || l.added || '');
+    if (!now.src) now.removeAttribute('src'); else now.play().catch(() => {});
+    $('#pvNowCap').textContent = l.pv === false && !(up && up.p3) ? 'Нет анимации' : 'Сейчас' + (l.pvAt ? ' · с ' + pvFmt(l.pvAt) : '');
+    const max = Math.max(0, (l.dur || 0) - PV_LEN);
+    const at = $('#pvAt'); at.max = String(Math.max(0.1, max)); at.value = String(Math.min(l.pvAt || 0, max)); $('#pvAtT').textContent = pvFmt(+at.value);
+    $('#pvBox').hidden = !canEncode || !(l.ks || l.r2 || (up && up.mp4) || vFiles[l.id + '.mp4'] != null);
+    $('#pvProg').hidden = true; $('#pvMake').disabled = false;
+    $('#pvState').textContent = canEncode ? '' : 'Этот браузер не умеет перекодировать видео — откройте админку в Chrome или Safari.';
+    const c = $('#pvFrame'); c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    pvFrame(+at.value, g);
+  }
+  function pvClose(){ pvGen++; const v = $('#pvNow'); try { v.pause(); } catch (_) {} v.removeAttribute('src'); }
+  // the frame at the chosen start, cut to 3:4 as the animation will be
+  async function pvFrame(t, g){
+    const l = editing; if (!l) return;
+    clearTimeout(pvT);
+    pvT = setTimeout(async () => {
+      try {
+        const M = await mb();
+        if (!pvInput) { pvInput = await pvSrc(l); pvTrack = await pvPick(pvInput); if (!pvTrack) throw new Error('нет картинки'); pvSink = new M.CanvasSink(pvTrack, {poolSize: 1}); }
+        if (g !== pvGen) return;
+        $('#pvFrameCap').textContent = 'Загружаю кадр…';
+        const fr = await pvSink.getCanvas(t);
+        if (g !== pvGen || !fr) return;
+        const cv = fr.canvas, c = crop34(cv.width, cv.height), out = $('#pvFrame');
+        out.getContext('2d').drawImage(cv, c.left, c.top, c.width, c.height, 0, 0, out.width, out.height);
+        $('#pvFrameCap').textContent = 'Начало: ' + pvFmt(t);
+      } catch(e) { if (g === pvGen) $('#pvFrameCap').textContent = 'Кадр не загрузился'; }
+    }, 220);
+  }
+  const pvSetAt = v => { const at = $('#pvAt'); at.value = String(Math.max(0, Math.min(+at.max, Math.round(v * 10) / 10))); $('#pvAtT').textContent = pvFmt(+at.value); pvFrame(+at.value, pvGen); };
+  $('#pvAt').addEventListener('input', () => pvSetAt(+$('#pvAt').value));
+  $('#pvMinus').addEventListener('click', () => pvSetAt(+$('#pvAt').value - 0.5));
+  $('#pvPlus').addEventListener('click', () => pvSetAt(+$('#pvAt').value + 0.5));
+  $('#pvMake').addEventListener('click', async () => {
+    const l = editing; if (!l || pvBusy) return;
+    const g = pvGen, start = +$('#pvAt').value, withJpg = $('#pvJpg').checked;
+    pvBusy = true; $('#pvMake').disabled = true; $('#pvProg').hidden = false; $('#pvBar').style.width = '3%';
+    const say = t => { if (g === pvGen) $('#pvState').textContent = t; };
+    say('Делаю анимацию с ' + pvFmt(start) + '… (до минуты, для Kinescope — дольше)');
+    try {
+      if (l.ks && await ksCheck(l.ks) !== 'ok') throw new Error('Kinescope ещё обрабатывает видео — попробуйте через пару минут');
+      const M = await mb(), input = await pvSrc(l), tr = await pvPick(input);
+      if (!tr) throw new Error('в видео нет картинки');
+      const c = crop34(tr.displayWidth, tr.displayHeight), W = 360, H = 480, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const gx = cv.getContext('2d');
+      const output = new M.Output({format: new M.Mp4OutputFormat({fastStart: 'in-memory'}), target: new M.BufferTarget()});
+      const end = Math.min(start + PV_LEN, l.dur || start + PV_LEN);
+      const conv = await M.Conversion.init({input, output, showWarnings: false, tracks: 'all', trim: {start, end},
+        video: t => t !== tr ? {discard: true} : {codec: 'avc', quality: new M.Quality({bitrate: 600000}), frameRate: 30, processedWidth: W, processedHeight: H,
+          process: async smp => { const src = smp.toCanvasImageSource(); let img = src; try { img = await createImageBitmap(src); } catch (_) {}
+            gx.drawImage(img, c.left, c.top, c.width, c.height, 0, 0, W, H); if (img !== src && img.close) img.close(); return cv; }},
+        audio: () => ({discard: true})});
+      if (!conv.isValid) throw new Error('браузер не смог прочитать видео (' + conv.discardedTracks.filter(d => d.reason !== 'discarded_by_user').map(d => d.reason).join(', ') + ')');
+      conv.onProgress = p => { if (g === pvGen) $('#pvBar').style.width = Math.round(5 + p * 85) + '%'; };
+      await withTimeout(conv.execute(), 180000);
+      const p3 = new Blob([output.target.buffer], {type: 'video/mp4'});
+      if (p3.size < 800) throw new Error('получился пустой файл');
+      // the cover picture: from the same frame (480×640 as on upload), or the current one stays
+      let jpg = null;
+      if (withJpg) {
+        const sink = new M.CanvasSink(tr, {poolSize: 1}), fr = await sink.getCanvas(start);
+        if (fr) { const k = crop34(fr.canvas.width, fr.canvas.height), o = document.createElement('canvas'); o.width = 480; o.height = 640;
+          o.getContext('2d').drawImage(fr.canvas, k.left, k.top, k.width, k.height, 0, 0, 480, 640);
+          jpg = await new Promise(r => o.toBlob(r, 'image/jpeg', 0.82)); }
+      }
+      const up = uploads[l.id];
+      if (!jpg) jpg = up ? up.jpg : await fetch('v/' + l.id + '.jpg?' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.blob() : null).catch(() => null);
+      if (!jpg) throw new Error('не нашёл текущую картинку обложки — включите «Картинку обложки — с того же кадра»');
+      if (up) { up.p3 = p3; up.jpg = jpg; up.coverUrl = URL.createObjectURL(jpg); }
+      else uploads[l.id] = {mp4: null, jpg, p3, coverUrl: URL.createObjectURL(jpg), replace: true, pvOnly: true};
+      l.pv = true; if (start > 0) l.pvAt = start; else delete l.pvAt;
+      l.cv = ((remote.lessons.find(x => x.id === l.id) || {}).cv || 0) + 1;
+      $('#pvBar').style.width = '100%';
+      if (g === pvGen) {
+        const now = $('#pvNow'); now.src = URL.createObjectURL(p3); now.play().catch(() => {});
+        $('#pvNowCap').textContent = 'Новая · с ' + pvFmt(start); $('#eCover').src = coverSrc(l);
+      }
+      say('Готово: анимация с ' + pvFmt(start) + (withJpg ? ', картинка обложки с того же кадра' : '') + '. Нажмите «Готово», потом «Опубликовать».');
+      renderLessons(); paintSaveBar();
+    } catch(e) {
+      say('Не получилось: ' + (e && e.message || e));
+    } finally { pvBusy = false; if (g === pvGen) { $('#pvMake').disabled = false; setTimeout(() => { if (g === pvGen) $('#pvProg').hidden = true; }, 800); } }
+  });
+
   // ---------- edit sheet ----------
   let editing = null;
   function fillSecSelect(sel){ sel.innerHTML = ''; SECTIONS.forEach(s => sel.add(new Option(s, s))); }
@@ -1478,6 +1607,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#eInfo').textContent = 'Длительность ' + fmtD(l.dur) + (l.ks ? ' · играет из Kinescope' : l.r2 ? ' · играет из Cloudflare R2' + (r2Size ? ' (' + fmtMB(r2Size) + ')' : '') : '') + (size && !l.r2 ? ' · в GitHub ' + fmtMB(size) : '') + (l.pv === false ? ' · без анимации обложки' : '');
     $('#eKs').value = l.ks ? ksPlay(l.ks) : '';
     paintKs(l);
+    pvOpen(l);
     $('#eName').value = l.name;
     fillSecSelect($('#eSec')); $('#eSec').value = l.sec;
     $('#eRu').value = l.ru || '';
@@ -1573,7 +1703,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     paintNewHint();
   });
   $('#eDate').addEventListener('change', paintNewHint);
-  function closeEdit(){ $('#editSheet').hidden = true; editing = null; }
+  function closeEdit(){ $('#editSheet').hidden = true; editing = null; pvClose(); }
   $('#eClose').addEventListener('click', closeEdit);
   $('#editSheet').addEventListener('click', e => { if (e.target.id === 'editSheet') closeEdit(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#editSheet').hidden) closeEdit(); });
@@ -2470,9 +2600,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) tree.push({path: 'config.js', mode: '100644', type: 'blob', content: cfgOut()});
       const newTree = await gh('/git/trees', {method: 'POST', body: {base_tree: head.tree.sha, tree}});
       const parts = [];
-      const idsNew = ids.filter(id => !uploads[id].replace), idsRep = ids.filter(id => uploads[id].replace);
+      const idsNew = ids.filter(id => !uploads[id].replace), idsRep = ids.filter(id => uploads[id].replace && !uploads[id].pvOnly), idsPv = ids.filter(id => uploads[id].pvOnly);
       if (idsNew.length) parts.push('новые уроки: ' + idsNew.map(id => lessons.find(l => l.id === id).name).join(', '));
       if (idsRep.length) parts.push('новое видео: ' + idsRep.map(id => lessons.find(l => l.id === id).name).join(', '));
+      if (idsPv.length) parts.push('анимация обложки: ' + idsPv.map(id => lessons.find(l => l.id === id).name).join(', '));
       if (deleted.length) parts.push('удалены: ' + deleted.join(', '));
       if (dropGh.length) parts.push('видео перенесены в Kinescope: ' + dropGh.join(', '));
       if (tree.some(t => t.path === 'config.js')) parts.push('настройки');

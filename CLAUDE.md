@@ -279,6 +279,16 @@
   can't see it); the 401 text says how to make a new token. iPhone home-screen admin has its own storage. Admin «версия 17».
 - «Добавить видео»: the lesson name is NOT taken from the file name any more (owner 07.11 «оставь пустым, введу вручную»);
   the file-name field (id) still fills itself from the typed name. Admin «версия 18».
+- Animated cover start (owner 11.11.2026 «сдвигать анимационную обложку… на пару секунд вперёд в админке»): lesson card
+  `#pvBox` «Анимационная обложка»: current -p3 (`#pvNow`) + the frame at the chosen start cut to 3:4 (`#pvFrame`, mediabunny
+  CanvasSink.getCanvas on the lesson's own video — `pvSrc(l)`: unpublished upload blob / Kinescope HLS (best ≤1080 track,
+  `pvPick`) / R2 with pass / v/<id>.mp4), slider `#pvAt` 0…dur−3 (0.1 s) + ±0,5 с, «Сделать анимацию» = Conversion trim
+  [start, start+3], crop+scale on a canvas (as convert()), 360×480, 30 fps, 600 kbit/s, no audio; «Картинку обложки — с того
+  же кадра» (on by default) = jpg 480×640 from that frame, else the current jpg is fetched. Kept in uploads[id] {pvOnly: true}
+  (list pill «НОВАЯ ОБЛОЖКА», save bar «анимация обложки», commit «анимация обложки: …»); lesson gets `pvAt` (start, admin
+  only) and `cv` = remote cv + 1. App: `jpgUrl(l)` / `pvUrl(l)` add `?c=<cv>` so phones fetch the new files (Pages caches
+  10 min, phones longer). Admin «версия 44». Tested headless with a colour-coded R2 test video (start 4.2 s ⇒ first frame
+  blue, +2 s yellow, 360×480, 3 s). Kinescope HLS path not reachable from the sandbox — same reader as cutStrip/cutIntro.
 - Lesson order by drag (owner 07.11.2026 «стрелками неудобно, если роликов много»): admin «Уроки» rows have a grip `.grip`
   (6 dots, right side) instead of ↑/↓: pointer events from the grip (touch-action:none, pointer capture), the row follows
   the finger, other rows of the section slide by one step, auto-scroll near the top/bottom edge (bottom zone above the
