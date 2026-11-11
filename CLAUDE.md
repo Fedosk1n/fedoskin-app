@@ -505,6 +505,27 @@
   leaderboard busts; profile row `#shopRow` (⭐ points) → sheet `#shopSheet` (preview of each item on my hero; Купить ·
   ⭐ N / не хватает / Надеть / Снять; buying wears it). Tested:
   worker on node:sqlite (auth, limits, self, inbox/seen, lb scores), app flow with mocked server (iPhone en).
+- Wardrobe (owner 11.11.2026 «как человек меняет одежду… инвентаря не предусмотрено?» → «делай»): the shop sheet `#shopSheet` is now
+  «Гардероб» with tabs `#wdSeg` «Мои вещи» / «Магазин» (`wdTab`; `openWd(tab)`: hero card `#heroCard` «Гардероб →» ⇒ mine, shop row
+  «Гардероб и магазин» ⇒ shop; no wallet yet ⇒ tabs + points hidden, only looks). «Мои вещи» (`minePaint`): `.mtop` = my hero now +
+  «Образ: ур. N · name» + worn items; «Образ» grid `#mLooks` = all 8 level looks (3 columns): unlocked ⇒ tap = wear (`setLook`),
+  locked = silhouette «Через {t}»; «Аксессуары» `#mItems` = owned items as shop cards (`itemCard(it, pre)` shared with the shop;
+  Надеть/Снять) or `#mEmpty` + «В магазин». The hidden pane is emptied on switch (same SVG ids twice ⇒ gradients broke).
+  Older look = `myLv` (`fedoskin-look`, 0 = always the newest; ≥ level ⇒ 0) ⇒ token 'lv<N>' rides in the look like 'girl':
+  `withLook(eq)` / `myLook()`; hero.js svg draws min(level, N) (hero.js `?v=11`); server /hero/eq keeps one /^lv[1-7]$/ (others
+  see it in the rating/battles); setMyEq strips 'girl' + lv. Level-up ⇒ myLv = 0 (the new look is put on) + lookSync. Old server drops
+  'lv' ⇒ btWallet re-syncs once per session (`BT.lvTried`). /visits `wd: 1` (admin banner; admin «версия 42»). Old gallery
+  `openHeroes`/#heroSheet kept, unused. Tested headless ru/en, b-boy/b-girl, mocked server (wear look, take off, shop tab, level-up reset).
+- 3-second loop on the slider (owner 11.11.2026 «как понять, где он начинается, где заканчивается… выделить на строке»): `.loopzone`
+  (#loopZone/#fsLoopZone) moved OUT of the 4-px `.track` (overflow hidden, same colour as the load layer ⇒ invisible) into `.timeline`:
+  gold band 14 px with gold brackets at both ends, above the line, under the knob; `paintLoop()` (setLoop + syncFs) also sets labels
+  `#tLoop`/`#fsTLoop` «↻ 0:12–0:15» (gold) in the time row — body `.loop3` hides the load label meanwhile; `lapFlash()` flashes the band
+  at every jump back (frame()) and on turning on. With the loop on, the finger on the slider MOVES the window (`lzMove`: grabbed on
+  the band ±14 px ⇒ keeps its offset, elsewhere ⇒ starts at the finger; picture = window start; release ⇒ plays from it, toolHint
+  updated). One-time toast «Цикл — золотая полоска на шкале. Потяни её, чтобы сдвинуть» (`fedoskin-loop-tip`). Landscape «ghost»
+  buttons (no timeline) unchanged. Tested headless on a vertical R2 lesson (mock 206 ranges): drag 0:05 → 0:11, loops 0:11–0:14.
+- B-girl rest text: the code already says «Твоя би-гёрл отдыхает» when prof.g = 'f'; profile save now repaints the rest bar at once
+  (was up to 15 s late). Owner reported the male text 11.11 18:26 — if it recurs after a full app restart, ask for a screenshot.
 - Rhythm battle, step 1 of 4 (owner 10.11.2026 «что-то похожее на настоящую игру» → chose option 1: a game on the current
   heroes, not a rebuild; plan = Project doc `claude/fedoskin-rhythm-battle-plan.md`): `rhythm.js` (`?v=1`, `window.RB`) — overlay
   `#rbGame` (.sheet-bg ⇒ history step; inner HTML + CSS built by rhythm.js). Setup «Собери связку»: 3 rows (TOPROCK / POWER /

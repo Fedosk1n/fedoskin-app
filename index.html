@@ -348,6 +348,24 @@ body.chatmode .tabs{display:none}
 .shopit button.subbtn{background:#3BD16F;color:#0B0B0C;height:auto;min-height:34px;padding:6px 6px;line-height:1.2}
 .shopit button.own{background:#26262B;color:var(--fg)} .shopit button.worn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
 .shopit button[disabled]{background:#26262B;color:var(--muted);cursor:default}
+/* wardrobe «Мои вещи» (11.11.2026) */
+.wdseg{margin:12px 0 0}
+.wdseg button{height:40px}
+.mtop{display:flex;gap:14px;align-items:center;margin-top:12px;padding:8px 12px 8px 8px;border-radius:16px;background:#1A1A1D;border:1px solid #26262A}
+.mhero{flex:none;width:92px} .mhero svg{display:block;width:100%;height:auto}
+.mtop b{font-size:15px;line-height:1.25} .mtop small{font-size:12px;line-height:1.35}
+.shopscroll{max-height:62dvh;margin-top:4px} .shopscroll .shopgrid{max-height:none;overflow:visible}
+.mscroll{max-height:52dvh;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-bottom:4px}
+.mh{font:400 20px var(--display);letter-spacing:.3px;text-transform:uppercase;margin:12px 0 2px}
+.mp{font-size:12.5px;line-height:1.4;color:var(--muted);margin:0 0 8px}
+.lookgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wdlook{font:inherit;color:inherit;cursor:pointer;padding:4px 6px 8px}
+.wdlook b{font-size:11.5px;line-height:1.25} .wdlook small{font-size:11px}
+.wdlook:not(.lock):not(.cur) small{color:var(--fg);font-weight:700}
+.wdlook.lock{cursor:default}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mempty{padding:12px;border-radius:14px;border:1px dashed #333338;text-align:center}
+.mempty p{font-size:13px;line-height:1.4;color:var(--muted);margin:0 0 10px}
 .btbtn{flex:none;display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 12px var(--body);letter-spacing:.3px;text-transform:uppercase;cursor:pointer}
 /* rating as a grid of hero cards, 3 in a row (owner 11.11.2026); places 1–3 gold / silver / bronze */
 .lbgrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;margin-top:10px!important}
@@ -738,7 +756,17 @@ body.fsmode .bigplay{z-index:3}
 .timeline{position:relative;height:28px;margin-top:8px}
 .track{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
 .track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0}
-.track .loopzone{position:absolute;top:0;bottom:0;background:rgba(242,239,232,.35)}
+/* the 3-second loop on the slider (owner 11.11.2026 «как понять, где он начинается и где заканчивается»): a gold band over the
+   line with brackets at both ends, a flash at every restart; label «↻ 0:12–0:15» in the time row instead of the load text */
+.timeline .loopzone{position:absolute;top:7px;height:14px;border-radius:4px;background:rgba(242,204,85,.26);box-shadow:inset 0 0 0 1.5px rgba(242,204,85,.8);pointer-events:none}
+.timeline .loopzone::before,.timeline .loopzone::after{content:"";position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:#F2CC55;box-shadow:0 0 6px rgba(242,204,85,.6)}
+.timeline .loopzone::before{left:-1.5px} .timeline .loopzone::after{right:-1.5px}
+.timeline .loopzone.lap{animation:lzlap .5s ease-out}
+@keyframes lzlap{0%{background:rgba(242,204,85,.8);box-shadow:inset 0 0 0 1.5px #F2CC55,0 0 12px rgba(242,204,85,.7)}100%{background:rgba(242,204,85,.26)}}
+.timeline.lzdrag .loopzone{background:rgba(242,204,85,.45)}
+.tloop{color:#F2CC55;font-weight:700;white-space:nowrap}
+body.loop3 .dlst{display:none}
+@media (prefers-reduced-motion: reduce){.timeline .loopzone.lap{animation:none}}
 /* how much of the video is already loaded / saved on the phone (owner 09.11.2026): a light layer under the orange line */
 .track .load{position:absolute;inset:0;pointer-events:none}
 .track .load i{position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(242,239,232,.42);transition:width .35s linear}
@@ -1028,8 +1056,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         </div>
         <div class="fsbottom">
           <div class="fsside" aria-hidden="true"><b id="fsSideName"></b><span id="fsSideMeta"></span></div>
-          <div class="timeline" style="margin:0"><div class="track"><div class="load" id="fsLoadBar"></div><div class="loopzone" id="fsLoopZone" hidden></div><div class="fill" id="fsFill"></div></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
-          <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span class="dlst" id="fsLoad" aria-live="polite"></span><span id="fsDur">0:00</span></div>
+          <div class="timeline" style="margin:0"><div class="track"><div class="load" id="fsLoadBar"></div><div class="fill" id="fsFill"></div></div><div class="loopzone" id="fsLoopZone" hidden></div><div class="knob" id="fsKnob"></div><input type="range" id="fsSeek" min="0" max="1000" value="0" aria-label="Перемотка"></div>
+          <div class="row" style="justify-content:space-between;font-size:12px;color:#C9C5BD;font-variant-numeric:tabular-nums"><span id="fsCur">0:00</span><span class="dlst" id="fsLoad" aria-live="polite"></span><span class="tloop" id="fsTLoop" hidden></span><span id="fsDur">0:00</span></div>
           <div class="fsctl">
             <button class="fsk" id="fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></span><span class="fsl">Цикл 3 сек</span></button>
             <button class="fsk" id="fsSpeed" aria-label="Скорость"><span class="fsi fstxt" id="fsSpeedVal">1x</span><span class="fsl">Скорость</span></button>
@@ -1055,14 +1083,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="timeline">
       <div class="track" id="track">
         <div class="load" id="loadBar"></div>
-        <div class="loopzone" id="loopZone" hidden></div>
         <div class="fill" id="fill"></div>
       </div>
+      <div class="loopzone" id="loopZone" hidden></div>
       <div class="knob" id="knob"></div>
       <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Перемотка">
     </div>
     <div class="row" style="justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums">
-      <span class="muted" id="tCur">0:00</span><span class="dlst" id="tLoad" aria-live="polite"></span><span class="muted" id="tDur">1:35</span>
+      <span class="muted" id="tCur">0:00</span><span class="dlst" id="tLoad" aria-live="polite"></span><span class="tloop" id="tLoop" hidden></span><span class="muted" id="tDur">1:35</span>
     </div>
   </div>
 
@@ -1250,10 +1278,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="lvlbar" aria-hidden="true"><i id="lvlBar" style="width:0%"></i></span>
       <span class="muted" id="lvlHint" style="font-size:12px;line-height:1.35"></span>
       <span class="btscore" id="btScore" hidden></span>
-      <span class="more">Все образы →</span>
+      <span class="more">Гардероб →</span>
     </span>
   </button>
-  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>+10 за победу · +20 за час уроков · +10 за новый урок</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Гардероб и магазин</b><small>+10 за победу · +20 за час уроков · +10 за новый урок</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
@@ -1486,11 +1514,27 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="sheet-bg" id="shopSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
-    <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Магазин</h2><span class="pts big">⭐ <b id="shopPts">0</b></span></div>
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Гардероб</h2><span class="pts big" id="shopPtsBox">⭐ <b id="shopPts">0</b></span></div>
+    <div class="seg wdseg" role="group" aria-label="Мои вещи или магазин" id="wdSeg"><button type="button" data-tab="mine" aria-pressed="true">Мои вещи</button><button type="button" data-tab="shop" aria-pressed="false">Магазин</button></div>
+    <div id="minePane">
+      <div class="mtop"><span class="mhero" id="mHero" aria-hidden="true"></span><span class="stack" style="gap:3px;min-width:0"><span class="label">Сейчас на тебе</span><b id="mLv"></b><small class="muted" id="mOn"></small></span></div>
+      <div class="mscroll" id="mScroll">
+        <h3 class="mh">Образ</h3>
+        <p class="mp">Новые образы открываются за время тренировок по урокам. Носи любой открытый.</p>
+        <div class="lookgrid" id="mLooks"></div>
+        <div id="mAcc">
+          <h3 class="mh">Аксессуары</h3>
+          <div class="mgrid" id="mItems"></div>
+          <div class="mempty" id="mEmpty" hidden><p>Пока пусто. Аксессуары покупаются в магазине за ⭐ — очки дают за победы в батлах и тренировки.</p><button type="button" class="btn btn-ghost" id="mToShop">В магазин</button></div>
+        </div>
+      </div>
+    </div>
+    <div id="shopPane" class="mscroll shopscroll" hidden>
     <div class="ptsinfo"><b>Как получить ⭐</b>
       <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в авто-батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
       <small>Поражение очков не даёт. Очки нельзя купить за деньги. Аксессуары — только для красоты, на батлы не влияют.</small></div>
     <div class="shopgrid" id="shopGrid"></div>
+    </div>
   </div>
 </div>
 <div class="sheet-bg btl" id="battle" hidden>
@@ -1576,7 +1620,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=10"></script>
+<script src="hero.js?v=11"></script>
 <script src="rhythm.js?v=6"></script>
 <script src="vendor/qr.js"></script>
 <script>
@@ -3250,9 +3294,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.loop = l;
     $('#btnLoop3').setAttribute('aria-pressed', !!l); $('#fsLoop3').setAttribute('aria-pressed', !!l);
     $('#badgeLoop').hidden = !l;
-    $('#loopZone').hidden = !l;
-    if (l){ $('#loopZone').style.left = (l.a / P.dur * 100) + '%'; $('#loopZone').style.width = ((l.b - l.a) / P.dur * 100) + '%'; }
+    paintLoop();
   }
+  function paintLoop(){
+    const l = P.loop, txt = l ? '↻ ' + fmt(l.a) + '–' + fmt(l.b) : '';
+    document.body.classList.toggle('loop3', !!l);
+    ['#loopZone', '#fsLoopZone'].forEach(id => { const z = $(id); z.hidden = !l; if (l && P.dur) { z.style.left = (l.a / P.dur * 100) + '%'; z.style.width = ((l.b - l.a) / P.dur * 100) + '%'; } });
+    ['#tLoop', '#fsTLoop'].forEach(id => { const e = $(id); e.hidden = !l; e.textContent = txt; });
+  }
+  // a short gold flash of the band each time the piece starts again — you see where it «jumps back»
+  function lapFlash(){ ['#loopZone', '#fsLoopZone'].forEach(id => { const z = $(id); z.classList.remove('lap'); void z.offsetWidth; z.classList.add('lap'); }); }
   // ===== subtitles: subs.js (window.LESSON_SUBS: id → {ks, langs, v}) + subs/<id>.json {ks, cues: [[from, to, {ru, en, …}]]}
   // valid only while the lesson still plays the same Kinescope video (a replaced video ⇒ ignored, like intros).
   // Choice in 'fedoskin-subs': 'off' or a language; nothing chosen ⇒ the app's language, off for Russian (the lessons are Russian).
@@ -3372,7 +3423,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else { P.t += (now - P.last) / 1000 * P.rate; }
       P.last = now;
       // the 3-second piece goes first; otherwise the whole lesson starts again (or stops if the loop is off)
-      if (P.loop){ if (P.t >= Math.min(P.loop.b, P.dur - 0.05)) seekTo(P.loop.a); }
+      if (P.loop){ if (P.t >= Math.min(P.loop.b, P.dur - 0.05)) { seekTo(P.loop.a); lapFlash(); } }
       else if (P.repeat && P.dur && P.t >= P.dur - 0.05){ seekTo(0); ctaNote(18); }
       else if (P.t >= P.dur){ P.t = P.dur; setPlaying(false); }
       paint();
@@ -3517,8 +3568,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#fsSpeedVal').textContent = P.rate + 'x'; $('#fsSpeed').setAttribute('aria-pressed', P.rate !== 1);
     $('#fsMirror').setAttribute('aria-pressed', P.mirror);
     $('#fsLoop').setAttribute('aria-pressed', !!P.repeat); $('#fsLoop3').setAttribute('aria-pressed', !!P.loop);
-    $('#fsLoopZone').hidden = !P.loop;
-    if (P.loop){ $('#fsLoopZone').style.left = (P.loop.a / P.dur * 100) + '%'; $('#fsLoopZone').style.width = ((P.loop.b - P.loop.a) / P.dur * 100) + '%'; }
+    paintLoop();
     syncGhost();
     $('#fsIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
   }
@@ -3631,14 +3681,28 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const r = tl.getBoundingClientRect(), rot = document.body.classList.contains('fs-rot'); // sideways picture: the slider runs top → bottom
       return Math.min(1, Math.max(0, rot ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width));
     };
+    // with the 3-second loop on (owner 11.11.2026) the finger moves the whole window: grabbed on the band ⇒ it keeps its
+    // place under the finger; elsewhere ⇒ the window starts where the finger is. The picture shows the window's start.
+    let lzOff = null;
+    const lzMove = t => {
+      const len = P.loop.b - P.loop.a, a = Math.max(0, Math.min(P.dur - len, t - lzOff));
+      P.loop = { a, b: a + len }; paintLoop(); scrubMove(a);
+    };
     tl.addEventListener('pointerdown', e => {
       if (e.button > 0) return;
       active = true; pid = e.pointerId; try { tl.setPointerCapture(pid); } catch (_) {} tl.classList.add('drag');
-      scrubStart(); scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs();
+      scrubStart();
+      const t = frac(e) * P.dur;
+      if (P.loop && P.dur) {
+        const pad = P.dur * 14 / Math.max(1, tl.getBoundingClientRect().width); // ≈14 px around the band still counts as «on it»
+        lzOff = t >= P.loop.a - pad && t <= P.loop.b + pad ? Math.max(0, Math.min(P.loop.b - P.loop.a, t - P.loop.a)) : 0;
+        tl.classList.add('lzdrag'); lzMove(t);
+      } else { lzOff = null; scrubMove(t); }
+      if (id === '#fsSeek') pokeFs();
       e.preventDefault();
     });
-    tl.addEventListener('pointermove', e => { if (!active || e.pointerId !== pid) return; scrubMove(frac(e) * P.dur); if (id === '#fsSeek') pokeFs(); });
-    const end = e => { if (!active || (e && e.pointerId != null && e.pointerId !== pid)) return; active = false; tl.classList.remove('drag'); scrubEnd(); };
+    tl.addEventListener('pointermove', e => { if (!active || e.pointerId !== pid) return; const t = frac(e) * P.dur; if (lzOff != null && P.loop) lzMove(t); else scrubMove(t); if (id === '#fsSeek') pokeFs(); });
+    const end = e => { if (!active || (e && e.pointerId != null && e.pointerId !== pid)) return; active = false; tl.classList.remove('drag', 'lzdrag'); scrubEnd(); if (lzOff != null && P.loop) { lzOff = null; lapFlash(); $('#toolHint').textContent = T('Фрагмент {a}–{b} повторяется по кругу. Включи замедление, чтобы разобрать его.', {a: fmt(P.loop.a), b: fmt(P.loop.b)}); } };
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tl.addEventListener(ev, end));
   });
 
@@ -3669,8 +3733,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   $('#btnLoop3').addEventListener('click', () => {
     if (P.loop){ setLoop(null); $('#toolHint').textContent = T('Повтор выключен.'); return; }
-    const a = Math.min(P.t, P.dur - 3), b = a + 3;
-    setLoop({ a, b });
+    const a = Math.max(0, Math.min(P.t, P.dur - 3)), b = Math.min(P.dur, a + 3);
+    setLoop({ a, b }); lapFlash();
+    if (!localStorage.getItem('fedoskin-loop-tip')) { try { localStorage.setItem('fedoskin-loop-tip', '1'); } catch (_) {} toast(T('Цикл — золотая полоска на шкале. Потяни её, чтобы сдвинуть')); }
     $('#toolHint').textContent = T('Фрагмент {a}–{b} повторяется по кругу. Включи замедление, чтобы разобрать его.', {a: fmt(a), b: fmt(b)});
     if (!P.playing){ seekTo(a); setPlaying(true); }
   });
@@ -4487,7 +4552,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lvlTitle').textContent = T(HERO.NAMES[v.level - 1]);
     $('#lvlBar').style.width = v.pct + '%';
     $('#lvlHint').textContent = v.next ? T('Ещё {t} тренировок — и новый образ: {perk}', {t: hmFmt(v.left), perk: T(HERO.PERKS[v.level])}) : T('Максимальный уровень — ты легенда');
-    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myLook()}); }
+    const hk = v.level + '|' + myLook().join(',');
+    if (heroDrawn !== hk) { heroDrawn = hk; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myLook()}); }
     lvlCheck();
     renderProgress();
   }
@@ -4496,9 +4562,19 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let myEq = []; try { myEq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
   const heroShown = () => !$('#profile').hidden || !$('#battles').hidden; // the hero card lives on «Батлы» (11.11.2026)
   // b-girl (owner 11.11.2026): the look = bought items + 'girl' (stored on the server with the items, so others see her too)
-  const myLook = () => prof.g === 'f' ? myEq.concat('girl') : myEq;
-  function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => k !== 'girl'); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (heroShown()) renderStats(); }
-  let heroDrawn = 0;
+  // wardrobe (owner 11.11.2026 «инвентарь»): any unlocked level look can be worn — 'lv<N>' rides along with the items like 'girl'
+  // (hero.js draws that level's outfit, never above the real level); 0 = always the newest look; reset on level-up
+  let myLv = 0; try { myLv = +localStorage.getItem('fedoskin-look') || 0; } catch (_) {}
+  const lookLv = () => myLv && myLv < statsView().level ? myLv : 0;
+  const withLook = eq => eq.concat(prof.g === 'f' ? ['girl'] : [], lookLv() ? ['lv' + lookLv()] : []);
+  const myLook = () => withLook(myEq);
+  const notItem = k => k === 'girl' || /^lv\d$/.test(k);
+  function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => !notItem(k)); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = ''; if (heroShown()) renderStats(); }
+  function setLook(l){
+    myLv = l >= statsView().level ? 0 : l; try { localStorage.setItem('fedoskin-look', String(myLv)); } catch (_) {}
+    lookSync(); wdPaint();
+  }
+  let heroDrawn = '';
   function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
   // the rating's full-length heroes: each look (level + things worn) is drawn once into an image and reused — 100 inline
   // SVGs of ~40 KB each would make the phone slow (11.11.2026)
@@ -4522,7 +4598,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#heroSheet').hidden = false;
     const cur = box.querySelector('.cur'); if (cur) setTimeout(() => cur.scrollIntoView({block: 'nearest'}), 50);
   }
-  $('#heroCard').addEventListener('click', openHeroes);
+  $('#heroCard').addEventListener('click', () => openWd('mine')); // owner 11.11.2026: the hero card opens the wardrobe (the old gallery openHeroes is kept)
   $('#heroSheet').addEventListener('click', e => { if (e.target.id === 'heroSheet') $('#heroSheet').hidden = true; });
   // the level the person has already celebrated; on the first start with the new levels it is just taken as is
   let lvlSeen = 0;
@@ -4537,7 +4613,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (l <= lvlSeen) return;
     const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
     if (busy) return;
-    const from = lvlSeen; lvlSave(l); showLvlUp(from, l);
+    const from = lvlSeen; lvlSave(l);
+    if (myLv) { myLv = 0; try { localStorage.setItem('fedoskin-look', '0'); } catch (_) {} lookSync(); } // a new level ⇒ its new look is put on
+    showLvlUp(from, l);
   }
   function showLvlUp(from, to){
     $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo', acc: myLook()}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un', acc: myLook()});
@@ -4546,7 +4624,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const box = $('#lvlUp'); box.hidden = false;
     box.querySelectorAll('.box *').forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
     if (navigator.vibrate) setTimeout(() => { try { navigator.vibrate([20, 60, 40]); } catch (_) {} }, 750);
-    heroDrawn = 0; if (heroShown()) renderStats();
+    heroDrawn = ''; if (heroShown()) renderStats();
   }
   window.fedoskinLevelUp = (a, b) => showLvlUp(a || 1, b || 2); // for checking the screen by hand
   $('#lvlUpOk').addEventListener('click', () => { $('#lvlUp').hidden = true; });
@@ -4620,7 +4698,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   // the look changed (b-boy ⇄ b-girl): redraw mine and tell the server (with the worn items) so others see it in battles
   async function lookSync(){
-    heroDrawn = 0; if (heroShown()) renderStats(); if (lbData) renderLeaders();
+    heroDrawn = ''; if (heroShown()) renderStats(); if (lbData) renderLeaders();
     if (!LB_URL || !lbShow) return;
     try { await btPost('/hero/eq', { eq: myLook() }); } catch (_) {}
   }
@@ -4643,7 +4721,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const gWas = prof.g === 'f' ? 'f' : 'm'; prof.g = gPick;
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
     if (gWas !== gPick) lookSync();
-    paintProfile(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
+    paintProfile(); btPaintRest(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
     if (LB_URL) lbSend(0).then(lbLoad);
   });
   const _goProfile = go;
@@ -4785,18 +4863,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     BT.wallet = Object.assign(BT.wallet || {}, w);
     $('#shopRow').hidden = false; $('#ptsN').textContent = nfmt(w.pts);
     if (Array.isArray(w.eq)) { const it = w.eq.filter(k => k !== 'girl'); if (JSON.stringify(it) !== JSON.stringify(myEq)) setMyEq(it);
-      if (w.eq.includes('girl') !== (prof.g === 'f')) lookSync(); } // the server still has the old look
-    if (!$('#shopSheet').hidden) shopPaint();
+      const slv = (w.eq.find(k => /^lv\d$/.test(k)) || '');
+      if (w.eq.includes('girl') !== (prof.g === 'f') || (slv !== (lookLv() ? 'lv' + lookLv() : '') && !BT.lvTried)) { BT.lvTried = 1; lookSync(); } } // the server still has the old look (an old server drops 'lv' ⇒ tried once)
+    if (!$('#shopSheet').hidden) wdPaint();
   }
-  function shopPaint(){
-    const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level, box = $('#shopGrid');
-    $('#shopPts').textContent = nfmt(w.pts);
-    box.innerHTML = '';
-    HERO.SHOP.slice().sort((a, b) => (b.sub ? 1 : 0) - (a.sub ? 1 : 0)).forEach(it => {
+  // one item card (shop and «Мои вещи» share it)
+  function itemCard(it, pre){
+    const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level;
       const own = (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
       const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '');
       const keep = myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; });
-      d.innerHTML = HERO.svg(lvl, { uid: 'sh' + it.id, acc: keep.concat(it.id, prof.g === 'f' ? ['girl'] : []) }) + '<b></b><button type="button"></button>';
+      d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) }) + '<b></b><button type="button"></button>';
       d.querySelector('b').textContent = T(it.name);
       const btn = d.querySelector('button');
       if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
@@ -4810,14 +4887,62 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           btn.disabled = true;
           if (Notification.permission === 'granted' && localStorage.getItem('fedoskin-push') === 'on') await teeAfterPush(); // already on — just link it
           else if (window.fedoskinPushOn) await window.fedoskinPushOn();
-          btn.disabled = false; shopPaint();
+          btn.disabled = false; wdPaint();
         };
       }
       else if (w.pts >= it.price) { btn.textContent = T('Купить · ⭐ {n}', { n: it.price }); btn.onclick = () => shopBuy(it, btn); }
       else { btn.disabled = true; btn.textContent = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts }); }
-      box.appendChild(d);
-    });
+      return d;
   }
+  function shopPaint(){
+    const w = BT.wallet || { pts: 0, owned: [] }, box = $('#shopGrid');
+    $('#shopPts').textContent = nfmt(w.pts);
+    box.innerHTML = '';
+    HERO.SHOP.slice().sort((a, b) => (b.sub ? 1 : 0) - (a.sub ? 1 : 0)).forEach(it => box.appendChild(itemCard(it)));
+  }
+  // ===== wardrobe = «Мои вещи» + «Магазин» in one sheet (owner 11.11.2026 «то есть инвентаря не предусмотрено?» → «делай») =====
+  let wdTab = 'mine';
+  function minePaint(){
+    const v = statsView(), cur = lookLv() || v.level, w = BT.wallet;
+    $('#mHero').innerHTML = HERO.svg(v.level, { uid: 'mh', acc: myLook() });
+    $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
+    const on = myEq.map(k => HERO.SHOP.find(x => x.id === k)).filter(Boolean).map(x => T(x.name));
+    $('#mOn').textContent = on.length ? on.join(' · ') : T('Без аксессуаров');
+    const looks = $('#mLooks'); looks.innerHTML = '';
+    HERO.LEVELS.forEach((need, i) => {
+      const l = i + 1, open = l <= v.level, worn = l === cur;
+      const d = document.createElement('button'); d.type = 'button';
+      d.className = 'herolook wdlook' + (open ? '' : ' lock') + (worn ? ' cur' : '');
+      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)) }) + '<b></b><small></small>';
+      d.querySelector('b').textContent = T('Ур. {n}', { n: l }) + ' · ' + T(HERO.NAMES[i]);
+      d.querySelector('small').textContent = worn ? T('Надето') : open ? T('Надеть') : T('Через {t}', { t: hmFmt(need - stats.sec / 60) });
+      if (!open) d.disabled = true;
+      else if (!worn) d.addEventListener('click', () => setLook(l));
+      looks.appendChild(d);
+    });
+    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id));
+    const box = $('#mItems'); box.innerHTML = '';
+    owned.forEach(it => box.appendChild(itemCard(it, 'mi')));
+    $('#mAcc').hidden = !w && !owned.length;
+    $('#mEmpty').hidden = !!owned.length || !w;
+  }
+  function wdPaint(){
+    if ($('#shopSheet').hidden) return;
+    const shop = !!BT.wallet; // no answer from the server yet ⇒ only the looks
+    if (!shop) wdTab = 'mine';
+    $('#wdSeg').hidden = !shop; $('#shopPtsBox').hidden = !shop; if (shop) $('#shopPts').textContent = nfmt(BT.wallet.pts || 0);
+    $('#wdSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === wdTab)));
+    $('#minePane').hidden = wdTab !== 'mine'; $('#shopPane').hidden = wdTab !== 'shop';
+    // the hidden pane is emptied: the same drawings twice ⇒ the same SVG ids, and gradients would be taken from the hidden copy
+    if (wdTab === 'mine') { $('#shopGrid').innerHTML = ''; minePaint(); } else { $('#mItems').innerHTML = ''; $('#mLooks').innerHTML = ''; $('#mHero').innerHTML = ''; shopPaint(); }
+  }
+  function openWd(tab){
+    wdTab = tab || wdTab; $('#shopSheet').hidden = false; wdPaint();
+    const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0;
+    if (BT.wallet) btInbox(false);
+  }
+  $('#wdSeg').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (!b) return; wdTab = b.dataset.tab; wdPaint(); const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0; });
+  $('#mToShop').addEventListener('click', () => { wdTab = 'shop'; wdPaint(); });
   async function shopBuy(it, btn){
     btn.disabled = true;
     try {
@@ -4826,15 +4951,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (r.status === 402) { btWallet({ pts: j.pts }); toast(T('Не хватает очков')); }
       else toast(T('Не получилось. Проверь интернет.'));
     } catch (_) { toast(T('Не получилось. Проверь интернет.')); }
-    shopPaint();
+    wdPaint();
   }
   async function shopWear(eq){
-    const before = myEq; setMyEq(eq); shopPaint();
-    try { const r = await btPost('/hero/eq', { eq: prof.g === 'f' ? eq.concat('girl') : eq }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
+    const before = myEq; setMyEq(eq); wdPaint();
+    try { const r = await btPost('/hero/eq', { eq: withLook(eq) }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
     catch (_) { setMyEq(before); toast(T('Не получилось. Проверь интернет.')); }
-    shopPaint(); if (lbData) renderLeaders();
+    wdPaint(); if (lbData) renderLeaders();
   }
-  $('#shopRow').addEventListener('click', () => { shopPaint(); $('#shopSheet').hidden = false; btInbox(false); });
+  $('#shopRow').addEventListener('click', () => openWd('shop'));
   $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') $('#shopSheet').hidden = true; });
   const btPost = (path, body) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})) });
   function btPaintScore(sc){

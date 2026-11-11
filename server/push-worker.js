@@ -794,6 +794,8 @@ async function battle(req, env, path, json) {
     (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; }); // one per slot
     const eq = Object.values(slots);
     if ((Array.isArray(b.eq) ? b.eq : []).includes('girl')) eq.push('girl'); // b-girl look (11.11.2026) — not an item, rides along with the items
+    const lv = (Array.isArray(b.eq) ? b.eq : []).map(String).find(k => /^lv[1-7]$/.test(k)); // an older level look chosen in the wardrobe (11.11.2026) — drawing never goes above the real level
+    if (lv) eq.push(lv);
     await db.prepare('INSERT INTO hero_eq (id, eq) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET eq = excluded.eq').bind(id, JSON.stringify(eq)).run();
     return json({ ok: true, eq });
   }
@@ -959,7 +961,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

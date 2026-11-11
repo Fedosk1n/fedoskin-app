@@ -38,7 +38,10 @@
   function levelFor(mins){ let l = 1; for (let i = 0; i < LEVELS.length; i++) if (mins >= LEVELS[i]) l = i + 1; return l; }
 
   function svg(level, opt){
-    const L = Math.max(1, Math.min(8, level | 0)); opt = opt || {};
+    opt = opt || {};
+    // an older look chosen in the wardrobe (owner 11.11.2026 «инвентарь»): 'lv<N>' in acc draws the outfit of level N (never higher)
+    const pick = (Array.isArray(opt.acc) ? opt.acc : []).map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
+    const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8));
     const id = 'h' + L + (opt.uid || '');
     const GOLD = 'url(#' + id + 'gold)';
     const o = [];
