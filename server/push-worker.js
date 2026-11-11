@@ -519,7 +519,7 @@ const HERO_LEVELS = [0, 60, 240, 600, 1200, 2100, 3600, 6000];
 const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes
 const DJ_SLOT = 30 * 60e3; // the DJ keeps a pair's track for half an hour
 // must match HERO.SHOP in hero.js: id → [slot, price]
-const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500] };
+const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0] }; // tee = not sold: given for push notifications (owner 11.11.2026)
 const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3;
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
 const BT_TITLE = { ru: 'Батл!', en: 'Battle!', es: '¡Batalla!', pt: 'Batalha!', fr: 'Battle !', de: 'Battle!', ja: 'バトル！', ko: '배틀!', zh: '斗舞！' };
@@ -653,6 +653,8 @@ async function battle(req, env, path, json) {
   const wallet = async () => {
     const sc = await score(id), own = await db.prepare('SELECT item FROM hero_own WHERE id = ?').bind(id).all();
     const owned = (own.results || []).map(r => r.item).filter(k => SHOP[k]);
+    // the team tee: this phone has notifications on (its subscription is linked) ⇒ it's theirs
+    if (!owned.includes('tee') && await db.prepare('SELECT 1 AS x FROM bt_sub WHERE id = ?').bind(id).first()) { await db.prepare('INSERT OR IGNORE INTO hero_own (id, item, t) VALUES (?, ?, ?)').bind(id, 'tee', now).run(); owned.push('tee'); }
     const bon = await db.prepare('SELECT SUM(pts) AS p FROM pts_bonus WHERE id = ?').bind(id).first();
     const earned = sc.w * PTS_WIN + Math.floor((me.m || 0) / 60) * PTS_HOUR + (bon && bon.p || 0);
     const spent = owned.reduce((n, k) => n + SHOP[k][1], 0);
@@ -768,6 +770,7 @@ async function battle(req, env, path, json) {
     if (!SHOP[item]) return json({ error: 'item' }, 400);
     const w = await wallet();
     if (w.owned.includes(item)) return json({ ok: true, ...w });
+    if (item === 'tee') return json({ error: 'sub', pts: w.pts }, 402); // only for notifications (wallet() gives it once they're on)
     if (w.pts < SHOP[item][1]) return json({ error: 'points', pts: w.pts }, 402);
     await db.prepare('INSERT OR IGNORE INTO hero_own (id, item, t) VALUES (?, ?, ?)').bind(id, item, now).run();
     return json({ ok: true, ...(await wallet()) });
@@ -784,7 +787,8 @@ async function battle(req, env, path, json) {
     if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys || !s.keys.p256dh || !s.keys.auth) return json({ error: 'sub' }, 400);
     await db.prepare('INSERT INTO bt_sub (id, sub, lang) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET sub = excluded.sub, lang = excluded.lang')
       .bind(id, JSON.stringify({ endpoint: s.endpoint, p256dh: s.keys.p256dh, auth: s.keys.auth }), BT_TITLE[b.lang] ? b.lang : 'en').run();
-    return json({ ok: true });
+    const w = await wallet(); // gives the team tee
+    return json({ ok: true, pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq });
   }
   return json({ error: 'not found' }, 404);
 }
@@ -940,7 +944,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

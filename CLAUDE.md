@@ -436,6 +436,17 @@
   toast «+10 ⭐ — ты посмотрел новый урок в первый час!»; local `fedoskin-fresh-got`. Shop sheet `.ptsinfo` «Как получить ⭐»
   (+10 win / +20 hour / +10 new lesson, loss = 0, not for money); shop row subtitle lists the three. /visits `pf: 1` (admin
   banner otherwise; admin «версия 39»). Tested: worker (admin only, claim once, late, republish), app (chip, claim after 30 s).
+  Team tee for notifications (owner 11.11.2026 «шмотку за подписку на уведомления… без цены, с подписью «за подписку»»):
+  HERO.SHOP item `tee` (slot top, price 0, `sub: true`, «Футболка Fedoskin team») — `fit.top = 'teeTeam'` replaces the level's
+  top: white tee, orange round «FT» print + black band «FEDOSKIN TEAM» (SVG text with textLength), short white sleeves (also
+  the raised arm at level 8 and the rig). Server SHOP tee: ['top', 0]; wallet() gives it (hero_own) whenever the phone has a
+  `bt_sub` row (its push subscription linked — also existing subscribers); /bt/sub answers the wallet; /hero/buy tee ⇒ 402
+  {error:'sub'}. App: shop lists `sub` items first; not owned ⇒ green card `.subit`, caption «🔔 За подписку на уведомления»,
+  button «Включить уведомления» → window.fedoskinPushOn() (turnOn now returns true/false and calls window.fedoskinPushed) /
+  already on ⇒ `teeAfterPush()` = btLinkPush(true) → tee owned ⇒ toast «Футболка Fedoskin team — твоя! 🎉» + worn at once;
+  iPhone not on the home screen ⇒ install guide + toast. «Как получить ⭐» lists 🎁 the tee. /visits `tee: 1` (admin
+  banner; admin «версия 40»), hero.js `?v=7`. Tested: worker (402 without sub, sub ⇒ owned, eq, old subscribers), drawings
+  levels 1–8 + rig + bust, shop before/after (ru).
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give

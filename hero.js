@@ -30,6 +30,8 @@
     { id: 'red', slot: 'kicks', price: 250, name: 'Красные кроссовки' },
     { id: 'box', slot: 'item', price: 300, name: 'Бумбокс' },
     { id: 'fire', slot: 'fx', price: 500, name: 'Огненная аура' },
+    // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
+    { id: 'tee', slot: 'top', price: 0, sub: true, name: 'Футболка Fedoskin team' },
   ];
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
   const OR = '#E2611A', OR_D = '#B44812', BLK = '#18181B', BLK2 = '#232328', WH = '#F2EFE8', WH_D = '#D6D1C6';
@@ -51,7 +53,7 @@
     // ---- the outfit of this level ----
     const fit = {
       hat: has('bandana') ? 'bandana' : [null, null, 'cap', 'cap', 'beanie', 'bucket', 'capBack', 'capGold', 'capGold'][L],
-      top: [null, 'tee', 'tee', 'teeBig', 'track', 'track', 'bomber', 'trackGold', 'trackGold'][L],
+      top: has('tee') ? 'teeTeam' : [null, 'tee', 'tee', 'teeBig', 'track', 'track', 'bomber', 'trackGold', 'trackGold'][L],
       pants: [null, 'jeans', 'jeans', 'trackp', 'trackp', 'trackp', 'wind', 'trackpGold', 'trackpGold'][L],
       shoe: [null, 'canvas', 'leather', 'leather', 'runner', 'runner', 'high', 'highGold', 'highGold'][L],
     };
@@ -200,7 +202,7 @@
 
     // ---- arms (behind the torso) ----
     const longSleeve = /track|bomber/.test(fit.top);
-    const sleeveCol = { tee: '#8E8E95', teeBig: BLK, track: OR, bomber: BLK, trackGold: BLK }[fit.top];
+    const sleeveCol = { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[fit.top];
     const cuffCol = { track: BLK, bomber: OR, trackGold: '#E7B23C' }[fit.top];
     const arm = (side) => {
       // side 0 = viewer's left (drawn), right is mirrored unless raised
@@ -234,10 +236,15 @@
     const AR_L = cap(() => arm(0)), AR_R = rig ? cap(() => MIR(() => arm(1))) : '';
     if (!rig) o.push(AR_L);
     if (rig) { /* both arms come from arm() */ } else if (L >= 8) {
-      // right arm up — fist in the air (sleeve, cuff, fist)
-      P('M129 92 Q143 88 148 72 L151 48 L139 46 L137 70 L127 98 Z', sleeveCol, S());
-      LN('M146 72 L149 49', GOLD, 2.2);
-      P('M138 44 L152 46 L151 54 L137 52 Z', cuffCol, S(1.6));
+      // right arm up — fist in the air (sleeve, cuff, fist); in the team tee: a bare arm with a short sleeve
+      if (fit.top === 'teeTeam') {
+        P('M129 92 Q143 88 148 72 L151 48 L139 46 L137 70 L127 98 Z', SKIN, S()); LN('M145 72 L148 50', SKIN_D, 1.4);
+        P('M129 92 Q140 89 144 80 L133 76 L126 96 Z', WH, S());
+      } else {
+        P('M129 92 Q143 88 148 72 L151 48 L139 46 L137 70 L127 98 Z', sleeveCol, S());
+        LN('M146 72 L149 49', GOLD, 2.2);
+        P('M138 44 L152 46 L151 54 L137 52 Z', cuffCol, S(1.6));
+      }
       P('M137 44 Q135 30 142 27 Q152 25 155 31 Q157 38 152 45 Z', SKIN, S());
       LN('M140 33 Q146 31 152 33 M140 38 Q146 36 152 38', SKIN_D, 1.2);
       if (has('gloves')) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', '#141416', S(1.6)); LN('M139 40 H153', OR, 1.2); }
@@ -247,7 +254,18 @@
     // ---- torso ----
     const TO0 = o.length;
     const top = fit.top;
-    if (top === 'tee' || top === 'teeBig') {
+    if (top === 'teeTeam') { // the team tee (for notifications): white, an orange round print with «FT» + a black band «FEDOSKIN TEAM»
+      const body = 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 150 Q100 153 71 150 Z';
+      P(body, WH, S()); P(body, 'url(#' + id + 'sh)');
+      P('M86 86 Q100 97 114 86 L111 85 Q100 93 89 85 Z', WH_D, S(1.4));
+      LN('M80 120 Q83 132 80 146 M120 118 Q117 132 120 146', 'rgba(0,0,0,.12)', 1.4);
+      LN('M72 146 Q100 149 128 146', 'rgba(0,0,0,.18)', .9, ' stroke-dasharray="1.6 1.6"');
+      o.push('<circle cx="100" cy="112" r="14" fill="' + OR + '" stroke="' + INK + '" stroke-width="1.8"/><circle cx="100" cy="112" r="11" fill="none" stroke="' + BLK + '" stroke-width="1" stroke-dasharray="1.4 1.4"/>');
+      o.push('<text x="100" y="117.5" text-anchor="middle" font-family="Anton, Impact, Arial Black, sans-serif" font-weight="900" font-size="15" textLength="15" lengthAdjust="spacingAndGlyphs" fill="' + BLK + '">FT</text>');
+      P('M80 130 h40 v8 h-40 Z', BLK, S(1));
+      o.push('<text x="100" y="136.3" text-anchor="middle" font-family="Anton, Impact, Arial Black, sans-serif" font-weight="900" font-size="5.6" textLength="36" lengthAdjust="spacingAndGlyphs" fill="' + WH + '">FEDOSKIN TEAM</text>');
+      LN('M84 139 v4 M100 139 v6 M114 139 v3', OR, 1.8); // little drips
+    } else if (top === 'tee' || top === 'teeBig') {
       const big = top === 'teeBig', col = big ? BLK : '#8E8E95';
       const body = big ? 'M66 94 Q70 87 82 85 L118 85 Q130 87 134 94 L133 156 Q100 160 67 156 Z' : 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 150 Q100 153 71 150 Z';
       P(body, col, S()); P(body, 'url(#' + id + 'sh)');
