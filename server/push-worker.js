@@ -377,7 +377,7 @@ async function leaderboard(req, env, json) {
     const me = String(q.get('id') || ''), city = normCity(q.get('city'));
     const mine = me ? await lbRow(db, me) : null;
     const pack = async (where, args) => {
-      const top = (await db.prepare('SELECT ' + LB_COLS + ' FROM lb WHERE hid = 0' + where + ' ORDER BY m DESC, f ASC LIMIT 50').bind(...args).all()).results || [];
+      const top = (await db.prepare('SELECT ' + LB_COLS + ' FROM lb WHERE hid = 0' + where + ' ORDER BY m DESC, f ASC LIMIT 100').bind(...args).all()).results || [];
       const total = (await db.prepare('SELECT COUNT(*) AS n FROM lb WHERE hid = 0' + where).bind(...args).first()).n;
       let place = 0;
       if (mine && !mine.hid && (!where || mine.cn === city)) place = 1 + (await db.prepare('SELECT COUNT(*) AS n FROM lb WHERE hid = 0' + where + ' AND (m > ? OR (m = ? AND f < ?))').bind(...args, mine.m, mine.m, mine.f).first()).n;
@@ -452,7 +452,7 @@ async function leaderboardKV(req, env, json) {
     const pack = list => ({
       total: list.length,
       place: list.findIndex(r => r.id === me) + 1,
-      top: list.slice(0, 50).map(r => ({ id: r.id, n: r.n, c: r.c, co: r.co, a: r.a, m: r.m, v: r.v, s: r.s }))
+      top: list.slice(0, 100).map(r => ({ id: r.id, n: r.n, c: r.c, co: r.co, a: r.a, m: r.m, v: r.v, s: r.s }))
     });
     const out = { world: pack(all), city: city ? pack(all.filter(r => normCity(r.c) === city)) : null };
     // battle scores of the people shown (10.11.2026)

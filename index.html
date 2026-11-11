@@ -248,7 +248,7 @@ body.chatmode .tabs{display:none}
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--hair);
   padding:8px max(8px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px))}
-.tabs-in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tabs-in{max-width:480px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)} /* as many columns as there are tabs (4 since «Батлы», 11.11.2026) */
 .tab{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:52px;justify-content:center;background:none;border:none;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
 .tab[aria-current="page"]{color:var(--accent)}
 
@@ -752,7 +752,7 @@ body.fsmode .bigplay{z-index:3}
 @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
 /* upright tablet: lesson and profile in one comfortable column */
 @media (min-width: 680px) and (max-width: 959.98px) and (min-height: 560px){
-  #lesson > *,#profile > *{max-width:760px;margin-left:auto;margin-right:auto}
+  #lesson > *,#profile > *,#battles > *{max-width:760px;margin-left:auto;margin-right:auto}
 }
 /* wide tablet (sideways, or a big one): lesson = video on the left, title, text and «more lessons» on the right;
    profile = two columns */
@@ -1130,20 +1130,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA</span>
     <p style="margin-top:10px;font-size:14px;line-height:1.45;font-weight:600">Ты альфа-тестер. Когда приложение станет платным, получишь месяц подписки бесплатно, а значок и аватар «Альфа» останутся у тебя навсегда.</p>
   </div>
-  <button class="card herocard" id="heroCard" type="button">
-    <span class="heroimg" id="heroImg" aria-hidden="true"></span>
-    <span class="stack herotx">
-      <span class="label">Твой уровень</span>
-      <span class="d lvl" id="lvlName">Уровень 1</span>
-      <span class="ttl" id="lvlTitle"></span>
-      <span class="lvlbar" aria-hidden="true"><i id="lvlBar" style="width:0%"></i></span>
-      <span class="muted" id="lvlHint" style="font-size:12px;line-height:1.35"></span>
-      <span class="btscore" id="btScore" hidden></span>
-      <span class="more">Все образы →</span>
-    </span>
-  </button>
-  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>Очки — за победы в батлах и часы уроков</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stViews">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">роликов посмотрено</span></div>
     <div class="card stack" style="padding:14px 12px;gap:6px;border-radius:16px"><span class="d" style="font-size:30px;line-height:1;font-variant-numeric:tabular-nums"><span id="stMins">0</span></span><span class="muted" style="font-size:12px;line-height:1.3">минут тренировок</span></div>
@@ -1160,6 +1146,39 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="list-item" id="storeItem"><span style="flex:1;font-weight:600">Память на телефоне</span><span class="muted" style="font-size:13px" id="storeState"></span></button>
   </div>
   <p class="muted" id="statsNote" style="margin-top:8px;font-size:11px">Считаются уроки и минуты, которые ты реально смотришь. Статистика хранится на этом телефоне.</p>
+
+  </div>
+  <div class="pcol-b">
+
+  <div class="sec">
+    <h2 style="margin-bottom:4px">Сохранённое</h2>
+    <div id="savedList"></div>
+  </div>
+
+  <div class="sec">
+    <h2 style="margin-bottom:12px">Прогресс по разделам</h2>
+    <div class="stack" id="progress" style="gap:12px"></div>
+  </div>
+
+  </div>
+</section>
+
+<!-- БАТЛЫ (owner 11.11.2026: own tab in the bottom menu; hero, shop, rating and battles moved here from the profile) -->
+<section class="screen" id="battles" aria-label="Батлы" hidden>
+  <h1>Батлы</h1>
+  <button class="card herocard" style="margin-top:16px" id="heroCard" type="button">
+    <span class="heroimg" id="heroImg" aria-hidden="true"></span>
+    <span class="stack herotx">
+      <span class="label">Твой уровень</span>
+      <span class="d lvl" id="lvlName">Уровень 1</span>
+      <span class="ttl" id="lvlTitle"></span>
+      <span class="lvlbar" aria-hidden="true"><i id="lvlBar" style="width:0%"></i></span>
+      <span class="muted" id="lvlHint" style="font-size:12px;line-height:1.35"></span>
+      <span class="btscore" id="btScore" hidden></span>
+      <span class="more">Все образы →</span>
+    </span>
+  </button>
+  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>Очки — за победы в батлах и часы уроков</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
@@ -1186,20 +1205,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="btn btn-accent" id="shareRank" style="margin-top:14px;min-height:52px">
       <svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
       Поделиться статистикой</button>
-  </div>
-  </div>
-  <div class="pcol-b">
-
-  <div class="sec">
-    <h2 style="margin-bottom:4px">Сохранённое</h2>
-    <div id="savedList"></div>
-  </div>
-
-  <div class="sec">
-    <h2 style="margin-bottom:12px">Прогресс по разделам</h2>
-    <div class="stack" id="progress" style="gap:12px"></div>
-  </div>
-
   </div>
 </section>
 
@@ -1503,11 +1508,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ['review','Коучинг','<path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12.5 11.5h.01M16.5 11.5h.01" stroke-width="2.6"/>'], // owner 09.11.2026: icon + one short word
     // promo tab hidden for now, comes back later
     // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
+    ['battles','Батлы','<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'], // owner 11.11.2026
     ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
   let installWanted = false, watchedNow = false, newRowDirty = false;
-  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',chat:'review',promo:'promo',profile:'profile'};
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',chat:'review',promo:'promo',battles:'battles',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== languages =====
@@ -4304,7 +4310,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // ===== the hero: gallery of looks + «level up» screen =====
   // accessories this phone wears (bought in the shop with points; the server keeps the real list, this is the copy)
   let myEq = []; try { myEq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
-  function setMyEq(eq){ myEq = Array.isArray(eq) ? eq : []; try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (!$('#profile').hidden) renderStats(); }
+  const heroShown = () => !$('#profile').hidden || !$('#battles').hidden; // the hero card lives on «Батлы» (11.11.2026)
+  function setMyEq(eq){ myEq = Array.isArray(eq) ? eq : []; try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (heroShown()) renderStats(); }
   let heroDrawn = 0;
   function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
   function heroMini(level, uid, acc){ return '<span class="heromini"><i style="background:' + HERO.RING[level - 1] + '40">' + HERO.svg(level, {bust: true, bg: false, uid, acc}) + '</i><b>' + level + '</b></span>'; }
@@ -4345,7 +4352,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const box = $('#lvlUp'); box.hidden = false;
     box.querySelectorAll('.box *').forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
     if (navigator.vibrate) setTimeout(() => { try { navigator.vibrate([20, 60, 40]); } catch (_) {} }, 750);
-    heroDrawn = 0; if (!$('#profile').hidden) renderStats();
+    heroDrawn = 0; if (heroShown()) renderStats();
   }
   window.fedoskinLevelUp = (a, b) => showLvlUp(a || 1, b || 2); // for checking the screen by hand
   $('#lvlUpOk').addEventListener('click', () => { $('#lvlUp').hidden = true; });
@@ -4368,7 +4375,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       stats.last = t;
     }
     if (stats.sec % 5 === 0) saveStats();
-    if (!$('#profile').hidden) renderStats();
+    if (heroShown()) renderStats();
   }, 1000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveStats(); });
   window.addEventListener('pagehide', saveStats);
@@ -4428,7 +4435,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (LB_URL) lbSend(0).then(lbLoad);
   });
   const _goProfile = go;
-  go = function(id){ _goProfile(id); if (id === 'profile') { renderStats(); if (LB_URL) btInbox(false); if (LB_URL) lbSend(2 * 60e3).then(() => { if (Date.now() - lbAt > 60e3) lbLoad(); else renderLeaders(); }); } };
+  go = function(id){ _goProfile(id); if (id === 'profile' || id === 'battles') { renderStats(); if (LB_URL) btInbox(false); if (LB_URL) lbSend(2 * 60e3).then(() => { if (Date.now() - lbAt > 60e3) lbLoad(); else renderLeaders(); }); } };
 
   // ===== leaderboard (alpha): our small Cloudflare server (the same one as notifications), no accounts =====
   // The phone sends its nick, city, avatar and minutes; a random secret makes sure only this phone can change its line.
@@ -4466,6 +4473,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     } catch (_) { lbErr = true; }
     lbBusy = false; renderLeaders();
   }
+  const LB_SHOW = 10; let lbAll = false; // rating rows shown before «Показать весь рейтинг» (owner 11.11.2026)
   function renderLeaders(){
     if (!LB_URL) return;
     $('#myMins').textContent = T('{n} мин', {n: nfmt(statsView().mins)});
@@ -4486,7 +4494,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const srch = LBQ.q.length >= 2 ? LBQ.res : null;
     if (srch) { say(LBQ.busy ? T('Ищу…') : srch.length ? '' : T('Никого не нашли')); }
     else if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
-    (srch || part.top).forEach((r, i) => {
+    // owner 11.11.2026: the top 100, but only the first 10 until «Показать весь рейтинг»
+    const rows = srch || (lbAll ? part.top : part.top.slice(0, LB_SHOW));
+    rows.forEach((r, i) => {
       const me = r.id === prof.id;
       const li = document.createElement('li'); li.className = 'row';
       li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
@@ -4507,6 +4517,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       li.querySelector('.mn').textContent = T('{n} мин', {n: nfmt(r.m)});
       box.appendChild(li);
     });
+    if (!srch && part.top.length > LB_SHOW) {
+      const li = document.createElement('li'); li.style.cssText = 'padding:12px 0 0;list-style:none';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost lbmore';
+      b.textContent = lbAll ? T('Свернуть') : T('Показать весь рейтинг ({n})', { n: part.top.length });
+      b.addEventListener('click', () => {
+        const wasAll = lbAll; lbAll = !lbAll; renderLeaders();
+        if (wasAll) { const sec = $('#leaders'); try { sec.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (_) {} }
+      });
+      li.appendChild(b); box.appendChild(li);
+    }
   }
   // ===== hero battles (owner 10.11.2026: «батлить друг с другом… ради интерактива») =====
   // A tap on «Батл» in the rating asks the server for a battle: three judges vote at random there (a higher level gives a
@@ -4538,7 +4558,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#btRestT').textContent = T('ещё {t}', { t: hmFmt(left / 60e3) });
     $('#btRestBar').style.width = Math.min(100, Math.max(2, 100 * (1 - left / BT_REST))).toFixed(1) + '%';
   }
-  setInterval(() => { if (!$('#profile').hidden) btPaintRest(); }, 15e3);
+  setInterval(() => { if (!$('#battles').hidden) btPaintRest(); }, 15e3);
   // points + the shop (points only for battle wins and lesson hours, never for money)
   function btWallet(w){
     if (!w || typeof w.pts !== 'number') return;

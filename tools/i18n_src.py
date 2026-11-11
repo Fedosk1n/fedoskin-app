@@ -524,6 +524,9 @@ t('Освобождено {n}', '{n} freed', '{n} liberados', '{n} liberados', '
 t('Удалить', 'Delete', 'Borrar', 'Apagar', 'Supprimer', 'Löschen', '削除', '삭제', '删除')
 t('Удалённый урок', 'Removed lesson', 'Lección eliminada', 'Aula removida', 'Leçon supprimée', 'Entfernte Lektion', '削除されたレッスン', '삭제된 레슨', '已删除的课程')
 t('Пусто', 'Empty', 'Vacío', 'Vazio', 'Vide', 'Leer', 'なし', '없음', '无')
+t('Батлы', 'Battles', 'Batallas', 'Batalhas', 'Battles', 'Battles', 'バトル', '배틀', '斗舞')
+t('Показать весь рейтинг ({n})', 'Show full ranking ({n})', 'Ver todo el ranking ({n})', 'Ver ranking completo ({n})', 'Voir tout le classement ({n})', 'Ganze Rangliste zeigen ({n})', 'ランキングをすべて表示（{n}）', '전체 랭킹 보기 ({n})', '查看完整排行榜（{n}）')
+t('Свернуть', 'Show less', 'Mostrar menos', 'Mostrar menos', 'Réduire', 'Weniger anzeigen', '閉じる', '접기', '收起')
 
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}

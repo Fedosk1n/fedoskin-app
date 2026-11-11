@@ -470,6 +470,14 @@
   search `#lbQ` (results replace the list via `LBQ`); `?vs=` ⇒ `vsOpen()` sheet `#vsSheet` «{name} вызывает тебя на батл!» →
   «Принять вызов» turns «show me» on, `lbSend(0, true)` (joins even with < 1 min) and battles that id. Owner chose nick search
   despite my child-safety note (only nick/level/country shown, as in the rating). D1 at large scale needs Workers Paid ($5/mo).
+- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (lightning icon)
+  / Профиль; `.tabs-in` is grid-auto-flow:column (any number of tabs). Screen `#battles` (h1 «Батлы»): `#heroCard` (level, outfits,
+  `#btScore`), `#shopRow`, the whole rating section (rankSoon/rankBox, rest bar, btTools, `#leaders`, show-me switch,
+  `#shareRank`) — moved out of `#profile` (ids unchanged). go('battles') does what go('profile') did for the rating
+  (renderStats, btInbox, lbSend/lbLoad); `heroShown()` = profile or battles visible; btPaintRest ticks on #battles.
+  Rating = top 100 (worker LIMIT 100 / KV slice 100 — the owner must update the server code; old server = 50): only the first
+  `LB_SHOW` = 10 rows until `.lbmore` «Показать весь рейтинг (N)» / «Свернуть» (`lbAll`, scrolls back to the list); search
+  results are never cut. Tested headless iPhone ru 390×844 / en 375×667 with a mocked /lb of 100 rows.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
 - iPhone home-screen app (iOS 26, WebKit 301108): the viewport is short by the status bar and nothing is drawn below it.
