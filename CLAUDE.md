@@ -470,7 +470,11 @@
   search `#lbQ` (results replace the list via `LBQ`); `?vs=` ⇒ `vsOpen()` sheet `#vsSheet` «{name} вызывает тебя на батл!» →
   «Принять вызов» turns «show me» on, `lbSend(0, true)` (joins even with < 1 min) and battles that id. Owner chose nick search
   despite my child-safety note (only nick/level/country shown, as in the rating). D1 at large scale needs Workers Paid ($5/mo).
-- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (lightning icon)
+- Press feedback (owner 11.11.2026 «легкую анимацию нажатия на любую кнопку»): CSS right after `.ico` — every button / .btn /
+  [role=button] shrinks to scale .95 while pressed (`:where(...)` = lowest priority), wide ones (.list-item, button.card,
+  .svccard, coach card buttons) to .98; uses the separate `scale` property (adds to transform positioning); .fsk / .fsghost /
+  .fscorner keep their own. A no-op document touchstart listener makes iPhone apply :active.
+- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (icon: two profiles face to face — owner «face to face, это ведь батл 1-1»)
   / Профиль; `.tabs-in` is grid-auto-flow:column (any number of tabs). Screen `#battles` (h1 «Батлы»): `#heroCard` (level, outfits,
   `#btScore`), `#shopRow`, the whole rating section (rankSoon/rankBox, rest bar, btTools, `#leaders`, show-me switch,
   `#shareRank`) — moved out of `#profile` (ids unchanged). go('battles') does what go('profile') did for the rating
@@ -544,6 +548,14 @@
   hls.resumeBuffering(); and a 500 ms check: playing, readyState < 3, not buffered for 2.5 s ⇒ resumeBuffering + startLoad(t).
   Reproduced in Chromium by dispatching `endstreaming` on a MediaSource subclass aliased as ManagedMediaSource (/tmp/tst/rep.js).
   Owner confirmed on his real iPhone 11.11.2026 13:07: «проверил все работает» (Baby love repeat with our MMS player).
+  Load bar for Kinescope lessons (owner 11.11.2026 13:19 screenshot «скачался, но полоска глючит» — it showed only the player's
+  ~30 s buffer with holes where he had scrubbed): `KS_HAVE` (ks → Set of saved piece keys; filled once per lesson by
+  `ksHaveLoad` in ldStart, kept up to date by ksPut, cleared by ksForget) + `ksSavedSegs(l)` = the current quality's fragments
+  whose key is saved ⇒ ldTick paints `mergeSegs(buffered ∪ saved)`; all saved ⇒ «✓ Сохранён на телефоне».
+  Offline with a partly saved lesson (found while testing): a failed unsaved piece used to be fatal ⇒ dropHls + «Видео не
+  загрузилось» although the start was on the phone. Now a fatal NETWORK_ERROR on a fragment with something buffered/saved
+  ⇒ keep playing, `hls.startLoad(t)` again in 4 s (and on `online`; the stall check retries too). Tested: 3-min fake lesson,
+  pieces 1:00–2:00 deleted, server off ⇒ plays from the phone, bar 0–33 % + 67–100 %.
 - «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
   `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
   limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache

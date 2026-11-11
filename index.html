@@ -61,6 +61,12 @@ p{margin:0}
 .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
 .back{width:44px;height:44px;border-radius:22px;background:#1C1C1F;border:none;color:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+/* light press feedback on every button (owner 11.11.2026 «легкую анимацию нажатия на любую кнопку»): the separate `scale`
+   property, so it adds to buttons that already use transform for their position; quick in, soft back out */
+button,.btn,[role="button"]{transition:scale .16s cubic-bezier(.2,.8,.2,1)}
+:where(button:not(:disabled),.btn,[role="button"]):active{scale:.95;transition-duration:.05s} /* :where = lowest priority, the rules below win */
+.list-item:active,button.card:active,.svccard:active,.coachcard button:active{scale:.98}
+.fsk:active,.fsghost button:active,.fscorner:active{scale:1} /* these have their own press effect */
 .ph{background:repeating-linear-gradient(135deg,#1A1A1D 0 14px,#141416 14px 28px)}
 .list-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--hair);text-decoration:none;color:var(--fg);background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;cursor:pointer}
 .thumb{width:52px;height:52px;flex:0 0 52px;border-radius:12px;background:#1C1C1F;display:flex;align-items:center;justify-content:center}
@@ -1501,6 +1507,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
+  document.addEventListener('touchstart', () => {}, { passive: true }); // iPhone shows :active (press feedback) only with a touch listener
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const TABS = [
     ['home','Главная','<path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/>'],
@@ -1508,7 +1515,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ['review','Коучинг','<path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 11.5h.01M12.5 11.5h.01M16.5 11.5h.01" stroke-width="2.6"/>'], // owner 09.11.2026: icon + one short word
     // promo tab hidden for now, comes back later
     // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
-    ['battles','Батлы','<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'], // owner 11.11.2026
+    // owner 11.11.2026: «что-то в стиле face to face, это ведь батл 1-1» — two profiles facing each other
+    ['battles','Батлы','<path d="M2.6 20.5C2.2 18.6 1.2 17 1.2 12.6C1.2 8 3.6 4.6 6.6 4.6C8.4 4.6 9.3 5.8 9.3 7.6L9.3 8.6L10.4 11L9.4 11.5L9.5 12.6C9.5 14 8.6 14.8 7.4 14.8L7.4 16.6C7.4 18.4 8.6 19.6 10 20.5"/><path d="M21.4 20.5C21.8 18.6 22.8 17 22.8 12.6C22.8 8 20.4 4.6 17.4 4.6C15.6 4.6 14.7 5.8 14.7 7.6L14.7 8.6L13.6 11L14.6 11.5L14.5 12.6C14.5 14 15.4 14.8 16.6 14.8L16.6 16.6C16.6 18.4 15.4 19.6 14 20.5"/>'],
     ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
@@ -2224,7 +2232,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ksSaved[ks] = { h: h || (was && was.h) || 0, t: Date.now() };
     try { localStorage.setItem(KS_SAVED, JSON.stringify(ksSaved)); } catch (_) {}
   }
-  function ksForget(ks){ if (ks) delete ksSaved[ks]; else ksSaved = {}; try { localStorage.setItem(KS_SAVED, JSON.stringify(ksSaved)); } catch (_) {} }
+  function ksForget(ks){ if (ks) { delete ksSaved[ks]; KS_HAVE.delete(ks); } else { ksSaved = {}; KS_HAVE.clear(); } try { localStorage.setItem(KS_SAVED, JSON.stringify(ksSaved)); } catch (_) {} }
   const KS_ROOT = new URL('__ks/', location.href).href;
   function ksPieceKey(ks, url, a, b){ try { return KS_ROOT + ks + new URL(url).pathname + (a != null && b ? '@' + a + '-' + b : ''); } catch (_) { return ''; } }
   function ksListKey(ks, url){
@@ -2239,11 +2247,29 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (!(await ksLimit())) return; // «Не хранить»
       const c = await caches.open(VCACHE);
       await c.put(key, new Response(body, { headers: { 'Content-Type': type, 'Content-Length': String(body.size), 'X-Saved': String(Date.now()) } }));
-      ksAdded += body.size; if (onDone) onDone();
+      ksAdded += body.size; ksHaveAdd(key); if (onDone) onDone();
       // let sw.js trim to the limit now and then (not after every 4-second piece)
       if (ksAdded > 24 * 1048576 || !ksPingT) { ksAdded = 0; clearTimeout(ksPingT); ksPingT = setTimeout(() => { ksPingT = 0; stPing('limit'); }, 15000); stPing('limit'); }
       if (!persistAsked) { persistAsked = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (_) {} }
     }).catch(() => {});
+  }
+  // which pieces of a Kinescope lesson are on the phone (for the load bar on the timeline, owner 11.11.2026 «шкала не
+  // выглядит прогруженной»: it showed only the player's ~30 s buffer, not what is saved): ks → Set of piece keys
+  const KS_HAVE = new Map();
+  function ksHaveAdd(key){ if (key.indexOf(KS_ROOT) !== 0) return; const ks = key.slice(KS_ROOT.length).split('/')[0], h = KS_HAVE.get(ks); if (h) h.add(key); }
+  async function ksHaveLoad(ks){
+    if (KS_HAVE.has(ks) || !window.caches) return;
+    const set = new Set(); KS_HAVE.set(ks, set);
+    try { const pre = KS_ROOT + ks + '/'; (await (await caches.open(VCACHE)).keys()).forEach(k => { if (k.url.indexOf(pre) === 0) set.add(k.url); }); } catch (_) {}
+  }
+  // the saved stretches of the current quality's video, as parts of the lesson (0…1)
+  function ksSavedSegs(l){
+    const set = KS_HAVE.get(l.ks); if (!set || !set.size || !hls || !hls.levels) return [];
+    const lv = hls.levels[hls.currentLevel >= 0 ? hls.currentLevel : hls.loadLevel] || hls.levels[0], d = lv && lv.details;
+    const dur = (d && d.totalduration) || P.dur; if (!d || !dur) return [];
+    const out = [];
+    d.fragments.forEach(f => { if (set.has(ksPieceKey(l.ks, f.url, f.byteRangeStartOffset, f.byteRangeEndOffset))) out.push([f.start / dur, Math.min(1, (f.start + f.duration) / dur)]); });
+    return out;
   }
   async function ksGet(key, text){
     if (!key || !window.caches) return null;
@@ -2326,6 +2352,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const inBuf = t => { try { const b = vid.buffered; for (let i = 0; i < b.length; i++) if (t >= b.start(i) - 0.25 && t < b.end(i) - 0.2) return true; } catch (_) {} return false; };
   function hlsKick(){ if (!hls || inBuf(vid.currentTime)) return; try { hls.resumeBuffering && hls.resumeBuffering(); } catch (_) {} }
   vid.addEventListener('seeking', hlsKick); vid.addEventListener('waiting', hlsKick);
+  window.addEventListener('online', () => { if (hls) try { hls.startLoad(vid.currentTime); } catch (_) {} });
   let hlsStallT = 0;
   setInterval(() => {
     if (!hls || av !== vid || !P.playing || scrub || document.hidden || vid.readyState >= 3 || inBuf(vid.currentTime)) { hlsStallT = 0; return; }
@@ -2401,6 +2428,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         // only a playback problem moves this iPhone to Apple's own player — no internet is not one (that would switch off
         // keeping lessons for a week)
         if (isApple && d.type !== Hls.ErrorTypes.NETWORK_ERROR && toNative('error')) return;
+        // no internet while part of the lesson is on the phone / in the player: keep what plays, try the rest again later
+        // (before, the whole player was dropped as soon as an unsaved piece failed — owner 11.11.2026 tests offline)
+        if (d.type === Hls.ErrorTypes.NETWORK_ERROR && d.frag && (vid.buffered.length || (ksSaved[ks] && KS_HAVE.get(ks) && KS_HAVE.get(ks).size))) {
+          const h = hls; clearTimeout(h._retryT);
+          h._retryT = setTimeout(() => { if (hls === h) try { h.startLoad(vid.currentTime); } catch (_) {} }, 4000);
+          return;
+        }
         dropHls(); streamFailed();
       });
       hls.loadSource(url);
@@ -2525,6 +2559,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ['#tLoad', '#fsLoad'].forEach(id => { const el = $(id); if (!el) return; if (txt) el.textContent = txt; el.classList.toggle('on', !!txt); el.classList.toggle('ok', !!ok); });
   }
   function ldDone(txt, ms){ ldLabel('✓ ' + txt, true); clearTimeout(ldHideT); ldHideT = setTimeout(() => ldLabel(''), ms); }
+  function mergeSegs(a){
+    a = a.filter(x => x[1] > x[0]).sort((x, y) => x[0] - y[0]); const out = [];
+    a.forEach(x => { const t = out[out.length - 1]; if (t && x[0] <= t[1] + 0.002) t[1] = Math.max(t[1], x[1]); else out.push([x[0], x[1]]); });
+    return out;
+  }
   function bufSegs(){
     const d = P.dur || av.duration, out = []; if (!d || !isFinite(d)) return out;
     try { const b = av.buffered; for (let i = 0; i < b.length; i++) out.push([Math.max(0, b.start(i) / d), Math.min(1, b.end(i) / d)]); } catch (_) {}
@@ -2545,8 +2584,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (ldState !== x.st) ldDone(x.st === 'saved' ? T('Сохранён на телефоне') : T('Загружен целиком'), ldState === 'dl' ? 5000 : 2500);
         ldState = x.st; next = 3000;
       } else {
-        const sg = bufSegs(); ldPaint(sg);
+        // Kinescope lessons: what the player holds now + every piece saved on the phone (merged)
+        const sg = l.ks ? mergeSegs(bufSegs().concat(ksSavedSegs(l))) : bufSegs(); ldPaint(sg);
         const sum = sg.reduce((a, y) => a + y[1] - y[0], 0);
+        if (l.ks && sum >= 0.995 && KS_HAVE.get(l.ks) && KS_HAVE.get(l.ks).size) { if (ldState !== 'ksfull') ldDone(T('Сохранён на телефоне'), 3000); ldState = 'ksfull'; next = 2000; }
         if (!l.ks && sum >= 0.995) { if (ldState !== 'full') ldDone(T('Загружен целиком'), 3000); ldState = 'full'; next = 3000; }
         // iPhone: the label shows while the player keeps loading (it may stop part way — then the label goes away)
         else if (!l.ks) {
@@ -2559,6 +2600,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ldTimer = setTimeout(() => ldTick(gen, l), next);
   }
   function ldStart(l){
+    if (l && l.ks) ksHaveLoad(l.ks);
     clearTimeout(ldTimer); clearTimeout(ldHideT); ldGen++; ldState = ''; ldSum = 0; ldGrowT = 0; ldPaint([]); ldLabel('');
     const g = ldGen; ldTimer = setTimeout(() => ldTick(g, l), 250);
   }
