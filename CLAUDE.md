@@ -474,7 +474,7 @@
   [role=button] shrinks to scale .95 while pressed (`:where(...)` = lowest priority), wide ones (.list-item, button.card,
   .svccard, coach card buttons) to .98; uses the separate `scale` property (adds to transform positioning); .fsk / .fsghost /
   .fscorner keep their own. A no-op document touchstart listener makes iPhone apply :active.
-- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (icon: two profiles face to face — owner «face to face, это ведь батл 1-1»)
+- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (icon: two FILLED profile silhouettes face to face with a gap — owner «face to face, это ведь батл 1-1»; the outline version «не понятно, что это лица»)
   / Профиль; `.tabs-in` is grid-auto-flow:column (any number of tabs). Screen `#battles` (h1 «Батлы»): `#heroCard` (level, outfits,
   `#btScore`), `#shopRow`, the whole rating section (rankSoon/rankBox, rest bar, btTools, `#leaders`, show-me switch,
   `#shareRank`) — moved out of `#profile` (ids unchanged). go('battles') does what go('profile') did for the rating
