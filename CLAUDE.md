@@ -394,7 +394,7 @@
   transformers.js 3.7.5 pipeline, whisper-large-v3-turbo_timestamped fp16/fp16 from the browser's transformers-cache, WebGPU,
   chunk 30 s / stride 5 s, word timestamps; 522 s took 92 s, 1020 s took 180 s), raw committed via the GitHub contents API.
   subs_build writes `r2` (file name) for lessons without ks; app subsInfo also requires x.r2 === l.r2. Glossary: чер = air chair
-  (Whisper writes «черт»), реверс = reverse 1990, дрил = drill, складка = pike, веревка = split, спичак = press handstand.
+  (Whisper writes «черт»), реверс = reverse 1990, дрил = drill, складка = pike, верёвка = SIDE split / straddle (owner 11.11.2026: «поперечный шпагат»; ru subs say «поперечный шпагат»), складка = pike (owner: folding the body as close to the legs as possible), спичак = press handstand. subs.js `v` is bumped by hand after re-translating (build resets it to 1 — bump again).
 - Pull to refresh (owner 05.11.2026: canvas particle vortex «тормозит», then a plain ring «хочу анимацию на лого»): `#ptr`
   = logo layers: ghost (16 %), `#ptrInk` white logo revealed left→right by clip-path as you pull with a spray dot `#ptrCan`
   riding the edge; full = ready (pop + vibrate). Release ⇒ `.spin`: `icons/logo-paint.png` (orange-filled logo, made with
