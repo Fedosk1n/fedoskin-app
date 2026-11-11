@@ -480,7 +480,7 @@ body.chatmode .tabs{display:none}
 /* swipe to the next / previous lesson: the video follows the finger, the neighbour's cover slides in */
 .stage.swiping #vid,.stage.swiping #vin,.stage.swiping .vload{translate:var(--sx,0) 0}
 .stage.swipe-anim #vid,.stage.swipe-anim #vin,.stage.swipe-anim .vload,.stage.swipe-anim .swpeek{transition:translate .15s ease-out}
-.swpeek{position:absolute;inset:0;background:#111113 center/cover no-repeat;display:none;align-items:center;justify-content:flex-start;padding:0 16px;box-sizing:border-box;pointer-events:none;translate:var(--px,100%) 0}
+.swpeek{position:absolute;inset:0;background:#0B0B0C center/contain no-repeat;display:none;align-items:center;justify-content:flex-start;padding:0 16px;box-sizing:border-box;pointer-events:none;translate:var(--px,100%) 0}
 .swpeek.from-left{justify-content:flex-end}
 .stage .swpeek video,.stage .swpeek canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:transparent}
 .stage .swpeek canvas[hidden]{display:none}
@@ -2756,7 +2756,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (mem) { if (pv.getAttribute('src') !== mem) { pv.src = mem; try { pv.load(); } catch (_) {} } pv.hidden = false; }
         else { pv.hidden = true; pv.removeAttribute('src'); }
         if (nb) {
-          $('#swPeek').style.backgroundImage = "url('v/" + nb.id + ".jpg')";
+          // its real frame is coming (memory): no cover behind it — the cover's crop differs, and a landscape lesson in the
+          // tall vertical view showed a zoomed copy above and below the frame (owner 11.11.2026 screenshot)
+          $('#swPeek').style.backgroundImage = mem ? 'none' : "url('v/" + nb.id + ".jpg')";
           $('#swPeekDir').textContent = dir > 0 ? T('Следующий урок') + ' →' : '← ' + T('Предыдущий урок');
           $('#swPeekName').textContent = nb.name;
         } else {
@@ -2806,7 +2808,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           const pv = $('#swPeekVid'), cv = $('#swPeekCan');
           let hold = !pv.hidden && pv.readyState >= 2 && pv.videoWidth > 0;
           if (hold) {
-            try { cv.width = pv.videoWidth; cv.height = pv.videoHeight; cv.getContext('2d').drawImage(pv, 0, 0); cv.hidden = false; }
+            try { cv.width = pv.videoWidth; cv.height = pv.videoHeight; cv.getContext('2d').drawImage(pv, 0, 0); cv.hidden = false; $('#swPeek').style.backgroundImage = 'none'; }
             catch (_) { hold = false; }
           }
           if (hold) {

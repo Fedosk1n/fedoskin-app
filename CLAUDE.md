@@ -118,6 +118,10 @@
   used by swipe neighbours, the peek prime and openLesson (meta «Новые уроки · урок n из m», `#nextHead` «Ещё новые уроки»,
   near preload). End chip «Это последний/первый из новых уроков»; swipe-down / edge-back labels say just «Назад» (back goes
   home). Tested: row swipes 1→2→3, last ⇒ chip, a section still walks the section.
+  Stacked picture (owner 11.11.2026 screenshot: swiping «Новые уроки» from a vertical to a landscape lesson in the vertical
+  view showed the neighbour's cover zoomed above and below its frame): `.swpeek` background is now `#0B0B0C center/contain`
+  (was cover), and the cover jpg is dropped (`backgroundImage none`) whenever the real first frame is there (memory blob at
+  swipe start, or the peekhold canvas copy). Landscape lessons reached by swipe stay in the vertical view with black bars.
   Neighbour preload (31.10): once the lesson plays (+0.6 s, fallback 4 s) its neighbours — next, prev, next+1 — are
   downloaded whole into memory (`introMem`, blob:, serial, max 5, ≤12 MB each): GitHub lessons = the whole mp4
   (`mediaFor`), Kinescope = the intro. Same gate as intros (`introFast`, saveData). GitHub lessons then play from the
