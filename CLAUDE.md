@@ -621,6 +621,15 @@
   jump back got no `startstreaming`. Fix: `hlsKick()` on vid seeking/waiting — position not in vid.buffered ⇒
   hls.resumeBuffering(); and a 500 ms check: playing, readyState < 3, not buffered for 2.5 s ⇒ resumeBuffering + startLoad(t).
   Reproduced in Chromium by dispatching `endstreaming` on a MediaSource subclass aliased as ManagedMediaSource (/tmp/tst/rep.js).
+  White screen ⇒ app restarted on home (owner 11.11.2026 17:25: Windmill(head), 9.5-min landscape Kinescope lesson from «Новые
+  уроки», ~1 min in, iPhone) = the phone closed the app, most likely for memory. hls.js defaults kept everything watched
+  (backBufferLength Infinity) and ran ahead up to 60 MB (8·maxBufferSize/bitrate, ≤ 600 s — the fake 3-min lesson was buffered
+  whole). Now Apple: backBufferLength 8, maxBufferLength 24, maxMaxBufferLength 40, maxBufferSize 18 MB; others 30/30/60/40 MB
+  (tested: Apple buffer ≈ t−10…t+42). Safety net at start: while a lesson plays the app writes `fedoskin-run` {id, t, ts, m =
+  Apple+hls.js} every 3 s, wiped on hidden/pagehide/leaving the lesson; a note < 90 s old at start = closed under the person ⇒
+  m ⇒ MMS_OFF (Apple's own player for 7 days), the lesson reopens and seeks to t on `playing`, toast «Приложение
+  перезапустилось — продолжаем с M:SS»; not again within 10 min (`fedoskin-run-rec`). Tested with CDP Page.crash (Android UA:
+  resumed 0:23; iPhone UA: mms-off set). The real cause on the phone is not confirmed — ask the owner if it happens again.
   Owner confirmed on his real iPhone 11.11.2026 13:07: «проверил все работает» (Baby love repeat with our MMS player).
   Load bar for Kinescope lessons (owner 11.11.2026 13:19 screenshot «скачался, но полоска глючит» — it showed only the player's
   ~30 s buffer with holes where he had scrubbed): `KS_HAVE` (ks → Set of saved piece keys; filled once per lesson by

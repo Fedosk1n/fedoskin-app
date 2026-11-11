@@ -2485,7 +2485,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (vid.canPlayType('application/vnd.apple.mpegurl')) { vid.src = url; if (P.playing && av === vid) playMain(); } else streamFailed(); return; }
       // start with 720p or lower: the first piece downloads fast, then hls.js raises the quality by itself
       const env = {};
-      hls = env.hls = new Hls(Object.assign({ capLevelToPlayerSize: !saved, autoStartLoad: false, startFragPrefetch: true, maxBufferLength: 30 }, window.caches ? ksLoaders(Hls, ks, env) : {}));
+      // memory (owner 11.11.2026: a 9-min landscape lesson on iPhone, after ~1 min the screen went white and the app
+      // restarted = the phone closed it for memory): hls.js by default keeps EVERYTHING already watched (back buffer
+      // without end) and runs ahead up to 60 MB. Now: little behind, ~30 s ahead (the pieces are saved on the phone
+      // anyway, so going back costs nothing). iPhone/iPad stricter.
+      const lim = isApple ? { backBufferLength: 8, maxBufferLength: 24, maxMaxBufferLength: 40, maxBufferSize: 18 * 1048576 }
+        : { backBufferLength: 30, maxBufferLength: 30, maxMaxBufferLength: 60, maxBufferSize: 40 * 1048576 };
+      hls = env.hls = new Hls(Object.assign({ capLevelToPlayerSize: !saved, autoStartLoad: false, startFragPrefetch: true }, lim, window.caches ? ksLoaders(Hls, ks, env) : {}));
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         // start in the quality the remembered internet speed allows (480p when unknown), never above 720p;
         // after that hls.js adjusts it by itself. (After an intro the picture may get sharper at the switch —
@@ -5759,6 +5765,38 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else if (startState.s === 'section' && startState.sec) openSection(startState.sec);
     else if (document.getElementById(startState.s)) go(startState.s);
   }
+  // Safety net (owner 11.11.2026: in the middle of a long lesson the screen went white and the app started again on the
+  // home screen = the phone closed it, most likely for memory). While a lesson plays, every 3 s the app notes which lesson
+  // and where; leaving the app or the lesson in a normal way wipes the note. A fresh note at start = the app was closed
+  // under the person ⇒ the same lesson opens again at that moment; if it ran on our iPhone stream player (MMS), the
+  // phone's own player is used from now on (7 days, as after other MMS trouble). Not twice within 10 minutes (no loops).
+  (() => {
+    const RUN = 'fedoskin-run', REC = 'fedoskin-run-rec';
+    let r = null;
+    try { r = JSON.parse(localStorage.getItem(RUN) || 'null'); localStorage.removeItem(RUN); } catch (_) {}
+    const clear = () => { try { localStorage.removeItem(RUN); } catch (_) {} };
+    setInterval(() => {
+      if (!curLesson || $('#lesson').hidden || document.hidden) { clear(); return; }
+      if (!P.playing) return;
+      try { localStorage.setItem(RUN, JSON.stringify({ id: curLesson.id, t: Math.floor(av.currentTime || P.t || 0), ts: Date.now(), m: !!(isApple && hls) })); } catch (_) {}
+    }, 3000);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
+    window.addEventListener('pagehide', clear);
+    if (!r || !(Date.now() - r.ts < 90e3) || !BY_ID[r.id]) return;
+    if (r.m) try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
+    let last = 0; try { last = +localStorage.getItem(REC) || 0; } catch (_) {}
+    if (Date.now() - last < 600e3 || (startState && startState.s === 'lesson')) return;
+    try { localStorage.setItem(REC, String(Date.now())); } catch (_) {}
+    const l = BY_ID[r.id];
+    openSection(l.sec); openLesson(l.id);
+    if (r.t > 3) {
+      const at = r.t, done = () => { [vid, vin].forEach(el => el.removeEventListener('playing', on)); };
+      const on = () => { done(); if (curLesson === l) setTimeout(() => { if (curLesson === l) seekTo(at); }, 150); };
+      [vid, vin].forEach(el => el.addEventListener('playing', on));
+      setTimeout(done, 30000);
+    }
+    setTimeout(() => toast(T('Приложение перезапустилось — продолжаем с {t}', { t: fmtD(r.t) })), 600);
+  })();
   if (!startState || !startState.s || /^(home|review|svc)$/.test(startState.s)) restoreCrypto(); // came back from the exchange app after a reload
   try {
     const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
