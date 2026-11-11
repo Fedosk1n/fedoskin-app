@@ -192,6 +192,16 @@ window.LESSONS_DATA = [
   "r2": "fr-shoulder-freeze-5kuht6i2.mp4"
  },
  {
+  "id": "tr-airchair",
+  "sec": "Freezes",
+  "name": "AIRCHAIR",
+  "dur": 522,
+  "ru": "airchair чер чейр",
+  "added": "2026-11-11",
+  "pv": true,
+  "r2": "tr-airchair-ke4ejzel.mp4"
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
