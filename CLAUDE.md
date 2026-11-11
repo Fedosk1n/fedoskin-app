@@ -535,6 +535,7 @@
   jump back got no `startstreaming`. Fix: `hlsKick()` on vid seeking/waiting — position not in vid.buffered ⇒
   hls.resumeBuffering(); and a 500 ms check: playing, readyState < 3, not buffered for 2.5 s ⇒ resumeBuffering + startLoad(t).
   Reproduced in Chromium by dispatching `endstreaming` on a MediaSource subclass aliased as ManagedMediaSource (/tmp/tst/rep.js).
+  Owner confirmed on his real iPhone 11.11.2026 13:07: «проверил все работает» (Baby love repeat with our MMS player).
 - «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
   `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
   limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache
