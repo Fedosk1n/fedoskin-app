@@ -426,6 +426,16 @@
   flashes + raised hands in the crowd on hype, shadow shrinks in the air, judges lean toward the dancer (`.judges.wl/.wr`,
   `.think`), fire aura / cardboard accessories as CSS on the fighter (`.fire`, `.cardb`). `fedoskinBattle(la, lb, win, side,
   seed)`; `?battle=demo` uses a random seed.
+  Owner 11.11.2026: rest 30 → 15 min (server BT_REST, app BT_REST bar, text «раз в 15 минут»); the DJ's track slot stays 30 min
+  (`DJ_SLOT`). Points for fresh lessons (owner «+10 очков тому, кто посмотрел НОВОЕ видео в течение первого часа после
+  загрузки»): admin publish → POST /lesson/fresh {ids} (admin auth) → D1 `lfresh (id, t)` (INSERT OR IGNORE: re-publishing keeps
+  the first time); GET /lesson/fresh (public) → lessons < 1 h old; app `freshLoad()` (1.5 s after start + on return after 10
+  min) ⇒ gold chip `.lfresh` «+10 ⭐» on those covers; watched in one go ≥ min(30 s, 60 % of dur) ⇒ `freshTick` → POST
+  /hero/fresh {lesson} (battle auth; 403 ⇒ lbSend(0, true) and retry; hidden from the rating ⇒ a toast, nothing forced) ⇒
+  D1 `pts_bonus (id, ref 'fresh:<lesson>', pts)` once per lesson, server window 1 h + 10 min grace; wallet earned += SUM(bonus);
+  toast «+10 ⭐ — ты посмотрел новый урок в первый час!»; local `fedoskin-fresh-got`. Shop sheet `.ptsinfo` «Как получить ⭐»
+  (+10 win / +20 hour / +10 new lesson, loss = 0, not for money); shop row subtitle lists the three. /visits `pf: 1` (admin
+  banner otherwise; admin «версия 39»). Tested: worker (admin only, claim once, late, republish), app (chip, claim after 30 s).
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give

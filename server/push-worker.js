@@ -78,6 +78,13 @@ export default {
       if (path === '/lb/search' && req.method === 'GET') return await lbSearch(req, env, json);
       if (path === '/lb/who' && req.method === 'GET') return await lbWho(req, env, json);
       if (path === '/hit' && req.method === 'POST') return await hit(req, env, json);
+      // lessons published less than an hour ago: watching one then gives +10 points (owner 11.11.2026)
+      if (path === '/lesson/fresh' && req.method === 'GET') {
+        if (!env.DB) return json({ fresh: [] });
+        await schema(env.DB);
+        const rs = await env.DB.prepare('SELECT id, t FROM lfresh WHERE t > ?').bind(Date.now() - FRESH_MS).all();
+        return json({ fresh: (rs.results || []).map(r => [r.id, r.t]), now: Date.now() });
+      }
       if (path === '/ev' && req.method === 'POST') return await ev(req, env, json);
       // reviews from paying clients (09.11.2026): the link check and the form are public, the code itself is the key
       if (path === '/rv/inv' && req.method === 'GET') return await rvInv(req, env, json);
@@ -115,6 +122,13 @@ export default {
         return json({ subscribers: n });
       }
       if (path === '/visits') return await visits(env, json);
+      if (path === '/lesson/fresh') { // the admin, right after publishing new lessons
+        if (!env.DB) return json({ error: 'nodb' }, 409);
+        await schema(env.DB);
+        const b = await req.json().catch(() => ({})), ids = (Array.isArray(b.ids) ? b.ids : []).map(String).filter(x => /^[a-z0-9-]{1,60}$/.test(x)).slice(0, 30);
+        if (ids.length) await env.DB.batch(ids.map(id => env.DB.prepare('INSERT OR IGNORE INTO lfresh (id, t) VALUES (?, ?)').bind(id, Date.now())));
+        return json({ ok: true, ids });
+      }
       if (path.startsWith('/r2/')) return await r2Admin(req, env, path, json);
       if (path.startsWith('/rv/')) return await rvAdmin(req, env, path, json);
       if (path === '/tg/setup' || path === '/tg/status' || path === '/tg/trtest') return await tgAdmin(req, env, path, json);
@@ -502,10 +516,11 @@ async function leaderboardKV(req, env, json) {
 // Points (owner 10.11.2026, for accessories only, never sold for money): +10 per battle win (losses give nothing),
 // +20 per full hour of lessons (the rating's minutes); spent = sum of bought items' prices.
 const HERO_LEVELS = [0, 60, 240, 600, 1200, 2100, 3600, 6000];
-const BT_REST = 30 * 60e3;
+const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes
+const DJ_SLOT = 30 * 60e3; // the DJ keeps a pair's track for half an hour
 // must match HERO.SHOP in hero.js: id → [slot, price]
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500] };
-const PTS_WIN = 10, PTS_HOUR = 20;
+const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3;
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
 const BT_TITLE = { ru: 'Батл!', en: 'Battle!', es: '¡Batalla!', pt: 'Batalha!', fr: 'Battle !', de: 'Battle!', ja: 'バトル！', ko: '배틀!', zh: '斗舞！' };
 const BT_BODY = { ru: '{n} вызывает тебя на батл — смотри, кто победил', en: '{n} challenged you to a battle — see who won', es: '{n} te retó a una batalla: mira quién ganó', pt: '{n} te desafiou para uma batalha — veja quem venceu', fr: '{n} te défie en battle — regarde qui a gagné', de: '{n} fordert dich zum Battle heraus — schau, wer gewonnen hat', ja: '{n}からバトルの挑戦！勝者をチェック', ko: '{n}님이 배틀을 신청했어요 — 누가 이겼는지 확인하세요', zh: '{n}向你发起斗舞——快看谁赢了' };
@@ -638,7 +653,8 @@ async function battle(req, env, path, json) {
   const wallet = async () => {
     const sc = await score(id), own = await db.prepare('SELECT item FROM hero_own WHERE id = ?').bind(id).all();
     const owned = (own.results || []).map(r => r.item).filter(k => SHOP[k]);
-    const earned = sc.w * PTS_WIN + Math.floor((me.m || 0) / 60) * PTS_HOUR;
+    const bon = await db.prepare('SELECT SUM(pts) AS p FROM pts_bonus WHERE id = ?').bind(id).first();
+    const earned = sc.w * PTS_WIN + Math.floor((me.m || 0) / 60) * PTS_HOUR + (bon && bon.p || 0);
     const spent = owned.reduce((n, k) => n + SHOP[k][1], 0);
     const eqr = await db.prepare('SELECT eq FROM hero_eq WHERE id = ?').bind(id).first();
     let eq = []; try { eq = JSON.parse(eqr && eqr.eq || '[]'); } catch (_) {}
@@ -669,7 +685,7 @@ async function battle(req, env, path, json) {
     const c = await db.prepare('SELECT COUNT(*) AS same FROM bt WHERE a = ? AND b = ? AND t > ?').bind(id, to, now - 864e5).first();
     if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
     const eq = await heroEq(db, [to]);
-    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / BT_REST)), lvl: heroLevel(me.m) });
+    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT)), lvl: heroLevel(me.m) });
   }
   if (path === '/bt/call') {
     const to = String(b.to || ''), op = await lbRow(db, to);
@@ -683,7 +699,7 @@ async function battle(req, env, path, json) {
     const p = Math.max(.3, Math.min(.7, .5 + .05 * (la - lb)));
     let ra = null;
     if (b.round) { // a round by hand: the DJ's track of this half hour (or the one before — the round takes ~20 s); the battle waits
-      const slot = Math.floor(now / BT_REST), djs = [await rbDj(id, to, slot), await rbDj(id, to, slot - 1)];
+      const slot = Math.floor(now / DJ_SLOT), djs = [await rbDj(id, to, slot), await rbDj(id, to, slot - 1)];
       ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0]);
       if (!ra) return json({ error: 'round' }, 400);
     }
@@ -738,6 +754,14 @@ async function battle(req, env, path, json) {
     if (!b.auto) await btDefSave(db, id, rb, now).run();
     const r2 = await btGet(db, n), w = await wallet();
     return json({ ok: true, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])), score: w.score, pts: w.pts });
+  }
+  // +10 for watching a lesson in the first hour after it was published (once per lesson; a few minutes' grace to finish it)
+  if (path === '/hero/fresh') {
+    const lid = String(b.lesson || ''), fr = await db.prepare('SELECT t FROM lfresh WHERE id = ?').bind(lid).first();
+    if (!fr || now > fr.t + FRESH_MS + 10 * 60e3) { const w = await wallet(); return json({ ok: true, got: 0, late: 1, pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq }); }
+    const ins = await db.prepare('INSERT OR IGNORE INTO pts_bonus (id, ref, pts, t) VALUES (?, ?, ?, ?)').bind(id, 'fresh:' + lid, PTS_FRESH, now).run();
+    const w = await wallet();
+    return json({ ok: true, got: ins.meta && ins.meta.changes ? PTS_FRESH : 0, pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq });
   }
   if (path === '/hero/buy') {
     const item = String(b.item || '');
@@ -806,6 +830,9 @@ function schema(db) {
     // rhythm rounds (11.11.2026): both rounds of a battle, and each phone's last round = how its dancer defends
     db.prepare('CREATE TABLE IF NOT EXISTS bt_h (n INTEGER PRIMARY KEY, a TEXT, b TEXT, dj TEXT, ra TEXT, rb TEXT, st TEXT, exp INTEGER, late INTEGER NOT NULL DEFAULT 0, done INTEGER, sa INTEGER NOT NULL DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_h_st ON bt_h (st, exp)'),
+    // points for fresh lessons (11.11.2026): when each lesson was published, and bonus points per phone (one per lesson)
+    db.prepare('CREATE TABLE IF NOT EXISTS lfresh (id TEXT PRIMARY KEY, t INTEGER) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS pts_bonus (id TEXT NOT NULL, ref TEXT NOT NULL, pts INTEGER, t INTEGER, PRIMARY KEY (id, ref)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_def (id TEXT PRIMARY KEY, d TEXT, t INTEGER) WITHOUT ROWID'),
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
     db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
@@ -913,7 +940,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

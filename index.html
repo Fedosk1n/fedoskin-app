@@ -673,6 +673,11 @@ body.fsmode .bigplay{z-index:3}
 .tilenew{position:absolute;top:12px;right:12px}
 .lcard.isnew .lcover{border-color:var(--new)}
 .lcover .covernew{position:absolute;top:8px;left:8px;z-index:2}
+.lcover .lfresh{position:absolute;top:8px;right:8px;z-index:2;padding:3px 7px;border-radius:999px;background:#F2CC55;color:#0B0B0C;font-weight:800;font-size:11px;line-height:1.2;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.ptsinfo{margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(242,204,85,.07);border:1px solid rgba(242,204,85,.28)}
+.ptsinfo>b{font-size:14px} .ptsinfo ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:5px}
+.ptsinfo li{display:flex;gap:9px;align-items:baseline;font-size:13px;line-height:1.35} .ptsinfo li i{flex:none;min-width:34px;font-style:normal;font-weight:800;color:#F2CC55}
+.ptsinfo small{display:block;margin-top:7px;font-size:11.5px;line-height:1.4;color:var(--muted)}
 /* home: a row of the newest lessons (owner 09.11.2026 — people from reels should see videos at once) */
 .hrow{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
   margin:0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px)));
@@ -1215,7 +1220,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="more">Все образы →</span>
     </span>
   </button>
-  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>Очки — за победы в батлах и часы уроков</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Магазин аксессуаров</b><small>+10 за победу · +20 за час уроков · +10 за новый урок</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
@@ -1229,7 +1234,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="stack" style="gap:2px;flex:1;min-width:0"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" id="myMins" style="font-size:12px"></span></span>
     </div>
     <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
-    <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b>Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 30 минут</small></div>
+    <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b>Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 15 минут</small></div>
     <div class="bttools" id="btTools" hidden>
       <button class="btn btn-accent" id="btFind" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Найти соперника</button>
       <button class="btn btn-ghost" id="btFriend" type="button">Вызвать друга</button>
@@ -1448,7 +1453,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
     <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Магазин</h2><span class="pts big">⭐ <b id="shopPts">0</b></span></div>
-    <p class="muted" style="margin-top:6px;font-size:12px;line-height:1.45">+10 очков за победу в батле · +20 за каждый час уроков. Аксессуары — только для красоты, на батлы не влияют.</p>
+    <div class="ptsinfo"><b>Как получить ⭐</b>
+      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li></ul>
+      <small>Поражение очков не даёт. Очки нельзя купить за деньги. Аксессуары — только для красоты, на батлы не влияют.</small></div>
     <div class="shopgrid" id="shopGrid"></div>
   </div>
 </div>
@@ -1735,6 +1742,38 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!screen) return;
     screen.querySelectorAll('.lcover video[data-pv]:not([src])').forEach(v => { if (pvHold && screen.id === 'lesson') return; v.src = v.dataset.pv; watchPreview(v); });
   }
+  // owner 11.11.2026: +10 points for watching a NEW lesson within the first hour after it was published. The server knows
+  // when each was published (admin → /lesson/fresh); watched = 60 % of it (≤ 30 s) in one go; the server pays once per lesson.
+  const FRESH = new Map(); let FRESH_AT = 0, FRESH_SKEW = 0;
+  const FRESH_GOT = 'fedoskin-fresh-got';
+  const freshGot = () => { try { return JSON.parse(localStorage.getItem(FRESH_GOT) || '{}') || {}; } catch (_) { return {}; } };
+  const freshLeft = id => FRESH.has(id) && !freshGot()[id] ? FRESH.get(id) + 3600e3 - (Date.now() - FRESH_SKEW) : 0;
+  async function freshLoad(){
+    FRESH_AT = Date.now();
+    try {
+      const r = await fetch(LB_URL + '/lesson/fresh', { cache: 'no-store' }); if (!r.ok) return;
+      const j = await r.json(); FRESH.clear(); if (j.now) FRESH_SKEW = Date.now() - j.now;
+      (j.fresh || []).forEach(([id, t]) => { if (LESSONS.some(l => l.id === id)) FRESH.set(id, t); });
+      if (FRESH.size) { paintNewRow(); if (!$('#section').hidden && curSection) openSection(curSection); }
+    } catch (_) {}
+  }
+  let freshBusy = false; const FRESH_HINT = new Set();
+  async function freshTick(l, sec){
+    if (freshBusy || freshLeft(l.id) <= 0 || sec < Math.min(30, Math.max(5, (l.dur || 30) * .6))) return;
+    if (!lbShow) { if (!FRESH_HINT.has(l.id)) { FRESH_HINT.add(l.id); toast(T('Включи «Показывать меня в рейтинге», чтобы получать очки')); } return; } // they chose to stay hidden
+    freshBusy = true;
+    try {
+      let r = await btPost('/hero/fresh', { lesson: l.id });
+      if (r.status === 403) { lbSent = {}; await lbSend(0, true); r = await btPost('/hero/fresh', { lesson: l.id }); } // not in the rating yet (first minute)
+      const j = await r.json().catch(() => ({}));
+      if (j.ok) {
+        const g = freshGot(); g[l.id] = Date.now(); try { localStorage.setItem(FRESH_GOT, JSON.stringify(g)); } catch (_) {}
+        btWallet(j);
+        if (j.got) toast(T('+{n} ⭐ — ты посмотрел новый урок в первый час!', { n: j.got }));
+      }
+    } catch (_) {}
+    freshBusy = false;
+  }
   function lessonCard(l){
     const b = document.createElement('button');
     b.className = 'lcard';
@@ -1746,6 +1785,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     b.querySelector('.ldur').textContent = fmtD(l.dur);
     b.querySelector('.lname').textContent = l.name;
     if (isNew(l)) { const np = newPill(); np.classList.add('covernew'); b.querySelector('.lcover').appendChild(np); b.classList.add('isnew'); }
+    if (freshLeft(l.id) > 0) { const f = document.createElement('span'); f.className = 'lfresh'; f.textContent = '+10 ⭐'; f.title = T('+10 очков, если посмотришь в первый час после выхода'); b.querySelector('.lcover').appendChild(f); }
     if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
     b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
     b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
@@ -4462,6 +4502,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
     stats.sec += 1; sessionSec += 1;
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
+    if (FRESH.has(curLesson.id)) freshTick(curLesson, sessionSec);
     if (!sessionCounted && sessionSec >= 5) { stats.views += 1; sessionCounted = true; }
     if (sessionSec >= 8) watchedNow = true;
     const t = todayKey();
@@ -4652,7 +4693,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, busy: false, run: 0, cur: null, rest: 0, wallet: null };
   try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
-  const BT_REST = 30 * 60e3;
+  const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes (the server decides; this only draws the bar)
   function btSetRest(ms){ BT.rest = Date.now() + Math.max(0, ms || 0); try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} btPaintRest(); }
   // «твой би-бой отдыхает» (owner 10.11.2026): one battle per 30 minutes; the bar fills up while he rests
   function btPaintRest(){
@@ -5048,6 +5089,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   if (LB_URL) {
     setTimeout(() => btInbox(false), 4000);
+    setTimeout(freshLoad, 1500);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - FRESH_AT > 10 * 60e3) freshLoad(); });
     $('#rankSoon').hidden = true; $('#rankBox').hidden = false;
     $('#rankShow').addEventListener('change', async () => {
       lbShow = $('#rankShow').checked;
