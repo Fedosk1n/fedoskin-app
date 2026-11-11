@@ -235,6 +235,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "pw-reverse-1990": {
+  "src": "r2:pw-reverse-1990-jun24gi0.mp4",
+  "every": 9,
+  "n": 114,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
  "tn-flare-to-airflare-to-flare": {
   "src": "262fa2a3-9675-40ac-8b20-5092475a3192",
   "every": 4.5,
@@ -271,10 +280,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "pw-reverse-1990": {
-  "src": "r2:pw-reverse-1990-jun24gi0.mp4",
-  "every": 9,
-  "n": 114,
+ "tr-airchair": {
+  "src": "r2:tr-airchair-ke4ejzel.mp4",
+  "every": 4.5,
+  "n": 116,
   "w": 320,
   "h": 180,
   "cols": 10,
