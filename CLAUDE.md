@@ -430,6 +430,13 @@
   Auto mode (owner 11.11.2026 «часть людей как я, просто готовы на рандом»): setup button «Играть на авто» `#rbAuto` ⇒
   `start(true)`: random cards of the shown ones, the hero taps himself (per note: miss chance (0.2 − 0.015·level)·(0.5…1.5 luck),
   else timing jitter ~±110 ms ⇒ PERFECT/GOOD), player's taps ignored, pad says «Авто». rhythm.js `?v=2`.
+  Four beats (owner 11.11.2026 «ещё 3 разных бита, с разной сложностью»): `BEATS` — LO-FI 84 BPM (notes one level sparser,
+  ×0.8), BOOM BAP 100 (the original, ×1), FUNK BREAK 114 (×1.25), RAW BREAKS 128 (notes one level denser, ×1.55); row «BEAT» at the
+  top of the setup (4 cards, ●○○○ + × + BPM), tap = 2-bar preview (green dot; same card again = stop), choice kept in
+  `fedoskin-rb-beat`, auto play uses the chosen beat. Sound per beat in `STY` (swing, kick patterns, ghost snares, open hats,
+  rim, bass wave/filter, chords: lo-fi keys + vinyl crackle, funk horn stabs, raw amen-like ghosts). `BEAT`/`TRAVEL` are set
+  per round in start(); `notesFor/maxScore(…, beat)` and the result carry the beat id; the computer is a bit weaker on harder
+  beats. `RB._render(beat[, bars])` renders a beat offline → loudness per second (check: all four ~0.1–0.2 RMS). rhythm.js `?v=3`.
   Now only a trial vs the computer: `?battle=play` / `window.fedoskinRhythm(level, oppLevel)` — NOT yet linked to real battles
   (next: cards/effects polish, server /bt/call with the round + /bt/play, moves unlocked by watching lessons). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never

@@ -4,10 +4,18 @@
 // index.html calls RB.init({ T, names, spin }) once and RB.open({ level, eq, nick, oppLevel }).
 (function () {
   'use strict';
-  const BPM = 100, BEAT = 60 / BPM;
+  // four beats (owner 11.11.2026 «ещё 3 разных бита, с разной сложностью»): tempo, how dense the notes are (`up` shifts the
+  // move's pattern level) and a score multiplier so a harder beat pays more. The id goes into the result (server checks later).
+  const BEATS = [
+    { id: 'lofi', name: 'LO-FI', bpm: 84, up: -1, mult: .8, lv: 1 },
+    { id: 'boom', name: 'BOOM BAP', bpm: 100, up: 0, mult: 1, lv: 2 },
+    { id: 'funk', name: 'FUNK BREAK', bpm: 114, up: 0, mult: 1.25, lv: 3 },
+    { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 }];
+  const beatOf = id => BEATS.find(b => b.id === id) || BEATS[1];
+  let BEAT = .6;
   const COUNT = 4, TOP = 8, POW = 12, FRZ = 4, OUTRO = 3; // beats
   const B_TOP = COUNT, B_POW = B_TOP + TOP, B_FRZ = B_POW + POW, B_BIG = B_FRZ + 3, B_END = B_FRZ + FRZ + OUTRO;
-  const TRAVEL = 2 * BEAT;            // how long a note is on the track before the ring
+  let TRAVEL = 2 * BEAT;              // how long a note is on the track before the ring (set per beat in start())
   const W_PERF = .08, W_GOOD = .16;   // tap windows, seconds either side
   const DIFF = { toprock: 1, kickstep: 1, salsa: 2, indian: 2, sixstep: 1, ccs: 1, backspin: 2, swipe: 2, windmill: 2, backflip: 3, headspin: 3,
     flare: 3, airflare: 3, ninety: 3, freeze: 1, headstand: 2, handstand: 2, airchair: 3, hollowback: 3 };
@@ -33,18 +41,19 @@
   };
 
   // ---- the notes of a round: the same picks + seed always give the same notes (the server can check a score later) ----
-  function notesFor(picks, seed) {
+  function notesFor(picks, seed, beat) {
+    const B = beatOf(beat), bt = 60 / B.bpm, lv = m => clamp(DIFF[m] + B.up, 1, 3);
     const rnd = mulberry(seed || 1), out = [];
-    const bars = (b0, n, d, ph) => { for (let b = 0; b < n; b++) { const p = PAT[d][Math.floor(rnd() * PAT[d].length)]; p.forEach(x => out.push({ t: (b0 + b * 4 + x) * BEAT, ph, big: false, st: 0 })); } };
-    bars(B_TOP, TOP / 4, DIFF[picks[0]], 0);
-    bars(B_POW, POW / 4, DIFF[picks[1]], 1);
-    PAT_F[DIFF[picks[2]]].forEach(x => out.push({ t: (B_FRZ + x) * BEAT, ph: 2, big: false, st: 0 }));
-    out.push({ t: B_BIG * BEAT, ph: 2, big: true, st: 0 });
+    const bars = (b0, n, d, ph) => { for (let b = 0; b < n; b++) { const p = PAT[d][Math.floor(rnd() * PAT[d].length)]; p.forEach(x => out.push({ t: (b0 + b * 4 + x) * bt, ph, big: false, st: 0 })); } };
+    bars(B_TOP, TOP / 4, lv(picks[0]), 0);
+    bars(B_POW, POW / 4, lv(picks[1]), 1);
+    PAT_F[lv(picks[2])].forEach(x => out.push({ t: (B_FRZ + x) * bt, ph: 2, big: false, st: 0 }));
+    out.push({ t: B_BIG * bt, ph: 2, big: true, st: 0 });
     return out;
   }
-  const noteBase = (n, picks, kind) => (kind === 1 ? 100 : 50) * (n.big ? 3 : 1) * MULT[DIFF[picks[n.ph]]];
+  const noteBase = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * (n.big ? 3 : 1) * MULT[DIFF[picks[n.ph]]] * beatOf(beat).mult;
   const comboMult = c => 1 + Math.min(c, 30) * .02;
-  function maxScore(picks, seed, level) { let s = 0, c = 0; notesFor(picks, seed).forEach(n => { c++; s += noteBase(n, picks, 1) * comboMult(c); }); return Math.round(s * (1 + .01 * (level || 1))); }
+  function maxScore(picks, seed, level, beat) { let s = 0, c = 0; notesFor(picks, seed, beat).forEach(n => { c++; s += noteBase(n, picks, 1, beat) * comboMult(c); }); return Math.round(s * (1 + .01 * (level || 1))); }
 
   // ---- the beat ----
   let ctx = null, master = null, noise = null;
@@ -63,33 +72,56 @@
   const env = (g, t, a, d) => { g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(.001, t + d); };
   function tone(out, t, type, f0, f1, a, d) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + d * .5); env(g, t, a, d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + .02); }
   function hiss(out, t, ftype, f, q, a, d) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; fl.type = ftype; fl.frequency.value = f; fl.Q.value = q; env(g, t, a, d); s.connect(fl); fl.connect(g); g.connect(out); s.start(t, Math.random() * .5, d + .02); }
-  const kick = (o, t) => tone(o, t, 'sine', 160, 46, 1, .3);
-  const snare = (o, t) => { hiss(o, t, 'bandpass', 1900, .8, .7, .17); tone(o, t, 'triangle', 200, 150, .35, .1); };
+  const kick = (o, t, a) => tone(o, t, 'sine', 160, 46, a || 1, .3);
+  const snare = (o, t, a) => { a = a == null ? 1 : a; hiss(o, t, 'bandpass', 1900, .8, .7 * a, .17); tone(o, t, 'triangle', 200, 150, .35 * a, .1); };
+  const rim = (o, t) => { tone(o, t, 'square', 1700, 0, .07, .03); hiss(o, t, 'bandpass', 2600, 2, .25, .05); };
   const hat = (o, t, a) => hiss(o, t, 'highpass', 7500, .5, a, .045);
+  const ohat = (o, t, a) => hiss(o, t, 'highpass', 6500, .5, a, .22);
   const crash = (o, t) => hiss(o, t, 'highpass', 4500, .3, .45, .9);
-  function bass(o, t, f, d) { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 520; env(g, t, .34, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02); }
-  function stab(o, t, f) { [1, 1.189, 1.498].forEach(m => { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = 'sawtooth'; os.frequency.value = f * m; fl.type = 'lowpass'; fl.frequency.value = 1500; env(g, t, .06, .32); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + .36); }); }
-  // the whole round is scheduled at once (20 s, ~300 short sounds): no timers to be throttled
-  function schedule(t0, seed) {
+  function bass(o, t, f, d, wave, lp, a) { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave || 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = lp || 520; env(g, t, a || .34, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02); }
+  function chord(o, t, f, iv, wave, lp, a, d) { iv.forEach(m => { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave; os.frequency.value = f * m; fl.type = 'lowpass'; fl.frequency.value = lp; env(g, t, a, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .04); }); }
+  const stab = (o, t, f) => chord(o, t, f, [1, 1.189, 1.498], 'sawtooth', 1500, .06, .32);
+  // each beat's own sound: drum pattern per 16th, swing (share of a 16th), bass, chords
+  const STY = {
+    lofi: { sw: .3, kicks: [[0, 10], [0, 7, 10], [0, 9, 11]], sn: [4, 12], snA: .55, rim: [10], hats: 8, hatA: .11, ghostHat: .25, open: [],
+      roots: [87.3, 82.4, 92.5], walk: [1, 1.335, 1.189, .891], bw: 'sine', blp: 300, ba: .5, bd: .5,
+      ch: (o, t, f, bar, S) => { chord(o, t, f * 2, [1, 1.189, 1.498, 1.782], 'triangle', 1100, .045, 1.6); chord(o, t + 10 * S, f * 2 * 1.122, [1, 1.189, 1.498], 'triangle', 1000, .03, .7); }, crash: [], crackle: true },
+    boom: { sw: .19, kicks: [[0, 7, 10], [0, 6, 10], [0, 3, 8, 10]], sn: [4, 12], hats: 8, hatA: .2, ghostHat: .6, open: [],
+      roots: [98, 110, 87.3], walk: [1, 1, 1.189, 1.335], bw: 'sawtooth', blp: 520, ba: .34,
+      ch: (o, t, f, bar) => { if (bar % 2 === 0) stab(o, t, f * 4); }, crash: [2, 4] },
+    funk: { sw: .25, kicks: [[0, 3, 6, 10], [0, 6, 9, 11], [0, 2, 7, 10]], sn: [4, 12], ghost: [7, 9, 15], hats: 16, hatA: .16, open: [14],
+      roots: [110, 123.5, 98], walk: [1, 1, 1.335, 1.122], bw: 'square', blp: 700, ba: .22, oct: true,
+      ch: (o, t, f, bar, S) => { [6, 14].forEach(x => chord(o, t + x * S, f * 4, [1, 1.26, 1.498], 'sawtooth', 2600, .045, .11)); }, crash: [2, 4] },
+    raw: { sw: .1, kicks: [[0, 2, 10, 11], [0, 2, 10], [0, 3, 10, 11]], sn: [4, 12], ghost: [7, 9, 15], ghostA: .45, hats: 16, hatA: .2, open: [6],
+      roots: [82.4, 87.3, 73.4], walk: [1, 1.189, 1, 1.498], bw: 'sawtooth', blp: 950, ba: .3, bd: .14,
+      ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4] } };
+  // the whole round is scheduled at once (~300 short sounds): no timers to be throttled. preview = only `bars` bars, no count-in
+  function schedule(t0, seed, beat, preview) {
     const out = ctx.createGain(); out.connect(master);
-    const rnd = mulberry(seed * 7 + 3), S = BEAT / 4;
-    const KICKS = [[0, 7, 10], [0, 6, 10], [0, 3, 8, 10]], kp = KICKS[Math.floor(rnd() * KICKS.length)];
-    const root = [98, 110, 87.3][Math.floor(rnd() * 3)], walk = [1, 1, 1.189, 1.335];
-    for (let b = 0; b < COUNT; b++) { tone(out, t0 + b * BEAT, 'square', 1100, 0, .12, .04); hat(out, t0 + b * BEAT + BEAT / 2, .12); }
-    const bars = (B_FRZ + FRZ - COUNT) / 4;
+    const Y = STY[beatOf(beat).id], bt = 60 / beatOf(beat).bpm, S = bt / 4;
+    const rnd = mulberry(seed * 7 + 3), kp = Y.kicks[Math.floor(rnd() * Y.kicks.length)];
+    const root = Y.roots[Math.floor(rnd() * Y.roots.length)];
+    if (!preview) for (let b = 0; b < COUNT; b++) { tone(out, t0 + b * bt, 'square', 1100, 0, .12, .04); hat(out, t0 + b * bt + bt / 2, .12); }
+    const bars = preview || (B_FRZ + FRZ - COUNT) / 4, tb0 = preview ? t0 : t0 + COUNT * bt;
     for (let bar = 0; bar < bars; bar++) {
-      const tb = t0 + (COUNT + bar * 4) * BEAT, last = bar === bars - 1;
+      const tb = tb0 + bar * 4 * bt, last = !preview && bar === bars - 1, f = root * Y.walk[bar % 4];
+      let kn = 0;
       for (let s = 0; s < 16; s++) {
-        const t = tb + s * S + (s % 2 ? .028 : 0);
+        const t = tb + s * S + (s % 2 ? Y.sw * S : 0);
         if (last && s >= 12) break; // the freeze hit lands in silence
-        if (kp.includes(s)) { kick(out, t); bass(out, t, root * walk[bar % 4], s === 0 ? .32 : .18); }
-        if (s === 4 || s === 12) snare(out, t);
-        if (s % 2 === 0) hat(out, t, s % 4 === 0 ? .22 : .14); else if (s === 15 && rnd() < .6) hat(out, t, .1);
+        if (kp.includes(s)) { kick(out, t); bass(out, t, Y.oct && kn % 2 ? f * 2 : f, s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18), Y.bw, Y.blp, Y.ba); kn++; }
+        if (Y.sn.includes(s)) snare(out, t, Y.snA);
+        if (Y.ghost && Y.ghost.includes(s) && rnd() < .7) snare(out, t, Y.ghostA || .22);
+        if (Y.rim && Y.rim.includes(s) && bar % 2) rim(out, t);
+        if (Y.open.includes(s)) ohat(out, t, .13);
+        else if (Y.hats === 16) hat(out, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
+        else if (s % 2 === 0) hat(out, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(out, t, Y.hatA * .5);
+        if (Y.crackle && rnd() < .35) hiss(out, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
       }
-      if (bar % 2 === 0) stab(out, tb, root * 4 * walk[bar % 4]);
-      if (bar === 2 || bar === 4) crash(out, tb);
+      if (!last || Y === STY.raw) Y.ch(out, tb, f, bar, S);
+      if (!preview && Y.crash.includes(bar)) crash(out, tb);
     }
-    const tBig = t0 + B_BIG * BEAT; kick(out, tBig); snare(out, tBig); crash(out, tBig); stab(out, tBig, root * 4);
+    if (!preview) { const tBig = t0 + B_BIG * bt; kick(out, tBig); snare(out, tBig); crash(out, tBig); stab(out, tBig, root * 4); }
     return out;
   }
   function blip(kind) { // the tap itself is heard at once: a clap for a hit
@@ -129,6 +161,10 @@
 .rbc i em{font-style:normal;color:#F2CC55}
 .rbc.on{border-color:var(--accent);background:rgba(226,97,26,.16)}
 .rbc.lock{opacity:.45}
+.rbcards.b4{grid-template-columns:repeat(4,1fr);gap:6px} .rbc.bt{padding:8px 2px 6px;min-height:56px} .rbc.bt b{font-size:13px}
+.rbc.bt small{display:block;font-size:9.5px;color:var(--muted);margin-top:3px;letter-spacing:.5px}
+.rbc.bt.pl:after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#3BD16F;animation:rbpl .5s ease-in-out infinite alternate}
+@keyframes rbpl{from{opacity:.25;transform:scale(.7)}to{opacity:1;transform:scale(1.2)}}
 .rbgo{margin-top:12px;display:flex;gap:8px;position:sticky;bottom:0;background:#0B0B0C;box-shadow:0 -10px 14px 6px #0B0B0C}
 .rbgo .btn{flex:1 1 0;width:auto;padding:0 8px;font-size:14px}
 .rbpad.auto{border-color:#3A3A40;background:#17171A;color:var(--muted)}
@@ -193,7 +229,7 @@
   }
   function stop() { cancelAnimationFrame(raf); raf = 0; if (G) { killBeat(); G.mode = ''; } }
   function close() { stop(); D.el.hidden = true; }
-  function killBeat() { if (G && G.out && ctx) { try { G.out.gain.setTargetAtTime(0, ctx.currentTime, .03); const o = G.out; setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); } catch (_) {} } if (G) G.out = null; }
+  function killBeat() { if (G && G.out && ctx) { try { G.out.gain.setTargetAtTime(0, ctx.currentTime, .03); const o = G.out; setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); } catch (_) {} } if (G) G.out = null; stopPreview(); }
 
   // ---- 1: build the set ----
   function setup() {
@@ -216,7 +252,11 @@
     });
     G.picks = rows.map(r => r.take[0]); G.prev = G.picks[0]; G.prevAt = performance.now();
     const dots = d => '<em>' + '●'.repeat(d) + '</em>' + '○'.repeat(3 - d) + ' ×' + MULT[d];
+    if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
+    const bdots = l => '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
+      '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
+      BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>' +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards">' +
         r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
         (r.lock ? '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>' : '') + '</div></div>').join('') +
@@ -225,8 +265,32 @@
       const k = +b.dataset.r; G.picks[k] = b.dataset.m; G.prev = b.dataset.m; G.prevAt = performance.now();
       $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"]').forEach(x => x.classList.toggle('on', x === b));
     }));
+    $('#rbSet').querySelectorAll('.rbc[data-b]').forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.b, again = id === G.beat && G.pv;
+      G.beat = id; try { localStorage.setItem('fedoskin-rb-beat', id); } catch (_) {}
+      $('#rbSet').querySelectorAll('.rbc[data-b]').forEach(x => x.classList.toggle('on', x === b));
+      if (again) stopPreview(); else preview(id);
+    }));
     $('#rbGo').addEventListener('click', () => start(false));
     $('#rbAuto').addEventListener('click', () => start(true));
+  }
+
+  // a tap on a beat card plays 2 bars of it (another tap on the same card stops it)
+  function preview(id) {
+    stopPreview();
+    if (!audioOn()) return;
+    try {
+      master.gain.value = G.mute ? 0 : .85;
+      const bars = 2, d = bars * 4 * 60 / beatOf(id).bpm;
+      G.pv = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars); G.pvId = id;
+      const card = $('#rbSet').querySelector('.rbc[data-b="' + id + '"]'); if (card) card.classList.add('pl');
+      const pv = G.pv; G.pvT = setTimeout(() => { if (G.pv === pv) stopPreview(); }, d * 1000 + 300);
+    } catch (_) {}
+  }
+  function stopPreview() {
+    if (!G) return; clearTimeout(G.pvT);
+    if (G.pv && ctx) { const o = G.pv; try { o.gain.setTargetAtTime(0, ctx.currentTime, .03); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); }
+    G.pv = null; if (box) box.querySelectorAll('.rbc.pl').forEach(x => x.classList.remove('pl'));
   }
 
   // ---- 2: the round ----
@@ -235,13 +299,15 @@
     const T = D.T;
     G.auto = !!auto;
     if (G.auto) G.picks = [0, 1, 2].map(k => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
-    G.notes = notesFor(G.picks, G.seed);
+    stopPreview();
+    const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
+    G.notes = notesFor(G.picks, G.seed, G.beat);
     if (G.auto) { const pm = clamp(.2 - .015 * G.level, .06, .2) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm; n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
     G.score = 0; G.combo = 0; G.best = 0; G.cnt = [0, 0, 0, 0]; G.missAt = -9; G.bigSt = 0; G.lastBeat = -1; G.shown = -1;
     const now = performance.now(); let lat = 0;
     G.audio = audioOn();
-    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed); } catch (_) { G.audio = false; } }
+    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed, G.beat); } catch (_) { G.audio = false; } }
     G.lat = lat; G.perf0 = now + 150; // song second 0 is heard at perf0 + lat
     G.mode = 'play';
     $('#rbSet').hidden = true; $('#rbEnd').hidden = true; $('#rbPlay').hidden = false; sizeCan();
@@ -254,7 +320,7 @@
   function judge(n, kind, s) {
     n.st = kind; n.jt = s; G.cnt[kind]++;
     if (kind === 3) { G.combo = 0; G.missAt = s; }
-    else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += noteBase(n, G.picks, kind) * comboMult(G.combo) * (1 + .01 * G.level); }
+    else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += noteBase(n, G.picks, kind, G.beat) * comboMult(G.combo) * (1 + .01 * G.level); }
     if (n.big) {
       G.bigSt = kind;
       const ar = $('#rbArena');
@@ -346,14 +412,14 @@
 
   // ---- 3: the judges ----
   function finish() {
-    const T = D.T, total = G.notes.length, max = maxScore(G.picks, G.seed, G.level), score = Math.round(G.score);
-    const res = { score, max, picks: G.picks.slice(), seed: G.seed, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits: G.notes.map(n => n.st).join('') };
+    const T = D.T, total = G.notes.length, max = maxScore(G.picks, G.seed, G.level, G.beat), score = Math.round(G.score);
+    const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits: G.notes.map(n => n.st).join('') };
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
     if (G.onEnd) { G.won = res.acc >= .5; G.onEnd(res); return; }
     // the trial: the computer dances for the opponent — its picks and accuracy depend on its level
     const ol = G.oppLevel, pk = ROWS.map(([, all]) => { const have = all.filter(m => (NEED[m] || 1) <= ol); return have[Math.floor(Math.random() * have.length)]; });
-    const opp = Math.round(maxScore(pk, G.seed, ol) * clamp(.5 + .04 * ol + (Math.random() - .5) * .3, .2, .95));
+    const opp = Math.round(maxScore(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
     const pMe = 1 / (1 + Math.exp(-(score - opp) / (.1 * Math.max(score, opp, 1))));
     const votes = [0, 1, 2].map(() => Math.random() < pMe ? 'l' : 'r'), mine = votes.filter(v => v === 'l').length, won = mine >= 2;
     G.won = won;
@@ -376,5 +442,16 @@
     }, 400 + 3 * 550 + 250);
   }
 
-  window.RB = { init: d => { D = d; }, open, close, notesFor, maxScore, BEAT, state: () => G };
+  // for checks: render a beat offline and return its loudness per second (window.RB._render('funk'))
+  async function render(beat, preview) {
+    const dur = preview ? preview * 4 * 60 / beatOf(beat).bpm + 1 : (B_END + 1) * 60 / beatOf(beat).bpm, sr = 22050;
+    const oc = new OfflineAudioContext(1, Math.ceil(sr * dur), sr), keep = [ctx, master, noise];
+    ctx = oc; master = oc.createGain(); master.connect(oc.destination);
+    noise = oc.createBuffer(1, sr, sr); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    try { schedule(.05, 1, beat, preview); } finally { [ctx, master, noise] = keep; }
+    const d = (await oc.startRendering()).getChannelData(0), per = [];
+    let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
+    return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
+  }
+  window.RB = { init: d => { D = d; }, open, close, notesFor, maxScore, BEATS, _render: render, state: () => G };
 })();
