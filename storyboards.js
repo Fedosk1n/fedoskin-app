@@ -118,6 +118,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "gd-knee-down-spin": {
+  "src": "32636f48-5008-4c13-8c63-cc76fc4a5376",
+  "every": 0.5,
+  "n": 59,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "fr-easychair": {
   "src": "r2:fr-easychair-5k378e3e.mp4",
   "every": 0.5,
@@ -262,12 +271,12 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "gd-knee-down-spin": {
-  "src": "32636f48-5008-4c13-8c63-cc76fc4a5376",
-  "every": 0.5,
-  "n": 59,
-  "w": 180,
-  "h": 320,
+ "pw-reverse-1990": {
+  "src": "r2:pw-reverse-1990-jun24gi0.mp4",
+  "every": 9,
+  "n": 114,
+  "w": 320,
+  "h": 180,
   "cols": 10,
   "v": 1
  }
