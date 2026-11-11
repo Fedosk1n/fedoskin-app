@@ -577,6 +577,18 @@
   client = server score, pending/answer by hand/auto/twice, results + seen, expiry with stand-in, old inbox, 3-pick refused, auto
   instant), app headless ru (auto ⇒ cartoon, by hand ⇒ sent screen + ⏳ row, opponent answers ⇒ result sheet ⇒ judges screen,
   incoming call sheet + ⚔️ row ⇒ answer on auto ⇒ result).
+  Moves opened by lessons (owner 11.11.2026 «открывать движения в игре через уроки… посмотрел уроки по Powermove — открыл windmill и
+  flare»): a move counts as known by level (NEED) OR when one of its lessons is watched — stats.watched ≥ max(5, min(½ dur, 120 s)).
+  index.html `UL_RX` finds a move's lessons by NAME (new lessons «Air chair» etc. map themselves; flare regex skips «airflare»),
+  `UL_SEC` = moves without own lesson (airchair: 2 Freezes lessons, hollowback: 3); `ulState()` → {have, hint (shortest lesson
+  or section n/need)} passed as `RB.open({ul})` ONLY when the server said `ul: 1` (/bt/ready, /bt/inbox; BT.ul, sessionStorage
+  `fedoskin-ul-srv`) — an older server refuses such rounds. rhythm.js: up to 2 lesson-opened moves always get a card (🎬 corner),
+  a hinted locked move is always shown as a teaser (dashed «🔒 🎬 Урок», row goes to 4 columns `b4`); tap ⇒ `#rbUl` how-to +
+  «Открыть урок/раздел» → D.onUl closes the game (its history step) and opens the lesson 350 ms later. round.u = picks above
+  the level; worker rbCheck accepts them (rbStand reuses any own saved pick). Toast «🎮 Открыто в батле: …» once per move
+  (`fedoskin-ul`; first run silent); lesson page `#lessonUl` «Посмотри урок — откроешь в батле: X» / «Открыто…». /visits `ul: 1`
+  (admin banner; admin «версия 43»), rhythm.js `?v=7`. `window.fedoskinUl(check)`. Tested: worker rbCheck (u accepted / not
+  for other moves), app headless ru/en (cards, hint, button → lesson, toast once, round.u).
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.

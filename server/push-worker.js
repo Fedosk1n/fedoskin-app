@@ -584,7 +584,10 @@ async function rbDj(a, b, slot) { const h = new Uint8Array(await crypto.subtle.d
 function rbCheck(r, level, beat) {
   if (!r || typeof r !== 'object' || r.b !== beat) return null;
   const p = Array.isArray(r.p) ? r.p.map(String) : [];
-  if (p.length !== 4 || p.some((m, k) => !RB_ROWS[k].includes(m) || (RB_NEED[m] || 1) > level)) return null;
+  // a move above the hero's level counts when the phone says its lesson was watched (round.u, owner 11.11.2026 «открывать движения
+  // в игре через уроки») — watching is counted on the phone, like the rating's minutes
+  const u = Array.isArray(r.u) ? r.u.slice(0, 8).map(String) : [];
+  if (p.length !== 4 || p.some((m, k) => !RB_ROWS[k].includes(m) || ((RB_NEED[m] || 1) > level && !u.includes(m)))) return null;
   const seed = Math.floor(+r.s || 0); if (!(seed >= 1 && seed < 4294967296)) return null;
   const h = String(r.h || ''), n = rbNotes(p, seed, beat).length; if (h.length !== n || /[^123]/.test(h)) return null;
   const k = (Array.isArray(r.k) ? r.k : []).slice(0, 300).map(x => Math.floor(+x)).filter(x => x >= 0 && x < n);
@@ -593,7 +596,7 @@ function rbCheck(r, level, beat) {
 // the other dancer: its own last round's picks (if it still knows them) and hit shares, on the DJ's track; else by level
 function rbStand(def, level, beat) {
   const rnd = rbMul(crypto.getRandomValues(new Uint32Array(1))[0] | 1), seed = (crypto.getRandomValues(new Uint32Array(1))[0] >>> 1) || 1;
-  const pk = RB_ROWS.map((all, k) => { const have = all.filter(m => (RB_NEED[m] || 1) <= level), own = def && def.p && def.p[k]; return have.includes(own) ? own : have[Math.floor(rnd() * have.length)]; });
+  const pk = RB_ROWS.map((all, k) => { const have = all.filter(m => (RB_NEED[m] || 1) <= level), own = def && def.p && def.p[k]; return all.includes(own) ? own : have[Math.floor(rnd() * have.length)]; }); // own picks were checked when saved (lesson-opened moves too)
   const lv = RB_BEATS[beat][3];
   let mr, pr;
   if (def && def.n) { mr = rbClamp(def.m / def.n + (rnd() - .5) * .06, 0, .9); pr = rbClamp(def.f / Math.max(1, def.n - def.m), 0, 1); }
@@ -698,7 +701,7 @@ async function battle(req, env, path, json) {
     const c = await db.prepare('SELECT COUNT(*) AS same FROM bt WHERE a = ? AND b = ? AND t > ?').bind(id, to, now - 864e5).first();
     if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
     const eq = await heroEq(db, [to]);
-    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT)), lvl: heroLevel(me.m) });
+    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT)), lvl: heroLevel(me.m), ul: 1 });
   }
   if (path === '/bt/call') {
     const to = String(b.to || ''), op = await lbRow(db, to);
@@ -749,7 +752,7 @@ async function battle(req, env, path, json) {
     const all = news.concat(calls, results, out), eq = await heroEq(db, [...new Set(all.map(r => r.a).concat(all.map(r => r.b), id))]);
     const w = await wallet();
     return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: calls.map(r => btPack(r, eq)), results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)),
-      lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq });
+      lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq, ul: 1 });
   }
   if (path === '/bt/seen') {
     if (b.side === 'a') await db.prepare('UPDATE bt_h SET sa = 1 WHERE n = ? AND a = ?').bind(Math.floor(+b.n || 0), id).run(); // a result of my own challenge
@@ -961,7 +964,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

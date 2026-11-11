@@ -929,6 +929,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-help li+li{margin-top:6px}
 .cr-help p{margin:10px 14px 0}
 .cr-ask{display:block;width:calc(100% - 28px);margin:10px 14px 14px;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:11px;font:600 14px var(--body,inherit);cursor:pointer}
+.lul{margin-top:6px;font-size:12.5px;color:#F2CC55;line-height:1.35}
+.lul b{font-family:var(--display);font-weight:400;letter-spacing:.4px;font-size:14px}
 </style>
 </head>
 <body>
@@ -1120,6 +1122,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="savebtn" id="btnSave" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span id="saveText">Сохранить</span></button>
   </div>
   <p class="muted" id="lessonMeta" style="margin-top:6px;font-size:13px">Урок 1 из 6 · 1:35</p>
+  <p class="lul" id="lessonUl" hidden></p>
   <p class="soft" style="margin-top:12px;font-size:14px;line-height:1.5">[Описание урока: что разбираем, на что обратить внимание, частые ошибки]</p>
 
   <button class="ctacard" id="ctaCard" type="button"><span class="ct"><b>Не получается? Федоскин поможет</b><span>Попробуй личный коучинг 1‑на‑1 с одним из опытнейших тренеров мира.</span><em>Онлайн-услуги →</em></span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -1621,7 +1624,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=11"></script>
-<script src="rhythm.js?v=6"></script>
+<script src="rhythm.js?v=7"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -2668,6 +2671,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
     $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: inRow ? T('Новые уроки') : l.sec, n, m: list.length, dur: fmtD(l.dur)});
     $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : T('Ещё в разделе');
+    try { ulPaint(l); } catch (_) {} // BT / BT_NAME are defined further down (a lesson can open at start-up)
     $('#badgeOwn').hidden = true;
     loadSubs(l);
     setLoop(null);
@@ -4534,6 +4538,47 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   try { const raw = JSON.parse(localStorage.getItem('fedoskin-stats') || 'null'); if (raw && typeof raw === 'object') stats = Object.assign(stats, raw); } catch (_) {}
   function saveStats(){ try { localStorage.setItem('fedoskin-stats', JSON.stringify(stats)); } catch (_) {} }
   function isWatched(l){ return (stats.watched[l.id] || 0) >= Math.min(l.dur * 0.5, 20); }
+  // ===== moves in the battle game opened by lessons (owner 11.11.2026 «посмотрел уроки по Powermove — открыл windmill и flare») =====
+  // A move opens by the hero's level (rhythm.js NEED) OR when one of its lessons is watched: half of it, at most 2 minutes of
+  // real playback (stats.watched seconds). Its lessons are found by name, so a new lesson «Air chair» opens AIRCHAIR by itself.
+  // Moves with no lesson of their own: N watched lessons of a section (UL_SEC). The server accepts them (round.u) only when it
+  // says `ul: 1` (/bt/ready, /bt/inbox) — an older server would refuse the round, so then only the level counts.
+  const UL_NEED = { windmill: 3, handstand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5, hollowback: 5 }; // = rhythm.js NEED
+  const UL_RX = { windmill: /windmill/i, handstand: /handstand/i, airchair: /air\s*-?\s*chair/i, headspin: /head\s*-?\s*spin/i,
+    flare: /(^|[^a-z])flare/i, airflare: /air\s*-?\s*flare|airtwist/i, ninety: /1990/, hollowback: /hollow\s*-?\s*back/i };
+  const UL_SEC = { airchair: ['Freezes', 2], hollowback: ['Freezes', 3] };
+  const ulThr = l => Math.max(5, Math.min((l.dur || 0) * 0.5, 120));
+  const ulDone = l => (stats.watched[l.id] || 0) >= ulThr(l);
+  const ulLessons = m => UL_RX[m] ? LESSONS.filter(l => UL_RX[m].test(l.name || '')) : [];
+  function ulState(){
+    const have = [], hint = {};
+    Object.keys(UL_NEED).forEach(m => {
+      const ls = ulLessons(m);
+      if (ls.length) { if (ls.some(ulDone)) have.push(m); else { const l = ls.slice().sort((a, b) => (a.dur || 0) - (b.dur || 0))[0]; hint[m] = { id: l.id, name: l.name }; } return; }
+      const s = UL_SEC[m]; if (!s) return;
+      const sl = LESSONS.filter(l => l.sec === s[0]); if (sl.length < s[1]) return;
+      const n = sl.filter(ulDone).length; if (n >= s[1]) have.push(m); else hint[m] = { sec: s[0], n, need: s[1] };
+    });
+    return { have, hint };
+  }
+  // «🎮 Открыто в батле» once per move; the first run only remembers what is already open (no burst of toasts)
+  function ulCheck(quiet){
+    if (!BT.ul) return;
+    const lvl = statsView().level, open = ulState().have.filter(m => UL_NEED[m] > lvl);
+    let known = null; try { known = JSON.parse(localStorage.getItem('fedoskin-ul') || 'null'); } catch (_) {}
+    const fresh = Array.isArray(known) ? open.filter(m => !known.includes(m)) : [];
+    try { localStorage.setItem('fedoskin-ul', JSON.stringify([...new Set([...(known || []), ...open])])); } catch (_) {}
+    if (fresh.length && !quiet) toast(T('🎮 Открыто в батле: {m}', { m: fresh.map(m => BT_NAME[m]).join(', ') }));
+  }
+  window.fedoskinUl = check => check ? ulCheck() : ulState(); // for checks
+  // lesson page: which battle moves this lesson opens (only moves above the person's level, only when the server takes them)
+  function ulPaint(l){
+    const el = $('#lessonUl'); if (!el) return;
+    const lvl = statsView().level, ms = BT.ul ? Object.keys(UL_RX).filter(m => UL_NEED[m] > lvl && UL_RX[m].test(l.name || '')) : [];
+    el.hidden = !ms.length; if (!ms.length) return;
+    const names = '<b>' + ms.map(m => BT_NAME[m]).join(', ') + '</b>';
+    el.innerHTML = ulDone(l) ? T('🎮 Открыто в батле: {m}', { m: names }) : T('🎮 Посмотри урок — откроешь в батле: {m}', { m: names });
+  }
   function currentStreak(){
     if (!stats.last) return 0;
     const y = new Date(); y.setDate(y.getDate() - 1);
@@ -4638,6 +4683,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
     stats.sec += 1; sessionSec += 1;
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
+    if (stats.watched[curLesson.id] === Math.ceil(ulThr(curLesson)) && BT.ul) setTimeout(() => { saveStats(); ulCheck(); ulPaint(curLesson); }, 0);
     if (FRESH.has(curLesson.id)) freshTick(curLesson, sessionSec);
     if (!sessionCounted && sessionSec >= 5) { stats.views += 1; sessionCounted = true; }
     if (sessionSec >= 8) watchedNow = true;
@@ -4844,7 +4890,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (n === LBQ.n) { LBQ.busy = false; renderLeaders(); }
     }, 350);
   });
-  const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, busy: false, run: 0, cur: null, rest: 0, wallet: null };
+  const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, busy: false, run: 0, cur: null, rest: 0, wallet: null, ul: false };
+  try { BT.ul = sessionStorage.getItem('fedoskin-ul-srv') === '1'; } catch (_) {}
+  const btUlSeen = j => { if (j && j.ul && !BT.ul) { BT.ul = true; try { sessionStorage.setItem('fedoskin-ul-srv', '1'); } catch (_) {} ulCheck(true); if (curLesson && !$('#lesson').hidden) ulPaint(curLesson); } };
   try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
   const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes (the server decides; this only draws the bar)
   function btSetRest(ms){ BT.rest = Date.now() + Math.max(0, ms || 0); try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} btPaintRest(); }
@@ -4990,12 +5038,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const res = await btPost('/bt/ready', r ? { to: r.id } : { find: 1 }), j = await res.json().catch(() => ({}));
       if (res.status === 404 && j.error === 'not found') old = true; // the server code is older than the app
       else if (!j.ok) { toast(btErr(res, j) || T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
-      else { opp = j.opp; dj = j.dj; if (j.lvl) lvl = j.lvl; } // the server's level decides which moves count — the game uses the same
+      else { opp = j.opp; dj = j.dj; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // the server's level decides which moves count — the game uses the same
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
     // owner 11.11.2026: «Сам» = your round by hand, the other one answers within a day (no cartoon); «Авто» = the old cartoon battle
-    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
+    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, ul: !old && BT.ul ? ulState() : null, onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
   }
   const btFinal = m => { const e = new Error(m); e.final = true; return e; };
   async function btCallPost(opp, body){
@@ -5043,7 +5091,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
       return { result: btRes(j.battle, 'b') };
     };
-    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
+    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, ul: BT.ul ? ulState() : null, onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -5257,7 +5305,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const res = await btPost('/bt/inbox', { v: 2 }), j = await res.json().catch(() => ({}));
       if (j.ok) {
         btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} }
-        btWallet(j); BT.news = (j.news || []).slice().reverse(); BT.calls = j.calls || []; BT.results = j.results || []; BT.out = j.out || []; if (j.lvl) BT.lvl = j.lvl;
+        btWallet(j); btUlSeen(j); BT.news = (j.news || []).slice().reverse(); BT.calls = j.calls || []; BT.results = j.results || []; BT.out = j.out || []; if (j.lvl) BT.lvl = j.lvl;
         const skew = j.now ? Date.now() - j.now : 0; [BT.calls, BT.out].forEach(l => l.forEach(x => { x.exp += skew; }));
         btLinkPush(); btPaintLists(); if (lbData) renderLeaders();
       }
@@ -5342,7 +5390,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   window.fedoskinPushed = () => { if (LB_URL && lbShow) teeAfterPush(); };
   // rhythm battle (rhythm.js): every battle starts with a round of it — btStart; fedoskinRhythm = the old trial vs the computer (checks only)
-  RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN });
+  RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN, onUl: h => {
+    // «Открыть урок» from a locked card: close the battle (its history step goes first), then the lesson / section
+    $('#rbGame').hidden = true;
+    setTimeout(() => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); }, 350);
+  } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
   window.fedoskinRare = kind => {

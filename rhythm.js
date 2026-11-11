@@ -12,6 +12,8 @@
     { id: 'funk', name: 'FUNK BREAK', bpm: 114, up: 0, mult: 1.25, lv: 3 },
     { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 }];
   const beatOf = id => BEATS.find(b => b.id === id) || BEATS[1];
+  const know = m => (NEED[m] || 1) <= G.level || G.ul.has(m); // by level or by its lesson
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   let BEAT = .6;
   // a set as in real breaking (owner 11.11.2026 «CC — это футворк»): toprock → footwork → power → freeze
   const COUNT = 4, TOP = 8, FOOT = 8, POW = 8, FRZ = 4, OUTRO = 3; // beats
@@ -170,6 +172,11 @@
 .rbc i em{font-style:normal;color:#F2CC55}
 .rbc.on{border-color:var(--accent);background:rgba(226,97,26,.16)}
 .rbc.lock{opacity:.45}
+.rbc.lock.ul{opacity:.8;border-style:dashed;border-color:#5A4A2A} .rbc.lock.ul i{color:#F2CC55}
+.rbc.fr:after{content:"🎬";position:absolute;top:3px;right:5px;font-size:10px}
+.rbcards.b4 .rbc{padding:9px 2px 7px} .rbcards.b4 .rbc b{font-size:11.5px;letter-spacing:0} .rbcards.b4 .rbc i{letter-spacing:.3px}
+.rbul{margin-top:9px;padding:10px 12px;border-radius:12px;border:1px dashed #5A4A2A;background:rgba(242,204,85,.07);font-size:12.5px;line-height:1.4;color:var(--soft)}
+.rbul{scroll-margin-bottom:150px} .rbul b{display:inline;font-family:var(--display);font-weight:400;letter-spacing:.4px;font-size:14px;color:var(--fg)} .rbul button{margin-top:8px;height:38px;width:100%;font-size:13.5px}
 .rbcards.b4{grid-template-columns:repeat(4,1fr);gap:6px} .rbc.bt{padding:8px 2px 6px;min-height:56px} .rbc.bt b{font-size:13px}
 .rbc.bt small{display:block;font-size:9.5px;color:var(--muted);margin-top:3px;letter-spacing:.5px}
 .rbc.bt.pl:after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#3BD16F;animation:rbpl .5s ease-in-out infinite alternate}
@@ -251,7 +258,7 @@
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
     G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
-      battle: !!(o.onEnd || o.result), answer: !!o.answer, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
+      battle: !!(o.onEnd || o.result), answer: !!o.answer, ul: new Set(o.ul && o.ul.have || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
@@ -297,15 +304,17 @@
     $('#rbPlay').hidden = true; $('#rbEnd').hidden = true; $('#rbSet').hidden = false; $('#rbConf').innerHTML = '';
     $('#rbScore').textContent = '0'; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); $('#rbPhase').textContent = '';
     $('#rbCrowd').classList.remove('hype'); $('#rbF').classList.remove('spin', 'win', 'lose');
-    // three cards a row: the moves this hero knows (a shuffled three, easy to hard) + the next one still locked as a teaser
+    // three cards a row: the moves this hero knows (a shuffled three, easy to hard) + the next one still locked as a teaser.
+    // Moves open by the hero's level OR by watching their lesson (owner 11.11.2026 «открывать движения в игре через уроки»):
+    // up to two moves opened by lessons always get a card (🎬); a locked move that a lesson opens is always shown as a teaser.
     const rows = ROWS.map(([title, all]) => {
-      const have = all.filter(m => (NEED[m] || 1) <= G.level), locked = all.filter(m => (NEED[m] || 1) > G.level);
+      const have = all.filter(know), locked = all.filter(m => !know(m));
       const sh = have.map(m => [rnd(), m]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-      const take = [], byD = d => sh.find(m => DIFF[m] === d && !take.includes(m));
-      [1, 2, 3].forEach(d => { const m = byD(d); if (m) take.push(m); });
+      const take = sh.filter(m => G.ul.has(m) && (NEED[m] || 1) > G.level).slice(0, 2), byD = d => sh.find(m => DIFF[m] === d && !take.includes(m));
+      [1, 2, 3].forEach(d => { const m = take.length < 3 && byD(d); if (m) take.push(m); });
       sh.forEach(m => { if (take.length < 3 && !take.includes(m)) take.push(m); });
       take.sort((a, b) => DIFF[a] - DIFF[b]);
-      const lock = take.length < 3 && locked.length ? locked[0] : null;
+      const hinted = locked.find(m => G.ulHint[m]), lock = hinted || (take.length < 3 && locked.length ? locked[0] : null);
       return { title, take, lock };
     });
     G.picks = rows.map(r => r.take[0]); G.prev = G.picks[0]; G.prevAt = performance.now();
@@ -315,14 +324,29 @@
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
-      rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards">' +
-        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
-        (r.lock ? '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>' : '') + '</div></div>').join('') +
+      rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
+        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && (NEED[m] || 1) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
+        (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>🔒 🎬 ' + T('Урок') + '</i></button>'
+          : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>') : '') + '</div></div>').join('') +
+      '<div class="rbul" id="rbUl" hidden></div>' +
       '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
     djWire();
     $('#rbSet').querySelectorAll('.rbc[data-m]').forEach(b => b.addEventListener('click', () => {
       const k = +b.dataset.r; G.picks[k] = b.dataset.m; G.prev = b.dataset.m; G.prevAt = performance.now();
       $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"]').forEach(x => x.classList.toggle('on', x === b));
+    }));
+    // a locked move with a lesson: how to open it + a button to that lesson (or section)
+    $('#rbSet').querySelectorAll('.rbc[data-ul]').forEach(b => b.addEventListener('click', () => {
+      const m = b.dataset.ul, h = G.ulHint[m], box2 = $('#rbUl'), nm = '<b>' + D.names[m] + '</b>';
+      if (!h || !box2) return;
+      if (!box2.hidden && box2.dataset.m === m) { box2.hidden = true; return; }
+      box2.dataset.m = m; box2.hidden = false;
+      box2.innerHTML = (h.id ? T('Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).', { move: nm, name: esc(h.name) })
+        : T('Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.', { move: nm, sec: esc(h.sec), n: h.n, need: h.need })) +
+        ' ' + T('Или дорасти до уровня {n}.', { n: NEED[m] || 1 }) +
+        (D.onUl ? '<button type="button" class="btn btn-accent" id="rbUlGo">' + (h.id ? T('Открыть урок') : T('Открыть раздел')) + '</button>' : '');
+      const go = $('#rbUlGo'); if (go) go.addEventListener('click', () => D.onUl(h));
+      box2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));
     $('#rbSet').querySelectorAll('.rbc[data-b]').forEach(b => b.addEventListener('click', () => {
       const id = b.dataset.b, again = id === G.beat && G.pv;
@@ -485,6 +509,7 @@
     const score = scoreOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
     const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
       round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
+    const viaL = G.picks.filter(m => (NEED[m] || 1) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
     if (G.onEnd) { G.won = res.acc >= .6; sendRound(); return; }

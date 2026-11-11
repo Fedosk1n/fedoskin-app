@@ -635,7 +635,14 @@ window.I18N = {
  "Пусто": "Empty",
  "Батлы": "Battles",
  "Показать весь рейтинг ({n})": "Show full ranking ({n})",
- "Свернуть": "Show less"
+ "Свернуть": "Show less",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "Unlock {move}: watch the lesson “{name}” — at least half of it (up to 2 minutes).",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "Unlock {move}: watch lessons in {sec} — {n} of {need}.",
+ "Или дорасти до уровня {n}.": "Or reach level {n}.",
+ "Открыть урок": "Open lesson",
+ "Открыть раздел": "Open section",
+ "🎮 Открыто в батле: {m}": "🎮 Unlocked in battles: {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Watch this lesson to unlock in battles: {m}"
  },
  "es": {
  "Главная": "Inicio",
@@ -1270,7 +1277,14 @@ window.I18N = {
  "Пусто": "Vacío",
  "Батлы": "Batallas",
  "Показать весь рейтинг ({n})": "Ver todo el ranking ({n})",
- "Свернуть": "Mostrar menos"
+ "Свернуть": "Mostrar menos",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "Desbloquea {move}: mira la lección «{name}», al menos la mitad (hasta 2 minutos).",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "Desbloquea {move}: mira lecciones de {sec}: {n} de {need}.",
+ "Или дорасти до уровня {n}.": "O llega al nivel {n}.",
+ "Открыть урок": "Abrir lección",
+ "Открыть раздел": "Abrir sección",
+ "🎮 Открыто в батле: {m}": "🎮 Desbloqueado en batallas: {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Mira esta lección para desbloquear en batallas: {m}"
  },
  "pt": {
  "Главная": "Início",
@@ -1905,7 +1919,14 @@ window.I18N = {
  "Пусто": "Vazio",
  "Батлы": "Batalhas",
  "Показать весь рейтинг ({n})": "Ver ranking completo ({n})",
- "Свернуть": "Mostrar menos"
+ "Свернуть": "Mostrar menos",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "Desbloqueie {move}: assista à aula “{name}” — pelo menos metade (até 2 minutos).",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "Desbloqueie {move}: assista às aulas de {sec} — {n} de {need}.",
+ "Или дорасти до уровня {n}.": "Ou chegue ao nível {n}.",
+ "Открыть урок": "Abrir aula",
+ "Открыть раздел": "Abrir seção",
+ "🎮 Открыто в батле: {m}": "🎮 Desbloqueado nas batalhas: {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Assista a esta aula para desbloquear nas batalhas: {m}"
  },
  "fr": {
  "Главная": "Accueil",
@@ -2540,7 +2561,14 @@ window.I18N = {
  "Пусто": "Vide",
  "Батлы": "Battles",
  "Показать весь рейтинг ({n})": "Voir tout le classement ({n})",
- "Свернуть": "Réduire"
+ "Свернуть": "Réduire",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "Débloque {move} : regarde la leçon « {name} », au moins la moitié (jusqu’à 2 minutes).",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "Débloque {move} : regarde des leçons de {sec} — {n} sur {need}.",
+ "Или дорасти до уровня {n}.": "Ou atteins le niveau {n}.",
+ "Открыть урок": "Ouvrir la leçon",
+ "Открыть раздел": "Ouvrir la section",
+ "🎮 Открыто в батле: {m}": "🎮 Débloqué en battle : {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Regarde cette leçon pour débloquer en battle : {m}"
  },
  "de": {
  "Главная": "Start",
@@ -3175,7 +3203,14 @@ window.I18N = {
  "Пусто": "Leer",
  "Батлы": "Battles",
  "Показать весь рейтинг ({n})": "Ganze Rangliste zeigen ({n})",
- "Свернуть": "Weniger anzeigen"
+ "Свернуть": "Weniger anzeigen",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "Schalte {move} frei: Schau dir die Lektion „{name}“ an – mindestens die Hälfte (bis zu 2 Minuten).",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "Schalte {move} frei: Schau Lektionen aus {sec} – {n} von {need}.",
+ "Или дорасти до уровня {n}.": "Oder erreiche Level {n}.",
+ "Открыть урок": "Lektion öffnen",
+ "Открыть раздел": "Bereich öffnen",
+ "🎮 Открыто в батле: {m}": "🎮 Im Battle freigeschaltet: {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Schau diese Lektion, um im Battle freizuschalten: {m}"
  },
  "ja": {
  "Главная": "ホーム",
@@ -3810,7 +3845,14 @@ window.I18N = {
  "Пусто": "なし",
  "Батлы": "バトル",
  "Показать весь рейтинг ({n})": "ランキングをすべて表示（{n}）",
- "Свернуть": "閉じる"
+ "Свернуть": "閉じる",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "{move}を解放：レッスン「{name}」を半分以上（最大2分）見よう。",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "{move}を解放：{sec}のレッスンを見よう（{n}/{need}）。",
+ "Или дорасти до уровня {n}.": "またはレベル{n}に到達しよう。",
+ "Открыть урок": "レッスンを開く",
+ "Открыть раздел": "カテゴリーを開く",
+ "🎮 Открыто в батле: {m}": "🎮 バトルで解放：{m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 このレッスンを見るとバトルで解放：{m}"
  },
  "ko": {
  "Главная": "홈",
@@ -4445,7 +4487,14 @@ window.I18N = {
  "Пусто": "없음",
  "Батлы": "배틀",
  "Показать весь рейтинг ({n})": "전체 랭킹 보기 ({n})",
- "Свернуть": "접기"
+ "Свернуть": "접기",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "{move} 잠금 해제: 레슨 “{name}”을 절반 이상(최대 2분) 시청하세요.",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "{move} 잠금 해제: {sec} 레슨 시청 — {n}/{need}.",
+ "Или дорасти до уровня {n}.": "또는 레벨 {n}에 도달하세요.",
+ "Открыть урок": "레슨 열기",
+ "Открыть раздел": "카테고리 열기",
+ "🎮 Открыто в батле: {m}": "🎮 배틀에서 잠금 해제: {m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 이 레슨을 보면 배틀에서 잠금 해제: {m}"
  },
  "zh": {
  "Главная": "首页",
@@ -5080,6 +5129,13 @@ window.I18N = {
  "Пусто": "无",
  "Батлы": "斗舞",
  "Показать весь рейтинг ({n})": "查看完整排行榜（{n}）",
- "Свернуть": "收起"
+ "Свернуть": "收起",
+ "Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).": "解锁 {move}：观看课程「{name}」至少一半（最多 2 分钟）。",
+ "Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.": "解锁 {move}：观看 {sec} 的课程 — {n}/{need}。",
+ "Или дорасти до уровня {n}.": "或升到 {n} 级。",
+ "Открыть урок": "打开课程",
+ "Открыть раздел": "打开分类",
+ "🎮 Открыто в батле: {m}": "🎮 已在对战中解锁：{m}",
+ "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 观看本课即可在对战中解锁：{m}"
  }
 };

@@ -594,6 +594,14 @@ t('Пусто', 'Empty', 'Vacío', 'Vazio', 'Vide', 'Leer', 'なし', '없음', 
 t('Батлы', 'Battles', 'Batallas', 'Batalhas', 'Battles', 'Battles', 'バトル', '배틀', '斗舞')
 t('Показать весь рейтинг ({n})', 'Show full ranking ({n})', 'Ver todo el ranking ({n})', 'Ver ranking completo ({n})', 'Voir tout le classement ({n})', 'Ganze Rangliste zeigen ({n})', 'ランキングをすべて表示（{n}）', '전체 랭킹 보기 ({n})', '查看完整排行榜（{n}）')
 t('Свернуть', 'Show less', 'Mostrar menos', 'Mostrar menos', 'Réduire', 'Weniger anzeigen', '閉じる', '접기', '收起')
+# ---- движения в батле открываются уроками (11.11.2026) ----
+t('Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).', 'Unlock {move}: watch the lesson “{name}” — at least half of it (up to 2 minutes).', 'Desbloquea {move}: mira la lección «{name}», al menos la mitad (hasta 2 minutos).', 'Desbloqueie {move}: assista à aula “{name}” — pelo menos metade (até 2 minutos).', 'Débloque {move} : regarde la leçon « {name} », au moins la moitié (jusqu’à 2 minutes).', 'Schalte {move} frei: Schau dir die Lektion „{name}“ an – mindestens die Hälfte (bis zu 2 Minuten).', '{move}を解放：レッスン「{name}」を半分以上（最大2分）見よう。', '{move} 잠금 해제: 레슨 “{name}”을 절반 이상(최대 2분) 시청하세요.', '解锁 {move}：观看课程「{name}」至少一半（最多 2 分钟）。')
+t('Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.', 'Unlock {move}: watch lessons in {sec} — {n} of {need}.', 'Desbloquea {move}: mira lecciones de {sec}: {n} de {need}.', 'Desbloqueie {move}: assista às aulas de {sec} — {n} de {need}.', 'Débloque {move} : regarde des leçons de {sec} — {n} sur {need}.', 'Schalte {move} frei: Schau Lektionen aus {sec} – {n} von {need}.', '{move}を解放：{sec}のレッスンを見よう（{n}/{need}）。', '{move} 잠금 해제: {sec} 레슨 시청 — {n}/{need}.', '解锁 {move}：观看 {sec} 的课程 — {n}/{need}。')
+t('Или дорасти до уровня {n}.', 'Or reach level {n}.', 'O llega al nivel {n}.', 'Ou chegue ao nível {n}.', 'Ou atteins le niveau {n}.', 'Oder erreiche Level {n}.', 'またはレベル{n}に到達しよう。', '또는 레벨 {n}에 도달하세요.', '或升到 {n} 级。')
+t('Открыть урок', 'Open lesson', 'Abrir lección', 'Abrir aula', 'Ouvrir la leçon', 'Lektion öffnen', 'レッスンを開く', '레슨 열기', '打开课程')
+t('Открыть раздел', 'Open section', 'Abrir sección', 'Abrir seção', 'Ouvrir la section', 'Bereich öffnen', 'カテゴリーを開く', '카테고리 열기', '打开分类')
+t('🎮 Открыто в батле: {m}', '🎮 Unlocked in battles: {m}', '🎮 Desbloqueado en batallas: {m}', '🎮 Desbloqueado nas batalhas: {m}', '🎮 Débloqué en battle : {m}', '🎮 Im Battle freigeschaltet: {m}', '🎮 バトルで解放：{m}', '🎮 배틀에서 잠금 해제: {m}', '🎮 已在对战中解锁：{m}')
+t('🎮 Посмотри урок — откроешь в батле: {m}', '🎮 Watch this lesson to unlock in battles: {m}', '🎮 Mira esta lección para desbloquear en batallas: {m}', '🎮 Assista a esta aula para desbloquear nas batalhas: {m}', '🎮 Regarde cette leçon pour débloquer en battle : {m}', '🎮 Schau diese Lektion, um im Battle freizuschalten: {m}', '🎮 このレッスンを見るとバトルで解放：{m}', '🎮 이 레슨을 보면 배틀에서 잠금 해제: {m}', '🎮 观看本课即可在对战中解锁：{m}')
 
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
