@@ -557,7 +557,22 @@ body.fsmode.fs-vert.fs-full #fsSoundC{right:62px!important}
 .stage.swiping .subtl,.stage.pulling .subtl{opacity:0}
 body.fsmode .subtl span{font-size:17px}
 body.fsmode:not(.fs-vert) .subtl{bottom:178px}
-body.fsmode.fs-hide:not(.fs-vert) .subtl{bottom:calc(28px + env(safe-area-inset-bottom, 0px))}
+body.fsmode.fs-hide:not(.fs-vert) .subtl{bottom:calc(28px + env(safe-area-inset-bottom, 0px));max-width:min(calc(100% - 150px), 680px)}
+/* landscape full screen, panel hidden: see-through control column on the right (in the black side bar when there is one —
+   --gx from placeGhost(); never under the notch). Only the buttons catch taps; the rest of the column passes them to the video. */
+.fsghost{display:none}
+body.fsmode:not(.fs-vert) .fsghost{display:flex;position:absolute;top:0;bottom:0;right:max(var(--gx, 10px), calc(env(safe-area-inset-right, 0px) + 4px));z-index:4;flex-direction:column;justify-content:center;align-items:center;gap:min(10px, 2.2vmin);pointer-events:none;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility 0s linear .25s}
+body.fsmode.fs-hide:not(.fs-vert) .fsghost{opacity:1;visibility:visible;transition:opacity .25s ease}
+body.fsmode.fs-rot .fsghost{right:var(--gx, 10px)}
+.stage.swiping .fsghost{opacity:0!important}
+.fsghost button{pointer-events:auto;width:42px;height:42px;flex:none;border-radius:21px;border:none;padding:0;background:rgba(0,0,0,.2);color:rgba(242,239,232,.42);display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .3s ease,color .3s ease,transform .1s}
+.fsghost button.fgplay{width:48px;height:48px;border-radius:24px;background:rgba(242,239,232,.14);color:rgba(242,239,232,.55)}
+.fsghost button[aria-pressed="true"]{color:rgba(226,97,26,.78);background:rgba(226,97,26,.13)}
+.fsghost button.hit{background:rgba(11,11,12,.6);color:#F2EFE8;transition:none}
+.fsghost button[aria-pressed="true"].hit{color:var(--accent)}
+.fsghost button:active{transform:scale(.92)}
+.fsghost button.snd-lock{opacity:.5}
+.fsghost .fgt{font:700 12px/1 var(--body);font-variant-numeric:tabular-nums}
 body.fsmode.fs-vert.fs-full .subtl{bottom:calc(66px + env(safe-area-inset-bottom, 0px))}
 body.fsmode.fs-vert.fs-full #fsSubsC{right:114px!important}
 body.fsmode.fs-vert #fsSubsTop{display:none!important}
@@ -949,6 +964,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
             <button class="fsk" id="fsSound" aria-pressed="false" aria-label="Выключить звук"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fsIcoSound"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></span><span class="fsl" id="fsSoundL">Звук</span></button>
           </div>
         </div>
+      </div>
+      <!-- landscape full screen with the panel hidden: the same controls as a see-through column on the right
+           (owner 11.11.2026 «сильно прозрачные кнопки… без тапания на экран») — no timeline, taps don't open the panel -->
+      <div class="fsghost" id="fsGhost">
+        <button data-for="#fsLoop3" aria-pressed="false" aria-label="Повтор 3 секунд"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3.5V8h-4.5"/><text x="12" y="15.7" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor" stroke="none" font-family="Inter,system-ui,sans-serif">3</text></svg></button>
+        <button data-for="#fsSpeed" aria-pressed="false" aria-label="Скорость"><span class="fgt" id="fgSpeedVal">1x</span></button>
+        <button data-for="#fsPlay" class="fgplay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" id="fgIcoPlay"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
+        <button data-for="#fsMirror" aria-pressed="false" aria-label="Зеркало"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></button>
+        <button data-for="#fsLoop" aria-pressed="true" aria-label="Повтор урока"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></button>
+        <button data-for="#fsSound" aria-pressed="false" aria-label="Выключить звук"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true" id="fgIcoSound"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
       </div>
       <button class="bigplay" id="bigPlay" aria-label="Смотреть"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="#0B0B0C"/></svg></button>
     </div>
@@ -2323,7 +2348,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const pt = t => rot ? { x: t.clientY, y: -t.clientX } : { x: t.clientX, y: t.clientY }; // sideways picture (fs-rot): its «sideways» is the screen's up/down
     stage.addEventListener('touchstart', e => {
       if (e.touches.length !== 1 || !curLesson || $('#lesson').hidden || !$('#badgeOwn').hidden) { mode = 0; return; }
-      if (e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')))) { mode = 0; return; }
+      if (e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom') || n.classList.contains('fsghost')))) { mode = 0; return; }
       const t = e.touches[0];
       // the screen's side edges are for «back» (our gesture on iPhone, the phone's own on Android / in browsers)
       if (t.clientX < EDGE_BACK || t.clientX > window.innerWidth - EDGE_BACK) { mode = 0; return; }
@@ -2932,6 +2957,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
     if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC' || n.id === 'btnSubs' || n.id === 'fsSubsC')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
+    if (e.composedPath().some(n => n.id === 'fsGhost')) return;
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
     if (onBar) { if (document.body.classList.contains('fsmode') && !document.body.classList.contains('fs-vert')) pokeFs(); return; }
     // double tap = full screen and back; a single tap waits a moment to make sure it isn't the first of two
@@ -3063,9 +3089,43 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#fsLoop').setAttribute('aria-pressed', !!P.repeat); $('#fsLoop3').setAttribute('aria-pressed', !!P.loop);
     $('#fsLoopZone').hidden = !P.loop;
     if (P.loop){ $('#fsLoopZone').style.left = (P.loop.a / P.dur * 100) + '%'; $('#fsLoopZone').style.width = ((P.loop.b - P.loop.a) / P.dur * 100) + '%'; }
+    syncGhost();
     $('#fsIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
   }
   $('#btnFs').addEventListener('click', () => enterFs());
+  // see-through control column (landscape full screen, panel hidden): each button does what its twin in the panel does,
+  // but the panel stays hidden; a short light-up shows the tap landed
+  function syncGhost(){
+    $('#fgSpeedVal').textContent = P.rate + 'x';
+    $('#fsGhost').querySelectorAll('[data-for]').forEach(g => {
+      const src = $(g.dataset.for); if (!src) return;
+      if (src.hasAttribute('aria-pressed')) g.setAttribute('aria-pressed', src.getAttribute('aria-pressed'));
+      if (g.dataset.for !== '#fsPlay') g.setAttribute('aria-label', src.getAttribute('aria-label') || '');
+    });
+    $('#fgIcoPlay').innerHTML = P.playing ? '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>' : '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
+    $('#fsGhost [data-for="#fsPlay"]').setAttribute('aria-label', P.playing ? T('Пауза') : T('Смотреть'));
+    const snd = $('#fsGhost [data-for="#fsSound"]'); $('#fgIcoSound').innerHTML = $('#fsIcoSound').innerHTML;
+    snd.classList.toggle('snd-lock', $('#fsSound').classList.contains('snd-lock')); snd.setAttribute('aria-disabled', $('#fsSound').getAttribute('aria-disabled') || 'false');
+  }
+  $('#fsGhost').addEventListener('click', e => {
+    const g = e.target.closest('[data-for]'); if (!g) return;
+    e.stopPropagation();
+    const wasHidden = document.body.classList.contains('fs-hide');
+    $(g.dataset.for).click(); // the panel twin (it may plan to hide the panel — it is hidden already)
+    if (wasHidden) { clearTimeout(fsTimer); document.body.classList.add('fs-hide'); } // pause must not bring the panel up
+    syncGhost();
+    g.classList.add('hit'); clearTimeout(g._hitT); g._hitT = setTimeout(() => g.classList.remove('hit'), 450);
+  });
+  // the column sits in the middle of the black bar beside a 16:9 video (wide phones), else 10 px from the edge
+  function placeGhost(){
+    if (!document.body.classList.contains('fsmode') || document.body.classList.contains('fs-vert')) return;
+    const e = av.videoWidth ? av : vid, ar = e.videoWidth ? e.videoWidth / e.videoHeight : 16 / 9;
+    const bar = Math.max(0, (stage.clientWidth - stage.clientHeight * ar) / 2);
+    stage.style.setProperty('--gx', Math.round(bar >= 62 ? bar / 2 - 24 : 10) + 'px');
+  }
+  new MutationObserver(() => requestAnimationFrame(placeGhost)).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('resize', () => requestAnimationFrame(placeGhost));
+  [vid, vin].forEach(el => el.addEventListener('loadedmetadata', () => requestAnimationFrame(placeGhost)));
   function paintMute(){
     const slow = P.rate < 1, soundOff = quiet(); // shadows the stored choice: paint what is heard
     ['#btnMute', '#fsMute', '#fsSound', '#fsSoundC'].forEach(id => { const b = $(id); if (b) { b.classList.toggle('snd-lock', slow); b.setAttribute('aria-disabled', String(slow)); } });
@@ -3076,6 +3136,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#fsSound').setAttribute('aria-pressed', soundOff); $('#fsSoundL').textContent = soundOff ? T('Без звука') : T('Звук');
     ['#fsSound', '#fsSoundC'].forEach(id => $(id).setAttribute('aria-label', $('#btnMute').getAttribute('aria-label')));
     $('#fsSoundC').setAttribute('aria-pressed', soundOff);
+    syncGhost();
   }
   // sound on / off: every sound button does the same; the choice is remembered for the next lessons and next time
   let sndT = 0;

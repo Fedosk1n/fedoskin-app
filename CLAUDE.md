@@ -169,6 +169,15 @@
   screen — «Звук / Без звука» 6th captioned button of the bottom row (`#fsSound`, hidden in fs-vert); `#btnMute` on the
   page player; the old top-bar icon `#fsMute` is not shown. `toggleSound()`: one state `soundOff`, remembered in
   `fedoskin-mute`, short centre sign `#sndFlash`. Autoplay-blocked fallback still mutes without saving.
+- See-through controls in landscape full screen (owner 11.11.2026 «сильно прозрачных кнопок управления, можно без шкалы…
+  без тапания на экран»): `#fsGhost` = column on the right of the stage, shown only while the landscape panel is hidden
+  (`fsmode.fs-hide:not(.fs-vert)`): Цикл 3 сек / Скорость (text 1x/0.5x/0.25x) / ▶❚❚ / Зеркало / Повтор / Звук, no captions,
+  no timeline; buttons ~42 % white on 20 % black, switched-on = faded orange; a tap lights the button for 0.45 s. Each button
+  clicks its panel twin (`data-for`), then puts `fs-hide` back (pause would otherwise bring the panel up); `syncGhost()` from
+  syncFs + paintMute. `placeGhost()` sets `--gx` = middle of the black side bar beside the video (bar ≥ 62 px) else 10 px,
+  never closer than safe-area-right + 4 (notch). Stage click handler and lessonSwipe ignore taps on it; the container is
+  pointer-events:none (only the buttons catch taps). Subtitles in that state are narrowed (100 % − 150 px). Works in
+  fs-rot too (stage is rotated, the column follows). Tested headless 844×390 and 390×844 rotated.
 - Slow motion is silent (owner 08.11.2026 «при 0.5 и 0.25 звук выключался автоматически без возможности включить»):
   `quiet()` = soundOff || P.rate < 1 drives `applyMute()` and `paintMute()` (which paints what is heard); at < 1x all sound
   buttons get `.snd-lock` (dimmed, aria-disabled) and `toggleSound()` only flashes + toast «На замедлении звук выключен — он
