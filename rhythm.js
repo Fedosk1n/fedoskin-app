@@ -54,6 +54,13 @@
   const noteBase = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * (n.big ? 3 : 1) * MULT[DIFF[picks[n.ph]]] * beatOf(beat).mult;
   const comboMult = c => 1 + Math.min(c, 30) * .02;
   function maxScore(picks, seed, level, beat) { let s = 0, c = 0; notesFor(picks, seed, beat).forEach(n => { c++; s += noteBase(n, picks, 1, beat) * comboMult(c); }); return Math.round(s * (1 + .01 * (level || 1))); }
+  // the final score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo (`brk` = index of
+  // the note after it). The server (push-worker.js rbScore) counts it exactly the same way — keep them equal.
+  function scoreOf(picks, seed, level, beat, hits, brk) {
+    const br = new Set(brk || []); let s = 0, c = 0;
+    notesFor(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k === 3) { c = 0; return; } c++; s += noteBase(n, picks, k, beat) * comboMult(c); });
+    return Math.round(s * (1 + .01 * (level || 1)));
+  }
 
   // ---- the beat ----
   let ctx = null, master = null, noise = null;
@@ -181,7 +188,28 @@
 .rbsnd{position:absolute;right:10px;top:10px;z-index:6;width:36px;height:36px;border-radius:50%;border:1px solid #333338;background:rgba(11,11,12,.7);color:var(--fg);display:flex;align-items:center;justify-content:center}
 .rbsnd.off{color:var(--accent)}
 .rbcnt{position:absolute;left:0;right:0;top:30%;text-align:center;font-family:var(--display);font-size:72px;z-index:4;pointer-events:none;opacity:0}
-.rbcnt.show{animation:rbj .55s ease-out both}`;
+.rbcnt.show{animation:rbj .55s ease-out both}
+.rbvsr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-top:10px}
+.rbvsr>span{display:flex;align-items:center;gap:8px;min-width:0} .rbvsr>span.op{flex-direction:row-reverse;text-align:right}
+.rbvsr .hb{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#1B1B1F;border:2px solid var(--accent)} .rbvsr .op .hb{border-color:#5BB8FF}
+.rbvsr .hb svg{width:100%;height:100%;display:block}
+.rbvsr b{display:block;font-size:14px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .rbvsr small{display:block;font-size:11px;color:var(--muted)}
+.rbvsr>span>span{min-width:0}
+.rbvsr em{font-style:normal;font-family:var(--display);font-size:24px;color:var(--muted)}
+.rbdj{display:flex;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;border-radius:12px;background:#151518;border:1px solid #26262A;color:var(--fg);width:100%;font:inherit;text-align:left}
+.rbdj i{font-style:normal;font-size:22px;line-height:1} .rbdj small{display:block;font-size:10.5px;color:var(--muted);letter-spacing:.4px}
+.rbdj b{font-family:var(--display);font-size:17px;font-weight:400;letter-spacing:.5px} .rbdj span{flex:1;min-width:0}
+.rbdj.pl{border-color:#3BD16F}
+.rbmode{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.rbmode button{padding:14px 10px 12px;border-radius:16px;border:2px solid var(--accent);background:rgba(226,97,26,.14);color:var(--fg);font:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px}
+.rbmode button.au{border-color:#3A3A40;background:#17171A}
+.rbmode svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round} .rbmode .au svg{stroke:var(--fg)}
+.rbmode b{font-family:var(--display);font-size:21px;font-weight:400;letter-spacing:.6px}
+.rbmode small{font-size:11.5px;line-height:1.3;color:var(--soft)}
+.rbskip{display:block;margin:10px auto 0;padding:9px 18px;border-radius:12px;border:1px solid #333338;background:#151518;color:var(--fg);font:inherit;font-size:13px}
+.rbwait{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;color:var(--soft);font-size:13.5px}
+.rbwait i{width:16px;height:16px;border-radius:50%;border:2px solid #333;border-top-color:var(--accent);animation:rbspin .8s linear infinite}
+@keyframes rbspin{to{transform:rotate(360deg)}}`;
   const SND = on => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/>' + (on ? '<path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>' : '<path d="m16 9 5 6m0-6-5 6"/>') + '</svg>';
 
   function build() {
@@ -196,11 +224,12 @@
       '<div class="btcam"><div class="fighter" id="rbF"><span class="spinfx"></span><span class="shd"></span><div class="mv"></div></div><div class="btfx" id="rbFx"></div></div>' +
       '<div class="crowd" id="rbCrowd">' + '<i></i>'.repeat(13) + '</div><div class="confetti" id="rbConf"></div></div>' +
       '<div id="rbSet" class="rbset" data-nt></div>' +
-      '<div id="rbPlay" hidden><div class="rbtrack"><canvas id="rbCan"></canvas></div><div class="rbpad" id="rbPad">' + T('Тапай!') + '</div></div>' +
+      '<div id="rbPlay" hidden><div class="rbtrack"><canvas id="rbCan"></canvas></div><div class="rbpad" id="rbPad">' + T('Тапай!') + '</div><button type="button" class="rbskip" id="rbSkip" data-nt hidden>' + T('Пропустить') + '</button></div>' +
       '<div id="rbEnd" class="rbend" data-nt hidden></div>' +
       '<div class="btbtns" data-nt><button class="btn btn-ghost" id="rbClose" type="button">' + T('Закрыть') + '</button></div>';
     box.querySelectorAll('#rbCrowd i').forEach((i, k) => { i.style.animationDelay = (-(k * 0.13) % 0.5).toFixed(2) + 's'; });
     $('#rbClose').addEventListener('click', close);
+    $('#rbSkip').addEventListener('click', skip);
     $('#rbSnd').addEventListener('click', () => { G.mute = !G.mute; try { localStorage.setItem('fedoskin-rb-mute', G.mute ? '1' : ''); } catch (_) {} paintSnd(); });
     box.addEventListener('pointerdown', e => {
       if (!G || G.mode !== 'play') return;
@@ -208,7 +237,7 @@
       e.preventDefault(); tap(e.timeStamp);
     });
     box.addEventListener('touchstart', e => { if (G && G.mode === 'play' && !(e.target.closest && e.target.closest('[data-nt]'))) e.preventDefault(); }, { passive: false });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') setup(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') again(); });
     new MutationObserver(() => { if (D.el.hidden) stop(); }).observe(D.el, { attributes: true, attributeFilter: ['hidden'] });
     window.addEventListener('resize', sizeCan);
   }
@@ -218,18 +247,43 @@
   function open(o) {
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
-    G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, mute, mode: '', picks: null, seed: 1 };
+    G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, mute, mode: '', picks: null, seed: 1,
+      battle: !!o.onEnd, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
     paintSnd();
     D.el.hidden = false;
-    setup();
+    if (G.battle) choose(); else setup();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
   function stop() { cancelAnimationFrame(raf); raf = 0; if (G) { killBeat(); G.mode = ''; } }
   function close() { stop(); D.el.hidden = true; }
   function killBeat() { if (G && G.out && ctx) { try { G.out.gain.setTargetAtTime(0, ctx.currentTime, .03); const o = G.out; setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); } catch (_) {} } if (G) G.out = null; stopPreview(); }
+
+  const again = () => { if (G.battle) choose(); else setup(); };
+  // the DJ's track (battle): the player doesn't pick it; a tap on it plays 2 bars
+  const djHtml = () => { const B = beatOf(G.beat); return '<button type="button" class="rbdj" id="rbDj"><i aria-hidden="true">🎧</i><span><small>' + D.T('Трек ставит диджей') + '</small><b>' + B.name + '</b></span><small>' + B.bpm + ' BPM · ×' + B.mult + '</small></button>'; };
+  const djWire = () => { const d = $('#rbDj'); if (!d) return; d.addEventListener('click', () => { if (G.pv) stopPreview(); else { preview(G.beat); d.classList.add('pl'); } }); };
+  // ---- 0 (battle): who against whom, which track, and how — by hand or on auto (owner 11.11.2026 «сразу выбрать авто или руками») ----
+  function choose() {
+    const T = D.T; killBeat();
+    G.mode = 'choose'; G.prev = 'bounce'; G.prevAt = performance.now();
+    $('#rbPlay').hidden = true; $('#rbEnd').hidden = true; $('#rbSet').hidden = false; $('#rbConf').innerHTML = '';
+    $('#rbScore').textContent = '0'; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); $('#rbPhase').textContent = '';
+    $('#rbCrowd').classList.remove('hype'); $('#rbF').classList.remove('spin', 'win', 'lose');
+    const o = G.opp, esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const side = (cls, name, lvl, eq, uid) => '<span class="' + cls + '"><span class="hb">' + (lvl ? HERO.svg(lvl, { uid, bust: true, bg: false, acc: eq || [] }) : '') + '</span><span><b>' + esc(name) + '</b><small>' + (lvl ? T('Ур. {n}', { n: lvl }) : '?') + '</small></span></span>';
+    const IC_HAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5v-2a1.5 1.5 0 0 1 3 0V12M14 10.5a1.5 1.5 0 0 1 3 0V12M17 11a1.5 1.5 0 0 1 3 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L4.3 15a1.6 1.6 0 0 1 2.6-1.8L8 14.5"/></svg>';
+    const IC_AUTO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M8 8h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3zM9.5 13h.01M14.5 13h.01M2 13v2M22 13v2"/></svg>';
+    $('#rbSet').innerHTML = '<div class="rbvsr">' + side('me', G.me || T('Ты'), G.level, G.eq, 'rvm') + '<em>VS</em>' + side('op', o ? o.name : T('Соперник'), o && o.lvl, o && o.eq, 'rvo') + '</div>' +
+      djHtml() + '<h3>' + T('Как будешь танцевать?') + '</h3>' +
+      '<div class="rbmode"><button type="button" id="rbHand">' + IC_HAND + '<b>' + T('Сам') + '</b><small>' + T('Тапай в бит — точность решает') + '</small></button>' +
+      '<button type="button" class="au" id="rbAutoGo">' + IC_AUTO + '<b>' + T('Авто') + '</b><small>' + T('Би-бой танцует сам, ты смотришь') + '</small></button></div>';
+    djWire();
+    $('#rbHand').addEventListener('click', () => setup());
+    $('#rbAutoGo').addEventListener('click', () => { setup(); start(true); });
+  }
 
   // ---- 1: build the set ----
   function setup() {
@@ -255,12 +309,13 @@
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
-      '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
-      BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>' +
+      (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
+      BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards">' +
         r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
         (r.lock ? '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>' : '') + '</div></div>').join('') +
-      '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button><button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button></div>';
+      '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
+    djWire();
     $('#rbSet').querySelectorAll('.rbc[data-m]').forEach(b => b.addEventListener('click', () => {
       const k = +b.dataset.r; G.picks[k] = b.dataset.m; G.prev = b.dataset.m; G.prevAt = performance.now();
       $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"]').forEach(x => x.classList.toggle('on', x === b));
@@ -272,7 +327,7 @@
       if (again) stopPreview(); else preview(id);
     }));
     $('#rbGo').addEventListener('click', () => start(false));
-    $('#rbAuto').addEventListener('click', () => start(true));
+    if ($('#rbAuto')) $('#rbAuto').addEventListener('click', () => start(true));
   }
 
   // a tap on a beat card plays 2 bars of it (another tap on the same card stops it)
@@ -290,7 +345,7 @@
   function stopPreview() {
     if (!G) return; clearTimeout(G.pvT);
     if (G.pv && ctx) { const o = G.pv; try { o.gain.setTargetAtTime(0, ctx.currentTime, .03); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); }
-    G.pv = null; if (box) box.querySelectorAll('.rbc.pl').forEach(x => x.classList.remove('pl'));
+    G.pv = null; if (box) box.querySelectorAll('.rbc.pl, .rbdj.pl').forEach(x => x.classList.remove('pl'));
   }
 
   // ---- 2: the round ----
@@ -302,8 +357,9 @@
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
     G.notes = notesFor(G.picks, G.seed, G.beat);
-    if (G.auto) { const pm = clamp(.2 - .015 * G.level, .06, .2) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm; n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
+    if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (clamp(DIFF[G.picks[n.ph]] + BB.up, 1, 3) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
+    $('#rbSkip').hidden = !G.auto; G.brk = [];
     G.score = 0; G.combo = 0; G.best = 0; G.cnt = [0, 0, 0, 0]; G.missAt = -9; G.bigSt = 0; G.lastBeat = -1; G.shown = -1;
     const now = performance.now(); let lat = 0;
     G.audio = audioOn();
@@ -336,7 +392,7 @@
     let bestN = null, bd = 9;
     for (const n of G.notes) { if (n.st) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
     if (bestN && bd <= W_GOOD) { const kind = bd <= W_PERF ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
-    else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
+    else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { const nx = G.notes.findIndex(n => !n.st && n.t > s); G.brk.push(nx < 0 ? G.notes.length : nx); G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
   }
   function draw(s) {
     const c = $('#rbCan'), x = c.getContext('2d'), W = c.width, H = c.height, d = W / (c.getBoundingClientRect().width || W), hx = W * .2, pps = (W * .8) / TRAVEL, cy = H / 2;
@@ -386,7 +442,7 @@
     if (!G || D.el.hidden) return;
     raf = requestAnimationFrame(frame);
     const M = HERO.MOVES;
-    if (G.mode === 'setup') { const t = (now - G.prevAt) / 1000, mv = G.prev, d = M[mv].dur; setHero(drive('s' + mv + G.prevAt, M[mv].f(((t / d) % 1 + 1) % 1), now / 1000)); return; }
+    if (G.mode === 'setup' || G.mode === 'choose') { const t = (now - G.prevAt) / 1000, mv = G.prev, d = M[mv].dur; setHero(drive('s' + mv + G.prevAt, M[mv].f(((t / d) % 1 + 1) % 1), now / 1000)); return; }
     if (G.mode === 'end') { const mv = G.won ? 'win2' : 'lose3', d = M[mv].dur; setHero(drive('e' + mv, M[mv].f((((now - G.endAt) / 1000 / d) % 1 + 1) % 1), now / 1000)); return; }
     if (G.mode !== 'play') return;
     // keep the clock on the sound (the audio clock is the truth; small corrections only)
@@ -410,13 +466,22 @@
     if (s >= B_END * BEAT) finish();
   }
 
+  // auto round: «Пропустить» = the rest of the notes are danced at once (the same luck as if watched)
+  function skip() {
+    if (!G || G.mode !== 'play' || !G.auto) return;
+    const s = B_END * BEAT;
+    G.notes.forEach(n => { if (n.st) return; if (n.am) judge(n, 3, s); else judge(n, Math.abs(n.aj) <= W_PERF ? 1 : 2, s); });
+    finish();
+  }
   // ---- 3: the judges ----
   function finish() {
-    const T = D.T, total = G.notes.length, max = maxScore(G.picks, G.seed, G.level, G.beat), score = Math.round(G.score);
-    const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits: G.notes.map(n => n.st).join('') };
+    const T = D.T, total = G.notes.length, max = maxScore(G.picks, G.seed, G.level, G.beat), hits = G.notes.map(n => n.st).join('');
+    const score = scoreOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
+    const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
+      round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
-    if (G.onEnd) { G.won = res.acc >= .5; G.onEnd(res); return; }
+    if (G.onEnd) { G.won = res.acc >= .6; sendRound(); return; }
     // the trial: the computer dances for the opponent — its picks and accuracy depend on its level
     const ol = G.oppLevel, pk = ROWS.map(([, all]) => { const have = all.filter(m => (NEED[m] || 1) <= ol); return have[Math.floor(Math.random() * have.length)]; });
     const opp = Math.round(maxScore(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
@@ -442,6 +507,22 @@
     }, 400 + 3 * 550 + 250);
   }
 
+  // battle: the round goes to the server (index.html onEnd → promise); meanwhile «the judges watch», on failure «try again»
+  function sendRound() {
+    const T = D.T, end = $('#rbEnd'), r = G.res, g = G;
+    end.innerHTML = '<b class="win" style="font-size:30px">' + T('Твой раунд') + '</b>' +
+      '<div class="rbvs" style="grid-template-columns:1fr"><span class="me"><small>' + T('Счёт') + '</small><b>' + r.score + '</b></span></div>' +
+      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + '</p>' +
+      '<div class="rbwait" id="rbWait"><i></i><span>' + T('Судьи смотрят батл…') + '</span></div>';
+    end.hidden = false;
+    $('#rbCrowd').classList.toggle('hype', r.acc >= .6);
+    Promise.resolve().then(() => g.onEnd(r)).catch(e => {
+      if (G !== g || g.mode !== 'end' || D.el.hidden) return;
+      const w = $('#rbWait'); if (!w) return;
+      w.outerHTML = '<p>' + ((e && e.message) || T('Не получилось отправить раунд. Проверь интернет.')) + '</p>' + (e && e.final ? '' : '<div class="rbbt"><button type="button" class="btn btn-accent" id="rbRetry">' + T('Отправить ещё раз') + '</button></div>');
+      const b = $('#rbRetry'); if (b) b.addEventListener('click', sendRound);
+    });
+  }
   // for checks: render a beat offline and return its loudness per second (window.RB._render('funk'))
   async function render(beat, preview) {
     const dur = preview ? preview * 4 * 60 / beatOf(beat).bpm + 1 : (B_END + 1) * 60 / beatOf(beat).bpm, sr = 22050;
@@ -453,5 +534,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, notesFor, maxScore, BEATS, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, notesFor, maxScore, scoreOf, BEATS, _render: render, state: () => G };
 })();

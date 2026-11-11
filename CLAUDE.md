@@ -453,10 +453,28 @@
   rim, bass wave/filter, chords: lo-fi keys + vinyl crackle, funk horn stabs, raw amen-like ghosts). `BEAT`/`TRAVEL` are set
   per round in start(); `notesFor/maxScore(…, beat)` and the result carry the beat id; the computer is a bit weaker on harder
   beats. `RB._render(beat[, bars])` renders a beat offline → loudness per second (check: all four ~0.1–0.2 RMS). rhythm.js `?v=3`.
-  Entry point (owner 11.11.2026 «Добавь… где батл можно играть руками или на авто»): tab «Батлы» → card `#rbOpen`
-  «Ритм-батл» (`.rbcard`, above «Магазин») → `window.fedoskinRhythm()` (setup: «Начать батл» = tap yourself / «Играть на авто»).
-  Now only a trial vs the computer: `?battle=play` / `window.fedoskinRhythm(level, oppLevel)` — NOT yet linked to real battles
-  (next: cards/effects polish, server /bt/call with the round + /bt/play, moves unlocked by watching lessons). Sound mute
+  IN THE MAIN BATTLE since 11.11.2026 (owner «не надо тренировку оставлять, просто встрой всё в основной батл… сразу выбрать авто
+  или руками»; «трек выбирается автоматически, якобы диджей»): the trial card is gone. «Батл» on a rating card / «Найти соперника» /
+  «Принять вызов» ⇒ `btStart(r)` → POST /bt/ready {to | find:1} (limits checked BEFORE playing: rest / 3 a day / gone / 403) →
+  {opp {id,name,lvl,eq,co}, dj, lvl} → `RB.open({level: server lvl, me, opp, dj, onEnd})` = battle mode: screen «Как будешь
+  танцевать?» (`choose()`: VS strip, DJ chip `#rbDj` «Трек ставит диджей» (tap = 2-bar preview), «Сам» `#rbHand` → card setup
+  without the BEAT row → «Начать батл»; «Авто» `#rbAutoGo` → random cards, auto round at once, «Пропустить» `#rbSkip` dances the
+  rest instantly). finish() → `scoreOf(picks, seed, level, beat, hits, brk)` (brk = note index after each stray tap = combo break)
+  → «Твой раунд» + «Судьи смотрят батл…» → onEnd = `btSend` → POST /bt/call {to, round {p, s, b, h, k, au}} → RB.close + btPlay
+  (cartoon). Errors: network ⇒ «Отправить ещё раз»; rest/limit/gone/400 round ⇒ final message.
+  Server (push-worker.js, ported notes/scoring = rbNotes/rbScore — KEEP EQUAL to rhythm.js notesFor/scoreOf, PAT/DIFF/NEED/BEATS):
+  DJ track `rbDj(a, b, half-hour slot)` = sha256 → one of 4 (call accepts this or the previous slot); `rbCheck` (picks in rows and
+  ≤ NEED for the server level, DJ track, hits length/charset) recounts the score itself; the challenged phone doesn't wait —
+  `rbStand`: its dancer on the same track with its OWN style = D1 `bt_def` (each phone's last attacking round: picks + n/miss/
+  perfect counts, ≤ 30 days), nobody yet ⇒ by level (miss chance rises with move difficulty, like client auto). Judges: per vote
+  p = logistic((sa − sb) / (.04·max)) (10 % ahead ≈ 92 % a vote). D1 `bt_rd (n, ra, rb)`; btPack adds `ra/rb` = {p, b, sc, pf,
+  gd, ms, fz (big freeze note hit), au, st (stand-in)}; /bt/inbox joins them. /bt/call without `round` (old apps) = old random
+  result. App with an old server (/bt/ready 404 'not found') ⇒ still plays (random DJ on the phone), then old /bt/call.
+  btPlay: each fighter dances its round's toprock + power (round 1), another power + its freeze or `shock` «MISS / OOPS!» (round
+  2); result line «Счёт: a : b · Судьи: x : y». /visits returns `rb: 1` (admin banner «обновите код сервера» otherwise; admin
+  «версия 38»). Tested: worker on node:sqlite (parity client = server score, cheats ⇒ 400, defence used, inbox carries rounds,
+  old client), app headless en/ru (auto + skip, by hand with scripted taps, rest refused before opening, old server).
+  `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.

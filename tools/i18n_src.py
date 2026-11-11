@@ -427,6 +427,17 @@ t('Пропустить', 'Skip', 'Saltar', 'Pular', 'Passer', 'Überspringen', 
 t('Ритм-батл', 'Rhythm battle', 'Batalla de ritmo', 'Batalha de ritmo', 'Battle rythmique', 'Rhythmus-Battle', 'リズムバトル', '리듬 배틀', '节奏对战')
 t('Счёт', 'Score', 'Puntos', 'Pontos', 'Score', 'Punkte', 'スコア', '점수', '得分')
 t('Комбо', 'Combo', 'Combo', 'Combo', 'Combo', 'Combo', 'コンボ', '콤보', '连击')
+t('Трек ставит диджей', 'The DJ picks the track', 'El DJ elige la pista', 'O DJ escolhe a faixa', 'Le DJ choisit le son', 'Der DJ wählt den Track', 'DJが曲を選ぶ', 'DJ가 트랙을 골라', 'DJ 选曲')
+t('Как будешь танцевать?', 'How will you dance?', '¿Cómo vas a bailar?', 'Como você vai dançar?', 'Comment tu vas danser ?', 'Wie tanzt du?', 'どうやって踊る？', '어떻게 출래?', '你要怎么跳？')
+t('Сам', 'Myself', 'Yo mismo', 'Eu mesmo', 'Moi-même', 'Selbst', '自分で', '직접', '自己跳')
+t('Тапай в бит — точность решает', 'Tap to the beat — accuracy wins', 'Toca al ritmo: la precisión decide', 'Toque na batida — a precisão decide', 'Tape sur le beat — la précision décide', 'Tippe im Takt — Genauigkeit entscheidet', 'ビートに合わせてタップ — 正確さが勝負', '비트에 맞춰 탭 — 정확도가 승부', '跟着节拍点击——准度决定胜负')
+t('Би-бой танцует сам, ты смотришь', 'Your b-boy dances, you watch', 'Tu b-boy baila solo, tú miras', 'Seu b-boy dança sozinho, você assiste', 'Ton b-boy danse seul, tu regardes', 'Dein B-Boy tanzt allein, du schaust zu', 'Bボーイが自分で踊る、君は見るだけ', '비보이가 알아서 춰, 넌 보기만 해', '你的 B-boy 自己跳，你来看')
+t('Твой раунд', 'Your round', 'Tu ronda', 'Sua rodada', 'Ton round', 'Deine Runde', 'きみのラウンド', '너의 라운드', '你的回合')
+t('Судьи смотрят батл…', 'The judges are watching…', 'Los jueces están mirando…', 'Os juízes estão assistindo…', 'Les juges regardent…', 'Die Jury schaut zu…', '審査員が見ている…', '심사위원이 보는 중…', '评委正在观看…')
+t('Не получилось отправить раунд. Проверь интернет.', 'Couldn’t send your round. Check your internet.', 'No se pudo enviar tu ronda. Revisa tu internet.', 'Não deu para enviar sua rodada. Verifique sua internet.', 'Impossible d’envoyer ton round. Vérifie ta connexion.', 'Deine Runde konnte nicht gesendet werden. Prüfe dein Internet.', 'ラウンドを送れなかった。ネット接続を確認してね。', '라운드를 보내지 못했어. 인터넷을 확인해 줘.', '回合没能发送。请检查网络。')
+t('Отправить ещё раз', 'Send again', 'Enviar de nuevo', 'Enviar de novo', 'Renvoyer', 'Nochmal senden', 'もう一度送る', '다시 보내기', '重新发送')
+t('Раунд не засчитан — попробуй ещё раз чуть позже', 'The round didn’t count — try again a bit later', 'La ronda no contó: inténtalo un poco más tarde', 'A rodada não valeu — tente de novo daqui a pouco', 'Le round n’a pas compté — réessaie un peu plus tard', 'Die Runde zählt nicht — versuch es etwas später nochmal', 'このラウンドは無効 — 少ししてからもう一度', '라운드가 인정되지 않았어 — 잠시 후 다시 해 봐', '这回合不算——稍后再试')
+t('Счёт: {a} : {b}', 'Score: {a} : {b}', 'Puntos: {a} : {b}', 'Pontos: {a} : {b}', 'Score : {a} : {b}', 'Punkte: {a} : {b}', 'スコア：{a} : {b}', '점수: {a} : {b}', '比分：{a} : {b}')
 t('Тапай!', 'Tap!', '¡Toca!', 'Toque!', 'Tape !', 'Tippen!', 'タップ！', '탭!', '点击！')
 t('Собери связку', 'Build your set', 'Arma tu combo', 'Monte seu set', 'Compose ton passage', 'Stell dein Set zusammen', 'セットを組もう', '세트를 짜자', '组合你的套路')
 t('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.', 'Tap to the beat. A harder move gives more points, but it is harder to hit.', 'Toca al ritmo del beat. Un movimiento difícil da más puntos, pero cuesta más acertar.', 'Toque no ritmo do beat. Um movimento difícil dá mais pontos, mas é mais difícil acertar.', 'Tape en rythme. Un mouvement difficile rapporte plus de points, mais il est plus dur à réussir.', 'Tippe im Takt. Ein schwerer Move bringt mehr Punkte, ist aber schwerer zu treffen.', 'ビートに合わせてタップ。難しい技ほど高得点だけど、合わせるのも難しい。', '비트에 맞춰 탭하세요. 어려운 동작일수록 점수가 높지만 맞추기 어려워요.', '跟着节拍点击。动作越难得分越高，但也更难踩准。')
@@ -527,8 +538,6 @@ t('Пусто', 'Empty', 'Vacío', 'Vazio', 'Vide', 'Leer', 'なし', '없음', 
 t('Батлы', 'Battles', 'Batallas', 'Batalhas', 'Battles', 'Battles', 'バトル', '배틀', '斗舞')
 t('Показать весь рейтинг ({n})', 'Show full ranking ({n})', 'Ver todo el ranking ({n})', 'Ver ranking completo ({n})', 'Voir tout le classement ({n})', 'Ganze Rangliste zeigen ({n})', 'ランキングをすべて表示（{n}）', '전체 랭킹 보기 ({n})', '查看完整排行榜（{n}）')
 t('Свернуть', 'Show less', 'Mostrar menos', 'Mostrar menos', 'Réduire', 'Weniger anzeigen', '閉じる', '접기', '收起')
-t('Танцуй связку под бит: тапай в такт сам или включи авто', 'Dance a combo to the beat: tap in time yourself or turn on auto', 'Baila un combo al ritmo: toca a tiempo tú mismo o activa el auto', 'Dance uma sequência na batida: toque no tempo você mesmo ou ligue o auto', 'Danse un enchaînement sur le beat : tape en rythme toi-même ou passe en auto', 'Tanz eine Kombi zum Beat: tippe selbst im Takt oder schalte Auto ein', 'ビートに合わせてコンボを踊ろう：自分でタップするか、オートにしよう', '비트에 맞춰 콤보를 춰 봐: 직접 박자에 맞춰 탭하거나 자동으로 해', '跟着节拍跳一套组合：自己按节奏点击，或开启自动')
-t('Играть', 'Play', 'Jugar', 'Jogar', 'Jouer', 'Spielen', 'プレイ', '플레이', '开始')
 
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
