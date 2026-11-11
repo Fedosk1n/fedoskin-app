@@ -336,6 +336,25 @@ body.chatmode .tabs{display:none}
 .shopit button.own{background:#26262B;color:var(--fg)} .shopit button.worn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
 .shopit button[disabled]{background:#26262B;color:var(--muted);cursor:default}
 .btbtn{flex:none;display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 12px var(--body);letter-spacing:.3px;text-transform:uppercase;cursor:pointer}
+/* rating as a grid of hero cards, 3 in a row (owner 11.11.2026); places 1–3 gold / silver / bronze */
+.lbgrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;margin-top:10px!important}
+.lbc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0;padding:8px 6px 10px;border-radius:16px;background:var(--surface,#151517);border:1px solid #232326}
+.lbc.me{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.lbpl{position:absolute;left:7px;top:6px;z-index:1;font:400 15px var(--display);color:var(--muted);font-variant-numeric:tabular-nums}
+.lbpl i{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font:400 14px var(--display);font-style:normal;color:#1A1206;background:var(--mc);box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.55)}
+.lbhero{display:block;width:100%;aspect-ratio:200/240;margin-top:2px}
+.lbhero img{display:block;width:100%;height:100%;object-fit:contain}
+.lblv{margin-top:2px;padding:2px 8px;border-radius:10px;font:800 10px var(--body);letter-spacing:.3px;color:#F2EFE8;background:color-mix(in srgb,var(--rc) 55%,#1C1C1F);border:1px solid var(--rc)}
+.lbnm{display:block;max-width:100%;margin-top:6px;font-size:13px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbct,.lbmn{display:block;max-width:100%;font-size:11px;line-height:1.3;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbc .btbtn{margin-top:auto;height:26px;padding:0 8px;font-size:11px}
+.lbc > small:last-of-type{margin-bottom:8px} /* the battle button sits at the card's bottom, level in a row */
+.lbc.p1{--mc:linear-gradient(135deg,#FFF1B0,#F2C14E 45%,#B07A12);border-color:#E7B23C;background:linear-gradient(180deg,rgba(231,178,60,.28),rgba(231,178,60,.04) 60%),var(--surface,#151517);box-shadow:0 0 18px rgba(231,178,60,.28)}
+.lbc.p2{--mc:linear-gradient(135deg,#FFFFFF,#C9CED6 45%,#7C838F);border-color:#B9BFC9;background:linear-gradient(180deg,rgba(201,206,214,.22),rgba(201,206,214,.03) 60%),var(--surface,#151517);box-shadow:0 0 14px rgba(201,206,214,.18)}
+.lbc.p3{--mc:linear-gradient(135deg,#F6D2AC,#C98A4B 45%,#7E4B1E);border-color:#C98A4B;background:linear-gradient(180deg,rgba(201,138,75,.24),rgba(201,138,75,.03) 60%),var(--surface,#151517);box-shadow:0 0 14px rgba(201,138,75,.2)}
+.lbc.p1 .lbnm{color:#F2CC55}.lbc.p2 .lbnm{color:#E4E7EC}.lbc.p3 .lbnm{color:#E3A869}
+.lbmorerow{grid-column:1/-1;list-style:none;padding-top:4px}
+@media (min-width:680px){.lbgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 .btbtn svg{width:13px;height:13px}
 .btbtn[disabled]{opacity:.45}
 /* hero battle (10.11.2026) */
@@ -1516,7 +1535,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // promo tab hidden for now, comes back later
     // ['promo','Акции','<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z"/>'],
     // owner 11.11.2026: «что-то в стиле face to face, это ведь батл 1-1» — two profiles facing each other
-    ['battles','Батлы','<path d="M 0.8 21.5L 0.8 17.5C 0.8 15.6 1.9 14.3 3.1 13.6C 1.9 12.4 1.3 10.8 1.3 9C 1.3 5.6 3.8 3.2 6.7 3.2C 8.7 3.2 9.7 4.5 9.8 6.3L 9.8 7.3L 10.9 9.6L 9.9 10.1L 10 11.2L 9.6 11.6L 9.9 12.1C 9.9 13.4 9 14 7.9 14L 7.5 14L 7.5 15.4C 7.5 16.2 8.3 16.8 9.7 17.4L 9.7 21.5Z" fill="currentColor" stroke="none"/><path d="M 23.2 21.5L 23.2 17.5C 23.2 15.6 22.1 14.3 20.9 13.6C 22.1 12.4 22.7 10.8 22.7 9C 22.7 5.6 20.2 3.2 17.3 3.2C 15.3 3.2 14.3 4.5 14.2 6.3L 14.2 7.3L 13.1 9.6L 14.1 10.1L 14 11.2L 14.4 11.6L 14.1 12.1C 14.1 13.4 15 14 16.1 14L 16.5 14L 16.5 15.4C 16.5 16.2 15.7 16.8 14.3 17.4L 14.3 21.5Z" fill="currentColor" stroke="none"/>'], // filled silhouettes (owner 11.11.2026: the outline version didn't read as faces)
+    ['battles','Батлы','<mask id="vsCut"><rect x="0" y="0" width="24" height="24" fill="#fff"/><path d="M4.8 8.4 7.9 15.6 11 8.4" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.9 9.6C18.4 8.8 17.6 8.4 16.6 8.4 15.3 8.4 14.4 9.1 14.4 10.2 14.4 12.6 19.2 11.7 19.2 14.3 19.2 15.4 18.2 16.1 16.7 16.1 15.5 16.1 14.6 15.6 14.1 14.7" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></mask><rect x="1.2" y="4.2" width="21.6" height="15.6" rx="4.2" fill="currentColor" stroke="none" mask="url(#vsCut)"/>'], // owner 11.11.2026 picked variant 10 of 10: a «VS» plate (letters cut out by a mask)
     ['profile','Профиль','<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
@@ -4356,6 +4375,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function setMyEq(eq){ myEq = Array.isArray(eq) ? eq : []; try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (heroShown()) renderStats(); }
   let heroDrawn = 0;
   function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
+  // the rating's full-length heroes: each look (level + things worn) is drawn once into an image and reused — 100 inline
+  // SVGs of ~40 KB each would make the phone slow (11.11.2026)
+  const HERO_IMG = new Map();
+  function heroImg(level, acc){
+    const key = level + '|' + (acc || []).slice().sort().join(',');
+    if (!HERO_IMG.has(key)) HERO_IMG.set(key, URL.createObjectURL(new Blob([HERO.svg(level, { uid: 'i', acc: acc || [] })], { type: 'image/svg+xml' })));
+    return HERO_IMG.get(key);
+  }
   function heroMini(level, uid, acc){ return '<span class="heromini"><i style="background:' + HERO.RING[level - 1] + '40">' + HERO.svg(level, {bust: true, bg: false, uid, acc}) + '</i><b>' + level + '</b></span>'; }
   function openHeroes(){
     const v = statsView(), box = $('#heroGrid'); box.innerHTML = '';
@@ -4538,29 +4565,33 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else if (!part || !part.top.length) { say(T('Пока в рейтинге никого нет — стань первым!')); return; }
     // owner 11.11.2026: the top 100, but only the first 10 until «Показать весь рейтинг»
     const rows = srch || (lbAll ? part.top : part.top.slice(0, LB_SHOW));
+    // owner 11.11.2026: «как раздел, 3 окошка в ряду — видно бибоя, одежду и уровень; 1–3 место разными цветами»
+    box.className = 'lbgrid';
     rows.forEach((r, i) => {
-      const me = r.id === prof.id;
-      const li = document.createElement('li'); li.className = 'row';
-      li.style.cssText = 'gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)';
-      li.innerHTML = '<span class="d" style="font-size:20px;min-width:56px;color:' + ((i === 0 && !srch) || me ? 'var(--accent)' : 'var(--muted)') + '">' + (srch ? '' : '#' + (i + 1)) + '</span>' + heroMini(HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0)), 'l' + i, me ? myEq : (r.eq || [])) +
-        '<span class="stack" style="gap:2px;flex:1;min-width:0"><span class="nm" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted ct" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></span>' +
-        '<span class="muted mn" style="font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap"></span>';
-      li.querySelector('.nm').textContent = (me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}))) + ' ';
-      const a = document.createElement('span'); a.className = 'alphamini'; a.title = T('Альфа-тестер'); a.textContent = 'α'; li.querySelector('.nm').appendChild(a);
-      li.querySelector('.ct').textContent = [r.c, rankScope === 'world' ? r.co : '', r.bt ? '🏆 ' + r.bt[0] + '–' + r.bt[1] : ''].filter(Boolean).join(' · ');
+      const me = r.id === prof.id, place = srch ? 0 : i + 1;
+      const lvl = HERO.levelFor(me ? Math.max(statsView().mins, r.m || 0) : (r.m || 0));
+      const li = document.createElement('li');
+      li.className = 'lbc' + (place && place <= 3 ? ' p' + place : '') + (me ? ' me' : '');
+      li.innerHTML = (place ? '<span class="lbpl">' + (place <= 3 ? '<i>' + place + '</i>' : '#' + place) + '</span>' : '') +
+        '<span class="lbhero"><img alt="" decoding="async" loading="lazy"></span><span class="lblv"></span>' +
+        '<b class="lbnm"></b><small class="lbct"></small><small class="lbmn"></small>' + (r.bt ? '<small class="lbmn lbbt"></small>' : '');
+      li.querySelector('img').src = heroImg(lvl, me ? myEq : (r.eq || []));
+      const lv = li.querySelector('.lblv'); lv.textContent = T('Ур. {n}', {n: lvl}); lv.style.setProperty('--rc', HERO.RING[lvl - 1]);
+      li.querySelector('.lbnm').textContent = me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}));
+      li.querySelector('.lbct').textContent = [r.c, rankScope === 'world' ? r.co : ''].filter(Boolean).join(' · ');
+      li.querySelector('.lbmn').textContent = T('{n} мин', {n: nfmt(r.m)});
+      if (r.bt) li.querySelector('.lbbt').textContent = '🏆 ' + r.bt[0] + '–' + r.bt[1];
       if (lbData.bt && !me && BT.rest <= Date.now()) { // battles (10.11.2026): server knows them; none while «resting»
         const bb = document.createElement('button'); bb.type = 'button'; bb.className = 'btbtn';
         bb.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>';
         bb.appendChild(document.createTextNode(T('Батл')));
         bb.addEventListener('click', () => btCall(r, bb));
-        const col = document.createElement('span'); col.className = 'stack'; col.style.cssText = 'gap:6px;align-items:flex-end;flex:none';
-        li.insertBefore(col, li.querySelector('.mn')); col.appendChild(li.querySelector('.mn')); col.appendChild(bb);
+        li.appendChild(bb);
       }
-      li.querySelector('.mn').textContent = T('{n} мин', {n: nfmt(r.m)});
       box.appendChild(li);
     });
     if (!srch && part.top.length > LB_SHOW) {
-      const li = document.createElement('li'); li.style.cssText = 'padding:12px 0 0;list-style:none';
+      const li = document.createElement('li'); li.className = 'lbmorerow';
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost lbmore';
       b.textContent = lbAll ? T('Свернуть') : T('Показать весь рейтинг ({n})', { n: part.top.length });
       b.addEventListener('click', () => {

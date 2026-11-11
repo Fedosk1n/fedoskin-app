@@ -474,7 +474,7 @@
   [role=button] shrinks to scale .95 while pressed (`:where(...)` = lowest priority), wide ones (.list-item, button.card,
   .svccard, coach card buttons) to .98; uses the separate `scale` property (adds to transform positioning); .fsk / .fsghost /
   .fscorner keep their own. A no-op document touchstart listener makes iPhone apply :active.
-- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (icon: two FILLED profile silhouettes face to face with a gap — owner «face to face, это ведь батл 1-1»; the outline version «не понятно, что это лица»)
+- Tab «Батлы» (owner 11.11.2026 «плашку БАТЛЫ… из профиля перенести все туда»): TABS = Главная / Коучинг / Батлы (icon: a «VS» plate, letters cut out by an SVG mask `vsCut` — owner picked variant 10 of a 10-icon sheet on 11.11.2026 after two face-to-face versions)
   / Профиль; `.tabs-in` is grid-auto-flow:column (any number of tabs). Screen `#battles` (h1 «Батлы»): `#heroCard` (level, outfits,
   `#btScore`), `#shopRow`, the whole rating section (rankSoon/rankBox, rest bar, btTools, `#leaders`, show-me switch,
   `#shareRank`) — moved out of `#profile` (ids unchanged). go('battles') does what go('profile') did for the rating
@@ -482,6 +482,12 @@
   Rating = top 100 (worker LIMIT 100 / KV slice 100 — the owner must update the server code; old server = 50): only the first
   `LB_SHOW` = 10 rows until `.lbmore` «Показать весь рейтинг (N)» / «Свернуть» (`lbAll`, scrolls back to the list); search
   results are never cut. Tested headless iPhone ru 390×844 / en 375×667 with a mocked /lb of 100 rows.
+  Hero cards (owner 11.11.2026 «как раздел, 3 окошка в ряду… видно бибоя, одежду и уровень; 1–3 место разными цветами»): `#leaders`
+  gets class `.lbgrid` (3 columns; tablets auto-fill 150 px), each row = `.lbc` card: place (`.lbpl`, places 1–3 = medal circle,
+  cards `.p1/.p2/.p3` gold / silver / bronze border, tint, glow, name colour), full-length hero with the person's level look +
+  worn shop items (incl. backgrounds) as an <img> from `heroImg(level, eq)` — each look drawn once into a blob: SVG and reused
+  (an inline hero is ~40 KB), level chip `.lblv` in the level's RING colour, nick, city · country, minutes, 🏆 w–l, «Батл» at the
+  bottom. Own card `.me` = accent border. Search results use the same cards without places.
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
 - iPhone home-screen app (iOS 26, WebKit 301108): the viewport is short by the status bar and nothing is drawn below it.
