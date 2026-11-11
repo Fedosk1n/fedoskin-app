@@ -597,7 +597,11 @@
   «Открыть урок/раздел» → D.onUl closes the game (its history step) and opens the lesson 350 ms later. round.u = picks above
   the level; worker rbCheck accepts them (rbStand reuses any own saved pick). Toast «🎮 Открыто в батле: …» once per move
   (`fedoskin-ul`; first run silent); lesson page `#lessonUl` «Посмотри урок — откроешь в батле: X» / «Открыто…». /visits `ul: 1`
-  (admin banner; admin «версия 43»), rhythm.js `?v=7`. `window.fedoskinUl(check)`. Tested: worker rbCheck (u accepted / not
+  (admin banner; admin «версия 43»), rhythm.js `?v=7`. `window.fedoskinUl(check)`.
+  Explanation (owner 11.11.2026 «ты сделал подсказку?» → «делай»): when ul is on, the setup shows `.rbulnote` «🎬 Смотри уроки —
+  открывай новые движения раньше уровня» under the heading, and ONCE (`fedoskin-ul-tip`) a yellow bubble `#rbTip` under the row of the
+  first lesson-locked card (arrow at the card via --ax, card pulses) «Это движение откроется, если посмотреть его урок. Нажми на
+  карточку.» + «Понятно»; tapping the card or «Понятно» removes it. rhythm.js `?v=8`. Tested: worker rbCheck (u accepted / not
   for other moves), app headless ru/en (cards, hint, button → lesson, toast once, round.u).
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never

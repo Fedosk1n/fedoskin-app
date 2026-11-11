@@ -641,6 +641,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "Or reach level {n}.",
  "Открыть урок": "Open lesson",
  "Открыть раздел": "Open section",
+ "Понятно": "Got it",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 Watch lessons to unlock new moves before your level does",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "This move unlocks when you watch its lesson. Tap the card.",
  "🎮 Открыто в батле: {m}": "🎮 Unlocked in battles: {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Watch this lesson to unlock in battles: {m}"
  },
@@ -1283,6 +1286,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "O llega al nivel {n}.",
  "Открыть урок": "Abrir lección",
  "Открыть раздел": "Abrir sección",
+ "Понятно": "Entendido",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 Mira lecciones y desbloquea movimientos antes de subir de nivel",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "Este movimiento se desbloquea al ver su lección. Toca la tarjeta.",
  "🎮 Открыто в батле: {m}": "🎮 Desbloqueado en batallas: {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Mira esta lección para desbloquear en batallas: {m}"
  },
@@ -1925,6 +1931,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "Ou chegue ao nível {n}.",
  "Открыть урок": "Abrir aula",
  "Открыть раздел": "Abrir seção",
+ "Понятно": "Entendi",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 Assista às aulas e desbloqueie movimentos antes do nível",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "Este movimento é liberado quando você assiste à aula dele. Toque no cartão.",
  "🎮 Открыто в батле: {m}": "🎮 Desbloqueado nas batalhas: {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Assista a esta aula para desbloquear nas batalhas: {m}"
  },
@@ -2567,6 +2576,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "Ou atteins le niveau {n}.",
  "Открыть урок": "Ouvrir la leçon",
  "Открыть раздел": "Ouvrir la section",
+ "Понятно": "Compris",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 Regarde les leçons pour débloquer des mouvements avant ton niveau",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "Ce mouvement se débloque quand tu regardes sa leçon. Touche la carte.",
  "🎮 Открыто в батле: {m}": "🎮 Débloqué en battle : {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Regarde cette leçon pour débloquer en battle : {m}"
  },
@@ -3209,6 +3221,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "Oder erreiche Level {n}.",
  "Открыть урок": "Lektion öffnen",
  "Открыть раздел": "Bereich öffnen",
+ "Понятно": "Verstanden",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 Schau Lektionen und schalte Moves schon vor deinem Level frei",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "Dieser Move wird frei, wenn du seine Lektion anschaust. Tippe auf die Karte.",
  "🎮 Открыто в батле: {m}": "🎮 Im Battle freigeschaltet: {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 Schau diese Lektion, um im Battle freizuschalten: {m}"
  },
@@ -3851,6 +3866,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "またはレベル{n}に到達しよう。",
  "Открыть урок": "レッスンを開く",
  "Открыть раздел": "カテゴリーを開く",
+ "Понятно": "わかった",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 レッスンを見ればレベルより先に新しい技が解放",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "この技はレッスンを見ると解放されます。カードをタップ。",
  "🎮 Открыто в батле: {m}": "🎮 バトルで解放：{m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 このレッスンを見るとバトルで解放：{m}"
  },
@@ -4493,6 +4511,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "또는 레벨 {n}에 도달하세요.",
  "Открыть урок": "레슨 열기",
  "Открыть раздел": "카테고리 열기",
+ "Понятно": "알겠어요",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 레슨을 보면 레벨보다 먼저 새 기술이 열려요",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "이 기술은 레슨을 보면 열려요. 카드를 탭하세요.",
  "🎮 Открыто в батле: {m}": "🎮 배틀에서 잠금 해제: {m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 이 레슨을 보면 배틀에서 잠금 해제: {m}"
  },
@@ -5135,6 +5156,9 @@ window.I18N = {
  "Или дорасти до уровня {n}.": "或升到 {n} 级。",
  "Открыть урок": "打开课程",
  "Открыть раздел": "打开分类",
+ "Понятно": "知道了",
+ "🎬 Смотри уроки — открывай новые движения раньше уровня": "🎬 看课程就能比升级更早解锁新动作",
+ "Это движение откроется, если посмотреть его урок. Нажми на карточку.": "看完对应课程即可解锁这个动作。点一下卡片。",
  "🎮 Открыто в батле: {m}": "🎮 已在对战中解锁：{m}",
  "🎮 Посмотри урок — откроешь в батле: {m}": "🎮 观看本课即可在对战中解锁：{m}"
  }

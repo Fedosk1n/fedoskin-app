@@ -176,6 +176,13 @@
 .rbc.fr:after{content:"🎬";position:absolute;top:3px;right:5px;font-size:10px}
 .rbcards.b4 .rbc{padding:9px 2px 7px} .rbcards.b4 .rbc b{font-size:11.5px;letter-spacing:0} .rbcards.b4 .rbc i{letter-spacing:.3px}
 .rbul{margin-top:9px;padding:10px 12px;border-radius:12px;border:1px dashed #5A4A2A;background:rgba(242,204,85,.07);font-size:12.5px;line-height:1.4;color:var(--soft)}
+.rbulnote{margin-top:6px;font-size:12.5px;color:#F2CC55;line-height:1.35}
+.rbtip{position:relative;margin-top:10px;scroll-margin-bottom:150px;padding:10px 12px;border-radius:12px;background:#F2CC55;color:#17171A;font-size:13px;line-height:1.35;font-weight:600;display:flex;gap:10px;align-items:center;animation:rbtipin .3s ease-out}
+.rbtip:before{content:"";position:absolute;top:-7px;left:var(--ax,85%);margin-left:-7px;border:7px solid transparent;border-top:0;border-bottom-color:#F2CC55}
+.rbtip span{flex:1} .rbtip button{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;background:#17171A;color:#fff;font-size:12.5px;font-weight:700}
+@keyframes rbtipin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.rbc.lock.ul.pulse{animation:rbulp 1.1s ease-in-out infinite}
+@keyframes rbulp{0%,100%{box-shadow:0 0 0 0 rgba(242,204,85,0)}50%{box-shadow:0 0 0 4px rgba(242,204,85,.45)}}
 .rbul{scroll-margin-bottom:150px} .rbul b{display:inline;font-family:var(--display);font-weight:400;letter-spacing:.4px;font-size:14px;color:var(--fg)} .rbul button{margin-top:8px;height:38px;width:100%;font-size:13.5px}
 .rbcards.b4{grid-template-columns:repeat(4,1fr);gap:6px} .rbc.bt{padding:8px 2px 6px;min-height:56px} .rbc.bt b{font-size:13px}
 .rbc.bt small{display:block;font-size:9.5px;color:var(--muted);margin-top:3px;letter-spacing:.5px}
@@ -258,7 +265,7 @@
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
     G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
-      battle: !!(o.onEnd || o.result), answer: !!o.answer, ul: new Set(o.ul && o.ul.have || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
+      battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
@@ -296,6 +303,27 @@
     $('#rbAutoGo').addEventListener('click', () => { if (!G.onAuto) { setup(); start(true); return; } wait(T('Судьи смотрят батл…'), '', () => G.onAuto()); });
   }
 
+  // one-time tip under the first locked card that a lesson opens (owner 11.11.2026: explain «смотри урок — откроешь движение»)
+  const UL_TIP = 'fedoskin-ul-tip';
+  function ulTipOff() {
+    const t = $('#rbTip'); if (t) t.remove();
+    box && box.querySelectorAll('.rbc.lock.ul.pulse').forEach(x => x.classList.remove('pulse'));
+  }
+  function ulTip() {
+    let seen = false; try { seen = localStorage.getItem(UL_TIP) === '1'; } catch (_) {}
+    const card = $('#rbSet').querySelector('.rbc[data-ul]'); if (seen || !card) return;
+    try { localStorage.setItem(UL_TIP, '1'); } catch (_) {}
+    const row = card.closest('.rbrow'), tip = document.createElement('div');
+    tip.className = 'rbtip'; tip.id = 'rbTip';
+    tip.innerHTML = '<span>' + D.T('Это движение откроется, если посмотреть его урок. Нажми на карточку.') + '</span><button type="button">' + D.T('Понятно') + '</button>';
+    row.after(tip);
+    const rr = row.getBoundingClientRect(), cr = card.getBoundingClientRect();
+    if (rr.width) tip.style.setProperty('--ax', Math.round((cr.left + cr.width / 2 - rr.left) / rr.width * 100) + '%');
+    card.classList.add('pulse');
+    tip.querySelector('button').addEventListener('click', ulTipOff);
+    setTimeout(() => tip.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
+  }
+
   // ---- 1: build the set ----
   function setup() {
     const T = D.T; killBeat();
@@ -322,6 +350,7 @@
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
+      (G.ulOn ? '<p class="rbulnote">' + T('🎬 Смотри уроки — открывай новые движения раньше уровня') + '</p>' : '') +
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
@@ -337,6 +366,7 @@
     }));
     // a locked move with a lesson: how to open it + a button to that lesson (or section)
     $('#rbSet').querySelectorAll('.rbc[data-ul]').forEach(b => b.addEventListener('click', () => {
+      ulTipOff();
       const m = b.dataset.ul, h = G.ulHint[m], box2 = $('#rbUl'), nm = '<b>' + D.names[m] + '</b>';
       if (!h || !box2) return;
       if (!box2.hidden && box2.dataset.m === m) { box2.hidden = true; return; }
@@ -348,6 +378,7 @@
       const go = $('#rbUlGo'); if (go) go.addEventListener('click', () => D.onUl(h));
       box2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));
+    ulTip();
     $('#rbSet').querySelectorAll('.rbc[data-b]').forEach(b => b.addEventListener('click', () => {
       const id = b.dataset.b, again = id === G.beat && G.pv;
       G.beat = id; try { localStorage.setItem('fedoskin-rb-beat', id); } catch (_) {}
