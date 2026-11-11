@@ -120,6 +120,13 @@
   from .fstop/.fsbottom/edges) moves the video up (`.stage.pulling`, --sy = −0.6·dy, slight scale) with a chip
   «↑ Подробнее» (#pullLabel) fading in; past 18 % of the height or a flick (> 40 px fast: < 300 ms or > 0.4 px/ms) ⇒ `#fsInfo` click (lesson page, video
   keeps playing); otherwise springs back. Down drag: nothing.
+- Swipe DOWN = back to the section (owner 11.11.2026 «при свайпе вниз… возврат в раздел»): in ANY full screen (fs-vert, only-video,
+  landscape fs, fs-rot — uses the picture's own down via pt()) a downward drag (lessonSwipe mode 4, same decision as mode 3)
+  moves the video down (`.stage.pulling`, --sy = +0.6·dy) with #pullLabel «↓ Назад к разделу <section>» (`#pullLabel b` set to ↑/↓
+  per mode); past PULL_GO or a flick ⇒ `leaveToSection()`: a full screen opened from the lesson page has its own history step ⇒
+  history.back() first, then (once popstate) `#lessonBack` click; otherwise exitFs() + `#lessonBack` (= goBack / openSection).
+  The lesson page itself (not full screen) keeps up/down for page scrolling. Tested with in-page TouchEvents: vertical lesson
+  160 px ⇒ section, 30 px ⇒ springs back, landscape fs from the page (2 steps) ⇒ section, fs-rot ⇒ section.
 - Swipe distances (owner 01.11.2026, iPad: «не работает свайп в Подробнее»): thresholds were shares of the screen
   (18 % height / 25 % width = 200+ px on iPad ⇒ springs back). Now `PULL_GO`/`SIDE_GO` = min(share, 100 px), flick > 36/45 px
   fast. In fsmode the stage is `touch-action:none` and touchmove is preventDefault'ed from the very first move (iOS Safari
@@ -523,6 +530,11 @@
   /tmp/tst/ksmock.js): Android + iPhone UA with MediaSource aliased as ManagedMediaSource — 1st view saves all pieces,
   2nd view 0 CDN requests (also after seeking), offline plays, intro start saves 0–4 s, fallback to native on no frames;
   network failure doesn't switch. Real iPhone MMS never tested by Claude.
+  Repeat stuck at 0:00 (owner 11.11.2026 screenshot, Baby love first view on iPhone: buffer 4–46 s, time 0:00, «playing»): with
+  MMS Safari sends `endstreaming` ⇒ hls.js pauseBuffering(); after the intro start 0–4 s were never streamed and the repeat's
+  jump back got no `startstreaming`. Fix: `hlsKick()` on vid seeking/waiting — position not in vid.buffered ⇒
+  hls.resumeBuffering(); and a 500 ms check: playing, readyState < 3, not buffered for 2.5 s ⇒ resumeBuffering + startLoad(t).
+  Reproduced in Chromium by dispatching `endstreaming` on a MediaSource subclass aliased as ManagedMediaSource (/tmp/tst/rep.js).
 - «Память на телефоне» (owner 09.11.2026 «кнопку очистить кэш… ограничения как в телеграм, не более 5гб»): Профиль → row
   `#storeItem` (shows used size) → sheet `#storeSheet` (a .sheet-bg ⇒ own history step): used MB/GB + bar vs the limit,
   limit seg `#storeLimits` «Не хранить / 500 МБ / 1 ГБ / 2 ГБ / 5 ГБ» (default 1 GB) written by the PAGE to cache

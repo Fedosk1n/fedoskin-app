@@ -2313,6 +2313,19 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     return true;
   }
   function hlsCan(){ return !isApple || mmsOk(); }
+  // iPhone (ManagedMediaSource): Safari tells hls.js to stop loading («endstreaming») once enough is in — e.g. the whole
+  // lesson after the intro start (owner 11.11.2026, Baby love stuck at 0:00 on repeat: 0–4 s were never loaded, and
+  // Safari didn't say «go on» after the jump back). A jump to a part that isn't loaded resumes loading ourselves; still
+  // waiting there after 2.5 s ⇒ loading restarts from that moment.
+  const inBuf = t => { try { const b = vid.buffered; for (let i = 0; i < b.length; i++) if (t >= b.start(i) - 0.25 && t < b.end(i) - 0.2) return true; } catch (_) {} return false; };
+  function hlsKick(){ if (!hls || inBuf(vid.currentTime)) return; try { hls.resumeBuffering && hls.resumeBuffering(); } catch (_) {} }
+  vid.addEventListener('seeking', hlsKick); vid.addEventListener('waiting', hlsKick);
+  let hlsStallT = 0;
+  setInterval(() => {
+    if (!hls || av !== vid || !P.playing || scrub || document.hidden || vid.readyState >= 3 || inBuf(vid.currentTime)) { hlsStallT = 0; return; }
+    if (!hlsStallT) { hlsStallT = performance.now(); return; }
+    if (performance.now() - hlsStallT > 2500) { hlsStallT = performance.now(); try { hls.resumeBuffering && hls.resumeBuffering(); hls.startLoad(vid.currentTime); } catch (_) {} }
+  }, 500);
   // keep the lesson's first seconds too (see ksSaveHead), once the stream has played a moment
   let headFor = null;
   vid.addEventListener('playing', () => {
@@ -2572,17 +2585,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
         if (Math.abs(mx) < Math.abs(my) * 1.3) {
           // up on a vertical lesson's video = «Подробнее» (the page comes up from below); anything else up/down is the page's
-          if (my < 0 && !rot && document.body.classList.contains('fs-vert')) { mode = 3; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullText').textContent = T('Подробнее'); }
+          if (my < 0 && !rot && document.body.classList.contains('fs-vert')) { mode = 3; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullLabel b').textContent = '↑'; $('#pullText').textContent = T('Подробнее'); }
+          // down while watching full screen (any: vertical, only-video, landscape, sideways picture) = back to the section
+          // (owner 11.11.2026 «при свайпе вниз… возврат в раздел»); on the lesson page up/down stays the page's scroll
+          else if (my > 0 && document.body.classList.contains('fsmode')) { mode = 4; stage.classList.remove('pull-anim'); stage.classList.add('pulling'); $('#pullLabel b').textContent = '↓'; $('#pullText').textContent = T('Назад к разделу') + (curSection ? ' ' + curSection : ''); }
           else { mode = 0; return; }
         }
       }
-      if (mode === 3) {
+      if (mode === 3 || mode === 4) {
         e.preventDefault();
-        const nowT = performance.now(), ndy = Math.max(0, -my);
+        const sg = mode === 3 ? -1 : 1, nowT = performance.now(), ndy = Math.max(0, sg * my);
         if (pT) vy = vy * 0.5 + 0.5 * (ndy - dy) / Math.max(1, nowT - pT); // speed of the finger, px/ms
         pT = nowT; dy = ndy;
-        const h = stage.getBoundingClientRect().height || window.innerHeight, k = Math.min(1, dy / PULL_GO(h));
-        stage.style.setProperty('--sy', (-dy * 0.6) + 'px'); stage.style.setProperty('--sk', String(1 - k * 0.08));
+        const sr = stage.getBoundingClientRect(), h = (rot ? sr.width : sr.height) || window.innerHeight, k = Math.min(1, dy / PULL_GO(h));
+        stage.style.setProperty('--sy', (sg * dy * 0.6) + 'px'); stage.style.setProperty('--sk', String(1 - k * 0.08));
         $('#pullLabel').style.opacity = String(k);
         return;
       }
@@ -2619,16 +2635,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       stage.style.setProperty('--px', (dir > 0 ? w + shown : -w + shown) + 'px');
     }, { passive: false });
     const end = () => {
-      if (mode === 3) {
-        mode = 0;
-        const h = stage.getBoundingClientRect().height || window.innerHeight;
+      if (mode === 3 || mode === 4) {
+        const down = mode === 4; mode = 0;
+        const r = stage.getBoundingClientRect(), h = (rot ? r.width : r.height) || window.innerHeight;
         const go = dy > PULL_GO(h) || (dy > 36 && (performance.now() - t0 < 350 || vy > 0.3)); // far enough, or a flick
         stage.classList.add('pull-anim'); $('#pullLabel').style.opacity = '0';
-        if (go) stage.style.setProperty('--sy', -Math.round(h * 0.4) + 'px');
+        if (go) stage.style.setProperty('--sy', (down ? 1 : -1) * Math.round(h * 0.4) + 'px');
         else { stage.style.setProperty('--sy', '0px'); stage.style.setProperty('--sk', '1'); }
         setTimeout(() => {
           stage.classList.remove('pulling', 'pull-anim'); stage.style.removeProperty('--sy'); stage.style.removeProperty('--sk');
-          if (go) $('#fsInfo').click();
+          if (go) { if (down) leaveToSection(); else $('#fsInfo').click(); }
         }, 170);
         return;
       }
@@ -2664,6 +2680,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     };
     stage.addEventListener('touchend', end); stage.addEventListener('touchcancel', end);
   })();
+  // leave the lesson from full screen, like its ← button: a full screen opened from the lesson page is a history step of its
+  // own — that step goes first, then the lesson's (else «back» would stop on the lesson page)
+  function leaveToSection(){
+    if (history.state && history.state.fs && navDepth > 0) {
+      window.addEventListener('popstate', () => setTimeout(() => { if (!$('#lesson').hidden) $('#lessonBack').click(); }, 0), { once: true });
+      history.back();
+      return;
+    }
+    if (document.body.classList.contains('fsmode')) exitFs();
+    $('#lessonBack').click();
+  }
   let peekT = 0, quietOpen = false;
   // the next lesson's first frame, decoded in advance in the hidden sliding picture
   function primePeek(){
