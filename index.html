@@ -1880,6 +1880,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else { vloadPv.hidden = true; vloadPv.removeAttribute('src'); }
     vload.hidden = false;
   }
+  // owner 11.11.2026 «чтобы анимационная обложка не пыталась влезть перед просмотром, если ролик уже загружен на телефон»:
+  // a lesson already on the phone (saved copy, in memory, or its Kinescope pieces) starts with no animated cover — only a
+  // small spinner if it still isn't moving after 0.9 s. Unknown ⇒ a quick look into the saved videos (≤ 0.2 s) first.
+  const stillWaiting = l => curLesson === l && P.playing && (av.paused || av.readyState < 3);
+  function quietStart(l){ clearTimeout(vloadT); vloadT = setTimeout(() => { if (stillWaiting(l) && !scrub) { vload.classList.add('stall'); vload.hidden = false; } }, 900); }
+  function coverOrNot(l){
+    const m = mediaFor(l);
+    if ((m && introMem.has(m)) || (l.ks && ksSaved[l.ks])) return quietStart(l);
+    if (l.ks || !window.caches) return showLoad(l);
+    let done = false;
+    const go = saved => { if (done) return; done = true; if (!stillWaiting(l)) return; if (saved) quietStart(l); else showLoad(l); };
+    caches.match(vKey(fileFor(l)), { ignoreSearch: true }).then(r => go(!!r), () => go(false));
+    setTimeout(() => go(false), 200);
+  }
   function showStall(){ // the video stopped to load more: spinner only, and only if it lasts
     if (scrub) return; // dragging the slider: the picture comes from the strip / the last frame, no spinner
     clearTimeout(vloadT);
@@ -2542,7 +2556,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     go('lesson');
     setPlaying(true);
     warmGen++;
-    if (P.playing && (av.paused || av.readyState < 3) && !quietOpen) showLoad(l);
+    if (P.playing && (av.paused || av.readyState < 3) && !quietOpen) coverOrNot(l);
     // the lessons next to this one: downloaded once this one plays, so a swipe to them starts from memory
     const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(Boolean);
     let warmed = false;

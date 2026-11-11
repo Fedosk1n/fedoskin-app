@@ -62,6 +62,10 @@
   Owner 31.10 19:22: the animation (then 60 % opacity over the cover jpg) over the loading video's picture looked
   messy ⇒ the overlay is now only the -p3 animation at full strength on solid #0B0B0C (no jpg, nothing of the video
   behind); the spinner is small (28 px) in the top-right corner (fullscreen: below the top bar).
+  Saved lessons (owner 11.11.2026 «чтобы анимационная обложка не пыталась влезть перед просмотром, если ролик уже загружен на
+  телефон»): openLesson → `coverOrNot(l)`: in memory (introMem) / Kinescope pieces saved (ksSaved) / the file in Cache Storage
+  (caches.match(vKey(fileFor(l))), answer awaited ≤ 0.2 s) ⇒ NO -p3 cover, `quietStart` = only the small spinner if still not
+  moving after 0.9 s; otherwise showLoad as before. Tested headless: saved ⇒ no cover frames, not saved ⇒ cover as before.
 - Instant start (31.10.2026): Kinescope lessons also have `v/<id>-intro.mp4` = first 5 s copied (no re-encode) from the
   480p rendition of the Kinescope HLS (~2 MB; Kinescope 720p is 5.1 Mbit/s — too heavy). `intros.js`
   (`window.LESSON_INTROS`) maps lesson id → "<ks>:480"; the app uses an intro only if it matches (replaced video or
