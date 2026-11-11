@@ -129,7 +129,9 @@
 .rbc i em{font-style:normal;color:#F2CC55}
 .rbc.on{border-color:var(--accent);background:rgba(226,97,26,.16)}
 .rbc.lock{opacity:.45}
-.rbgo{margin-top:12px;width:100%;position:sticky;bottom:0;box-shadow:0 -10px 14px 6px #0B0B0C}
+.rbgo{margin-top:12px;display:flex;gap:8px;position:sticky;bottom:0;background:#0B0B0C;box-shadow:0 -10px 14px 6px #0B0B0C}
+.rbgo .btn{flex:1 1 0;width:auto;padding:0 8px;font-size:14px}
+.rbpad.auto{border-color:#3A3A40;background:#17171A;color:var(--muted)}
 .rbend{text-align:center;padding-top:10px}
 .rbend>b{display:block;font-family:var(--display);font-size:40px;line-height:1;animation:vspop .5s cubic-bezier(.2,1.6,.4,1) both}
 .rbend>b.win{color:var(--accent)} .rbend>b.lose{color:var(--muted)}
@@ -218,18 +220,24 @@
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards">' +
         r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
         (r.lock ? '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>' : '') + '</div></div>').join('') +
-      '<button type="button" class="btn btn-accent rbgo" id="rbGo">' + T('Начать батл') + '</button>';
+      '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button><button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button></div>';
     $('#rbSet').querySelectorAll('.rbc[data-m]').forEach(b => b.addEventListener('click', () => {
       const k = +b.dataset.r; G.picks[k] = b.dataset.m; G.prev = b.dataset.m; G.prevAt = performance.now();
       $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"]').forEach(x => x.classList.toggle('on', x === b));
     }));
-    $('#rbGo').addEventListener('click', start);
+    $('#rbGo').addEventListener('click', () => start(false));
+    $('#rbAuto').addEventListener('click', () => start(true));
   }
 
   // ---- 2: the round ----
-  function start() {
+  // auto = «на рандом» (owner 11.11.2026): random cards, the hero taps by himself — how clean depends on luck and his level
+  function start(auto) {
     const T = D.T;
+    G.auto = !!auto;
+    if (G.auto) G.picks = [0, 1, 2].map(k => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     G.notes = notesFor(G.picks, G.seed);
+    if (G.auto) { const pm = clamp(.2 - .015 * G.level, .06, .2) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm; n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
+    const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
     G.score = 0; G.combo = 0; G.best = 0; G.cnt = [0, 0, 0, 0]; G.missAt = -9; G.bigSt = 0; G.lastBeat = -1; G.shown = -1;
     const now = performance.now(); let lat = 0;
     G.audio = audioOn();
@@ -256,6 +264,7 @@
     $('#rbScore').textContent = Math.round(G.score); $('#rbCombo').textContent = G.combo; $('#rbCombo').classList.toggle('hot', G.combo >= 8);
   }
   function tap(stamp) {
+    if (G.auto) return;
     let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp;
     const s = song(p), pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
     let bestN = null, bd = 9;
@@ -317,6 +326,7 @@
     // keep the clock on the sound (the audio clock is the truth; small corrections only)
     if (G.audio && ctx.state === 'running') { const diff = (ctx.currentTime - G.aud0 - G.lat) - song(now); if (Math.abs(diff) > .04) G.perf0 -= diff * 1000 * .15; }
     const s = song(now), T = D.T;
+    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.st && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
     for (const n of G.notes) { if (!n.st && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
     const beat = Math.floor(s / BEAT);
     if (beat !== G.lastBeat) {

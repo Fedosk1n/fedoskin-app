@@ -427,6 +427,9 @@
   clock minus output latency; one-button taps anywhere (pointerdown on the box, `data-nt` = not a tap): PERFECT ±80 ms, GOOD
   ±160 ms, stray tap or miss breaks the combo (hero stumbles); score = base × difficulty × combo (≤ +60 %) × (1 + 1 %·level);
   `notesFor(picks, seed)` / `maxScore()` are deterministic (server will check scores). Missed big note ⇒ no freeze (shock).
+  Auto mode (owner 11.11.2026 «часть людей как я, просто готовы на рандом»): setup button «Играть на авто» `#rbAuto` ⇒
+  `start(true)`: random cards of the shown ones, the hero taps himself (per note: miss chance (0.2 − 0.015·level)·(0.5…1.5 luck),
+  else timing jitter ~±110 ms ⇒ PERFECT/GOOD), player's taps ignored, pad says «Авто». rhythm.js `?v=2`.
   Now only a trial vs the computer: `?battle=play` / `window.fedoskinRhythm(level, oppLevel)` — NOT yet linked to real battles
   (next: cards/effects polish, server /bt/call with the round + /bt/play, moves unlocked by watching lessons). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never

@@ -434,6 +434,8 @@ t('Начать батл', 'Start battle', 'Empezar batalla', 'Começar batalha'
 t('Приготовься', 'Get ready', 'Prepárate', 'Prepare-se', 'Prépare-toi', 'Mach dich bereit', '準備して', '준비', '准备')
 t('Соперник', 'Opponent', 'Rival', 'Adversário', 'Adversaire', 'Gegner', '相手', '상대', '对手')
 t('Это пробная версия игры: соперник здесь — компьютер.', 'This is a trial version of the game: the opponent here is the computer.', 'Es una versión de prueba del juego: aquí el rival es la computadora.', 'Esta é uma versão de teste do jogo: aqui o adversário é o computador.', "C'est une version d'essai du jeu : ici, l'adversaire est l'ordinateur.", 'Das ist eine Testversion des Spiels: Der Gegner ist hier der Computer.', 'これはゲームの試作版です。相手はコンピューターです。', '게임의 체험판입니다. 여기서 상대는 컴퓨터예요.', '这是游戏的试玩版：对手是电脑。')
+t('Играть на авто', 'Auto play', 'Jugar en auto', 'Jogar no auto', 'Jouer en auto', 'Auto spielen', 'オートで遊ぶ', '자동으로 하기', '自动进行')
+t('Авто', 'Auto', 'Auto', 'Auto', 'Auto', 'Auto', 'オート', '자동', '自动')
 t('Ещё раз', 'Again', 'Otra vez', 'De novo', 'Encore', 'Nochmal', 'もう一回', '다시', '再来一次')
 t('Ты', 'You', 'Tú', 'Você', 'Toi', 'Du', 'あなた', '나', '你')
 t('Реванш', 'Rematch', 'Revancha', 'Revanche', 'Revanche', 'Revanche', 'リベンジ', '재대결', '再战')
