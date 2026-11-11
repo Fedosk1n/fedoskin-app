@@ -283,6 +283,16 @@ window.LESSONS_DATA = [
   "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df"
  },
  {
+  "id": "pw-reverse-1990",
+  "sec": "Powermove",
+  "name": "Reverse 1990",
+  "dur": 1020,
+  "ru": "reverse 1990 реверс",
+  "added": "2026-11-11",
+  "pv": true,
+  "r2": "pw-reverse-1990-jun24gi0.mp4"
+ },
+ {
   "id": "tn-flare-to-airflare-to-flare",
   "sec": "Transitions",
   "name": "Flare to airflare to flare",
