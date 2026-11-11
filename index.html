@@ -345,7 +345,9 @@ body.chatmode .tabs{display:none}
 .lbhero{display:block;width:100%;aspect-ratio:200/240;margin-top:2px}
 .lbhero img{display:block;width:100%;height:100%;object-fit:contain}
 .lblv{margin-top:2px;padding:2px 8px;border-radius:10px;font:800 10px var(--body);letter-spacing:.3px;color:#F2EFE8;background:color-mix(in srgb,var(--rc) 55%,#1C1C1F);border:1px solid var(--rc)}
-.lbnm{display:block;max-width:100%;margin-top:6px;font-size:13px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbnm{display:flex;flex-direction:column;align-items:center;max-width:100%;margin-top:6px;font-size:13px;line-height:1.2}
+.lbpre{display:block;font-size:11px;font-weight:700;letter-spacing:.2px;opacity:.85;white-space:nowrap}
+.lbrest{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-width:100%;overflow:hidden;overflow-wrap:anywhere;text-align:center}
 .lbct,.lbmn{display:block;max-width:100%;font-size:11px;line-height:1.3;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lbc .btbtn{margin-top:auto;height:26px;padding:0 8px;font-size:11px}
 .lbc > small:last-of-type{margin-bottom:8px} /* the battle button sits at the card's bottom, level in a row */
@@ -4577,7 +4579,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         '<b class="lbnm"></b><small class="lbct"></small><small class="lbmn"></small>' + (r.bt ? '<small class="lbmn lbbt"></small>' : '');
       li.querySelector('img').src = heroImg(lvl, me ? myEq : (r.eq || []));
       const lv = li.querySelector('.lblv'); lv.textContent = T('Ур. {n}', {n: lvl}); lv.style.setProperty('--rc', HERO.RING[lvl - 1]);
-      li.querySelector('.lbnm').textContent = me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}));
+      // «B-boy / Bboy / B-girl / Bgirl» on its own line above the name (owner 11.11.2026: names didn't fit)
+      const full = me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}));
+      const pm = /^\s*(b[\s_.\-]?boy|b[\s_.\-]?girl)\b[\s_.\-:]*(\S.*)$/i.exec(full), nmEl = li.querySelector('.lbnm');
+      if (pm) { const a = document.createElement('span'), b = document.createElement('span'); a.className = 'lbpre'; b.className = 'lbrest'; a.textContent = pm[1]; b.textContent = pm[2]; nmEl.append(a, b); }
+      else { const b = document.createElement('span'); b.className = 'lbrest'; b.textContent = full; nmEl.appendChild(b); }
       li.querySelector('.lbct').textContent = [r.c, rankScope === 'world' ? r.co : ''].filter(Boolean).join(' · ');
       li.querySelector('.lbmn').textContent = T('{n} мин', {n: nfmt(r.m)});
       if (r.bt) li.querySelector('.lbbt').textContent = '🏆 ' + r.bt[0] + '–' + r.bt[1];

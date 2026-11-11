@@ -488,6 +488,8 @@
   worn shop items (incl. backgrounds) as an <img> from `heroImg(level, eq)` — each look drawn once into a blob: SVG and reused
   (an inline hero is ~40 KB), level chip `.lblv` in the level's RING colour, nick, city · country, minutes, 🏆 w–l, «Батл» at the
   bottom. Own card `.me` = accent border. Search results use the same cards without places.
+  Names (owner 11.11.2026 «имя не влезает… B-boy вверху, остальное под ним, по центру»): a leading b-boy / bboy / b_boy / b boy /
+  b-girl / bgirl (any case) goes to its own small centred line `.lbpre`, the rest `.lbrest` below (up to 2 lines, wraps anywhere).
 - Leaderboard (30.10.2026): same Cloudflare worker (`/lb`, one KV key `lb`), URL = `pushUrl`. Phone id = profile id,
   random secret in `fedoskin-lb-secret`; server caps minute growth to real time and first claim to 300. Hidden until pushUrl set.
 - iPhone home-screen app (iOS 26, WebKit 301108): the viewport is short by the status bar and nothing is drawn below it.
