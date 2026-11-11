@@ -300,7 +300,9 @@ window.LESSONS_DATA = [
   "ru": "reverse 1990 реверс",
   "added": "2026-11-11",
   "pv": true,
-  "r2": "pw-reverse-1990-jun24gi0.mp4"
+  "r2": "pw-reverse-1990-jun24gi0.mp4",
+  "pvAt": 2.7,
+  "cv": 1
  },
  {
   "id": "tn-flare-to-airflare-to-flare",
