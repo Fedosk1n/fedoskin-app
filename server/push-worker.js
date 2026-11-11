@@ -554,6 +554,12 @@ const RB_PAT = [null, [[0, 1, 2, 3]],
 const RB_PAT_F = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5]];
 const rbMul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const rbClamp = (x, a, b) => Math.max(a, Math.min(b, x));
+// rare battle-deciding move (11.11.2026) — the SAME formula as btRare in index.html: 1 seed in 100, side 'a' | 'b'
+function btRare(seed) {
+  let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
+  return x % 100 === 0 ? ((x >>> 8) & 1 ? 'b' : 'a') : null;
+}
 function rbNotes(picks, seed, beat) { // only the phase and «big» of each note, in the same order as rhythm.js
   const up = RB_BEATS[beat][1], lv = m => rbClamp(RB_DIFF[m] + up, 1, 3), rnd = rbMul(seed || 1), out = [];
   const bars = (n, d, ph) => { for (let b = 0; b < n; b++) RB_PAT[d][Math.floor(rnd() * RB_PAT[d].length)].forEach(() => out.push({ ph, big: false })); };
@@ -705,9 +711,11 @@ async function battle(req, env, path, json) {
       ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0]);
       if (!ra) return json({ error: 'round' }, 400);
     }
-    const votes = ra ? [] : [0, 1, 2].map(() => Math.random() < p ? 'a' : 'b');
-    const win = ra ? '' : votes.filter(v => v === 'a').length >= 2 ? 'a' : 'b';
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 1;
+    // 1 % of auto battles: the seed gives one dancer a rare legendary move (the app shows it) ⇒ all three judges for him
+    const rare = ra ? null : btRare(seed);
+    const votes = ra ? [] : rare ? [rare, rare, rare] : [0, 1, 2].map(() => Math.random() < p ? 'a' : 'b');
+    const win = ra ? '' : votes.filter(v => v === 'a').length >= 2 ? 'a' : 'b';
     const na = me.n || ('Breaker ' + id.slice(-4)), nb = op.n || ('Breaker ' + to.slice(-4));
     const ins = await db.prepare('INSERT INTO bt (a, b, la, lb, na, nb, seed, votes, win, t) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(id, to, la, lb, na, nb, seed, JSON.stringify(votes), win, now).run();
     const n = ins.meta && ins.meta.last_row_id;

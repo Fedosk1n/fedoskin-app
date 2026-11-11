@@ -600,5 +600,22 @@
     lose2: { dur: 1.6, f: u => ({ root: { y: 3 }, shR: 26, elR: 152, shL: -6, elL: -10, head: 20 + 2 * Math.sin(u * TAU), torso: 4 }) },
     lose3: { dur: .7, f: u => { const c = Math.abs(Math.sin(u * PI)); return { shL: 16, shR: 16, elL: -104 + 22 * c, elR: -104 + 22 * c, head: 8 + 4 * c, hipL: 4, hipR: 4 }; } },
   });
+  // ---- rare, battle-deciding moves (owner 11.11.2026: «редкую анимацию… решающей в победе на авто… в 1 % батлов… стойки,
+  // вращения или акробатика… 3 разных»). Longer than the usual ones, with a hold the battle plays in slow motion.
+  Object.assign(MOVES, {
+    // SPIN — «2000»: upside down on both hands stacked, legs in a V, spinning faster and faster, then the legs open into a split
+    r2000: { dur: 2.8, f: u => { const k = env(u, .14, .88), sp = ss(.16, .68, u), th = sp * sp * TAU * 6, c = Math.cos(th), o = ss(.68, .76, u) * (1 - ss(.86, .9, u));
+      return { root: { y: 196 * k, r: 180 * k, sx: (1 - k) + k * c, px: 100, py: 30 }, shL: 176 * k, elL: 0, shR: 176 * k, elR: 0, torso: 0,
+        hipL: k * (14 + 56 * o), hipR: k * (14 + 56 * o), kneeL: 0, kneeR: 0, ankL: -10 * k, ankR: -10 * k, head: -6 * k }; } },
+    // ACROBATICS — double backflip: high, two turns tucked, lands low and pops up
+    rflip: { dur: 2.0, f: u => { const a = ss(.1, .82, u), h = Math.sin(a * PI), cr = ss(0, .1, u) * (1 - ss(.1, .18, u)) + ss(.8, .87, u) * (1 - ss(.9, 1, u)),
+        t = ss(.22, .34, u) * (1 - ss(.66, .76, u)), arm = ss(.04, .16, u) * (1 - ss(.86, 1, u));
+      return { root: { y: -150 * h + 22 * cr, r: -720 * ss(.18, .76, u), px: 100, py: 140, sy: 1 - .14 * cr }, hipL: 72 * t + 10 * cr, hipR: 72 * t + 10 * cr,
+        kneeL: -140 * t - 26 * cr, kneeR: -140 * t - 26 * cr, shL: 160 * arm * (1 - t) + 40 * t, elL: 60 * t, shR: 160 * arm * (1 - t) + 40 * t, elR: 60 * t, head: -8 * arm + 14 * t }; } },
+    // STANCE — one-hand hollowback: on ONE straight arm, back arched, legs folded over the head, the free arm out — held long
+    rhollow: { dur: 2.6, f: u => { const k = ss(0, .2, u) * (1 - ss(.86, 1, u)), w = u > .2 && u < .3 ? Math.sin(u * 300) * 1.8 : 0, br = Math.sin(u * TAU * 1.5) * .8 * k;
+      return { root: { y: 198 * k, r: 180 * k + 6 * k + w + br, px: 100, py: 30 }, torso: -40 * k, shR: 178 * k, elR: 0, shL: 92 * k, elL: 4 * k,
+        hipL: 46 * k, kneeL: -92 * k, ankL: 30 * k, hipR: -12 * k, kneeR: 64 * k, ankR: 20 * k, head: 24 * k }; } },
+  });
   window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose };
 })();

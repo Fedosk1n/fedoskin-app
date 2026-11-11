@@ -457,6 +457,17 @@
   iPhone not on the home screen ⇒ install guide + toast. «Как получить ⭐» lists 🎁 the tee. /visits `tee: 1` (admin
   banner; admin «версия 40»), hero.js `?v=7`. Tested: worker (402 without sub, sub ⇒ owned, eq, old subscribers), drawings
   levels 1–8 + rig + bust, shop before/after (ru).
+  Rare battle-deciding moves (owner 11.11.2026 «редкую анимацию… решающей в победе на "авто"… в 1 % батлов… стойки, вращения или
+  акробатика… 3 разных»): HERO.MOVES r2000 (spin «2000»: inverted on stacked hands, V legs, accelerating 6 turns, legs open into a
+  split), rflip (DOUBLE BACKFLIP, high, tucked, 720°), rhollow (ONE-HAND HOLLOWBACK, long hold, free arm out). `btRare(seed)` — same
+  hash in index.html and push-worker.js (KEEP EQUAL): 1 seed in 100 ⇒ {side a|b, mv by (x>>>9)%3}; the worker's auto /bt/call then
+  sets votes = [side ×3] (hand battles untouched). btPlay: shown only if win + all votes agree (older server ⇒ nothing); in round 2
+  the rare dancer goes last and his finisher becomes the rare move: arena `.legend` (dim, gold spotlight), gold banner `#btLegend`
+  «LEGENDARY MOVE» + name (`.long` 17 px for long names, no normal caption), gold spin ring (`.fighter.gold`), slow motion at the
+  peak, double stars, gold rain, «UNREAL!/LEGEND!/NO WAY!»; winner keeps the gold glow; result line `#btResR` «Редкий приём {move}
+  решил батл — такое бывает 1 раз из 100». Demo: `?battle=rare` / `rare1` / `rare2` / `rare3` (`window.fedoskinRare(k)`). hero.js `?v=8`.
+  Tested: 2 M seeds ⇒ 1.007 %, sides/kinds even; worker on node:sqlite with a forced rare seed ⇒ votes bbb; demos ru 390×844.
+  The owner must update the server code for the 1 % to happen in real battles.
   Owner 10.11.2026 update: NO rematch button; ONE challenge per 30 min per phone (server `BT_REST`, 429 {error:'rest', rest};
   `#btRest` bar «Твой би-бой отдыхает» + time left, battle buttons hidden meanwhile; `fedoskin-bt-rest`), 3 a day vs the
   same person; being challenged doesn't tire you. Points + shop (owner: for retention, NEVER sold for money; losses give
