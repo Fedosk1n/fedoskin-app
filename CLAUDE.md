@@ -454,26 +454,37 @@
   per round in start(); `notesFor/maxScore(…, beat)` and the result carry the beat id; the computer is a bit weaker on harder
   beats. `RB._render(beat[, bars])` renders a beat offline → loudness per second (check: all four ~0.1–0.2 RMS). rhythm.js `?v=3`.
   IN THE MAIN BATTLE since 11.11.2026 (owner «не надо тренировку оставлять, просто встрой всё в основной батл… сразу выбрать авто
-  или руками»; «трек выбирается автоматически, якобы диджей»): the trial card is gone. «Батл» on a rating card / «Найти соперника» /
-  «Принять вызов» ⇒ `btStart(r)` → POST /bt/ready {to | find:1} (limits checked BEFORE playing: rest / 3 a day / gone / 403) →
-  {opp {id,name,lvl,eq,co}, dj, lvl} → `RB.open({level: server lvl, me, opp, dj, onEnd})` = battle mode: screen «Как будешь
-  танцевать?» (`choose()`: VS strip, DJ chip `#rbDj` «Трек ставит диджей» (tap = 2-bar preview), «Сам» `#rbHand` → card setup
-  without the BEAT row → «Начать батл»; «Авто» `#rbAutoGo` → random cards, auto round at once, «Пропустить» `#rbSkip` dances the
-  rest instantly). finish() → `scoreOf(picks, seed, level, beat, hits, brk)` (brk = note index after each stray tap = combo break)
-  → «Твой раунд» + «Судьи смотрят батл…» → onEnd = `btSend` → POST /bt/call {to, round {p, s, b, h, k, au}} → RB.close + btPlay
-  (cartoon). Errors: network ⇒ «Отправить ещё раз»; rest/limit/gone/400 round ⇒ final message.
-  Server (push-worker.js, ported notes/scoring = rbNotes/rbScore — KEEP EQUAL to rhythm.js notesFor/scoreOf, PAT/DIFF/NEED/BEATS):
-  DJ track `rbDj(a, b, half-hour slot)` = sha256 → one of 4 (call accepts this or the previous slot); `rbCheck` (picks in rows and
-  ≤ NEED for the server level, DJ track, hits length/charset) recounts the score itself; the challenged phone doesn't wait —
-  `rbStand`: its dancer on the same track with its OWN style = D1 `bt_def` (each phone's last attacking round: picks + n/miss/
-  perfect counts, ≤ 30 days), nobody yet ⇒ by level (miss chance rises with move difficulty, like client auto). Judges: per vote
-  p = logistic((sa − sb) / (.04·max)) (10 % ahead ≈ 92 % a vote). D1 `bt_rd (n, ra, rb)`; btPack adds `ra/rb` = {p, b, sc, pf,
-  gd, ms, fz (big freeze note hit), au, st (stand-in)}; /bt/inbox joins them. /bt/call without `round` (old apps) = old random
-  result. App with an old server (/bt/ready 404 'not found') ⇒ still plays (random DJ on the phone), then old /bt/call.
-  btPlay: each fighter dances its round's toprock + power (round 1), another power + its freeze or `shock` «MISS / OOPS!» (round
-  2); result line «Счёт: a : b · Судьи: x : y». /visits returns `rb: 1` (admin banner «обновите код сервера» otherwise; admin
-  «версия 38»). Tested: worker on node:sqlite (parity client = server score, cheats ⇒ 400, defence used, inbox carries rounds,
-  old client), app headless en/ru (auto + skip, by hand with scripted taps, rest refused before opening, old server).
+  или руками»; «трек выбирается автоматически, якобы диджей»; then 15:38 «когда руками играем — не показывать авто-анимацию,
+  соперник должен ответить в течение суток; если авто — старый вариант анимации, без тапов»). The trial card is gone.
+  A SET = 4 rows as in real breaking (owner 15:38 «в топроке нет Топрок, есть cross step; CC — футворк»): TOPROCK (toprock shown as
+  «CROSS STEP», kickstep, salsa, indian) / FOOTWORK (sixstep, ccs) / POWER (backspin, swipe, windmill, headspin, flare, airflare,
+  1990 — backflip not in the game) / FREEZE. Beats: count 4, top 8, foot 8, power 8, freeze 4 (big FRZ on its 3rd), outro 3 ≈ 21 s.
+  Flow: «Батл» on a rating card / «Найти соперника» / «Принять вызов» ⇒ `btStart(r)` → POST /bt/ready {to | find:1} (limits
+  checked BEFORE: rest / 3 a day / gone / 403) → {opp, dj, lvl} → `RB.open({level: server lvl, me, opp, dj, onEnd, onAuto})` =
+  screen «Как будешь танцевать?» (`choose()`: VS strip, DJ chip `#rbDj` «Трек ставит диджей» (tap = 2-bar preview)):
+  «Сам» `#rbHand` → card setup without the BEAT row → «Начать батл» → round by hand → `btSendHand` → POST /bt/call {to, round {p, s,
+  b, h, k}} → pending battle: «Раунд отправлен! {name} ответит своим раундом в течение суток…» + «Готово» (NO cartoon);
+  «Авто» `#rbAutoGo` → `btAuto` → old /bt/call without round → old random-by-level result → btPlay cartoon (no tapping).
+  Answer: /bt/inbox {v:2} → `calls` (challenges to answer), `results` (my challenges decided, unseen), `out` (my challenges
+  waiting), `lvl`, `now`; `#btCallSheet` shows one at a time (`btNext`: call → result → old news; `#btCallP` subtitle; «Позже» on a
+  call/result = not again this session, `BT.later`); list `#btLists` on the Battles tab (⚔️ «{name} вызывает тебя на батл ·
+  осталось t» «Ответить» / 🏆 «Батл с {name}: судьи решили» «Смотреть» / ⏳ «Ждём ответа от {name}»). `btAnswer(bt)` → RB.open
+  answer mode (h3 «Ответь на вызов», same DJ track): by hand or auto → POST /bt/answer {n, round | auto:1} → `RB.result`-style
+  `showResult` in rhythm.js: both scores, 3 judge cards one by one, Победа/Поражение, PERFECT/GOOD/MISS, note (late). Challenger
+  sees it via results → `btOpenRes` (/bt/seen {n, side:'a'}). Hand battles NEVER go to btPlay; news with `hand` ⇒ result screen.
+  Server (push-worker.js; rbNotes/rbScore/RB_ROWS/DIFF/NEED/BEATS — KEEP EQUAL to rhythm.js notesFor/scoreOf): DJ `rbDj(a, b,
+  half-hour slot)`; `rbCheck` (4 picks in rows, ≤ NEED for the server level, DJ track, hits) recounts the score; D1 `bt_h (n, a, b,
+  dj, ra, rb, st wait|done, exp = +24 h, late, done, sa)`, bt row has win '' while waiting (old /bt/seen only marks win != '');
+  `btResolve` = judges p = logistic((sa − sb)/(.04·max)) per vote, bt_score, push to the challenger (BT_TITLE_R/BT_BODY_R);
+  `btExpire` (on /bt/inbox, /bt/ready and the cron `scheduled()`): no answer in 24 h ⇒ `rbStand` = the other phone's dancer
+  (its last hand round's picks + miss/perfect shares from `bt_def`, else by level, a bit weaker than a person) ⇒ late = 1, seen = 0
+  ⇒ it reaches the challenged phone as news (result screen) and the challenger as a result. Challenge push for hand battles is
+  always sent (BT_BODY_H «ответь… в течение суток»). Old apps: /bt/call without round = old instant result; inbox without v:2 never
+  sees pending ones. App with an old server (/bt/ready 404) ⇒ hand round still played, old /bt/call returns a decided battle ⇒ cartoon.
+  /visits returns `rb: 1` (admin banner «обновите код сервера» otherwise; admin «версия 38»). Tested: worker on node:sqlite (parity
+  client = server score, pending/answer by hand/auto/twice, results + seen, expiry with stand-in, old inbox, 3-pick refused, auto
+  instant), app headless ru (auto ⇒ cartoon, by hand ⇒ sent screen + ⏳ row, opponent answers ⇒ result sheet ⇒ judges screen,
+  incoming call sheet + ⚔️ row ⇒ answer on auto ⇒ result).
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.

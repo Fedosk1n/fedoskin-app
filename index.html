@@ -316,6 +316,11 @@ body.chatmode .tabs{display:none}
 .btscore{font-size:12px;font-weight:700;color:var(--soft)}
 .btscore b{color:var(--accent)}
 .bttools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.btlists{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.btl{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#151518;border:1px solid #26262A}
+.btl.call{border-color:rgba(226,97,26,.55);background:rgba(226,97,26,.1)} .btl.res{border-color:rgba(242,204,85,.45)}
+.btl .ic{font-size:20px;line-height:1;flex:none} .btl .tx{flex:1;min-width:0} .btl b{display:block;font-size:14px;line-height:1.25}
+.btl small{display:block;font-size:12px;color:var(--muted);margin-top:2px} .btl .btn{flex:none;width:auto;min-height:36px;padding:0 14px;font-size:13px}
 .bttools .btn{min-height:44px;font-size:14px;gap:6px}
 .bttools .btn svg{width:16px;height:16px}
 .btsearch{grid-column:1/-1;display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-radius:12px;background:#131315;border:1px solid var(--line);color:var(--muted)}
@@ -1230,6 +1235,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <button class="btn btn-ghost" id="btFriend" type="button">Вызвать друга</button>
       <label class="btsearch"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lbQ" type="search" maxlength="20" placeholder="Найти по нику" autocomplete="off" enterkeyhint="search"></label>
     </div>
+    <ul class="btlists" id="btLists" hidden></ul>
     <ol id="leaders" style="margin:6px 0 0;padding:0;list-style:none"></ol>
     <p class="muted" id="btHint" style="font-size:12px;line-height:1.45;margin:10px 0 0" hidden>Нажми «Батл» у любого из рейтинга — ваши человечки сразятся, а судьи решат, кто круче</p>
     <label class="row" style="gap:12px;margin-top:14px;font-size:14px;cursor:pointer"><input type="checkbox" id="rankShow" style="width:20px;height:20px;accent-color:var(--accent)"><span>Показывать меня в рейтинге</span></label>
@@ -1483,7 +1489,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px"></div>
     <div class="row" style="justify-content:center;gap:10px;align-items:flex-end"><span id="btCallA" style="width:90px"></span><span class="d" style="font-size:26px;margin-bottom:40px">VS</span><span id="btCallB" style="width:90px"></span></div>
     <h2 id="btCallT" style="font-size:22px;margin-top:6px"></h2>
-    <p class="muted" style="margin-top:6px;font-size:13px">Судьи уже решили — смотри, кто победил</p>
+    <p class="muted" id="btCallP" style="margin-top:6px;font-size:13px">Судьи уже решили — смотри, кто победил</p>
     <div class="row" style="gap:10px;margin-top:16px"><button class="btn btn-ghost" id="btCallLater" type="button" style="flex:1">Позже</button><button class="btn btn-accent" id="btCallGo" type="button" style="flex:2">Смотреть батл</button></div>
   </div>
 </div>
@@ -1529,7 +1535,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=6"></script>
-<script src="rhythm.js?v=4"></script>
+<script src="rhythm.js?v=5"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -4630,7 +4636,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (n === LBQ.n) { LBQ.busy = false; renderLeaders(); }
     }, 350);
   });
-  const BT = { news: [], busy: false, run: 0, cur: null, rest: 0, wallet: null };
+  const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, busy: false, run: 0, cur: null, rest: 0, wallet: null };
   try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
   const BT_REST = 30 * 60e3;
   function btSetRest(ms){ BT.rest = Date.now() + Math.max(0, ms || 0); try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} btPaintRest(); }
@@ -4720,20 +4726,56 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
-    RB.open({ level: lvl, eq: myEq, me: prof.nick || T('Ты'), opp, dj, onEnd: res => btSend(opp, res.round, old) });
+    // owner 11.11.2026: «Сам» = your round by hand, the other one answers within a day (no cartoon); «Авто» = the old cartoon battle
+    RB.open({ level: lvl, eq: myEq, me: prof.nick || T('Ты'), opp, dj, onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
   }
-  async function btSend(opp, round, old){
+  const btFinal = m => { const e = new Error(m); e.final = true; return e; };
+  async function btCallPost(opp, body){
     let res, j;
-    try { res = opp ? await btPost('/bt/call', { to: opp.id, round }) : await btPost('/bt/find'); j = await res.json().catch(() => ({})); }
+    try { res = opp ? await btPost('/bt/call', Object.assign({ to: opp.id }, body)) : await btPost('/bt/find'); j = await res.json().catch(() => ({})); }
     catch (_) { throw new Error(T('Не получилось отправить раунд. Проверь интернет.')); }
     if (!j.ok) {
-      if (res.status === 400 && j.error === 'round') { const e = new Error(T('Раунд не засчитан — попробуй ещё раз чуть позже')); e.final = true; throw e; }
-      const m = btErr(res, j); if (m) { const e = new Error(m); e.final = true; throw e; }
+      if (res.status === 400 && j.error === 'round') throw btFinal(T('Раунд не засчитан — попробуй ещё раз чуть позже'));
+      const m = btErr(res, j); if (m) throw btFinal(m);
       throw new Error(T('Не получилось отправить раунд. Проверь интернет.'));
     }
     btPaintScore(j.score); btWallet({ pts: j.pts }); btSetRest(j.rest || BT_REST); renderLeaders();
-    if (old && j.battle && !j.battle.ra) j.battle.ra = { p: round.p, b: round.b, sc: RB.scoreOf(round.p, round.s, (RB.state() || {}).level || statsView().level, round.b, round.h, round.k), fz: round.h.slice(-1) !== '3' ? 1 : 0 };
+    return j;
+  }
+  async function btSendHand(opp, round){
+    const j = await btCallPost(opp, { round });
+    if (j.pending) { // the challenge waits for the other one's round
+      BT.out = [j.battle].concat(BT.out.filter(x => x.n !== j.battle.n)); btPaintLists();
+      return { text: T('Раунд отправлен! {name} ответит своим раундом в течение суток — результат придёт уведомлением.', { name: j.battle.b.name }) };
+    }
+    RB.close(); setTimeout(() => btPlay(j.battle, 'a', { id: j.battle.b.id }), 350); // an old server: decided at once
+  }
+  async function btAuto(opp){
+    const j = await btCallPost(opp, {});
     RB.close(); setTimeout(() => btPlay(j.battle, 'a', { id: j.battle.b.id }), 350);
+  }
+  // a battle by hand as seen from this phone → what RB.result shows
+  function btRes(bt, side){
+    const my = side === 'a' ? bt.ra : bt.rb, th = side === 'a' ? bt.rb : bt.ra, them = bt[side === 'a' ? 'b' : 'a'];
+    const note = bt.late ? (side === 'a' ? T('{name} не ответил за сутки — за него танцевал его би-бой', { name: them.name }) : T('Ты не ответил за сутки — за тебя танцевал твой би-бой')) : '';
+    return { my: my || {}, their: th || {}, votes: (bt.votes || []).map(v => v === side ? 'l' : 'r'), won: bt.win === side, note };
+  }
+  function btShowResult(bt, side){
+    const them = bt[side === 'a' ? 'b' : 'a'], me = bt[side];
+    RB.result({ level: me.lvl || statsView().level, eq: myEq, me: prof.nick || T('Ты'), opp: them, dj: bt.dj }, btRes(bt, side));
+  }
+  // answering a challenge: the same DJ track; by hand or auto, the judges decide at once
+  function btAnswer(bt){
+    const post = async body => {
+      let res, j;
+      try { res = await btPost('/bt/answer', Object.assign({ n: bt.n }, body)); j = await res.json().catch(() => ({})); }
+      catch (_) { throw new Error(T('Не получилось отправить раунд. Проверь интернет.')); }
+      if (!j.ok) { if (res.status === 400) throw btFinal(T('Раунд не засчитан — попробуй ещё раз чуть позже')); if (res.status === 404) throw btFinal(T('Этот вызов уже не действует')); throw new Error(T('Не получилось отправить раунд. Проверь интернет.')); }
+      BT.calls = BT.calls.filter(x => x.n !== bt.n); btPaintLists();
+      if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
+      return { result: btRes(j.battle, 'b') };
+    };
+    RB.open({ level: BT.lvl || statsView().level, eq: myEq, me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -4750,7 +4792,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const BT_TAUNT = { burn: 'BURN!', brush: 'TOO EASY!', comehere: 'COME ON!' };
   const BT_REACT = ['idle', 'bounce', 'clap', 'nah'];
   const BT_SPIN = ['windmill', 'headspin', 'flare', 'airflare', 'ninety', 'backspin', 'swipe', 'sixstep'];
-  const BT_NAME = { toprock: 'TOPROCK', kickstep: 'KICK STEP', salsa: 'SALSA STEP', indian: 'INDIAN STEP', sixstep: '6-STEP', ccs: 'CC', backspin: 'BACKSPIN', swipe: 'SWIPE',
+  const BT_NAME = { toprock: 'CROSS STEP', kickstep: 'KICK STEP', salsa: 'SALSA STEP', indian: 'INDIAN STEP', sixstep: '6-STEP', ccs: 'CC', backspin: 'BACKSPIN', swipe: 'SWIPE',
     windmill: 'WINDMILL', backflip: 'BACKFLIP', headspin: 'HEADSPIN', flare: 'FLARE', airflare: 'AIRFLARE', ninety: '1990', freeze: 'BABY FREEZE', headstand: 'HEADSTAND FREEZE',
     handstand: 'HANDSTAND FREEZE', airchair: 'AIRCHAIR', hollowback: 'HOLLOWBACK' };
   function btPlay(bt, side, opp){
@@ -4772,9 +4814,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#btRes').hidden = true; $('#btSkip').hidden = false; $('#btClose').hidden = true;
     $('#battle').hidden = false;
     const rnd = mulberry(bt.seed || 1), pick = a => a[Math.floor(rnd() * a.length)];
-    // rhythm rounds (11.11.2026): each one dances what was danced in the game — its toprock and power move, then (round 2) another
-    // power move and its freeze, or a stumble if the big freeze note was missed
-    const RD = { A: side === 'a' ? bt.ra : bt.rb, B: side === 'a' ? bt.rb : bt.ra };
     const arena = $('#btArena'), cam = $('#btCam'), fx = $('#btFx');
     cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake');
     const shout = (left, txt) => { const s = $('#btShout'); s.textContent = txt; s.style.left = left ? '10%' : ''; s.style.right = left ? '' : '10%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
@@ -4794,17 +4833,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (r === 2) ev.push([t - .3, () => round(T('Раунд {n}', { n: 2 }))]);
       for (const leftTurn of [firstLeft, !firstLeft]) {
         const who = leftTurn ? 'A' : 'B', other = leftTurn ? 'B' : 'A', f = leftTurn ? A : B, lvl = leftTurn ? me.lvl : them.lvl;
-        const rd = RD[who] && RD[who].p && HERO.MOVES[RD[who].p[1]] ? RD[who] : null;
-        const power = rd && r === 1 ? rd.p[1] : pick(BT_POOL(lvl).filter(m => !used[who].includes(m) && !(rd && m === rd.p[1]))); used[who].push(power);
-        const parts = r === 1 ? [rd ? rd.p[0] : pick(BT_TOP), power] : [power, rd ? (rd.fz ? rd.p[2] : 'shock') : rnd() < .65 ? pick(BT_FRZ(lvl)) : pick(Object.keys(BT_TAUNT))];
+        const power = pick(BT_POOL(lvl).filter(m => !used[who].includes(m))); used[who].push(power);
+        const parts = r === 1 ? [pick(BT_TOP), power] : [power, rnd() < .65 ? pick(BT_FRZ(lvl)) : pick(Object.keys(BT_TAUNT))];
         const react = pick(BT_REACT), shock = rnd() < .5, cry = pick(BT_SHOUTS), t0 = t;
         ev.push([t0, () => { camOn(leftTurn); A.classList.toggle('dim', !leftTurn); B.classList.toggle('dim', leftTurn); arena.classList.toggle('on-l', leftTurn); arena.classList.toggle('on-r', !leftTurn); $('#btJudges').className = 'judges ' + (leftTurn ? 'wl' : 'wr'); }]);
         parts.forEach(mv => {
           const d = HERO.MOVES[mv].dur * (BT_TOP.includes(mv) ? .75 : 1), s0 = t;
           seg[who].push([s0, d, mv]);
-          ev.push([s0 + .03, () => caption(leftTurn, mv === 'shock' ? 'MISS' : BT_NAME[mv])]);
-          if (mv === 'shock') ev.push([s0 + d * .3, () => { shout(!leftTurn, 'OOPS!'); puff(leftTurn); }]);
-          else if (BT_SPIN.includes(mv)) {
+          ev.push([s0 + .03, () => caption(leftTurn, BT_NAME[mv])]);
+          if (BT_SPIN.includes(mv)) {
             ev.push([s0 + d * .18, () => { puff(leftTurn); f.classList.add('spin'); }]);
             ev.push([s0 + d * .8, () => { f.classList.remove('spin'); hype(true); shout(!leftTurn, cry); }]);
             ev.push([s0 + d, () => hype(false)]);
@@ -4862,8 +4899,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ending = { won }; $('#btJudges').className = 'judges';
         A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win'); arena.classList.add(won ? 'on-l' : 'on-r');
         const tt = $('#btResT'); tt.textContent = won ? T('Победа!') : T('Поражение'); tt.className = won ? 'win' : 'lose';
-        const ra = side === 'a' ? bt.ra : bt.rb, rb = side === 'a' ? bt.rb : bt.ra;
-        $('#btResS').textContent = (ra && rb ? T('Счёт: {a} : {b}', { a: nfmt(ra.sc), b: nfmt(rb.sc) }) + ' · ' : '') + T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
+        $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
         hype(true);
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
@@ -4916,25 +4952,69 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!LB_URL || !lbShow || BT.busy) return;
     BT.busy = true;
     try {
-      const res = await btPost('/bt/inbox'), j = await res.json().catch(() => ({}));
-      if (j.ok) { btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} } btWallet(j); BT.news = (j.news || []).slice().reverse(); btLinkPush(); if (lbData) renderLeaders(); }
+      const res = await btPost('/bt/inbox', { v: 2 }), j = await res.json().catch(() => ({}));
+      if (j.ok) {
+        btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} }
+        btWallet(j); BT.news = (j.news || []).slice().reverse(); BT.calls = j.calls || []; BT.results = j.results || []; BT.out = j.out || []; if (j.lvl) BT.lvl = j.lvl;
+        const skew = j.now ? Date.now() - j.now : 0; [BT.calls, BT.out].forEach(l => l.forEach(x => { x.exp += skew; }));
+        btLinkPush(); btPaintLists(); if (lbData) renderLeaders();
+      }
     } catch (_) {}
     BT.busy = false;
     btShowNews(now);
   }
+  // battles by hand on the «Батлы» tab: challenges to answer, results ready, my challenges still waiting
+  function btPaintLists(){
+    const ul = $('#btLists'); if (!ul) return;
+    const now = Date.now(), left = x => hmFmt(Math.max(1, (x.exp - now) / 60e3));
+    const rows = BT.calls.filter(x => x.exp > now).map(x => ['call', x, T('{name} вызывает тебя на батл', { name: x.a.name }), T('осталось {t}', { t: left(x) }), T('Ответить')])
+      .concat(BT.results.map(x => ['res', x, T('Батл с {name}: судьи решили', { name: x.b.name }), '', T('Смотреть')]))
+      .concat(BT.out.filter(x => x.exp > now).map(x => ['out', x, T('Ждём ответа от {name}', { name: x.b.name }), T('осталось {t}', { t: left(x) }), '']));
+    ul.hidden = !rows.length; ul.innerHTML = '';
+    rows.forEach(([k, x, a, b, go]) => {
+      const li = document.createElement('li'); li.className = 'btl ' + k;
+      li.innerHTML = '<span class="ic" aria-hidden="true">' + (k === 'call' ? '⚔️' : k === 'res' ? '🏆' : '⏳') + '</span><span class="tx"><b></b><small></small></span>' + (go ? '<button type="button" class="btn btn-accent"></button>' : '');
+      li.querySelector('b').textContent = a; li.querySelector('small').textContent = b; li.querySelector('small').hidden = !b;
+      if (go) { const bb = li.querySelector('button'); bb.textContent = go; bb.addEventListener('click', () => k === 'call' ? btAnswer(x) : btOpenRes(x)); }
+      ul.appendChild(li);
+    });
+  }
+  setInterval(() => { if (!$('#battles').hidden && (BT.calls.length || BT.out.length)) btPaintLists(); }, 60e3);
+  function btOpenRes(bt){
+    BT.results = BT.results.filter(x => x.n !== bt.n); btPaintLists();
+    btPost('/bt/seen', { n: bt.n, side: 'a' }).catch(() => {});
+    btShowResult(bt, 'a');
+  }
+  // one sheet at a time: a challenge to answer, then a result of my challenge, then battles somebody started against me
+  function btNext(){
+    const c = BT.calls.find(x => x.exp > Date.now() && !BT.later.has(x.n)); if (c) return ['call', c];
+    const r = BT.results.find(x => !BT.later.has(x.n)); if (r) return ['res', r];
+    if (BT.news.length) return ['news', BT.news[0]];
+    return null;
+  }
   function btShowNews(force){
-    if (!BT.news.length) return;
+    const nx = btNext(); if (!nx) return;
     const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
     if (busy) return;
-    const bt = BT.news[0];
-    $('#btCallA').innerHTML = HERO.svg(bt.b.lvl, { uid: 'ca', bg: false, acc: myEq }); $('#btCallB').innerHTML = HERO.svg(bt.a.lvl, { uid: 'cb', bg: false, acc: bt.a.eq || [] });
-    $('#btCallT').textContent = T('{name} вызывает тебя на батл!', { name: bt.a.name });
+    const [k, bt] = nx, mine = k === 'res' ? bt.a : bt.b, them = k === 'res' ? bt.b : bt.a;
+    BT.sheet = nx;
+    $('#btCallA').innerHTML = HERO.svg(mine.lvl, { uid: 'ca', bg: false, acc: myEq }); $('#btCallB').innerHTML = HERO.svg(them.lvl, { uid: 'cb', bg: false, acc: them.eq || [] });
+    $('#btCallT').textContent = k === 'res' ? T('Батл с {name}: судьи решили', { name: them.name }) : T('{name} вызывает тебя на батл!', { name: them.name });
+    $('#btCallP').textContent = k === 'call' ? T('Ответь своим раундом — осталось {t}', { t: hmFmt(Math.max(1, (bt.exp - Date.now()) / 60e3)) }) : T('Судьи уже решили — смотри, кто победил');
+    $('#btCallGo').textContent = k === 'call' ? T('Ответить') : k === 'res' ? T('Смотреть') : T('Смотреть батл');
     $('#btCallSheet').hidden = false;
   }
   function btSeen(bt){ BT.news = BT.news.filter(x => x.n !== bt.n); btPost('/bt/seen', { n: bt.n }).catch(() => {}); }
-  $('#btCallGo').addEventListener('click', () => { const bt = BT.news[0]; $('#btCallSheet').hidden = true; if (!bt) return; btSeen(bt); setTimeout(() => btPlay(bt, 'b', { id: bt.a.id }), 350); });
-  $('#btCallLater').addEventListener('click', () => { const bt = BT.news[0]; $('#btCallSheet').hidden = true; if (bt) btSeen(bt); });
-  $('#btCallSheet').addEventListener('click', e => { if (e.target.id === 'btCallSheet') { const bt = BT.news[0]; $('#btCallSheet').hidden = true; if (bt) btSeen(bt); } });
+  const btLater = () => { const nx = BT.sheet; BT.sheet = null; $('#btCallSheet').hidden = true; if (!nx) return; if (nx[0] === 'news') btSeen(nx[1]); else { BT.later.add(nx[1].n); btPaintLists(); } };
+  $('#btCallGo').addEventListener('click', () => {
+    const nx = BT.sheet; BT.sheet = null; $('#btCallSheet').hidden = true; if (!nx) return;
+    const [k, bt] = nx;
+    if (k === 'call') setTimeout(() => btAnswer(bt), 350);
+    else if (k === 'res') setTimeout(() => btOpenRes(bt), 350);
+    else { btSeen(bt); setTimeout(() => bt.hand ? btShowResult(bt, 'b') : btPlay(bt, 'b', { id: bt.a.id }), 350); } // by hand ⇒ the judges' result, no cartoon
+  });
+  $('#btCallLater').addEventListener('click', btLater);
+  $('#btCallSheet').addEventListener('click', e => { if (e.target.id === 'btCallSheet') btLater(); });
   // «you were challenged» pushes go to the subscription this phone already has for new lessons / chat
   async function btLinkPush(){
     try {

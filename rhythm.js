@@ -13,15 +13,16 @@
     { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 }];
   const beatOf = id => BEATS.find(b => b.id === id) || BEATS[1];
   let BEAT = .6;
-  const COUNT = 4, TOP = 8, POW = 12, FRZ = 4, OUTRO = 3; // beats
-  const B_TOP = COUNT, B_POW = B_TOP + TOP, B_FRZ = B_POW + POW, B_BIG = B_FRZ + 3, B_END = B_FRZ + FRZ + OUTRO;
+  // a set as in real breaking (owner 11.11.2026 «CC — это футворк»): toprock → footwork → power → freeze
+  const COUNT = 4, TOP = 8, FOOT = 8, POW = 8, FRZ = 4, OUTRO = 3; // beats
+  const B_TOP = COUNT, B_FOOT = B_TOP + TOP, B_POW = B_FOOT + FOOT, B_FRZ = B_POW + POW, B_BIG = B_FRZ + 3, B_END = B_FRZ + FRZ + OUTRO;
   let TRAVEL = 2 * BEAT;              // how long a note is on the track before the ring (set per beat in start())
   const W_PERF = .08, W_GOOD = .16;   // tap windows, seconds either side
-  const DIFF = { toprock: 1, kickstep: 1, salsa: 2, indian: 2, sixstep: 1, ccs: 1, backspin: 2, swipe: 2, windmill: 2, backflip: 3, headspin: 3,
+  const DIFF = { toprock: 1, kickstep: 1, salsa: 2, indian: 2, sixstep: 1, ccs: 2, backspin: 1, swipe: 2, windmill: 2, backflip: 3, headspin: 3,
     flare: 3, airflare: 3, ninety: 3, freeze: 1, headstand: 2, handstand: 2, airchair: 3, hollowback: 3 };
   const NEED = { windmill: 3, backflip: 3, handstand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5, hollowback: 5 }; // hero level
-  const ROWS = [['TOPROCK', ['toprock', 'kickstep', 'salsa', 'indian']],
-    ['POWER', ['sixstep', 'ccs', 'backspin', 'swipe', 'windmill', 'backflip', 'headspin', 'flare', 'airflare', 'ninety']],
+  const ROWS = [['TOPROCK', ['toprock', 'kickstep', 'salsa', 'indian']], ['FOOTWORK', ['sixstep', 'ccs']],
+    ['POWER', ['backspin', 'swipe', 'windmill', 'headspin', 'flare', 'airflare', 'ninety']],
     ['FREEZE', ['freeze', 'headstand', 'handstand', 'airchair', 'hollowback']]];
   const MULT = [0, 1, 1.35, 1.7];
   const PAT = [null, [[0, 1, 2, 3]],
@@ -46,9 +47,10 @@
     const rnd = mulberry(seed || 1), out = [];
     const bars = (b0, n, d, ph) => { for (let b = 0; b < n; b++) { const p = PAT[d][Math.floor(rnd() * PAT[d].length)]; p.forEach(x => out.push({ t: (b0 + b * 4 + x) * bt, ph, big: false, st: 0 })); } };
     bars(B_TOP, TOP / 4, lv(picks[0]), 0);
-    bars(B_POW, POW / 4, lv(picks[1]), 1);
-    PAT_F[lv(picks[2])].forEach(x => out.push({ t: (B_FRZ + x) * bt, ph: 2, big: false, st: 0 }));
-    out.push({ t: B_BIG * bt, ph: 2, big: true, st: 0 });
+    bars(B_FOOT, FOOT / 4, lv(picks[1]), 1);
+    bars(B_POW, POW / 4, lv(picks[2]), 2);
+    PAT_F[lv(picks[3])].forEach(x => out.push({ t: (B_FRZ + x) * bt, ph: 3, big: false, st: 0 }));
+    out.push({ t: B_BIG * bt, ph: 3, big: true, st: 0 });
     return out;
   }
   const noteBase = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * (n.big ? 3 : 1) * MULT[DIFF[picks[n.ph]]] * beatOf(beat).mult;
@@ -207,6 +209,7 @@
 .rbmode b{font-family:var(--display);font-size:21px;font-weight:400;letter-spacing:.6px}
 .rbmode small{font-size:11.5px;line-height:1.3;color:var(--soft)}
 .rbskip{display:block;margin:10px auto 0;padding:9px 18px;border-radius:12px;border:1px solid #333338;background:#151518;color:var(--fg);font:inherit;font-size:13px}
+.rbend p.sent{font-size:14px;color:var(--fg);line-height:1.4;margin-top:12px}
 .rbwait{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;color:var(--soft);font-size:13.5px}
 .rbwait i{width:16px;height:16px;border-radius:50%;border:2px solid #333;border-top-color:var(--accent);animation:rbspin .8s linear infinite}
 @keyframes rbspin{to{transform:rotate(360deg)}}`;
@@ -247,14 +250,14 @@
   function open(o) {
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
-    G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, mute, mode: '', picks: null, seed: 1,
-      battle: !!o.onEnd, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
+    G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
+      battle: !!(o.onEnd || o.result), answer: !!o.answer, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
     paintSnd();
     D.el.hidden = false;
-    if (G.battle) choose(); else setup();
+    if (o.result) showResult(o.result); else if (G.battle) choose(); else setup();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
   function stop() { cancelAnimationFrame(raf); raf = 0; if (G) { killBeat(); G.mode = ''; } }
@@ -277,12 +280,13 @@
     const IC_HAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5v-2a1.5 1.5 0 0 1 3 0V12M14 10.5a1.5 1.5 0 0 1 3 0V12M17 11a1.5 1.5 0 0 1 3 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L4.3 15a1.6 1.6 0 0 1 2.6-1.8L8 14.5"/></svg>';
     const IC_AUTO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M8 8h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3zM9.5 13h.01M14.5 13h.01M2 13v2M22 13v2"/></svg>';
     $('#rbSet').innerHTML = '<div class="rbvsr">' + side('me', G.me || T('Ты'), G.level, G.eq, 'rvm') + '<em>VS</em>' + side('op', o ? o.name : T('Соперник'), o && o.lvl, o && o.eq, 'rvo') + '</div>' +
-      djHtml() + '<h3>' + T('Как будешь танцевать?') + '</h3>' +
-      '<div class="rbmode"><button type="button" id="rbHand">' + IC_HAND + '<b>' + T('Сам') + '</b><small>' + T('Тапай в бит — точность решает') + '</small></button>' +
-      '<button type="button" class="au" id="rbAutoGo">' + IC_AUTO + '<b>' + T('Авто') + '</b><small>' + T('Би-бой танцует сам, ты смотришь') + '</small></button></div>';
+      djHtml() + '<h3>' + (G.answer ? T('Ответь на вызов') : T('Как будешь танцевать?')) + '</h3>' +
+      '<div class="rbmode"><button type="button" id="rbHand">' + IC_HAND + '<b>' + T('Сам') + '</b><small>' + (G.answer ? T('Тапай в бит — точность решает') : T('Тапай в бит. Соперник ответит в течение суток')) + '</small></button>' +
+      '<button type="button" class="au" id="rbAutoGo">' + IC_AUTO + '<b>' + T('Авто') + '</b><small>' + (G.answer ? T('Без тапов — би-бой станцует сам') : T('Без тапов — сразу мультик-батл')) + '</small></button></div>';
     djWire();
     $('#rbHand').addEventListener('click', () => setup());
-    $('#rbAutoGo').addEventListener('click', () => { setup(); start(true); });
+    // auto (owner 11.11.2026): no tapping to the music — index.html decides (the old cartoon battle, or an instant answer)
+    $('#rbAutoGo').addEventListener('click', () => { if (!G.onAuto) { setup(); start(true); return; } wait(T('Судьи смотрят батл…'), '', () => G.onAuto()); });
   }
 
   // ---- 1: build the set ----
@@ -353,7 +357,7 @@
   function start(auto) {
     const T = D.T;
     G.auto = !!auto;
-    if (G.auto) G.picks = [0, 1, 2].map(k => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
+    if (G.auto) G.picks = ROWS.map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
     G.notes = notesFor(G.picks, G.seed, G.beat);
@@ -417,11 +421,13 @@
   // which pose the hero is in at song second s
   function pose(s) {
     const M = HERO.MOVES, loop = (mv, t, k) => { const d = M[mv].dur * (k || 1); return M[mv].f((((t / d) % 1) + 1) % 1); };
-    const tTop = B_TOP * BEAT, tPow = B_POW * BEAT, tFrz = B_FRZ * BEAT, tBig = B_BIG * BEAT, fz = M[G.picks[2]], fStart = tBig - .23 * fz.dur;
+    const tTop = B_TOP * BEAT, tFoot = B_FOOT * BEAT, tPow = B_POW * BEAT, tFrz = B_FRZ * BEAT, tBig = B_BIG * BEAT, fz = M[G.picks[3]], fStart = tBig - .23 * fz.dur;
+    const span = (mv, t0, n) => { const d = n * BEAT, reps = Math.max(1, Math.round(d / M[mv].dur)); return M[mv].f((((s - t0) / (d / reps)) % 1 + 1) % 1); };
     let key, p;
     if (s < tTop) { key = 'in'; p = loop('bounce', s + 9); }
-    else if (s < tPow) { key = 'top'; p = loop(G.picks[0], s - tTop, .75); }
-    else if (s < tFrz) { const span = POW * BEAT, reps = Math.max(1, Math.round(span / M[G.picks[1]].dur)); key = 'pow'; p = M[G.picks[1]].f((((s - tPow) / (span / reps)) % 1 + 1) % 1); }
+    else if (s < tFoot) { key = 'top'; p = loop(G.picks[0], s - tTop, .75); }
+    else if (s < tPow) { key = 'foot'; p = span(G.picks[1], tFoot, FOOT); }
+    else if (s < tFrz) { key = 'pow'; p = span(G.picks[2], tPow, POW); }
     else if (s < fStart) { key = 'pre'; p = loop(G.picks[0], s - tFrz, .75); }
     else if (G.bigSt === 3) { const t = s - (tBig + W_GOOD); key = 'fail'; p = t < M.shock.dur ? M.shock.f(clamp(t / M.shock.dur, 0, 1)) : loop('lose2', t); }
     else { const u = (s - fStart) / fz.dur; if (u < 1) { key = 'frz'; p = fz.f(clamp(u, 0, 1)); } else { key = 'after'; p = loop('win', s - fStart - fz.dur); } }
@@ -454,9 +460,9 @@
     if (beat !== G.lastBeat) {
       G.lastBeat = beat;
       if (beat >= 0 && beat < COUNT) { const c = $('#rbCnt'); c.textContent = beat === COUNT - 1 ? 'GO!' : String(COUNT - 1 - beat); c.classList.remove('show'); void c.offsetWidth; c.classList.add('show'); }
-      const ph = beat < B_TOP ? -1 : beat < B_POW ? 0 : beat < B_FRZ ? 1 : 2;
-      if (ph !== G.shown) { G.shown = ph; if (ph >= 0) $('#rbPhase').textContent = D.names[G.picks[ph]]; $('#rbF').classList.toggle('spin', ph === 1 && D.spin.includes(G.picks[1])); if (ph === 1) puff(); }
-      if (ph < 2) $('#rbCrowd').classList.toggle('hype', G.combo >= 8);
+      const ph = beat < B_TOP ? -1 : beat < B_FOOT ? 0 : beat < B_POW ? 1 : beat < B_FRZ ? 2 : 3;
+      if (ph !== G.shown) { G.shown = ph; if (ph >= 0) $('#rbPhase').textContent = D.names[G.picks[ph]]; $('#rbF').classList.toggle('spin', (ph === 1 || ph === 2) && D.spin.includes(G.picks[ph])); if (ph === 1 || ph === 2) puff(); }
+      if (ph < 3) $('#rbCrowd').classList.toggle('hype', G.combo >= 8);
     }
     draw(s);
     let [key, p] = pose(s);
@@ -507,21 +513,56 @@
     }, 400 + 3 * 550 + 250);
   }
 
-  // battle: the round goes to the server (index.html onEnd → promise); meanwhile «the judges watch», on failure «try again»
+  // battle: after a round by hand the round goes to the server (index.html onEnd → promise). A challenge ⇒ «sent, the other one
+  // answers within a day»; an answer ⇒ the judges' result at once. On failure «send again».
   function sendRound() {
-    const T = D.T, end = $('#rbEnd'), r = G.res, g = G;
-    end.innerHTML = '<b class="win" style="font-size:30px">' + T('Твой раунд') + '</b>' +
+    const T = D.T, r = G.res;
+    const head = '<b class="win" style="font-size:30px">' + T('Твой раунд') + '</b>' +
       '<div class="rbvs" style="grid-template-columns:1fr"><span class="me"><small>' + T('Счёт') + '</small><b>' + r.score + '</b></span></div>' +
-      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + '</p>' +
-      '<div class="rbwait" id="rbWait"><i></i><span>' + T('Судьи смотрят батл…') + '</span></div>';
-    end.hidden = false;
+      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + '</p>';
     $('#rbCrowd').classList.toggle('hype', r.acc >= .6);
-    Promise.resolve().then(() => g.onEnd(r)).catch(e => {
-      if (G !== g || g.mode !== 'end' || D.el.hidden) return;
+    wait(G.answer ? T('Судьи смотрят батл…') : T('Отправляем раунд…'), head, () => G.onEnd(r));
+  }
+  function wait(text, head, job) {
+    const T = D.T, end = $('#rbEnd'), g = G;
+    killBeat(); if (G.mode !== 'end') { G.mode = 'end'; G.endAt = performance.now(); G.won = true; }
+    $('#rbSet').hidden = true; $('#rbPlay').hidden = true;
+    end.innerHTML = (head || '') + '<div class="rbwait" id="rbWait"><i></i><span>' + text + '</span></div>';
+    end.hidden = false;
+    Promise.resolve().then(job).then(x => {
+      if (G !== g || D.el.hidden || !x) return;
+      if (x.result) return showResult(x.result);
+      const w = $('#rbWait'); if (!w) return;
+      w.outerHTML = '<p class="sent">' + (x.text || '') + '</p><div class="rbbt"><button type="button" class="btn btn-accent" id="rbDone">' + T('Готово') + '</button></div>';
+      $('#rbDone').addEventListener('click', close);
+    }).catch(e => {
+      if (G !== g || D.el.hidden) return;
       const w = $('#rbWait'); if (!w) return;
       w.outerHTML = '<p>' + ((e && e.message) || T('Не получилось отправить раунд. Проверь интернет.')) + '</p>' + (e && e.final ? '' : '<div class="rbbt"><button type="button" class="btn btn-accent" id="rbRetry">' + T('Отправить ещё раз') + '</button></div>');
-      const b = $('#rbRetry'); if (b) b.addEventListener('click', sendRound);
+      const b = $('#rbRetry'); if (b) b.addEventListener('click', () => wait(text, head, job));
     });
+  }
+  // the judges' result of a battle by hand (no cartoon — owner 11.11.2026): both scores, three cards one by one, the verdict
+  // r = { my: {sc, pf, gd, ms}, their: {sc}, votes: ['l' (for me) | 'r', ×3], won, note }
+  function showResult(r) {
+    const T = D.T, end = $('#rbEnd'), g = G, my = r.my || {}, th = r.their || {};
+    killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.won = !!r.won;
+    $('#rbSet').hidden = true; $('#rbPlay').hidden = true; $('#rbPhase').textContent = ''; $('#rbConf').innerHTML = '';
+    $('#rbScore').textContent = my.sc || 0; $('#rbCombo').textContent = '0';
+    const jd = '<div class="judge"><span class="card"></span></div>', esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
+      '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + (my.sc || 0) + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + esc(G.opp ? G.opp.name : T('Соперник')) + '</small><b>' + (th.sc || 0) + '</b></span></div>' +
+      (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + '</p>' : '') +
+      (r.note ? '<p class="n">' + esc(r.note) + '</p>' : '');
+    end.hidden = false;
+    const cards = end.querySelectorAll('.card'), votes = r.votes || [];
+    votes.forEach((v, k) => setTimeout(() => { if (G !== g || g.mode !== 'end') return; cards[k].className = 'card ' + v; if (navigator.vibrate) try { navigator.vibrate(12); } catch (_) {} }, 500 + k * 600));
+    setTimeout(() => {
+      if (G !== g || g.mode !== 'end') return;
+      const t = $('#rbResT'); t.textContent = r.won ? T('Победа!') : T('Поражение'); t.className = r.won ? 'win' : 'lose'; t.style.visibility = '';
+      $('#rbCrowd').classList.toggle('hype', !!r.won);
+      if (r.won) { const c = $('#rbConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
+    }, 500 + votes.length * 600 + 250);
   }
   // for checks: render a beat offline and return its loudness per second (window.RB._render('funk'))
   async function render(beat, preview) {
@@ -534,5 +575,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, notesFor, maxScore, scoreOf, BEATS, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS, _render: render, state: () => G };
 })();
