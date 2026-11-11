@@ -360,13 +360,30 @@
     const TORSO = rig ? o.splice(TO0).join('') : '';
     // ---- head ----
     const HE0 = o.length;
+    // b-girl (owner 11.11.2026 «женский образ… девчата одеваются как парни с небольшими тонкостями»): same clothes; long hair
+    // in a ponytail/braids behind, a bun when there's no hat, lashes, hoop earrings, a touch of colour on the lips
+    const girl = opt.g === 'f' || has('girl');
+    if (girl) {
+      // hair behind the head, down to the shoulders, and a thick braid over the right shoulder
+      P('M78 44 Q71 66 76 90 Q84 94 91 86 L109 86 Q116 94 124 90 Q129 66 122 44 Z', HAIR, S(1.8));
+      P('M118 70 Q127 80 125 96 Q124 108 129 118 L123 121 Q117 108 118 96 Q119 84 113 76 Z', HAIR, S(1.6));
+      LN('M119 84 l6 2 M119 92 l6 2 M119 100 l6 2 M121 108 l6 2', '#3A2E28', 1.2);
+      o.push('<circle cx="126" cy="119" r="2.6" fill="' + OR + '" stroke="' + INK + '" stroke-width="1"/>'); // hair tie
+    }
     o.push('<circle cx="77" cy="56" r="6" fill="' + SKIN + '" stroke="' + INK + '" stroke-width="2"/><circle cx="123" cy="56" r="6" fill="' + SKIN + '" stroke="' + INK + '" stroke-width="2"/>');
     LN('M76 54 Q78 57 76 59 M124 54 Q122 57 124 59', SKIN_D, 1.2);
-    if (L >= 6) o.push('<circle cx="76" cy="61" r="1.7" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".5"/>'); // stud earring
+    if (girl) { const hc = L >= 5 ? GOLD : '#C9CCD2'; [[76.5, 64], [123.5, 64]].forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.4" fill="none" stroke="' + hc + '" stroke-width="1.5"/>')); } // hoops
+    else if (L >= 6) o.push('<circle cx="76" cy="61" r="1.7" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".5"/>'); // stud earring
     P('M100 28 Q123 28 123 54 Q123 80 100 81 Q77 80 77 54 Q77 28 100 28 Z', SKIN, S());
     P('M80 64 Q86 78 100 80 Q90 76 84 64 Z', SKIN_D, ' opacity=".35"');
     // hair: short fade, visible under hats as sideburns
-    if (!fit.hat) {
+    if (!fit.hat && girl) {
+      // pulled back with a middle part + a bun on top
+      o.push('<circle cx="100" cy="19" r="9.5" fill="' + HAIR + '" stroke="' + INK + '" stroke-width="1.8"/>');
+      LN('M93 16 Q100 12 107 16', '#3A2E28', 1.3);
+      P('M77 54 Q73 26 100 25 Q127 26 123 54 Q121 40 112 35 Q105 32 100 36 Q95 32 88 35 Q79 40 77 54 Z', HAIR, S(1.8));
+      LN('M100 27 V36 M88 31 Q83 36 81 44 M112 31 Q117 36 119 44', '#3A2E28', 1.2);
+    } else if (!fit.hat) {
       P('M77 52 Q74 26 100 25 Q127 26 123 52 Q120 41 112 38 Q104 34 96 37 Q86 36 80 44 Z', HAIR, S(1.8));
       LN('M86 33 Q92 30 98 32 M102 31 Q110 30 116 34', '#3A2E28', 1.4);
     } else {
@@ -433,13 +450,15 @@
       });
     } else {
       const lift = L >= 3 ? -1 : 0;
-      LN('M85 ' + (52 + lift) + ' Q90 ' + (49 + lift) + ' 95 ' + (51 + lift) + ' M105 ' + (51 + lift) + ' Q110 ' + (49 + lift * 2) + ' 115 ' + (52 + lift), HAIR, 2.6);
+      LN('M85 ' + (52 + lift) + ' Q90 ' + (49 + lift) + ' 95 ' + (51 + lift) + ' M105 ' + (51 + lift) + ' Q110 ' + (49 + lift * 2) + ' 115 ' + (52 + lift), HAIR, girl ? 1.8 : 2.6);
       [[90, 58], [110, 58]].forEach(p => { o.push('<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="3.6" ry="4" fill="#fff" stroke="' + INK + '" stroke-width="1.2"/><circle cx="' + (p[0] + .6) + '" cy="' + (p[1] + .6) + '" r="2.3" fill="' + INK + '"/><circle cx="' + (p[0] + 1.4) + '" cy="' + (p[1] - .6) + '" r=".8" fill="#fff"/>'); });
+      if (girl) LN('M85.6 55.6 l-2.6 -1.6 M86.2 54.4 l-1.8 -2.2 M114.4 55.6 l2.6 -1.6 M113.8 54.4 l1.8 -2.2', INK, 1.1); // lashes
     }
     LN('M100 61 Q97 67 100 69 Q102 69 103 68', SKIN_D, 1.8);
-    if (L >= 6) { P('M90 72 Q100 80 111 71 Q101 75 90 72 Z', '#fff', S(1.6)); }
-    else if (L >= 3) LN('M92 73 Q101 77 110 71', INK, 2.2);
-    else LN('M93 74 Q100 75 107 73', INK, 2.2);
+    const LIP = girl ? '#8E3B3B' : INK;
+    if (L >= 6) { P('M90 72 Q100 80 111 71 Q101 75 90 72 Z', '#fff', girl ? ' stroke="' + LIP + '" stroke-width="1.8" stroke-linejoin="round"' : S(1.6)); }
+    else if (L >= 3) LN('M92 73 Q101 77 110 71', LIP, 2.2);
+    else LN('M93 74 Q100 75 107 73', LIP, 2.2);
     if (L >= 4) LN('M88 66 h0 M112 66 h0', SKIN_L, 0); // (cheek highlight placeholder kept tiny)
 
     if (rig) {
@@ -619,10 +638,11 @@
   });
   // ---- even rarer, «mythic» moves (owner 11.11.2026: «ещё 3 с вероятностью 0,5 %… красный фон и слегка трясущийся экран») ----
   Object.assign(MOVES, {
-    // SPIN — jackhammer: on ONE hand, body folded, hopping round and round on that hand
-    rjack: { dur: 2.8, f: u => { const k = env(u, .14, .86), sp = ss(.14, .84, u), th = sp * TAU * 7, c = Math.cos(th), hop = Math.abs(Math.sin(th)) * k;
-      return { root: { y: 112 * k - 26 * hop, r: 128 * k, sx: (1 - k) + k * c, px: 100, py: 96 }, torso: 24 * k, shR: 150 * k, elR: 0, shL: 70 * k, elL: 60 * k,
-        hipL: 96 * k, kneeL: -30 * k, hipR: 84 * k, kneeR: -40 * k, ankL: 10 * k, ankR: 10 * k, head: -16 * k }; } },
+    // SPIN — «real one hand» (owner 11.11.2026: «airflare через 1 руку… самый мощный элемент powermove»): airflare turns in the air
+    // over ONE straight arm, the other arm folded to the chest, legs in a wide V, faster and faster
+    rone: { dur: 3.0, f: u => { const k = env(u, .14, .86), sp = ss(.14, .84, u), th = (sp * .6 + sp * sp * .4) * TAU * 4, sn = Math.sin(th);
+      return { root: { y: 30 * k - 30 * k * Math.abs(sn), r: 150 * k + th * 180 / PI, px: 100, py: 120 }, hipL: 58 * k, hipR: 58 * k, kneeL: -4 * k, kneeR: -4 * k,
+        shR: 168 * k, elR: 2 * k, shL: -20 * k, elL: -120 * k, torso: -6 * k * sn, head: 12 * k * sn }; } },
     // ACROBATICS — corkscrew: a layout flip with a full twist, very high, arms hugged in for the twist
     rcork: { dur: 2.0, f: u => { const a = ss(.1, .84, u), h = Math.sin(a * PI), cr = ss(0, .1, u) * (1 - ss(.1, .18, u)) + ss(.82, .88, u) * (1 - ss(.9, 1, u)),
         tw = ss(.24, .7, u), arm = ss(.04, .16, u) * (1 - ss(.24, .3, u)), hug = ss(.24, .3, u) * (1 - ss(.7, .78, u)), sx = Math.cos(tw * TAU);

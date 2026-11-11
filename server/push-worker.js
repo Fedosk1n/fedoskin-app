@@ -520,7 +520,7 @@ const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes
 const DJ_SLOT = 30 * 60e3; // the DJ keeps a pair's track for half an hour
 // must match HERO.SHOP in hero.js: id → [slot, price]
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0] }; // tee = not sold: given for push notifications (owner 11.11.2026)
-const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3;
+const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3, PTS_GOLD = 5, PTS_RED = 10; // + bonus for pulling out a rare move (owner 11.11.2026)
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
 const BT_TITLE = { ru: 'Батл!', en: 'Battle!', es: '¡Batalla!', pt: 'Batalha!', fr: 'Battle !', de: 'Battle!', ja: 'バトル！', ko: '배틀!', zh: '斗舞！' };
 const BT_BODY = { ru: '{n} вызывает тебя на батл — смотри, кто победил', en: '{n} challenged you to a battle — see who won', es: '{n} te retó a una batalla: mira quién ganó', pt: '{n} te desafiou para uma batalha — veja quem venceu', fr: '{n} te défie en battle — regarde qui a gagné', de: '{n} fordert dich zum Battle heraus — schau, wer gewonnen hat', ja: '{n}からバトルの挑戦！勝者をチェック', ko: '{n}님이 배틀을 신청했어요 — 누가 이겼는지 확인하세요', zh: '{n}向你发起斗舞——快看谁赢了' };
@@ -558,7 +558,12 @@ const rbClamp = (x, a, b) => Math.max(a, Math.min(b, x));
 function btRare(seed) {
   let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
   x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
-  return x % 100 === 0 || x % 200 === 1 ? ((x >>> 8) & 1 ? 'b' : 'a') : null; // 1 % legendary + 0.5 % mythic
+  return x % 100 === 0 ? 'gold' : x % 200 === 1 ? 'red' : null; // 1 % legendary (gold) + 0.5 % mythic (red)
+}
+function btRareSide(seed) {
+  let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
+  return (x >>> 8) & 1 ? 'b' : 'a';
 }
 function rbNotes(picks, seed, beat) { // only the phase and «big» of each note, in the same order as rhythm.js
   const up = RB_BEATS[beat][1], lv = m => rbClamp(RB_DIFF[m] + up, 1, 3), rnd = rbMul(seed || 1), out = [];
@@ -713,7 +718,7 @@ async function battle(req, env, path, json) {
     }
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 1;
     // 1 % of auto battles: the seed gives one dancer a rare legendary move (the app shows it) ⇒ all three judges for him
-    const rare = ra ? null : btRare(seed);
+    const tier = ra ? null : btRare(seed), rare = tier && btRareSide(seed);
     const votes = ra ? [] : rare ? [rare, rare, rare] : [0, 1, 2].map(() => Math.random() < p ? 'a' : 'b');
     const win = ra ? '' : votes.filter(v => v === 'a').length >= 2 ? 'a' : 'b';
     const na = me.n || ('Breaker ' + id.slice(-4)), nb = op.n || ('Breaker ' + to.slice(-4));
@@ -721,6 +726,7 @@ async function battle(req, env, path, json) {
     const n = ins.meta && ins.meta.last_row_id;
     if (ra) await db.batch([db.prepare('INSERT INTO bt_h (n, a, b, dj, ra, st, exp) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(n, id, to, ra.b, JSON.stringify(ra), 'wait', now + BT_WAIT), btDefSave(db, id, ra, now)]);
     if (!ra) await btScore(db, id, to, win);
+    if (rare) await db.prepare('INSERT OR IGNORE INTO pts_bonus (id, ref, pts, t) VALUES (?, ?, ?, ?)').bind(rare === 'a' ? id : to, 'rare:' + n, tier === 'red' ? PTS_RED : PTS_GOLD, now).run(); // ⭐ for the move itself
     // tell the challenged phone — at most once per 6 hours
     try {
       const recent = await db.prepare('SELECT COUNT(*) AS n FROM bt WHERE b = ? AND t > ?').bind(to, now - 6 * 3600e3).first();
@@ -787,6 +793,7 @@ async function battle(req, env, path, json) {
     const w = await wallet(), slots = {};
     (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; }); // one per slot
     const eq = Object.values(slots);
+    if ((Array.isArray(b.eq) ? b.eq : []).includes('girl')) eq.push('girl'); // b-girl look (11.11.2026) — not an item, rides along with the items
     await db.prepare('INSERT INTO hero_eq (id, eq) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET eq = excluded.eq').bind(id, JSON.stringify(eq)).run();
     return json({ ok: true, eq });
   }
@@ -952,7 +959,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

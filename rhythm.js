@@ -282,7 +282,7 @@
     $('#rbSet').innerHTML = '<div class="rbvsr">' + side('me', G.me || T('Ты'), G.level, G.eq, 'rvm') + '<em>VS</em>' + side('op', o ? o.name : T('Соперник'), o && o.lvl, o && o.eq, 'rvo') + '</div>' +
       djHtml() + '<h3>' + (G.answer ? T('Ответь на вызов') : T('Как будешь танцевать?')) + '</h3>' +
       '<div class="rbmode"><button type="button" id="rbHand">' + IC_HAND + '<b>' + T('Сам') + '</b><small>' + (G.answer ? T('Тапай в бит — точность решает') : T('Тапай в бит. Соперник ответит в течение суток')) + '</small></button>' +
-      '<button type="button" class="au" id="rbAutoGo">' + IC_AUTO + '<b>' + T('Авто') + '</b><small>' + (G.answer ? T('Без тапов — би-бой станцует сам') : T('Без тапов — сразу мультик-батл')) + '</small></button></div>';
+      '<button type="button" class="au" id="rbAutoGo">' + IC_AUTO + '<b>' + T('Авто') + '</b><small>' + (G.answer ? T((G.eq || []).includes('girl') ? 'Без тапов — би-гёрл станцует сама' : 'Без тапов — би-бой станцует сам') : T('Без тапов — сразу мультик-батл')) + '</small></button></div>';
     djWire();
     $('#rbHand').addEventListener('click', () => setup());
     // auto (owner 11.11.2026): no tapping to the music — index.html decides (the old cartoon battle, or an instant answer)

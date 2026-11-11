@@ -424,6 +424,11 @@ body.chatmode .tabs{display:none}
 .btlegend.show{animation:legend 2.6s ease both}
 .btlegend.long b{font-size:17px}
 @keyframes legend{0%{opacity:0;transform:scale(.6)}10%{opacity:1;transform:scale(1.08)}16%{transform:none}82%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+.gseg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gseg button{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;border-radius:14px;border:1.5px solid var(--line);background:var(--card,#141416);color:var(--fg);font:700 15px var(--body,Inter,sans-serif);text-align:left;cursor:pointer}
+.gseg button .gh{width:46px;height:46px;border-radius:12px;overflow:hidden;background:#1E1E22;flex:none}
+.gseg button .gh svg{width:100%;height:100%;display:block}
+.gseg button[aria-checked="true"]{border-color:var(--accent);background:rgba(226,97,26,.12)}
 .btresr{display:block;font-style:normal;font-size:12px;font-weight:700;color:#F2CC55;margin-top:6px}
 /* mythic (0.5 %): red light, the whole arena trembles slightly, red banner and glow */
 .arena.myth{animation:mythq .09s linear infinite;box-shadow:inset 0 0 60px rgba(255,40,40,.35)}
@@ -1262,7 +1267,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="stack" style="gap:2px;flex:1;min-width:0"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" id="myMins" style="font-size:12px"></span></span>
     </div>
     <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
-    <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b>Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 15 минут</small></div>
+    <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b id="btRestH">Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 15 минут</small></div>
     <div class="bttools" id="btTools" hidden>
       <button class="btn btn-accent" id="btFind" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Найти соперника</button>
       <button class="btn btn-ghost" id="btFriend" type="button">Вызвать друга</button>
@@ -1329,6 +1334,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="psteps" aria-hidden="true"><i></i><i></i><i></i></div>
     <p class="pstep-t" id="pStepT" aria-live="polite"></p>
     <div class="stack" style="gap:12px;margin-top:12px">
+      <div class="field gpick"><label id="fGl">Твой персонаж</label><div class="gseg" id="fG" role="radiogroup" aria-labelledby="fGl"><button type="button" role="radio" data-g="m"><span class="gh"></span><b>B-boy</b></button><button type="button" role="radio" data-g="f"><span class="gh"></span><b>B-girl</b></button></div></div>
       <div class="field pst"><label for="fNick"><b class="pn">1</b>Имя (никнейм)</label><input id="fNick" maxlength="20" autocomplete="nickname" enterkeyhint="next" placeholder="Например, B-boy Storm"><span class="phint">Как тебя зовут на батлах — так тебя увидят в рейтинге</span></div>
       <div class="field pst"><label for="fCountry"><b class="pn">2</b>Страна</label><input id="fCountry" maxlength="30" list="countryList" autocomplete="country-name" enterkeyhint="next" placeholder="Например, Россия"><span class="phint">Начни писать и выбери из подсказок</span></div>
       <div class="field pst"><label for="fCity"><b class="pn">3</b>Город</label><input id="fCity" maxlength="30" autocomplete="address-level2" enterkeyhint="done" placeholder="Где ты тренируешься"><span class="phint">Город, где ты тренируешься — для рейтинга «Мой город»</span></div>
@@ -1482,7 +1488,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
     <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Магазин</h2><span class="pts big">⭐ <b id="shopPts">0</b></span></div>
     <div class="ptsinfo"><b>Как получить ⭐</b>
-      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
+      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в авто-батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
       <small>Поражение очков не даёт. Очки нельзя купить за деньги. Аксессуары — только для красоты, на батлы не влияют.</small></div>
     <div class="shopgrid" id="shopGrid"></div>
   </div>
@@ -1570,8 +1576,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=9"></script>
-<script src="rhythm.js?v=5"></script>
+<script src="hero.js?v=10"></script>
+<script src="rhythm.js?v=6"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -3765,7 +3771,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let rankScope = 'world';
   function openStory(){
     const st = statsView();
-    $('#stAvatar').innerHTML = HERO.svg(st.level, {uid: 's', acc: myEq});
+    $('#stAvatar').innerHTML = HERO.svg(st.level, {uid: 's', acc: myLook()});
     $('#stLvl').textContent = T('Уровень {n}', {n: st.level}) + ' · ' + T(HERO.NAMES[st.level - 1]);
     $('#stPlace').textContent = st.mins;
     $('#stWhere').textContent = T(st.mins === 1 ? 'минута тренировок в Fedoskin' : 'минут тренировок в Fedoskin');
@@ -3818,7 +3824,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try { const lg = await loadImg('logo.png'); const lw = 380, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 160, lw, lh); } catch (_) {}
     // the hero of the person's level (owner 10.11.2026)
     const stv = statsView();
-    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c', acc: myEq}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
+    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c', acc: myLook()}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
     // nick + alpha badge
     const nick = (prof.nick || T('Брейкер')).toUpperCase();
     g.font = fitFont(nick, 76, W - 160, DISP); g.fillStyle = '#F2EFE8'; g.textAlign = 'center'; g.fillText(nick, W / 2, 890);
@@ -4481,7 +4487,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lvlTitle').textContent = T(HERO.NAMES[v.level - 1]);
     $('#lvlBar').style.width = v.pct + '%';
     $('#lvlHint').textContent = v.next ? T('Ещё {t} тренировок — и новый образ: {perk}', {t: hmFmt(v.left), perk: T(HERO.PERKS[v.level])}) : T('Максимальный уровень — ты легенда');
-    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myEq}); }
+    if (heroDrawn !== v.level) { heroDrawn = v.level; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myLook()}); }
     lvlCheck();
     renderProgress();
   }
@@ -4489,7 +4495,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // accessories this phone wears (bought in the shop with points; the server keeps the real list, this is the copy)
   let myEq = []; try { myEq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
   const heroShown = () => !$('#profile').hidden || !$('#battles').hidden; // the hero card lives on «Батлы» (11.11.2026)
-  function setMyEq(eq){ myEq = Array.isArray(eq) ? eq : []; try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (heroShown()) renderStats(); }
+  // b-girl (owner 11.11.2026): the look = bought items + 'girl' (stored on the server with the items, so others see her too)
+  const myLook = () => prof.g === 'f' ? myEq.concat('girl') : myEq;
+  function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => k !== 'girl'); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = 0; if (heroShown()) renderStats(); }
   let heroDrawn = 0;
   function hmFmt(m){ m = Math.max(1, Math.ceil(m)); if (m < 60) return T('{n} мин', {n: m}); if (m >= 600) return T('{h} ч', {h: Math.ceil(m / 60)}); const h = Math.floor(m / 60), r = m % 60; return r ? T('{h} ч {m} мин', {h, m: r}) : T('{h} ч', {h}); }
   // the rating's full-length heroes: each look (level + things worn) is drawn once into an image and reused — 100 inline
@@ -4506,7 +4514,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     HERO.LEVELS.forEach((need, i) => {
       const l = i + 1, d = document.createElement('div');
       d.className = 'herolook' + (l > v.level ? ' lock' : '') + (l === v.level ? ' cur' : '');
-      d.innerHTML = HERO.svg(l, {uid: 'g' + l}) + '<b></b><small></small>';
+      d.innerHTML = HERO.svg(l, {uid: 'g' + l, g: prof.g}) + '<b></b><small></small>';
       d.querySelector('b').textContent = T('Ур. {n}', {n: l}) + ' · ' + T(HERO.NAMES[i]);
       d.querySelector('small').textContent = l === v.level ? T('Сейчас') : l < v.level ? T('Открыт') : T('Через {t}', {t: hmFmt(need - stats.sec / 60)});
       box.appendChild(d);
@@ -4532,7 +4540,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const from = lvlSeen; lvlSave(l); showLvlUp(from, l);
   }
   function showLvlUp(from, to){
-    $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo', acc: myEq}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un', acc: myEq});
+    $('#lvlUpOld').innerHTML = HERO.svg(from, {uid: 'uo', acc: myLook()}); $('#lvlUpNew').innerHTML = HERO.svg(to, {uid: 'un', acc: myLook()});
     $('#lvlUpName').textContent = T('Уровень {n}', {n: to}) + ' · ' + T(HERO.NAMES[to - 1]);
     $('#lvlUpPerk').textContent = T('Открыто: {perk}', {perk: T(HERO.PERKS[to - 1])});
     const box = $('#lvlUp'); box.hidden = false;
@@ -4603,7 +4611,22 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     inp.addEventListener('change', paintSteps);
     if (i < PST.length - 1) inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#' + PST[i + 1]).focus(); } });
   });
+  // b-boy / b-girl (owner 11.11.2026 «женский образ… возможность выбрать пол в профиле»): picked in the profile form, saved at «Сохранить»
+  let gPick = 'm';
+  function paintG(){ $('#fG').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.g === gPick))); }
+  $('#fG').querySelectorAll('button').forEach(b => {
+    b.querySelector('.gh').innerHTML = HERO.svg(statsView().level, { uid: 'gp' + b.dataset.g, bust: true, bg: false, g: b.dataset.g, acc: myEq });
+    b.addEventListener('click', () => { gPick = b.dataset.g; paintG(); });
+  });
+  // the look changed (b-boy ⇄ b-girl): redraw mine and tell the server (with the worn items) so others see it in battles
+  async function lookSync(){
+    heroDrawn = 0; if (heroShown()) renderStats(); if (lbData) renderLeaders();
+    if (!LB_URL || !lbShow) return;
+    try { await btPost('/hero/eq', { eq: myLook() }); } catch (_) {}
+  }
   function openProf(){
+    gPick = prof.g === 'f' ? 'f' : 'm'; paintG();
+    $('#fG').querySelectorAll('button').forEach(b => { b.querySelector('.gh').innerHTML = HERO.svg(statsView().level, { uid: 'gp' + b.dataset.g, bust: true, bg: false, g: b.dataset.g, acc: myEq }); });
     $('#fNick').value = prof.nick; $('#fCountry').value = prof.country || ''; $('#fCity').value = prof.city;
     pstFocus = -1; paintSteps(); $('#profSheet').hidden = false;
     // nothing filled yet (first time) ⇒ start right away on step 1
@@ -4617,7 +4640,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     prof.nick = $('#fNick').value.trim().slice(0, 20);
     prof.country = $('#fCountry').value.trim().slice(0, 30);
     prof.city = $('#fCity').value.trim().slice(0, 30);
+    const gWas = prof.g === 'f' ? 'f' : 'm'; prof.g = gPick;
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
+    if (gWas !== gPick) lookSync();
     paintProfile(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
     if (LB_URL) lbSend(0).then(lbLoad);
   });
@@ -4693,7 +4718,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       li.innerHTML = (place ? '<span class="lbpl">' + (place <= 3 ? '<i>' + place + '</i>' : '#' + place) + '</span>' : '') +
         '<span class="lbhero"><img alt="" decoding="async" loading="lazy"></span><span class="lblv"></span>' +
         '<b class="lbnm"></b><small class="lbct"></small><small class="lbmn"></small>' + (r.bt ? '<small class="lbmn lbbt"></small>' : '');
-      li.querySelector('img').src = heroImg(lvl, me ? myEq : (r.eq || []));
+      li.querySelector('img').src = heroImg(lvl, me ? myLook() : (r.eq || []));
       const lv = li.querySelector('.lblv'); lv.textContent = T('Ур. {n}', {n: lvl}); lv.style.setProperty('--rc', HERO.RING[lvl - 1]);
       // «B-boy / Bboy / B-girl / Bgirl» on its own line above the name (owner 11.11.2026: names didn't fit)
       const full = me ? (prof.nick || T('Ты')) : (r.n || T('Брейкер {id}', {id: String(r.id).slice(-4)}));
@@ -4749,7 +4774,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function btPaintRest(){
     const left = BT.rest - Date.now(), box = $('#btRest');
     if (left <= 0 || !lbData || !lbData.bt) { if (!box.hidden) { box.hidden = true; renderLeaders(); } return; }
-    box.hidden = false;
+    box.hidden = false; $('#btRestH').textContent = T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает' : 'Твой би-бой отдыхает');
     $('#btRestT').textContent = T('ещё {t}', { t: hmFmt(left / 60e3) });
     $('#btRestBar').style.width = Math.min(100, Math.max(2, 100 * (1 - left / BT_REST))).toFixed(1) + '%';
   }
@@ -4759,7 +4784,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!w || typeof w.pts !== 'number') return;
     BT.wallet = Object.assign(BT.wallet || {}, w);
     $('#shopRow').hidden = false; $('#ptsN').textContent = nfmt(w.pts);
-    if (Array.isArray(w.eq) && JSON.stringify(w.eq) !== JSON.stringify(myEq)) setMyEq(w.eq);
+    if (Array.isArray(w.eq)) { const it = w.eq.filter(k => k !== 'girl'); if (JSON.stringify(it) !== JSON.stringify(myEq)) setMyEq(it);
+      if (w.eq.includes('girl') !== (prof.g === 'f')) lookSync(); } // the server still has the old look
     if (!$('#shopSheet').hidden) shopPaint();
   }
   function shopPaint(){
@@ -4770,7 +4796,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const own = (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
       const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '');
       const keep = myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; });
-      d.innerHTML = HERO.svg(lvl, { uid: 'sh' + it.id, acc: keep.concat(it.id) }) + '<b></b><button type="button"></button>';
+      d.innerHTML = HERO.svg(lvl, { uid: 'sh' + it.id, acc: keep.concat(it.id, prof.g === 'f' ? ['girl'] : []) }) + '<b></b><button type="button"></button>';
       d.querySelector('b').textContent = T(it.name);
       const btn = d.querySelector('button');
       if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
@@ -4804,7 +4830,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   async function shopWear(eq){
     const before = myEq; setMyEq(eq); shopPaint();
-    try { const r = await btPost('/hero/eq', { eq }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
+    try { const r = await btPost('/hero/eq', { eq: prof.g === 'f' ? eq.concat('girl') : eq }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
     catch (_) { setMyEq(before); toast(T('Не получилось. Проверь интернет.')); }
     shopPaint(); if (lbData) renderLeaders();
   }
@@ -4822,7 +4848,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // the round goes to /bt/call → the cartoon of both. An old server (no /bt/ready) ⇒ the round is danced, the result is random.
   const btErr = (res, j) => {
     if (res.status === 404 && j.error === 'nobody') return T('Пока не с кем батлить — загляни чуть позже');
-    if (res.status === 429 && j.error === 'rest') { btSetRest(j.rest); return T('Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt(j.rest / 60e3) }); }
+    if (res.status === 429 && j.error === 'rest') { btSetRest(j.rest); return T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает — следующий батл через {t}' : 'Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt(j.rest / 60e3) }); }
     if (res.status === 429) return T('С этим человеком на сегодня хватит — выбери другого');
     if (res.status === 404 && j.error === 'gone') return T('Этого человека больше нет в рейтинге');
     if (res.status === 404 || res.status === 409) return T('Батлы скоро заработают');
@@ -4831,7 +4857,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   };
   async function btStart(r, btn){
     if (!lbShow) { toast(T('Включи «Показывать меня в рейтинге», чтобы батлить')); return; }
-    if (BT.rest > Date.now()) { toast(T('Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt((BT.rest - Date.now()) / 60e3) })); return; }
+    if (BT.rest > Date.now()) { toast(T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает — следующий батл через {t}' : 'Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt((BT.rest - Date.now()) / 60e3) })); return; }
     if (btn) btn.disabled = true;
     let lvl = statsView().level;
     let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false;
@@ -4844,7 +4870,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
     // owner 11.11.2026: «Сам» = your round by hand, the other one answers within a day (no cartoon); «Авто» = the old cartoon battle
-    RB.open({ level: lvl, eq: myEq, me: prof.nick || T('Ты'), opp, dj, onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
+    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
   }
   const btFinal = m => { const e = new Error(m); e.final = true; return e; };
   async function btCallPost(opp, body){
@@ -4874,12 +4900,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // a battle by hand as seen from this phone → what RB.result shows
   function btRes(bt, side){
     const my = side === 'a' ? bt.ra : bt.rb, th = side === 'a' ? bt.rb : bt.ra, them = bt[side === 'a' ? 'b' : 'a'];
-    const note = bt.late ? (side === 'a' ? T('{name} не ответил за сутки — за него танцевал его би-бой', { name: them.name }) : T('Ты не ответил за сутки — за тебя танцевал твой би-бой')) : '';
+    const note = bt.late ? (side === 'a' ? T((them.eq || []).includes('girl') ? '{name} не ответила за сутки — за неё танцевала её би-гёрл' : '{name} не ответил за сутки — за него танцевал его би-бой', { name: them.name }) : T(prof.g === 'f' ? 'Ты не ответила за сутки — за тебя танцевала твоя би-гёрл' : 'Ты не ответил за сутки — за тебя танцевал твой би-бой')) : '';
     return { my: my || {}, their: th || {}, votes: (bt.votes || []).map(v => v === side ? 'l' : 'r'), won: bt.win === side, note };
   }
   function btShowResult(bt, side){
     const them = bt[side === 'a' ? 'b' : 'a'], me = bt[side];
-    RB.result({ level: me.lvl || statsView().level, eq: myEq, me: prof.nick || T('Ты'), opp: them, dj: bt.dj }, btRes(bt, side));
+    RB.result({ level: me.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: them, dj: bt.dj }, btRes(bt, side));
   }
   // answering a challenge: the same DJ track; by hand or auto, the judges decide at once
   function btAnswer(bt){
@@ -4892,7 +4918,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
       return { result: btRes(j.battle, 'b') };
     };
-    RB.open({ level: BT.lvl || statsView().level, eq: myEq, me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
+    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -4916,7 +4942,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Decided by the battle's seed with the SAME formula as the server (push-worker.js btRare — keep equal): the server then
   // gives all three judges to that dancer. An older server doesn't know it ⇒ shown only if the result agrees.
   // + «mythic» ones (owner 11.11.2026): 1 seed in 200, red light, the screen trembles, vibration.
-  const BT_RARE = ['r2000', 'rflip', 'rhollow'], BT_MYTH = ['rjack', 'rcork', 'rplanche'];
+  const BT_RARE = ['r2000', 'rflip', 'rhollow'], BT_MYTH = ['rone', 'rcork', 'rplanche'];
   function btRare(seed){
     let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
     x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
@@ -4925,7 +4951,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (x % 200 === 1) return { side, mv: BT_MYTH[(x >>> 9) % 3], myth: true };
     return null;
   }
-  Object.assign(BT_NAME, { r2000: '2000', rflip: 'DOUBLE BACKFLIP', rhollow: 'ONE-HAND HOLLOWBACK', rjack: 'JACKHAMMER', rcork: 'CORKSCREW', rplanche: 'PLANCHE' });
+  Object.assign(BT_NAME, { r2000: '2000', rflip: 'DOUBLE BACKFLIP', rhollow: 'ONE-HAND HOLLOWBACK', rone: 'REAL ONE HAND', rcork: 'CORKSCREW', rplanche: 'PLANCHE' });
   const btIsRare = mv => BT_RARE.includes(mv) || BT_MYTH.includes(mv);
   function btPlay(bt, side, opp){
     const run = ++BT.run, me = bt[side], them = bt[side === 'a' ? 'b' : 'a'];
@@ -4934,7 +4960,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#btNa').innerHTML = ''; $('#btNb').innerHTML = '';
     const nm = (el, p, mine) => { el.append(mine ? (prof.nick || T('Ты')) : p.name); const sm = document.createElement('small'); sm.textContent = T('Ур. {n}', { n: p.lvl }) + ' · ' + T(HERO.NAMES[p.lvl - 1]); el.appendChild(sm); };
     nm($('#btNa'), me, true); nm($('#btNb'), them, false);
-    const eqA = side === 'a' ? myEq : (me.eq || myEq), eqB = them.eq || [];
+    const eqA = side === 'a' ? myLook() : (me.eq || myLook()), eqB = them.eq || [];
     A.querySelector('.mv').innerHTML = HERO.svg(me.lvl, { uid: 'ba', rig: true, acc: eqA });
     B.querySelector('.mv').innerHTML = HERO.svg(them.lvl, { uid: 'bb', rig: true, acc: eqB });
     const JA = HERO.rigJoints(A.querySelector('svg')), JB = HERO.rigJoints(B.querySelector('svg'));
@@ -4981,11 +5007,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           seg[who].push([s0, d, mv]);
           if (!btIsRare(mv)) ev.push([s0 + .03, () => caption(leftTurn, BT_NAME[mv])]); // a rare move has its own gold banner
           if (btIsRare(mv)) { // the legendary moment: the arena goes dark, gold light (mythic: red + trembling), slow motion at the peak, the crowd explodes
-            const myth = BT_MYTH.includes(mv), peak = { r2000: .5, rflip: .44, rhollow: .3, rjack: .5, rcork: .46, rplanche: .3 }[mv], glow = myth ? 'red' : 'gold';
+            const myth = BT_MYTH.includes(mv), peak = { r2000: .5, rflip: .44, rhollow: .3, rone: .5, rcork: .46, rplanche: .3 }[mv], glow = myth ? 'red' : 'gold';
             const buzz = p => { if (navigator.vibrate) try { navigator.vibrate(p); } catch (_) {} };
             const yell = myth ? ['INSANE!', 'MYTHIC!', 'IMPOSSIBLE!'] : ['UNREAL!', 'LEGEND!', 'NO WAY!'];
             ev.push([s0, () => { arena.classList.add('legend'); if (myth) { arena.classList.add('myth'); buzz([60, 80, 60, 80, 60]); } legendT(leftTurn, BT_NAME[mv], myth); camOn(leftTurn, 1.16); $('#btCrowd').classList.remove('hype'); f.classList.add(glow); }]);
-            if (mv === 'r2000' || mv === 'rjack') { ev.push([s0 + d * .16, () => { puff(leftTurn); f.classList.add('spin'); }]); ev.push([s0 + d * .8, () => f.classList.remove('spin')]); }
+            if (mv === 'r2000' || mv === 'rone') { ev.push([s0 + d * .16, () => { puff(leftTurn); f.classList.add('spin'); }]); ev.push([s0 + d * .8, () => f.classList.remove('spin')]); }
             ev.push([s0 + d * peak, () => { rate = .28; camOn(leftTurn, 1.3); re(arena, 'shake'); re(arena, 'flash'); stars(leftTurn); stars(leftTurn); buzz(myth ? [120, 50, 160, 50, 220] : [25, 40, 60]); }]);
             ev.push([s0 + d * peak + .32, () => { rate = 1; camOn(leftTurn, 1.16); }]);
             ev.push([s0 + d * .8, () => { hype(true); goldRain(myth); shout(!leftTurn, pick(yell)); if (myth) buzz([40, 40, 40, 40, 90]); }]);
@@ -5050,7 +5076,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win'); arena.classList.add(won ? 'on-l' : 'on-r');
         const tt = $('#btResT'); tt.textContent = won ? T('Победа!') : T('Поражение'); tt.className = won ? 'win' : 'lose';
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
-        if (rare) { const rr = $('#btResR'); rr.textContent = rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); rr.hidden = false; }
+        if (rare) { const rr = $('#btResR'); rr.textContent = rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); if (rareLeft && bt.n) rr.textContent += ' · ' + T('+{n} ⭐ за редкий приём', { n: rare.myth ? 10 : 5 }); rr.hidden = false; }
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
         hype(true);
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
@@ -5078,7 +5104,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (!r.ok) { toast(T(r.status === 404 ? 'Этого человека больше нет в рейтинге' : 'Батлы скоро заработают')); return; }
       const w = await r.json();
       VS.who = w;
-      $('#vsA').innerHTML = HERO.svg(statsView().level, { uid: 'va', bg: false, acc: myEq }); $('#vsB').innerHTML = HERO.svg(w.lvl || 1, { uid: 'vb', bg: false, acc: w.eq || [] });
+      $('#vsA').innerHTML = HERO.svg(statsView().level, { uid: 'va', bg: false, acc: myLook() }); $('#vsB').innerHTML = HERO.svg(w.lvl || 1, { uid: 'vb', bg: false, acc: w.eq || [] });
       $('#vsT').textContent = T('{name} вызывает тебя на батл!', { name: w.n || T('Брейкер {id}', { id: String(w.id).slice(-4) }) });
       $('#vsM').textContent = T('Ур. {n}', { n: w.lvl || 1 }) + ' · ' + T(HERO.NAMES[(w.lvl || 1) - 1]) + (w.co ? ' · ' + w.co : '');
       const show = () => { const busy = !$('#lesson').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden); if (busy) return setTimeout(show, 1500); $('#vsSheet').hidden = false; };
@@ -5149,7 +5175,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (busy) return;
     const [k, bt] = nx, mine = k === 'res' ? bt.a : bt.b, them = k === 'res' ? bt.b : bt.a;
     BT.sheet = nx;
-    $('#btCallA').innerHTML = HERO.svg(mine.lvl, { uid: 'ca', bg: false, acc: myEq }); $('#btCallB').innerHTML = HERO.svg(them.lvl, { uid: 'cb', bg: false, acc: them.eq || [] });
+    $('#btCallA').innerHTML = HERO.svg(mine.lvl, { uid: 'ca', bg: false, acc: myLook() }); $('#btCallB').innerHTML = HERO.svg(them.lvl, { uid: 'cb', bg: false, acc: them.eq || [] });
     $('#btCallT').textContent = k === 'res' ? T('Батл с {name}: судьи решили', { name: them.name }) : T('{name} вызывает тебя на батл!', { name: them.name });
     $('#btCallP').textContent = k === 'call' ? T('Ответь своим раундом — осталось {t}', { t: hmFmt(Math.max(1, (bt.exp - Date.now()) / 60e3)) }) : T('Судьи уже решили — смотри, кто победил');
     $('#btCallGo').textContent = k === 'call' ? T('Ответить') : k === 'res' ? T('Смотреть') : T('Смотреть батл');
@@ -5192,14 +5218,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   window.fedoskinPushed = () => { if (LB_URL && lbShow) teeAfterPush(); };
   // rhythm battle (rhythm.js): every battle starts with a round of it — btStart; fedoskinRhythm = the old trial vs the computer (checks only)
   RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN });
-  window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myEq, oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
+  window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
   window.fedoskinRare = kind => {
     const want = kind ? BT_RARE.concat(BT_MYTH)[kind - 1] : null, lvl = statsView().level;
     for (let sd = 1 + Math.floor(Math.random() * 1e6); ; sd++) { const r = btRare(sd); if (r && (!want || r.mv === want)) {
-      return btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl, eq: myEq }, b: { id: '2', name: 'Ana', lvl: Math.min(8, lvl + 2), eq: ['bandana', 'gloves'] }, seed: sd, votes: [r.side, r.side, r.side], win: r.side }, 'a', { id: '' }); } }
+      return btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl, eq: myLook() }, b: { id: '2', name: 'Ana', lvl: Math.min(8, lvl + 2), eq: ['bandana', 'gloves', 'girl'] }, seed: sd, votes: [r.side, r.side, r.side], win: r.side }, 'a', { id: '' }); } }
   };
-  window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myEq }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
+  window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myLook() }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves', 'girl'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 
   if (LB_URL) {
     setTimeout(() => btInbox(false), 4000);
@@ -5876,7 +5902,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
     if (qs.get('battle') === 'play') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRhythm(), 800); } // the rhythm game trial, no server
-    const rq = /^rare([1-6])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback) / mythic: rare4 (jackhammer) / rare5 (corkscrew) / rare6 (planche)
+    const rq = /^rare([1-6])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback) / mythic: rare4 (real one hand) / rare5 (corkscrew) / rare6 (planche)
     if (rq) { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRare(rq[1] ? +rq[1] : 0), 800); }
     else if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
     else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
