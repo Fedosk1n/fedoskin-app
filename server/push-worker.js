@@ -104,8 +104,13 @@ export default {
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
         if (!sub || !sub.endpoint || !/^https:\/\//.test(sub.endpoint) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return json({ error: 'bad subscription' }, 400);
-        const rec = { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, lang: TEXT[lang] ? lang : 'en', t: Date.now() };
-        await env.PUSH.put('s:' + await hash(sub.endpoint), JSON.stringify(rec));
+        const key = 's:' + await hash(sub.endpoint);
+        // keep the FIRST subscribe time (a language change re-sends the same phone); t also goes to the key's metadata so the
+        // admin's «подписались по дням» is counted from the list alone (12.11.2026)
+        let t0 = Date.now();
+        try { const old = await env.PUSH.get(key, 'json'); if (old && old.t) t0 = old.t; } catch (_) {}
+        const rec = { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, lang: TEXT[lang] ? lang : 'en', t: t0 };
+        await env.PUSH.put(key, JSON.stringify(rec), { metadata: { t: t0 } });
         return json({ ok: true });
       }
       if (path === '/unsubscribe') {
@@ -117,9 +122,21 @@ export default {
       // ----- admin only -----
       if (!(await isAdmin(req, env))) return json({ error: 'forbidden' }, 403);
       if (path === '/stats') {
-        let n = 0, cursor;
-        do { const r = await env.PUSH.list({ prefix: 's:', cursor }); n += r.keys.length; cursor = r.list_complete ? null : r.cursor; } while (cursor);
-        return json({ subscribers: n });
+        // owner 12.11.2026 «в статистику "подписались на уведомления"»: total + by Moscow day of the first subscribe
+        let n = 0, cursor; const byDay = {}, old = [];
+        do {
+          const r = await env.PUSH.list({ prefix: 's:', cursor }); n += r.keys.length;
+          r.keys.forEach(k => { if (k.metadata && k.metadata.t) byDay[mskDay(k.metadata.t)] = (byDay[mskDay(k.metadata.t)] || 0) + 1; else old.push(k.name); });
+          cursor = r.list_complete ? null : r.cursor;
+        } while (cursor);
+        let noDate = 0;
+        for (let i = 0; i < old.length; i += 50) { // older records: the time is inside the value
+          const recs = await Promise.all(old.slice(i, i + 50).map(k => env.PUSH.get(k, 'json').catch(() => null)));
+          recs.forEach(x => { if (x && x.t) byDay[mskDay(x.t)] = (byDay[mskDay(x.t)] || 0) + 1; else noDate++; });
+        }
+        let tee = null;
+        if (env.DB) { try { await schema(env.DB); tee = ((await env.DB.prepare("SELECT COUNT(*) AS n FROM hero_own WHERE item = 'tee'").first()) || {}).n || 0; } catch (_) {} }
+        return json({ subscribers: n, subDays: Object.entries(byDay).sort((a, b) => a[0] < b[0] ? -1 : 1), noDate, tee, today: mskDay() });
       }
       if (path === '/visits') return await visits(env, json);
       if (path === '/lesson/fresh') { // the admin, right after publishing new lessons
@@ -964,7 +981,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

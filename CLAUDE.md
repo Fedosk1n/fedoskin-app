@@ -346,6 +346,19 @@
   Telegram, Messenger (`m.me/<fb>?text=`, only if `fb` set). Config keys `wa` (digits), `ig`, `fb` (admin «Настройки»;
   empty = not shown). Order: SRC ig ⇒ IG first; ru ⇒ TG first; SRC fb ⇒ Messenger first; else IG, WA, TG. `sendEv('tg', svc,
   m)` ⇒ worker kind `via:<m>`; admin sources card shows «Какой мессенджер выбирают». Service texts no longer say «в Telegram».
+- Order through the chat (owner 12.11.2026: «кнопка "чат с тренером" выглядит будто можно бесплатно решить свой вопрос… один уже так
+  писал»; «её надо вместо кнопки на конкретной услуге, а выбор мессенджеров — доп. кнопкой»): the coach card has NO free-chat button; it
+  offers the cheapest shown service `#ccOffer` («Разбор твоего видео» + price + «Заказать разбор» `#ccOrder`; tap on the text = service page).
+  Service cards «Заказать», service page `#tgLink` «Заказать · $N` → `orderSvc(s)`: chat on ⇒ `openChat(orderText(s), s.id)` straight away
+  (prefill «Привет! Хочу заказать: {s} ({p})» whenever the field is empty; sendEv tg/chat), chat off ⇒ the messenger sheet as before.
+  Messengers = extra button `#svcMsgr` «Написать в мессенджере» (only when chat on) and the chat's order banner `#chatOrder` («Заказ: {s} · {p}» +
+  «Оплата — после того, как обсудим задачу.» + «Удобнее в мессенджере?» `#chatMsgr`) → `openContact(text, noChat=true)`. Ordered service kept in
+  `fedoskin-chat-svc`. `#ccChat` = «Переписка по заказу», only for phones that already wrote (chHas). Chat empty state «Опиши задачу… подтвердит
+  задачу и пришлёт способ оплаты». «Как это работает» no longer says «Это бесплатно» (step 1 «Выбери услугу»).
+- Push subscribers by day (owner 12.11.2026, after the team tee): worker /subscribe keeps the FIRST `t` and writes it into the KV key metadata;
+  /stats returns {subscribers, subDays [[msk day, n]], noDate, tee (hero_own tee count), today} (old records read by value); /visits `sd: 1`.
+  Admin «Статистика» → «Уведомления» `#pushDays` (`paintSubDays`): Сегодня / Вчера / 7 дней / с футболкой + 14-day bars. Phones that turned
+  notifications off are not counted. Admin «версия 45». The owner must update the server code.
 - Crypto payment (owner 07.11.2026, option 1 «свой кошелёк»): service page `#cryptoBtn` «Оплатить криптой (USDT)» — only
   non-ru UI (rubles there; RU law 259-FZ) and services with a $ price → `#cryptoSheet`: amount = service USD in USDT
   (copy), network USDT · TRON (TRC-20), QR drawn from the address by `vendor/qr.js` (own encoder: byte mode, ECC M, v1–10;

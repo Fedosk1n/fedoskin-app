@@ -266,13 +266,20 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .crsteps li+li{margin-top:4px}
 .crwarn{margin-top:10px;border-radius:12px;padding:10px 12px;background:rgba(226,97,26,.10);border:1px solid rgba(226,97,26,.45);font-size:13px;line-height:1.45}
 .crwarn b:first-child{color:var(--accent)} .crwarn ul{margin:6px 0 0;padding-left:18px}
+.sdk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.sdk span{display:flex;flex-direction:column;gap:2px;padding:8px;border-radius:10px;background:rgba(255,255,255,.04)}
+.sdk b{font-family:var(--display);font-size:22px;font-weight:400;color:var(--accent)}.sdk small{font-size:11px;color:var(--muted)}
+.sdb{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px;align-items:end;margin-top:12px;height:104px}
+.sdb span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%}
+.sdb i{font-style:normal;font-size:10px;color:var(--fg)}.sdb em{width:100%;max-width:18px;border-radius:3px 3px 0 0;background:var(--accent);opacity:.75}.sdb em.td{opacity:1}
+.sdb small{font-size:9px;line-height:1.1;color:var(--muted);text-align:center;min-height:20px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 44</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 45</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -644,6 +651,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       </div>
       <div id="pushOn" class="card" hidden>
         <div class="row" style="justify-content:space-between"><b>Подписаны на уведомления</b><span class="d" id="pushCount" style="font-family:var(--display);font-size:28px">…</span></div>
+        <div id="pushDays" hidden></div>
         <p class="hint" style="margin:6px 0 0">После публикации нового урока уведомление уходит само через 3 минуты (пока урок появляется в приложении). Можно отправить и вручную:</p>
         <label class="f"><span>Урок</span><select id="pushLesson"></select></label>
         <div class="row" style="margin-top:12px"><button class="btn btn-accent" id="pushSend">Отправить уведомление</button></div>
@@ -2175,7 +2183,23 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     lessons.filter(l => !l.hidden).slice().sort((a, b) => String(b.added || '').localeCompare(String(a.added || ''))).forEach(l => sel.add(new Option(l.sec + ' — ' + l.name, l.id)));
     if (cur) sel.value = cur;
     $('#pushCount').textContent = '…';
-    pushApi('/stats').then(j => { $('#pushCount').textContent = j.subscribers; }).catch(e => { $('#pushCount').textContent = '—'; $('#pushResult').textContent = 'Сервер не отвечает: ' + e.message; });
+    pushApi('/stats').then(j => { $('#pushCount').textContent = j.subscribers; paintSubDays(j); }).catch(e => { $('#pushCount').textContent = '—'; $('#pushResult').textContent = 'Сервер не отвечает: ' + e.message; });
+  }
+  // «Подписались на уведомления» по дням (owner 12.11.2026): /stats → subDays [[day, n]] by the first subscribe (Moscow
+  // day; people who later turned notifications off are not counted), tee = phones that got the team tee for it
+  function paintSubDays(j){
+    const box = $('#pushDays');
+    if (!Array.isArray(j.subDays)) { box.hidden = false; box.innerHTML = '<p class="hint" style="margin:8px 0 0">Подписки по дням появятся после обновления кода сервера («Скопировать код сервера» вверху).</p>'; return; }
+    const m = Object.fromEntries(j.subDays), today = j.today || new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+    const ago = n => new Date(Date.parse(today + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+    const sum = n => { let x = 0; for (let i = 0; i < n; i++) x += m[ago(i)] || 0; return x; };
+    const days = Array.from({ length: 14 }, (_, i) => ago(13 - i)), mx = Math.max(1, ...days.map(d => m[d] || 0));
+    const wd = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    box.hidden = false;
+    box.innerHTML = '<div class="sdk">' + [['Сегодня', m[today] || 0], ['Вчера', m[ago(1)] || 0], ['За 7 дней', sum(7)]].map(([k, v]) => '<span><b>+' + v + '</b><small>' + k + '</small></span>').join('') +
+      (j.tee != null ? '<span><b>' + j.tee + '</b><small>с футболкой 👕</small></span>' : '') + '</div>' +
+      '<div class="sdb">' + days.map(d => { const v = m[d] || 0, dt = new Date(d + 'T12:00:00Z'); return '<span title="' + d + ': +' + v + '"><i>' + (v || '') + '</i><em style="height:' + Math.max(2, Math.round(v / mx * 56)) + 'px"' + (d === today ? ' class="td"' : '') + '></em><small>' + (d === today ? 'сег.' : dt.getUTCDate() + '<br>' + wd[dt.getUTCDay()]) + '</small></span>'; }).join('') + '</div>' +
+      '<p class="hint" style="margin:6px 0 0">Сколько телефонов включили уведомления в этот день (по Москве). Кто потом выключил — не считается.' + (j.noDate ? ' Без даты: ' + j.noDate + '.' : '') + ' Футболку дают за подписку с 11.11.</p>';
   }
   // ---------- ready texts for reels and posts (owner 07.11.2026: «чтобы каждый раз не печатал») ----------
   // English (the audience is mostly abroad), each in a simple version and a slang version (owner's standing wish).
@@ -2381,7 +2405,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
+    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };

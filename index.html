@@ -180,7 +180,16 @@ body.chatmode .tabs{display:none}
 .chatbar button{flex:none;width:42px;height:42px;border-radius:50%;border:none;display:grid;place-items:center;cursor:pointer;background:var(--surface-2);color:var(--fg)}
 .chatbar .send{background:var(--accent);color:var(--on-accent)}
 .chatbar button svg{width:20px;height:20px}
-.chatbtn{margin-top:12px;width:100%}
+.chatbtn{margin-top:10px;width:100%}
+.ccoffer{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 10px 10px 14px;border-radius:14px;background:rgba(226,97,26,.08);border:1px solid rgba(226,97,26,.32)}
+.cco-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;background:none;border:none;padding:0;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+.cco-t{font-weight:700;font-size:15px;line-height:1.25}
+.cco-p{font-size:13px;color:var(--muted)}.cco-p b{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:20px;color:var(--accent);letter-spacing:.3px;margin-right:4px}
+.cco-btn{flex:none;width:auto;min-height:46px;padding:0 16px;font-size:14px;border-radius:12px}
+.chatorder{display:flex;align-items:center;gap:10px;padding:9px max(14px, env(safe-area-inset-right, 0px)) 9px max(14px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:rgba(226,97,26,.07);font-size:12px;line-height:1.35}
+.chatorder b{font-size:14px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chatorder button{flex:none;background:none;border:none;padding:6px 0;color:var(--accent);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:42%;text-align:right}
+.chatorder[hidden]{display:none}
 .unread{position:relative}
 .unread::after{content:'';position:absolute;top:6px;right:calc(50% - 22px);width:9px;height:9px;border-radius:50%;background:var(--new);box-shadow:0 0 0 2px var(--bg)}
 .chatbtn.unread::after{top:-3px;right:-3px}
@@ -1169,6 +1178,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <img class="chatava" src="icons/coach.jpg?v=2" alt="">
     <span class="stack" style="gap:3px;min-width:0"><b class="d">Федоскин</b><span class="muted" style="font-size:12px">Отвечает лично</span></span>
   </div>
+  <div class="chatorder" id="chatOrder" hidden><span class="stack" style="gap:2px;min-width:0;flex:1"><b id="chatOrderT"></b><span class="muted">Оплата — после того, как обсудим задачу.</span></span><button type="button" id="chatMsgr">Удобнее в мессенджере?</button></div>
   <div class="chatlist" id="chatList"></div>
   <div class="chatnote" id="chatNote" hidden><span id="chatNoteT" style="flex:1"></span><button class="btn btn-sm" id="chatNoteBtn" type="button"></button></div>
   <div class="chatname" id="chatNameRow" hidden><input id="chatName" maxlength="40" autocomplete="given-name" placeholder="Как тебя зовут?" enterkeyhint="next"></div>
@@ -1193,7 +1203,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span><b class="d">19</b><small>лет тренирую</small></span>
       <span><b class="d">11</b><small>стран — онлайн-ученики</small></span>
     </div>
-    <button class="btn btn-accent chatbtn" id="ccChat" type="button" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать в чат</button>
+    <!-- owner 12.11.2026: «Написать в чат» read as free help ⇒ the coach card offers the cheapest paid service with its price;
+         the chat is reached by ordering a service; people who already wrote get «Переписка по заказу» -->
+    <div class="ccoffer" id="ccOffer"><button class="cco-txt" id="ccOfferInfo" type="button"><span class="cco-t">Разбор твоего видео</span><span class="cco-p" id="ccOfferP"></span></button><button class="btn btn-accent cco-btn" id="ccOrder" type="button">Заказать разбор</button></div>
+    <button class="btn btn-ghost chatbtn" id="ccChat" type="button" hidden><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Переписка по заказу</button>
   </div>
   <div class="rvhead" id="rvHead" hidden><span class="label">Отзывы учеников</span><button class="rvlink" id="rvAll" type="button">Все отзывы</button></div>
   <div class="hrow rvrow" id="rvRow" hidden></div>
@@ -1214,6 +1227,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <button class="btn btn-accent" id="tgLink" style="margin-top:26px;min-height:56px;font-size:17px;border-radius:16px"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Написать тренеру</button>
   <p class="muted" style="margin-top:10px;font-size:12px;text-align:center;line-height:1.4">Сообщение уже будет написано — останется нажать «Отправить».</p>
   <p class="muted" style="margin-top:4px;font-size:12px;text-align:center;line-height:1.4">Оплата — после того, как обсудим задачу.</p>
+  <button class="btn btn-ghost" id="svcMsgr" type="button" hidden style="margin-top:14px;min-height:48px;font-size:15px;border-radius:16px">Написать в мессенджере</button>
   <button class="btn btn-crypto" id="cryptoBtn" hidden style="margin-top:16px;min-height:50px;font-size:15px;border-radius:16px;gap:8px"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:#26A17B" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 8h9M12 8v9M8.5 11.5c0 1 1.6 1.7 3.5 1.7s3.5-.7 3.5-1.7"/></svg>Оплатить криптой (USDT)</button>
 </section>
 
@@ -4072,18 +4086,18 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const b = document.createElement('div'); b.className = 'card svccard' + (s.prem ? ' prem' : '');
       b.innerHTML = '<button class="svcopen" type="button">' + (s.fit ? '<span class="fit">' + esc(T(s.fit)) + '</span>' : '') + '<span class="top"><span class="d nm">' + esc(T(s.name)) + '</span><span class="pr">' + esc(money(s.rub, s.usd)) + ' <small>' + esc(T(s.per)) + '</small></span></span>' +
         '<span class="muted" style="font-size:13px;line-height:1.4">' + esc(T(s.short)) + '</span></button>' +
-        '<span class="svcbtns"><button class="btn btn-line" type="button" data-act="write">' + esc(T('Написать тренеру')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
+        '<span class="svcbtns"><button class="btn btn-line" type="button" data-act="write">' + esc(T('Заказать')) + '</button><button class="btn btn-ghost" type="button" data-act="more">' + esc(T('Подробнее')) + '</button></span>';
       b.querySelector('.svcopen').addEventListener('click', () => openService(s));
       b.querySelector('[data-act="more"]').addEventListener('click', () => openService(s));
       // straight to the messenger choice for this service (owner 09.11.2026: a visible button gets more requests)
-      b.querySelector('[data-act="write"]').addEventListener('click', () => { curSvc = s; openContact(); });
+      b.querySelector('[data-act="write"]').addEventListener('click', () => orderSvc(s));
       box.appendChild(b);
     });
     // how it works: 4 steps, payment after the talk; reply times in the viewer's own time
     const crypto = String(CFG.usdtTrc20 || '').trim() && LANG !== 'ru';
     const steps = [
-      ['Напиши тренеру', 'Выбери услугу и мессенджер — сообщение уже будет написано.'],
-      ['Обсуждаем задачу', 'Расскажи, что уже умеешь и чего хочешь добиться. Это бесплатно.'],
+      ['Выбери услугу', 'Нажми «Заказать» — сообщение уже будет написано.'],
+      ['Обсуждаем задачу', 'Расскажи, что уже умеешь и чего хочешь добиться — тренер подтвердит задачу.'],
       ['Оплата', LANG === 'ru' ? 'Реквизиты пришлю в чате.' : crypto ? 'Способ оплаты обсудим в чате. Можно оплатить криптой (USDT).' : 'Способ оплаты обсудим в чате.'],
       ['Старт', 'Ответ или первое задание — в течение {h} часов.']
     ];
@@ -4092,6 +4106,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // owner 09.11.2026: no reply-time line at the bottom; only the chat-language note (not in ru)
     $('#svcHours').textContent = LANG !== 'ru' ? T('Переписка — на твоём языке.') : '';
     $('#svcHours').hidden = LANG === 'ru';
+    // offer on the coach card (owner 12.11.2026): the cheapest shown service with its price
+    const cheap = shown.slice().sort((a, b) => (LANG === 'ru' ? (+a.rub || 1e9) - (+b.rub || 1e9) : (+a.usd || 1e9) - (+b.usd || 1e9)))[0];
+    if (cheap) {
+      $('#ccOfferP').innerHTML = '<b>' + esc(money(cheap.rub, cheap.usd)) + '</b>' + esc(T(cheap.per));
+      $('#ccOrder').addEventListener('click', () => orderSvc(cheap));
+      $('#ccOfferInfo').addEventListener('click', () => openService(cheap));
+    } else $('#ccOffer').hidden = true;
     // where to see the coach: YouTube and Instagram
     const links = [['YouTube', 'https://www.youtube.com/fe_dosk1n']];
     if (String(CFG.ig || '').trim()) links.push(['Instagram', 'https://instagram.com/' + encodeURIComponent(String(CFG.ig).trim().replace(/^@/, ''))]);
@@ -4218,7 +4239,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const u = chUnread() && $('#chat').hidden;
     const tab = document.querySelector('.tab[data-tab="review"]'); if (tab) tab.classList.toggle('unread', u);
     $('#ccChat').classList.toggle('unread', u);
-    $('#ccChat').lastChild.textContent = chHas() ? T('Чат с тренером') : T('Написать в чат');
+    $('#ccChat').lastChild.textContent = T('Переписка по заказу');
   }
   function chTime(ms){ try { return new Date(ms).toLocaleTimeString(LANG === 'zh' ? 'zh-CN' : LANG, { hour: '2-digit', minute: '2-digit' }); } catch (_) { return ''; } }
   function chDay(ms){ try { return new Date(ms).toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, { day: 'numeric', month: 'long' }); } catch (_) { return ''; } }
@@ -4242,8 +4263,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!all.length) {
       const e = document.createElement('div'); e.className = 'chatempty';
       e.innerHTML = '<img src="icons/coach.jpg?v=2" alt=""><b></b><span></span>';
-      e.querySelector('b').textContent = T('Напиши тренеру');
-      e.querySelector('span').textContent = T('Расскажи, что умеешь и чего хочешь добиться. Можно сразу прикрепить видео элемента — Федоскин ответит лично здесь же.');
+      e.querySelector('b').textContent = T('Опиши задачу');
+      e.querySelector('span').textContent = T('Расскажи, что умеешь и чего хочешь добиться, и прикрепи видео элемента. Федоскин ответит лично здесь же: подтвердит задачу и пришлёт способ оплаты.');
       list.appendChild(e);
     }
     let day = '';
@@ -4312,10 +4333,22 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function chatHidden(){ if (CHAT.timer && !$('#chat').hidden) return; clearInterval(CHAT.timer); CHAT.timer = 0; chPaintBadge(); }
   window.fedoskinChat = () => ({ on: CHAT.on, timer: !!CHAT.timer, last: CHAT.last, busy: CHAT.busy, msgs: CHAT.msgs.length, pend: CHAT.pend.length });
   function openChat(prefill, svc){
-    CHAT.svc = svc || '';
-    if (prefill && !CHAT.msgs.length && !$('#chatText').value.trim()) $('#chatText').value = prefill;
+    if (svc) chSet('fedoskin-chat-svc', svc);
+    CHAT.svc = svc || chGet('fedoskin-chat-svc') || '';
+    if (prefill && !$('#chatText').value.trim()) $('#chatText').value = prefill;
+    chOrderBar();
     go('chat'); chGrow();
   }
+  // order banner in the chat (owner 12.11.2026): which paid service this is about + the messengers as an alternative
+  function chOrderBar(){
+    const s = SERVICES.find(x => x.id === CHAT.svc);
+    $('#chatOrder').hidden = !s;
+    if (s) $('#chatOrderT').textContent = T('Заказ: {s} · {p}', { s: T(s.name), p: money(s.rub, s.usd) });
+  }
+  $('#chatMsgr').addEventListener('click', () => {
+    const s = SERVICES.find(x => x.id === CHAT.svc); if (s) curSvc = s;
+    openContact(($('#chatText').value.trim()) || undefined, true);
+  });
   function chGrow(){ const t = $('#chatText'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight + 2) + 'px'; }
   // the phone keyboard: keep the bar right above it (iPhone moves the page instead of resizing it)
   function chFit(){
@@ -4386,7 +4419,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   $('#chatName').addEventListener('change', () => { const v = $('#chatName').value.trim(); if (v.length >= 2) { chSet('fedoskin-chat-name', v); $('#chatNameRow').hidden = true; } });
   $('#ccChat').addEventListener('click', () => openChat('', ''));
-  function chPaintEntry(){ $('#ccChat').hidden = !CHAT.on && !chHas(); chPaintBadge(); }
+  function chPaintEntry(){ $('#ccChat').hidden = !chHas(); $('#svcMsgr').hidden = !CHAT.on; chPaintBadge(); }
   setTimeout(async () => { // is the chat switched on (the coach's bot connected)?
     if (!CH_BASE) return;
     try { CHAT.on = !!(await fetch(CH_BASE + '/chat/on', { cache: 'no-store' }).then(x => x.json())).on; } catch (_) {}
@@ -4418,6 +4451,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (kind === 'link') { el = document.createElement('p'); const l = document.createElement('a'); l.href = b; l.target = '_blank'; l.rel = 'noopener'; l.textContent = T(a) + ' ↗'; el.appendChild(l); }
       if (el) body.appendChild(el);
     });
+    $('#tgLink').lastChild.textContent = T('Заказать') + ' · ' + money(s.rub, s.usd);
     paintCryptoBtn();
     rvForService(s);
     go('svc');
@@ -4438,11 +4472,20 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   };
   let msgOverride = '';
   function msgText(){ return msgOverride || (T(CFG.tgMessage) + '\n' + T('Услуга:') + ' ' + T(curSvc.name)); }
-  function openContact(text){
+  // «Заказать» on a service (owner 12.11.2026): straight into the in-app chat with the order written; messengers stay an extra
+  // button. Chat off ⇒ the messenger choice as before.
+  const orderText = s => T('Привет! Хочу заказать: {s} ({p})', { s: T(s.name), p: money(s.rub, s.usd) + ' ' + T(s.per) });
+  function orderSvc(s){
+    curSvc = s;
+    if (!CHAT.on) { openContact(); return; }
+    try { sendEv('tg', s.id, 'chat'); } catch (_) {}
+    openChat(orderText(s), s.id);
+  }
+  function openContact(text, noChat){
     msgOverride = typeof text === 'string' ? text : '';
     const order = SRC === 'ig' ? ['ig', 'wa', 'tg', 'fb'] : LANG === 'ru' ? ['tg', 'wa', 'ig', 'fb'] : SRC === 'fb' ? ['fb', 'wa', 'ig', 'tg'] : ['ig', 'wa', 'tg', 'fb'];
     const list = $('#contactList'); list.innerHTML = '';
-    if (CHAT.on) { // chat in the app first (09.11.2026); the messengers stay as a backup
+    if (CHAT.on && !noChat) { // chat in the app first (09.11.2026); the messengers stay as a backup
       const c = document.createElement('button'); c.type = 'button'; c.className = 'msgr chatin';
       c.innerHTML = '<span class="mi" style="background:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="#0B0B0C" stroke-width="2.2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span></span><span class="sub"></span>';
       c.children[1].textContent = T('Чат в приложении'); c.children[2].textContent = T('ответ придёт сюда');
@@ -4465,7 +4508,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     });
     $('#contactSheet').hidden = false;
   }
-  $('#tgLink').addEventListener('click', () => openContact());
+  $('#tgLink').addEventListener('click', () => orderSvc(curSvc));
+  $('#svcMsgr').addEventListener('click', () => openContact(undefined, true));
   // «Оплатить криптой» (owner 07.11.2026): own USDT TRC-20 wallet, no middleman. Not in the Russian UI (rubles there; RU law
   // 259-FZ). The QR is drawn from the address by vendor/qr.js, so changing the wallet in the admin is all it takes.
   const USDT = String(CFG.usdtTrc20 || '').trim();
