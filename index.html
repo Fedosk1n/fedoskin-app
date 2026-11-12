@@ -856,7 +856,10 @@ body.loop3 .dlst{display:none}
 #storeClear:disabled{opacity:.4;cursor:default}
 .sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:480px;background:#141416;border-radius:24px 24px 0 0;border-top:1px solid var(--line);
-  padding:12px max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));animation:up .22s ease}
+  padding:12px max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));animation:up .22s ease;
+  /* owner 12.11.2026 «нельзя доскролить до своего языка»: a sheet taller than the screen (subtitles: 10 rows ≈ 870 px) had its
+     top cut off with no scroll ⇒ never taller than the screen, scrolls inside */
+  max-height:calc(100dvh - max(12px, env(safe-area-inset-top, 0px)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
 .av-pick{aspect-ratio:1;max-width:100%;border-radius:50%;padding:0;border:3px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .av-pick[aria-checked="true"]{border-color:var(--fg)}
@@ -3493,6 +3496,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       list.appendChild(b);
     });
     $('#subsSheet').hidden = false;
+    // the list can be taller than the screen (phone on its side) ⇒ start at the top, then bring the chosen language into view
+    const sh = $('#subsSheet .sheet'); sh.scrollTop = 0;
+    const on = list.querySelector('[aria-checked="true"]'); if (on && on.offsetTop + on.offsetHeight > sh.clientHeight) sh.scrollTop = on.offsetTop + on.offsetHeight - sh.clientHeight + 16;
   }
   ['#btnSubs', '#fsSubsC', '#fsSubsTop'].forEach(id => $(id).addEventListener('click', e => { e.stopPropagation(); openSubsSheet(); }));
   $('#subsSheet').addEventListener('click', e => { if (e.target.id === 'subsSheet') $('#subsSheet').hidden = true; });
@@ -6409,7 +6415,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     window.addEventListener('languagechange', () => {
       if (LANG_AUTO && phoneLang() !== LANG) { saveStats && saveStats(); reloadClean(); }
     });
-    const open = () => { $('#langSheet').hidden = false; };
+    const open = () => { // long list (10 rows) ⇒ bring the chosen language into view (owner 12.11.2026)
+      $('#langSheet').hidden = false;
+      const sh = $('#langSheet .sheet'), on = list.querySelector('[aria-checked="true"]'); sh.scrollTop = 0;
+      if (on && on.offsetTop + on.offsetHeight > sh.clientHeight) sh.scrollTop = on.offsetTop + on.offsetHeight - sh.clientHeight + 16;
+    };
     $('#langPill').addEventListener('click', open);
     $('#langItem').addEventListener('click', open);
     $('#langSheet').addEventListener('click', e => { if (e.target.id === 'langSheet') $('#langSheet').hidden = true; });
