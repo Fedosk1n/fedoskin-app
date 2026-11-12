@@ -54,7 +54,7 @@ p{line-height:1.5}
 .ibtn{width:40px;height:40px;min-height:40px;padding:0;border-radius:10px}
 label.f{display:flex;flex-direction:column;gap:6px;margin-top:14px}
 label.f>span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px}
-input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{width:100%;min-height:46px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#131315;outline:none}
+input[type=text],input[type=url],input[type=number],input[type=date],input[type=password],select,textarea{width:100%;min-height:46px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#131315;outline:none}
 textarea{min-height:80px;resize:vertical;line-height:1.4}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .hint{font-size:12px;color:var(--muted);line-height:1.4}
@@ -273,13 +273,27 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 .sdb span{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%}
 .sdb i{font-style:normal;font-size:10px;color:var(--fg)}.sdb em{width:100%;max-width:18px;border-radius:3px 3px 0 0;background:var(--accent);opacity:.75}.sdb em.td{opacity:1}
 .sdb small{font-size:9px;line-height:1.1;color:var(--muted);text-align:center;min-height:20px}
+.crc{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--surface);border:1px solid #222225;margin-top:8px;cursor:pointer}
+.crc img,.crc .ph{width:64px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:#1C1C1F}
+.crc .tx{flex:1;min-width:0}.crc .nm{font-weight:700}.crc .mt{font-size:12px;color:var(--muted);margin-top:3px}
+.crl{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #222225}
+.crl:first-child{border-top:none}
+.crl img{width:40px;height:52px;border-radius:6px;object-fit:cover;background:#1C1C1F;flex:none}
+.crl .nm{flex:1;min-width:0;cursor:pointer;font-size:14px}
+.crl label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--soft);white-space:nowrap}
+.crl .btn{min-height:32px;padding:0 9px}
+.cro{border-top:1px solid #222225;padding:12px 0;display:flex;flex-direction:column;gap:6px}
+.cro:first-child{border-top:none}
+.cro code{font-family:ui-monospace,Menlo,monospace;font-weight:700;letter-spacing:1px}
+.cro .rvs-badge.paid{background:rgba(226,97,26,.18);color:var(--accent)}
+.cro .rvs-badge.no{background:#2E2E32;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 45</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 46</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -308,6 +322,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="lessons" aria-selected="true">Уроки</button>
       <button class="tab" role="tab" data-tab="add">Добавить видео</button>
+      <button class="tab" role="tab" data-tab="courses">Курсы</button>
       <button class="tab" role="tab" data-tab="settings">Тексты и настройки</button>
       <button class="tab" role="tab" data-tab="stats">Статистика</button>
       <button class="tab" role="tab" data-tab="reviews">Клиенты</button>
@@ -403,6 +418,64 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <div id="aPhoneHelp">
       <h3>Если сжимаете на телефоне</h3>
       <p class="soft small">Проще всего: в CapCut экспортируйте видео в <b>720p, 30 или 60 кадров</b>, выберите его здесь и нажмите «Без сжатия». Можно и 1080p — тогда ролик весит в 3–5 раз больше. Файл должен быть меньше 70 МБ — это ограничение GitHub. Обложку и анимацию админка сделает сама.</p>
+      </div>
+    </div>
+
+    <!-- платные видеокурсы (owner 12.11.2026) -->
+    <div data-pane="courses" hidden>
+      <div class="card" id="crOld" hidden style="margin-top:12px;border-color:var(--accent);background:rgba(226,97,26,.08)">
+        <b style="font-size:15px">Нужно обновить код сервера — для продажи курсов</b>
+        <p class="hint" style="margin:6px 0 0">Сервер выдаёт коды заказов, открывает курс купившему и закрывает видео курса от остальных. Один раз обновите его код:</p>
+        <ol class="hint" style="margin:8px 0 0;padding-left:20px;line-height:1.6">
+          <li><button class="btn btn-sm btn-accent" id="crCopyCode" type="button" style="min-height:32px">Скопировать код сервера</button></li>
+          <li>Cloudflare → <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → <b>Edit code</b> → выделите всё, удалите, вставьте → <b>Deploy</b>.</li>
+          <li>Вернитесь сюда и нажмите <button class="btn btn-sm" id="crRecheck" type="button" style="min-height:32px">Проверить</button></li>
+        </ol>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Как покупают курс</h2>
+        <ol class="hint" style="margin:8px 0 0;padding-left:20px;line-height:1.65">
+          <li>Человек жмёт «Купить» — приложение показывает <b>код заказа</b> (например FT-7K2QM) и просит вписать его в комментарий к платежу.</li>
+          <li>Он платит по вашей <b>ссылке PayPal</b> и жмёт «Я оплатил». Вам в Telegram-бот приходит сообщение с кодом (если бот подключён во вкладке «Клиенты»).</li>
+          <li>Вы видите деньги в PayPal → здесь, в «Заказах», жмёте <b>«Оплата пришла — открыть курс»</b>. Курс сам открывается у него в приложении (+ уведомление, если они включены).</li>
+          <li>Заплатил по-другому (крипта, перевод) или сменил телефон — создайте <b>код доступа</b> ниже и отправьте ему.</li>
+        </ol>
+        <p class="hint" style="margin:8px 0 0">Видео курса лежат в Cloudflare R2 и открываются только на телефонах, где курс куплен. Пробные уроки (отметка в уроке курса) видят все.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Ссылка на оплату PayPal</h2>
+        <p class="hint" style="margin:6px 0 0">Общая для всех курсов (у курса можно указать свою — она главнее). Начинается с <b>https://</b>.</p>
+        <label class="f"><span>Ссылка</span><input type="url" id="crPayUrl" placeholder="https://www.paypal.com/ncp/payment/…" spellcheck="false" autocomplete="off"></label>
+        <p class="hint" id="crPayHint" style="margin:6px 0 0"></p>
+        <details style="margin-top:10px"><summary class="hint" style="cursor:pointer"><b>Где взять ссылку</b></summary>
+          <ol class="hint" style="margin:8px 0 0;padding-left:20px;line-height:1.65">
+            <li><b>Лучше всего — «ссылка на оплату» с ценой</b> (нужен бизнес-аккаунт PayPal, он бесплатный): paypal.com → <b>Pay &amp; Get Paid</b> → <b>Accept payments</b> → <b>Payment links and buttons</b> → <b>Create payment link</b> → название курса, цена в USD → <b>Copy link</b>. Покупатель сразу видит сумму и может платить картой без аккаунта PayPal. Под каждый курс со своей ценой — своя ссылка (вставьте её в карточку курса).</li>
+            <li><b>Проще — PayPal.Me</b>: paypal.me/ваше-имя. Сумму можно дописать в конец: <b>https://paypal.me/имя/20USD</b>. Минус: человеку нужен аккаунт PayPal, а комиссия может отличаться.</li>
+            <li>Деньги ищите в PayPal → <b>Activity</b>: у платежа будет комментарий с кодом заказа (FT-…). Если комментария нет — сверяйте по сумме и времени или попросите скриншот в чате.</li>
+          </ol>
+        </details>
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:18px"><h2 style="margin:0">Курсы</h2><button class="btn btn-accent btn-sm" id="crAdd" type="button">+ Добавить курс</button></div>
+      <div id="crList" style="margin-top:10px"></div>
+      <div class="card" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between"><h2 style="margin:0">Заказы</h2><button class="btn btn-sm" id="crReload" type="button">Обновить</button></div>
+        <p class="hint" id="crFunnel" style="margin:6px 0 0"></p>
+        <p class="hint" id="crErr" style="color:#FF8A6B"></p>
+        <div id="crOrders"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0">Код доступа к курсу</h2>
+        <p class="hint" style="margin:6px 0 0">Открывает курс на одном телефоне — без PayPal. Для тех, кто заплатил другим способом, сменил телефон, или в подарок.</p>
+        <label class="f"><span>Курс</span><select id="crCodeCourse"></select></label>
+        <label class="f"><span>Для кого (видно только вам)</span><input type="text" id="crCodeNote" maxlength="80" placeholder="например, Mike, оплатил USDT"></label>
+        <div class="row" style="margin-top:14px"><button class="btn btn-accent" id="crCodeMake" type="button">Создать код</button></div>
+        <div id="crCodeMade" hidden>
+          <div class="rvs-link" id="crCodeLink"></div>
+          <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn btn-sm" id="crCodeCopy" type="button">Копировать ссылку</button></div>
+          <p class="hint" style="margin:14px 0 6px">Готовое сообщение — выберите язык и скопируйте:</p>
+          <div class="stack" id="crCodeMsgs" style="gap:10px"></div>
+        </div>
+        <div id="crCodeList" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -675,6 +748,34 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   <div class="in"><div class="msg" id="saveMsg"></div><button class="btn btn-sm" id="undoBtn">Отменить</button><button class="btn btn-accent" id="pubBtn">Опубликовать</button></div>
 </div>
 
+<div class="sheet" id="crSheet" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="crTitle">
+    <div class="row"><h2 id="crTitle" style="margin:0;flex:1">Курс</h2><button class="btn ibtn" id="crClose" aria-label="Закрыть">✕</button></div>
+    <p class="hint" id="crIdHint" style="margin:6px 0 0"></p>
+    <div class="grid2">
+      <label class="f"><span>Название (по-русски)</span><input type="text" id="cNameRu" maxlength="80" placeholder="Например: Виндмил с нуля"></label>
+      <label class="f"><span>Название (по-английски)</span><input type="text" id="cNameEn" maxlength="80" placeholder="Windmill from zero"></label>
+    </div>
+    <label class="f"><span>Описание (по-русски)</span><textarea id="cDescRu" rows="3" maxlength="600" placeholder="Что человек получит после курса"></textarea></label>
+    <label class="f"><span>Описание (по-английски)</span><textarea id="cDescEn" rows="3" maxlength="600" placeholder="What you'll get from this course"></textarea></label>
+    <div class="grid2">
+      <label class="f"><span>Метка (по-русски)</span><input type="text" id="cTagRu" maxlength="24" placeholder="Новичок"></label>
+      <label class="f"><span>Метка (по-английски)</span><input type="text" id="cTagEn" maxlength="24" placeholder="Beginner"></label>
+    </div>
+    <p class="hint" style="margin:4px 0 0">На остальных языках приложение покажет английский текст. Метку можно оставить пустой.</p>
+    <div class="grid2">
+      <label class="f"><span>Цена, $</span><input type="number" id="cUsd" min="1" step="1" inputmode="decimal" placeholder="10"></label>
+      <label class="f"><span>Показывать в приложении</span><span class="row" style="gap:8px;min-height:44px"><input type="checkbox" id="cShow" style="width:22px;height:22px"><span class="hint" id="cShowHint"></span></span></label>
+    </div>
+    <label class="f"><span>Своя ссылка PayPal для этого курса (необязательно)</span><input type="url" id="cPay" placeholder="пусто — общая ссылка" spellcheck="false" autocomplete="off"></label>
+    <h3 style="margin:18px 0 6px">Видео курса</h3>
+    <p class="hint" style="margin:0">Порядок — стрелками. «Пробный» — урок смотрят бесплатно, до покупки (хорошо для первого). Нажмите на название — откроется карточка урока.</p>
+    <div id="cLessons" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px"><button class="btn btn-sm btn-accent" id="cAddVid" type="button">+ Добавить видео в курс</button></div>
+    <div class="row" style="margin-top:20px;gap:8px;flex-wrap:wrap"><button class="btn btn-accent" id="crOk" type="button">Готово</button><button class="btn btn-ghost" id="crDel" type="button">Удалить курс</button></div>
+    <p class="hint" style="margin:8px 0 0">Изменения попадут в приложение после «Опубликовать» внизу.</p>
+  </div>
+</div>
 <div class="sheet" id="editSheet" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="eTitle">
     <div class="row"><h2 id="eTitle" style="margin:0;flex:1">Урок</h2><button class="btn ibtn" id="eClose" aria-label="Закрыть">✕</button></div>
@@ -720,7 +821,23 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
   const SECTIONS = ['Toprock','Footwork','Godowns','Powermove','Freezes','Flowrock','Transitions','Tricks'];
   const PREFIX = {Toprock:'tr',Footwork:'fw',Godowns:'gd',Powermove:'pw',Freezes:'fr',Flowrock:'fl',Transitions:'tn',Tricks:'tk'};
-  const CFG_DEFAULT = {pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
+  // paid courses (12.11.2026) — helpers used early (paintDest runs at load); the rest is in «paid video courses» below
+  const isCrsSec = sec => /^course:/.test(sec || '');
+  const crList = () => (cfg && Array.isArray(cfg.courses)) ? cfg.courses : [];
+  const crName = c => (c && ((c.n && (c.n.ru || c.n.en)) || c.id)) || '';
+  const crById = id => crList().find(c => c.id === id);
+  const secLabel = sec => isCrsSec(sec) ? 'Курс «' + crName(crById(sec.slice(7)) || {id: sec.slice(7)}) + '»' : sec;
+  const crLessons = id => lessons.filter(l => l.sec === 'course:' + id);
+  let crAPass = {};
+  async function crGetAPass(){ try { const j = await pushApi('/course/apass'); crAPass = (j && j.pass) || {}; } catch (_) {} }
+  // which course's pass opens this R2 file (as the server will decide after the next publish)
+  function crKeyCourse(key){
+    const l = lessons.find(x => x.r2 === key);
+    if (l && isCrsSec(l.sec) && !l.free) return l.sec.slice(7);
+    const m = /^crs-([a-z0-9]{2,24})-/.exec(key || '');
+    return m && !(l && (l.free || !isCrsSec(l.sec))) ? m[1] : '';
+  }
+  const CFG_DEFAULT = {payUrl:'', pushUrl:'', subRub:199, subYearRub:1990, subUsd:3.99, subYearUsd:39.99, alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:''};
   // GitHub accepts one upload of about 100 MB *after* base64 (+33%), so the video itself must stay under ~70 MB
   const MAX_FILE = 70 * 1024 * 1024;
   const TOKEN_KEY = 'fedoskin-admin-token';
@@ -783,7 +900,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   let r2Info = null, r2Xhr = null, r2Abort = false, r2Pass = '';
   const r2Base = () => String((cfg && cfg.pushUrl) || (remote && remote.cfg.pushUrl) || '').replace(/\/+$/, '');
   // the server gives videos only with a fresh pass (GET /pass from this site, 24 h) — see server/push-worker.js
-  const r2Url = key => r2Base() + '/v/' + key + (r2Pass ? '?p=' + r2Pass : '');
+  const r2Url = key => { const c = crKeyCourse(key), p = c && crAPass[c] ? crAPass[c] : r2Pass; return r2Base() + '/v/' + key + (p ? '?p=' + p : ''); };
   async function r2GetPass(){ try { const r = await fetch(r2Base() + '/pass', {cache: 'no-store'}); const j = await r.json(); if (r.ok && j.p) r2Pass = j.p; } catch(e) {} return r2Pass; }
   const r2Ready = () => !!(r2Info && r2Info.ok);
   const fmtGB = b => (b / 1e9 < 0.1 ? Math.round(b / 1e6) + ' МБ' : (b / 1e9).toFixed(2).replace('.', ',') + ' ГБ');
@@ -792,7 +909,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     try {
       const r = await fetch(r2Base() + '/r2/usage', {headers: {'Authorization': 'Bearer ' + token}});
       const j = await r.json().catch(() => ({}));
-      if (r.ok && j.ok) await r2GetPass();
+      if (r.ok && j.ok) { await r2GetPass(); await crGetAPass(); }
       r2Info = r.ok && j.ok ? {ok: true, bytes: j.bytes || 0, count: j.count || 0, files: new Map(j.files || [])}
         : r.status === 409 ? {err: 'nobucket'} : r.status === 404 ? {err: 'old'} : r.status === 403 ? {err: 'other', msg: 'сервер не принял ключ GitHub'} : {err: 'other', msg: j.error || 'ошибка ' + r.status};
     } catch(e) { r2Info = {err: 'net'}; }
@@ -1043,6 +1160,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (name === 'stats') renderStats();
     if (name === 'social') { try { renderPosts(); renderLinks(); } catch (_) {} }
     if (name === 'reviews') { renderReviews(); tgStatus(); }
+    if (name === 'courses') { crRenderList(); crLoad(); }
     store.set('fedoskin-admin-tab', name);
   }
 
@@ -1255,7 +1373,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     });
     return JSON.stringify(o);
   }
-  const normCfg = c => JSON.stringify(Object.keys(Object.assign({}, CFG_DEFAULT, remote ? remote.cfg : {}, c)).filter(k => k !== 'newRow').sort().map(k => [k, String(c[k] ?? CFG_DEFAULT[k] ?? '')]));
+  const normCfg = c => JSON.stringify(Object.keys(Object.assign({}, CFG_DEFAULT, remote ? remote.cfg : {}, c)).filter(k => k !== 'newRow' && k !== 'courses').sort().map(k => [k, String(c[k] ?? CFG_DEFAULT[k] ?? '')]));
   function pending(){
     const items = [];
     if (!remote) return items;
@@ -1288,6 +1406,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     const moved = SECTIONS.filter(sec => lessons.filter(l => l.sec === sec && same.has(l.id)).map(l => l.id).join() !== remote.lessons.filter(r => r.sec === sec && same.has(r.id)).map(r => r.id).join());
     if (moved.length) items.push('порядок уроков: ' + moved.join(', '));
     if (JSON.stringify(cfg.newRow || []) !== JSON.stringify(remote.cfg.newRow || [])) items.push('порядок в ряду «Новые уроки»');
+    if (JSON.stringify(cfg.courses || []) !== JSON.stringify(remote.cfg.courses || [])) items.push('курсы');
     if (normCfg(cfg) !== normCfg(remote.cfg)) items.push('тексты и настройки');
     return items;
   }
@@ -1327,7 +1446,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       const list = lessons.filter(l => l.sec === sec);
       const shown = list.filter(l => !q || (l.name + ' ' + (l.ru || '') + ' ' + l.id).toLowerCase().includes(q));
       if (q && !shown.length) return;
-      const h = document.createElement('h3'); h.textContent = sec + ' · ' + list.length; box.appendChild(h);
+      const h = document.createElement('h3'); h.textContent = secLabel(sec) + ' · ' + list.length; box.appendChild(h);
       if (!list.length) { const p = document.createElement('p'); p.className = 'muted small'; p.style.margin = '0'; p.textContent = 'Пока пусто'; box.appendChild(p); }
       shown.forEach(l => {
         const r = document.createElement('div'); r.className = 'lrow' + (l.hidden ? ' off' : '');
@@ -1356,6 +1475,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       });
     });
     renderNewRow();
+    if (!$('#crSheet').hidden) crPaintLessons();
+    if (!$('[data-pane="courses"]').hidden) crRenderList();
   }
   $('#lFilter').addEventListener('input', renderLessons);
   function move(l, d){
@@ -1369,7 +1490,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   // ---------- «Новые уроки» row on the app's home screen (owner 10.11.2026) ----------
   // cfg.newRow = lesson ids in the owner's order; empty = automatic (10 newest by date, like the app does).
   const NR_AUTO = 10;
-  const nrAutoIds = () => lessons.filter(l => !l.hidden).slice().sort((a, b) => String(b.added || '2026-10-01').localeCompare(String(a.added || '2026-10-01'))).slice(0, NR_AUTO).map(l => l.id);
+  const nrAutoIds = () => lessons.filter(l => !l.hidden && !isCrsSec(l.sec)).slice().sort((a, b) => String(b.added || '2026-10-01').localeCompare(String(a.added || '2026-10-01'))).slice(0, NR_AUTO).map(l => l.id);
   const nrManual = () => Array.isArray(cfg.newRow) && cfg.newRow.some(id => lessons.some(l => l.id === id));
   const nrIds = () => nrManual() ? cfg.newRow.filter(id => lessons.some(l => l.id === id)) : nrAutoIds();
   function renderNewRow(){
@@ -1601,7 +1722,12 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 
   // ---------- edit sheet ----------
   let editing = null;
-  function fillSecSelect(sel){ sel.innerHTML = ''; SECTIONS.forEach(s => sel.add(new Option(s, s))); }
+  function fillSecSelect(sel){
+    const v = sel.value; sel.innerHTML = ''; SECTIONS.forEach(s => sel.add(new Option(s, s)));
+    const cs = (cfg && Array.isArray(cfg.courses)) ? cfg.courses : [];
+    if (cs.length) { const g = document.createElement('optgroup'); g.label = 'Платные курсы'; cs.forEach(c => g.appendChild(new Option('Курс: ' + crName(c), 'course:' + c.id))); sel.appendChild(g); }
+    if (v && [...sel.options].some(o => o.value === v)) sel.value = v;
+  }
   function openEdit(id){
     const l = lessons.find(x => x.id === id); if (!l) return;
     editing = l;
@@ -1918,14 +2044,15 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#aDestHint').textContent = dest === 'ks'
       ? (ksReady() ? 'Загружайте исходник как есть — 4K, 60 кадров, любой длины. Kinescope сам сделает качества для телефонов. Бесплатно — 100 минут видео на всё.' : 'Сначала впишите токен и проект Kinescope во вкладке «Тексты и настройки».')
       : dest === 'gh' ? 'Для коротких роликов до 70 МБ (после сжатия). Внимание: на GitHub видео лежит по открытой ссылке — скачать его может любой. Для уроков лучше Cloudflare R2: там видео отдаётся только приложению.'
+      : isCrsSec($('#aSec').value) ? 'Видео курса — только в Cloudflare R2: его увидят лишь те, кто купил курс (и пробные уроки — все). ' + (r2Ready() ? 'Занято ' + fmtGB(r2Info.bytes) + ' из 10 ГБ бесплатных.' : '')
       : r2Ready() ? 'Cloudflare R2: занято ' + fmtGB(r2Info.bytes) + ' из 10 ГБ бесплатных (' + r2Info.count + ' видео). Любая длина и размер, трафик бесплатный. Видео играет в приложении как есть — качество выберите ниже.'
       : r2Info && r2Info.err === 'net' ? 'Не получилось связаться с сервером — проверьте интернет и нажмите «Проверить» ниже.'
       : r2Info ? '' : 'Проверяю подключение Cloudflare R2…';
     paintR2Setup(); paintQuality();
     if (dest === 'r2' && !r2Info && remote) r2Check();
   }
-  $('#aDestKs').addEventListener('click', () => { if (busy) return; dest = 'ks'; store.set('fedoskin-admin-dest', dest); paintDest(); });
-  $('#aDestGh').addEventListener('click', () => { if (busy) return; dest = 'gh'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  $('#aDestKs').addEventListener('click', () => { if (busy) return; if (isCrsSec($('#aSec').value)) { toast('Видео курса загружается только в Cloudflare R2 — там оно закрыто от тех, кто не купил', true); return; } dest = 'ks'; store.set('fedoskin-admin-dest', dest); paintDest(); });
+  $('#aDestGh').addEventListener('click', () => { if (busy) return; if (isCrsSec($('#aSec').value)) { toast('Видео курса загружается только в Cloudflare R2 — там оно закрыто от тех, кто не купил', true); return; } dest = 'gh'; store.set('fedoskin-admin-dest', dest); paintDest(); });
   $('#aDestR2').addEventListener('click', () => { if (busy) return; dest = 'r2'; store.set('fedoskin-admin-dest', dest); paintDest(); });
   $('#r2Copy').addEventListener('click', () => $('#visCopy').click());
   $('#r2Recheck').addEventListener('click', async () => { const b = $('#r2Recheck'); b.disabled = true; b.textContent = 'Проверяю…'; await r2Check(); b.disabled = false; b.textContent = 'Проверить'; if (r2Ready()) toast('Cloudflare R2 подключён — можно загружать'); else if (r2Info && r2Info.err === 'nobucket') toast('Код сервера новый, но хранилище не привязано — проверьте шаг 3 (имя VIDEOS)', true); else if (r2Info && r2Info.err === 'old') toast('Сервер пока со старым кодом — проверьте шаг 4', true); });
@@ -1939,9 +2066,16 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#r2StepCode').style.opacity = r2Info.err === 'nobucket' ? '.55' : '';
   }
   paintDest();
-  function autoId(){ if (!idTouched) $('#aId').value = uniqueId(PREFIX[$('#aSec').value] + '-' + (slug($('#aName').value) || 'lesson')); }
+  function autoId(){ if (!idTouched) $('#aId').value = uniqueId((PREFIX[$('#aSec').value] || 'c' + ($('#aSec').value.slice(7, 9) || 'r')) + '-' + (slug($('#aName').value) || 'lesson')); }
   $('#aName').addEventListener('input', () => { autoId(); paintGo(); });
-  $('#aSec').addEventListener('change', autoId);
+  // a course video goes only to R2: there it is given only to phones that bought the course (12.11.2026)
+  let destBeforeCrs = null;
+  $('#aSec').addEventListener('change', () => {
+    autoId();
+    if (isCrsSec($('#aSec').value)) { if (dest !== 'r2') { destBeforeCrs = dest; dest = 'r2'; } }
+    else if (destBeforeCrs) { dest = destBeforeCrs; destBeforeCrs = null; }
+    paintDest();
+  });
   $('#aId').addEventListener('input', () => { idTouched = true; $('#aId').value = $('#aId').value.toLowerCase().replace(/[^a-z0-9-]/g, ''); paintGo(); });
   const paintGo = () => { $('#aGo').disabled = busy || !file || !$('#aName').value.trim() || !$('#aId').value; };
   $('#fileIn').addEventListener('change', () => pickFile($('#fileIn').files[0]));
@@ -2126,7 +2260,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       }
       if (toR2 && mp4) {
         step = 3; stepState(3, 'run', 'Загрузка в Cloudflare R2 — 0%');
-        const key = r2Key(id), up = mp4;
+        const key = r2Key(isCrsSec(sec) ? 'crs-' + sec.slice(7) + '-' + id : id), up = mp4;
         const got = await r2Upload(up, key, p => { bar(.15 + .85 * vPart + p * .85 * (1 - vPart)); stepState(3, 'run', 'Загрузка в Cloudflare R2 — ' + Math.round(p * 100) + '% из ' + fmtMB(up.size) + '. Не закрывайте страницу'); });
         stepState(3, 'ok', 'Загружено в Cloudflare R2 (' + fmtMB(got) + ')');
         r2 = key; mp4 = null;
@@ -2143,13 +2277,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       let at = -1; lessons.forEach((x, i) => { if (x.sec === fSec) at = i; });
       lessons.splice(at < 0 ? lessons.length : at + 1, 0, lesson);
       uploads[id] = {mp4, jpg, p3, coverUrl: URL.createObjectURL(jpg)};
-      if (Array.isArray(cfg.newRow) && cfg.newRow.length) cfg.newRow = [id].concat(cfg.newRow.filter(x => x !== id)); // a manual row gets the new lesson first
+      if (!isCrsSec(fSec) && Array.isArray(cfg.newRow) && cfg.newRow.length) cfg.newRow = [id].concat(cfg.newRow.filter(x => x !== id)); // a manual row gets the new lesson first
       renderLessons(); paintSaveBar();
       toast('Урок готов. Нажмите «Опубликовать» внизу');
       // what was saved — stays on screen after the form is cleared for the next video
       const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
       $('#aDone').innerHTML = '<b style="color:var(--new)">✓ Урок добавлен — осталось нажать «Опубликовать» внизу</b>' +
-        '<p class="soft small" style="margin:8px 0 0;line-height:1.6">Название: <b>' + esc(fName) + '</b><br>Раздел: ' + esc(fSec) +
+        '<p class="soft small" style="margin:8px 0 0;line-height:1.6">Название: <b>' + esc(fName) + '</b><br>Раздел: ' + esc(secLabel(fSec)) +
         '<br>Слова для поиска: ' + (fRu ? esc(fRu) : '<span class="muted">не заданы</span>') + '<br>Дата: ' + esc(fAdded) + (ksId ? '<br>Видео: Kinescope' : r2 ? '<br>Видео: Cloudflare R2' : '') + '</p>' +
         '<div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="aDoneEdit">Изменить урок</button></div>' +
         '<p class="hint" style="margin-top:8px">Форма выше очищена для следующего видео.</p>';
@@ -2167,6 +2301,242 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       busy = false; current = null; $('#aCancel').hidden = true; paintGo();
     }
   });
+
+  // ---------- paid video courses (owner 12.11.2026 «раздел КУРСЫ… кнопку добавить курс… место под ссылку на оплату (paypal)») ----------
+  // cfg.courses = [{id, n {ru,en}, d {ru,en}, tag {ru,en}, usd, pay, hidden}] (published with config.js); the videos are lessons with
+  // sec «course:<id>» (+ free: true = preview). R2 files of course videos are named crs-<course>-…; at every publish the server learns
+  // which files are closed (POST /course/sync) BEFORE the lessons go live. Orders / access codes: worker /course/*.
+  function crSyncBody(){
+    const c = {}, open = [], lock = {};
+    crList().forEach(x => { c[x.id] = {n: crName(x), usd: +x.usd || 0}; });
+    lessons.forEach(l => {
+      if (!l.r2) return;
+      const cid = isCrsSec(l.sec) ? l.sec.slice(7) : '', m = /^crs-([a-z0-9]{2,24})-/.exec(l.r2);
+      if (cid && !l.free) { if (!m || m[1] !== cid) lock[l.r2] = cid; }
+      else if (m) open.push(l.r2); // a preview lesson, or moved out of its course
+    });
+    return {c, open, lock};
+  }
+  const crNeedSync = () => crList().length > 0 || (remote && Array.isArray(remote.cfg.courses) && remote.cfg.courses.length > 0) || lessons.some(l => l.r2 && (isCrsSec(l.sec) || /^crs-/.test(l.r2)));
+  async function crSync(){
+    const paid = lessons.some(l => isCrsSec(l.sec) && !l.free && !l.hidden);
+    try { await pushApi('/course/sync', crSyncBody()); }
+    catch (e) {
+      if (paid) throw new Error((/not found/.test(e.message) ? 'сервер не умеет закрывать видео курсов — обновите код сервера (вкладка «Курсы», вверху)' : 'сервер не ответил (' + e.message + ')') + '. Без этого видео курса было бы открыто всем');
+    }
+  }
+  // the list of courses
+  function crRenderList(){
+    const box = $('#crList'); if (!box) return; box.innerHTML = '';
+    if (!crList().length) { box.innerHTML = '<p class="hint" style="margin:4px 0 0">Курсов пока нет. Пока их нет, вкладки «Курсы» в приложении тоже нет — она появится с первым курсом, в котором есть видео.</p>'; }
+    crList().forEach(c => {
+      const ls = crLessons(c.id), mins = Math.round(ls.reduce((a, l) => a + (+l.dur || 0), 0) / 60);
+      const r = document.createElement('div'); r.className = 'crc';
+      const first = ls[0];
+      r.innerHTML = (first ? '<img alt="">' : '<span class="ph"></span>') + '<div class="tx"><div class="nm"></div><div class="mt"></div></div><button class="btn btn-sm" type="button">Изменить</button>';
+      if (first) r.querySelector('img').src = coverSrc(first);
+      const nm = r.querySelector('.nm'); nm.textContent = crName(c);
+      const live = !c.hidden && ls.some(l => !l.hidden);
+      nm.insertAdjacentHTML('beforeend', live ? '<span class="pill new">В ПРИЛОЖЕНИИ</span>' : '<span class="pill hid">' + (c.hidden ? 'СКРЫТ' : 'НЕТ ВИДЕО') + '</span>');
+      const own = crData && crData.owners ? crData.owners[c.id] || 0 : null;
+      r.querySelector('.mt').textContent = '$' + (+c.usd || 0) + ' · ' + ls.length + ' видео · ' + mins + ' мин' + (ls.some(l => l.free) ? ' · есть пробный' : '') + (own != null ? ' · купили: ' + own : '');
+      r.addEventListener('click', () => crOpen(c.id));
+      box.appendChild(r);
+    });
+    const sel = $('#crCodeCourse'), v = sel.value; sel.innerHTML = '';
+    crList().forEach(c => sel.add(new Option(crName(c), c.id))); if (v) sel.value = v;
+    $('#crCodeMake').disabled = !crList().length;
+    $('#crPayUrl').value = cfg.payUrl || ''; crPayHint();
+  }
+  function crPayHint(){
+    const v = String(cfg.payUrl || ''), h = $('#crPayHint');
+    h.style.color = '';
+    if (!v) { h.textContent = 'Пока ссылки нет — в приложении вместо оплаты будет «напиши тренеру».'; h.style.color = '#FF8A6B'; return; }
+    if (!/^https:\/\//.test(v)) { h.textContent = 'Ссылка должна начинаться с https:// — пока она не сохранится.'; h.style.color = '#FF8A6B'; return; }
+    h.textContent = /paypal\.(me|com)\//i.test(v) ? '✓ Ссылка PayPal. Покупатель попадёт на неё после кнопки «Оплатить».' : '✓ Ссылка сохранится. (Это не PayPal — проверьте, что она ведёт на оплату.)';
+  }
+  $('#crPayUrl').addEventListener('input', () => {
+    const v = $('#crPayUrl').value.trim();
+    if (!v || /^https:\/\/\S+$/.test(v)) { if (v) cfg.payUrl = v; else delete cfg.payUrl; paintSaveBar(); }
+    crPayHint();
+  });
+  // the course card (sheet)
+  let crEd = null;
+  function crNewId(){
+    const base = (slug($('#cNameEn').value) || slug($('#cNameRu').value) || 'course').replace(/-/g, '').slice(0, 18) || 'course';
+    let id = base.length < 2 ? base + 'c' : base, n = 2;
+    while (crById(id)) id = base.slice(0, 20) + n++;
+    return id;
+  }
+  function crOpen(id){
+    crEd = id ? crById(id) : null;
+    const c = crEd || {};
+    $('#crTitle').textContent = crEd ? crName(c) : 'Новый курс';
+    $('#cNameRu').value = (c.n && c.n.ru) || ''; $('#cNameEn').value = (c.n && c.n.en) || '';
+    $('#cDescRu').value = (c.d && c.d.ru) || ''; $('#cDescEn').value = (c.d && c.d.en) || '';
+    $('#cTagRu').value = (c.tag && c.tag.ru) || ''; $('#cTagEn').value = (c.tag && c.tag.en) || '';
+    $('#cUsd').value = c.usd || ''; $('#cPay').value = c.pay || '';
+    $('#cShow').checked = crEd ? !c.hidden : true;
+    $('#crDel').hidden = !crEd;
+    crIdHint(); crPaintLessons();
+    $('#crSheet').hidden = false;
+    if (!crEd) setTimeout(() => $('#cNameRu').focus({preventScroll: true}), 50);
+  }
+  function crIdHint(){
+    const app = rvAppUrl();
+    $('#crIdHint').textContent = crEd ? 'Ссылка на курс (для постов и сторис): ' + app + '?c=' + crEd.id : 'Ссылка на курс появится после «Готово».';
+    const n = crEd ? crLessons(crEd.id).length : 0;
+    $('#cShowHint').textContent = !$('#cShow').checked ? 'скрыт — в приложении не виден' : n ? 'виден всем' : 'появится, когда будет хотя бы одно видео';
+  }
+  $('#cShow').addEventListener('change', crIdHint);
+  function crPaintLessons(){
+    const box = $('#cLessons'); box.innerHTML = '';
+    if (!crEd) { box.innerHTML = '<p class="hint" style="margin:0">Сначала нажмите «Готово» — потом добавляйте видео.</p>'; $('#cAddVid').textContent = '+ Сохранить и добавить видео'; return; }
+    $('#cAddVid').textContent = '+ Добавить видео в курс';
+    const ls = crLessons(crEd.id);
+    if (!ls.length) box.innerHTML = '<p class="hint" style="margin:0">Видео пока нет.</p>';
+    ls.forEach((l, i) => {
+      const r = document.createElement('div'); r.className = 'crl';
+      r.innerHTML = '<img alt=""><span class="nm"></span><label><input type="checkbox"> пробный</label><button class="btn btn-sm btn-ghost" type="button" aria-label="Выше">↑</button><button class="btn btn-sm btn-ghost" type="button" aria-label="Ниже">↓</button>';
+      r.querySelector('img').src = coverSrc(l);
+      const nm = r.querySelector('.nm'); nm.textContent = (i + 1) + '. ' + l.name + ' · ' + fmtD(l.dur);
+      if (l.hidden) nm.insertAdjacentHTML('beforeend', '<span class="pill hid">СКРЫТ</span>');
+      if (l.ks) nm.insertAdjacentHTML('beforeend', '<span class="pill up" title="Видео из Kinescope не закрыто — загрузите его в R2">KINESCOPE — НЕ ЗАЩИЩЕНО</span>');
+      if (uploads[l.id]) nm.insertAdjacentHTML('beforeend', '<span class="pill up">НЕ ОПУБЛИКОВАН</span>');
+      nm.addEventListener('click', () => openEdit(l.id));
+      const cb = r.querySelector('input'); cb.checked = !!l.free;
+      cb.addEventListener('change', () => { if (cb.checked) l.free = true; else delete l.free; paintSaveBar(); renderLessons(); });
+      const [up, dn] = r.querySelectorAll('button');
+      up.disabled = i === 0; dn.disabled = i === ls.length - 1;
+      up.addEventListener('click', () => move(l, -1)); dn.addEventListener('click', () => move(l, 1));
+      box.appendChild(r);
+    });
+  }
+  function crApply(){ // fields → cfg.courses; returns the course or null (with a message)
+    const nRu = $('#cNameRu').value.trim(), nEn = $('#cNameEn').value.trim();
+    if (!nRu && !nEn) { toast('Впишите название курса', true); $('#cNameRu').focus(); return null; }
+    const usd = Math.round(+$('#cUsd').value * 100) / 100;
+    if (!(usd >= 1)) { toast('Впишите цену в долларах (от $1)', true); $('#cUsd').focus(); return null; }
+    const pay = $('#cPay').value.trim();
+    if (pay && !/^https:\/\/\S+$/.test(pay)) { toast('Своя ссылка на оплату должна начинаться с https://', true); $('#cPay').focus(); return null; }
+    const two = (ru, en) => { const o = {}; if (ru) o.ru = ru; if (en) o.en = en; return Object.keys(o).length ? o : undefined; };
+    const c = crEd || {id: crNewId()};
+    c.n = two(nRu, nEn); c.usd = usd;
+    const d = two($('#cDescRu').value.trim(), $('#cDescEn').value.trim()); if (d) c.d = d; else delete c.d;
+    const tg = two($('#cTagRu').value.trim(), $('#cTagEn').value.trim()); if (tg) c.tag = tg; else delete c.tag;
+    if (pay) c.pay = pay; else delete c.pay;
+    if ($('#cShow').checked) delete c.hidden; else c.hidden = true;
+    if (!crEd) { cfg.courses = crList().concat([c]); crEd = c; }
+    return c;
+  }
+  $('#crOk').addEventListener('click', () => {
+    const was = !!crEd, c = crApply(); if (!c) return;
+    $('#crSheet').hidden = true; crEd = null;
+    fillSecSelect($('#aSec')); renderLessons(); crRenderList(); paintSaveBar();
+    toast(was ? 'Курс изменён. Нажмите «Опубликовать» внизу' : 'Курс создан. Добавьте в него видео и нажмите «Опубликовать»');
+  });
+  $('#cAddVid').addEventListener('click', () => {
+    const c = crApply(); if (!c) return;
+    $('#crSheet').hidden = true; crEd = null;
+    fillSecSelect($('#aSec')); renderLessons(); crRenderList(); paintSaveBar();
+    showTab('add');
+    $('#aSec').value = 'course:' + c.id; $('#aSec').dispatchEvent(new Event('change'));
+    toast('Выберите видео — оно попадёт в курс «' + crName(c) + '»');
+  });
+  $('#crDel').addEventListener('click', () => {
+    const c = crEd; if (!c) return;
+    const n = crLessons(c.id).length;
+    if (n) { toast('В курсе ' + n + ' видео. Сначала удалите их или перенесите в разделы (карточка урока → «Раздел»)', true); return; }
+    if (!confirm('Удалить курс «' + crName(c) + '»?')) return;
+    cfg.courses = crList().filter(x => x !== c); if (!cfg.courses.length) delete cfg.courses;
+    $('#crSheet').hidden = true; crEd = null;
+    fillSecSelect($('#aSec')); renderLessons(); crRenderList(); paintSaveBar();
+  });
+  $('#crClose').addEventListener('click', () => { $('#crSheet').hidden = true; crEd = null; });
+  $('#crSheet').addEventListener('click', e => { if (e.target.id === 'crSheet') { $('#crSheet').hidden = true; crEd = null; } });
+  $('#crAdd').addEventListener('click', () => crOpen(null));
+  // orders and access codes
+  let crData = null;
+  const CR_ST = {new: ['Перешёл к оплате', ''], paid: ['Нажал «Я оплатил»', 'paid'], ok: ['Курс открыт ✓', 'ok'], no: ['Отклонён', 'no']};
+  const crWhen = ms => new Date(ms).toLocaleString('ru', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+  async function crLoad(){
+    if (!cfg.pushUrl) { $('#crErr').textContent = 'Сначала подключите сервер (вкладка «Статистика» → «Уведомления»).'; return; }
+    $('#crErr').textContent = '';
+    try { crData = await pushApi('/course/list'); $('#crOld').hidden = true; }
+    catch (e) { if (/not found/.test(e.message)) { $('#crOld').hidden = false; crData = null; } else $('#crErr').textContent = 'Не получилось загрузить заказы: ' + e.message; }
+    crPaintOrders(); crRenderList();
+  }
+  function crPaintOrders(){
+    const box = $('#crOrders'); box.innerHTML = '';
+    const os = (crData && crData.orders) || [];
+    const f = (crData && crData.funnel) || {};
+    $('#crFunnel').textContent = crData ? 'Открыли окно покупки: ' + (f.cb || 0) + ' · перешли в PayPal: ' + (f.cp || 0) + ' · нажали «Я оплатил»: ' + os.filter(o => o.tp).length + ' · открыто курсов: ' + os.filter(o => o.st === 'ok').length : '';
+    if (!os.length) { box.innerHTML = '<p class="hint" style="margin:8px 0 0">Заказов пока нет.</p>'; }
+    os.slice().sort((a, b) => (b.st === 'paid') - (a.st === 'paid') || b.t - a.t).forEach(o => {
+      const c = crById(o.course), st = CR_ST[o.st] || [o.st, ''];
+      const it = document.createElement('div'); it.className = 'cro';
+      it.innerHTML = '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><code></code> · <b class="cn"></b> · $<span class="us"></span></span><span class="rvs-badge"></span></div><div class="hint mt" style="margin:0"></div><div class="row bt" style="gap:8px;flex-wrap:wrap"></div>';
+      it.querySelector('code').textContent = o.code; it.querySelector('.cn').textContent = c ? crName(c) : o.course; it.querySelector('.us').textContent = o.usd;
+      const bd = it.querySelector('.rvs-badge'); bd.textContent = st[0]; if (st[1]) bd.classList.add(st[1]);
+      it.querySelector('.mt').textContent = [rvFlag(o.co) + ' ' + (rvCountry(o.co) || o.co || ''), o.name || '', 'язык: ' + (RV_LANG_RU[o.lang] || o.lang), 'заказ ' + crWhen(o.t), o.tp ? '«оплатил» ' + crWhen(o.tp) : ''].filter(x => String(x).trim()).join(' · ');
+      const bt = it.querySelector('.bt');
+      const btn = (t, cls, fn, sure) => { const b = document.createElement('button'); b.className = 'btn btn-sm ' + cls; b.type = 'button'; b.textContent = t;
+        b.addEventListener('click', async () => { if (sure && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = sure; setTimeout(() => { b.dataset.sure = ''; b.textContent = t; }, 4000); return; } b.disabled = true; try { await fn(); } catch (e) { toast('Не получилось: ' + e.message, true); } b.disabled = false; });
+        bt.appendChild(b); };
+      if (o.st === 'new' || o.st === 'paid') {
+        btn('Оплата пришла — открыть курс', 'btn-accent', async () => { const j = await pushApi('/course/grant', {code: o.code}); toast('Курс открыт' + (j.pushed ? ' — клиенту ушло уведомление' : ' — откроется у клиента при следующем заходе')); await crLoad(); });
+        btn('Отклонить', 'btn-ghost', async () => { await pushApi('/course/deny', {code: o.code}); await crLoad(); }, 'Точно отклонить?');
+      } else if (o.st === 'ok') btn('Забрать доступ', 'btn-ghost', async () => { await pushApi('/course/undo', {code: o.code}); toast('Доступ закрыт'); await crLoad(); }, 'Точно забрать?');
+      box.appendChild(it);
+    });
+    const cl = $('#crCodeList'); cl.innerHTML = '';
+    const codes = (crData && crData.codes) || [];
+    if (codes.length) cl.insertAdjacentHTML('beforeend', '<h3 style="margin:14px 0 4px">Созданные коды</h3>');
+    codes.forEach(x => {
+      const c = crById(x.course), d = document.createElement('div'); d.className = 'cro';
+      d.innerHTML = '<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><code></code> · <b></b></span><span class="rvs-badge"></span></div><div class="hint" style="margin:0"></div><div class="row" style="gap:8px;flex-wrap:wrap"></div>';
+      d.querySelector('code').textContent = x.code; d.querySelector('b').textContent = c ? crName(c) : x.course;
+      const bd = d.querySelector('.rvs-badge'); bd.textContent = x.used ? 'Использован ✓' : 'Ждёт'; if (x.used) bd.classList.add('ok');
+      d.querySelector('.hint').textContent = [x.note || '', 'создан ' + crWhen(x.t), x.used ? 'открыт ' + crWhen(x.used) : ''].filter(Boolean).join(' · ');
+      if (!x.used) {
+        const row = d.querySelector('.row:last-child');
+        const sh = document.createElement('button'); sh.className = 'btn btn-sm'; sh.type = 'button'; sh.textContent = 'Показать ссылку'; sh.addEventListener('click', () => crShowCode(x.code, x.course)); row.appendChild(sh);
+        const del = document.createElement('button'); del.className = 'btn btn-sm btn-ghost'; del.type = 'button'; del.textContent = 'Удалить';
+        del.addEventListener('click', async () => { if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; return; } await pushApi('/course/delcode', {code: x.code}).catch(() => {}); crLoad(); });
+        row.appendChild(del);
+      }
+      cl.appendChild(d);
+    });
+  }
+  function crShowCode(code, cid){
+    const link = rvAppUrl() + '?ca=' + code, c = crById(cid), en = c ? ((c.n && (c.n.en || c.n.ru)) || cid) : cid, ru = c ? crName(c) : cid;
+    $('#crCodeLink').textContent = link; $('#crCodeMade').hidden = false;
+    $('#crCodeCopy').onclick = () => rvCopy(link, 'Ссылка');
+    const box = $('#crCodeMsgs'); box.innerHTML = '';
+    [['English — просто', 'Thanks for your payment! Your course “' + en + '” is ready. Open this link on your phone and it unlocks right away:\n' + link + '\n(Or in the app: Courses → “Have an access code?” → ' + code + ')'],
+     ['English — сленг', 'Got your payment, appreciate you! 🙌 “' + en + '” is all yours — tap this on your phone and it unlocks instantly:\n' + link + '\n(Or Courses → “Have an access code?” → ' + code + ')'],
+     ['Español', '¡Gracias por tu pago! Tu curso «' + en + '» está listo. Abre este enlace en tu teléfono y se desbloquea al instante:\n' + link + '\n(O en la app: Cursos → «¿Tienes un código de acceso?» → ' + code + ')'],
+     ['Português', 'Obrigado pelo pagamento! Seu curso “' + en + '” está pronto. Abra este link no celular e ele é liberado na hora:\n' + link + '\n(Ou no app: Cursos → “Tem um código de acesso?” → ' + code + ')'],
+     ['Русский', 'Спасибо за оплату! Курс «' + ru + '» готов. Открой эту ссылку на телефоне — он сразу откроется:\n' + link + '\n(Или в приложении: Курсы → «Есть код доступа?» → ' + code + ')']
+    ].forEach(([lang, text]) => {
+      const d = document.createElement('div');
+      d.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:13px"></b><button class="btn btn-sm" type="button">Копировать</button></div><div class="rvs-msg"></div>';
+      d.querySelector('b').textContent = lang; d.querySelector('.rvs-msg').textContent = text;
+      d.querySelector('button').addEventListener('click', () => rvCopy(text, 'Сообщение (' + lang + ')'));
+      box.appendChild(d);
+    });
+  }
+  $('#crCodeMake').addEventListener('click', async () => {
+    const cid = $('#crCodeCourse').value; if (!cid) return;
+    if (!remote.cfg.courses || !remote.cfg.courses.some(c => c.id === cid)) { toast('Сначала опубликуйте курс — кнопка «Опубликовать» внизу', true); return; }
+    const b = $('#crCodeMake'); b.disabled = true; b.textContent = 'Создаю…';
+    try { const j = await pushApi('/course/code', {course: cid, note: $('#crCodeNote').value.trim()}); crShowCode(j.code, cid); $('#crCodeNote').value = ''; toast('Код готов — отправьте его клиенту'); crLoad(); }
+    catch (e) { if (/not found/.test(e.message)) $('#crOld').hidden = false; toast('Не получилось: ' + e.message, true); }
+    b.disabled = false; b.textContent = 'Создать код';
+  });
+  $('#crReload').addEventListener('click', crLoad);
+  $('#crCopyCode').addEventListener('click', () => $('#visCopy').click());
+  $('#crRecheck').addEventListener('click', crLoad);
 
   // ---------- notifications ----------
   async function pushApi(path, body){
@@ -2405,7 +2775,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
+    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
@@ -2619,6 +2989,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         const l = lessons.find(x => x.id === id);
         if (l && l.ks && vFiles[id + '.mp4'] != null) tree.push({path: 'v/' + id + '.mp4', mode: '100644', type: 'blob', sha: null});
       });
+      if (crNeedSync()) { say('Закрываю видео курсов на сервере…'); await crSync(); }
       say('Сохраняю…');
       if (JSON.stringify(lessons) !== JSON.stringify(remote.lessons) || ids.length || deleted.length) tree.push({path: 'lessons.js', mode: '100644', type: 'blob', content: lessonsOut()});
       if (JSON.stringify(cfg) !== JSON.stringify(remote.cfg)) tree.push({path: 'config.js', mode: '100644', type: 'blob', content: cfgOut()});
@@ -2630,6 +3001,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (idsPv.length) parts.push('анимация обложки: ' + idsPv.map(id => lessons.find(l => l.id === id).name).join(', '));
       if (deleted.length) parts.push('удалены: ' + deleted.join(', '));
       if (dropGh.length) parts.push('видео перенесены в Kinescope: ' + dropGh.join(', '));
+      if (JSON.stringify(cfg.courses || []) !== JSON.stringify(remote.cfg.courses || [])) parts.push('курсы');
       if (tree.some(t => t.path === 'config.js')) parts.push('настройки');
       if (!parts.length) parts.push('уроки');
       const r2Gone = deleted.map(id => (remote.lessons.find(x => x.id === id) || {}).r2).filter(Boolean);
@@ -2638,7 +3010,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       // the app no longer lists these lessons: their videos in R2 can go (a failure only leaves a file behind)
       for (const k of r2Gone) await r2Delete(k).catch(() => {});
       toast('Опубликовано! В приложении появится через 1–5 минут');
-      const fresh = idsNew.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden);
+      const fresh = idsNew.map(id => lessons.find(l => l.id === id)).filter(l => l && !l.hidden && !isCrsSec(l.sec));
       await loadRemote(); renderAll();
       if (fresh.length && cfg.pushUrl) schedulePush(fresh);
       // owner 11.11.2026: who watches a new lesson within its first hour gets +10 points — the server notes the time now

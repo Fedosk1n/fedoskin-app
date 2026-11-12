@@ -186,6 +186,46 @@ body.chatmode .tabs{display:none}
 .cco-t{font-weight:700;font-size:15px;line-height:1.25}
 .cco-p{font-size:13px;color:var(--muted)}.cco-p b{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:20px;color:var(--accent);letter-spacing:.3px;margin-right:4px}
 .cco-btn{flex:none;width:auto;min-height:46px;padding:0 16px;font-size:14px;border-radius:12px}
+/* paid courses (12.11.2026) */
+.crcard{display:flex;flex-direction:column;width:100%;padding:0;border-radius:18px;overflow:hidden;background:var(--surface);border:1px solid #222225;color:var(--fg);text-align:left;cursor:pointer}
+.crcard .crimg{position:relative;display:block;height:170px;background:#1C1C1F center/cover no-repeat}
+.crcard .crimg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,11,12,0) 45%,rgba(11,11,12,.85))}
+.crtag{position:absolute;top:14px;left:14px;z-index:1;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--fg);background:var(--bg);padding:6px 10px;border-radius:6px}
+.crown{position:absolute;top:14px;right:14px;z-index:1;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:6px 10px;border-radius:6px;background:var(--new);color:#0B0B0C}
+.crcard .crbody{display:flex;flex-direction:column;gap:10px;padding:16px}
+.crcard .crnm{font-family:Anton,Impact,sans-serif;font-size:24px;line-height:1.05;text-transform:uppercase;letter-spacing:.3px}
+.crcard .crds{font-size:13px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.crcard .crft{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.crcard .crft .btn{width:auto;padding:0 20px;min-height:44px;pointer-events:none}
+.crmini{display:flex;align-items:center;gap:12px;width:100%;padding:12px;border-radius:16px;background:var(--surface);border:1px solid #222225;color:var(--fg);text-align:left;cursor:pointer}
+.crmini img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none;background:#1C1C1F}
+.crmini .nm{font-family:Anton,Impact,sans-serif;font-size:19px;line-height:1.05;text-transform:uppercase}
+.crmini .btn{flex:none;width:auto;padding:0 14px;min-height:40px;font-size:14px;pointer-events:none}
+.crhero{position:relative;margin-top:14px;border-radius:18px;overflow:hidden;aspect-ratio:16/10;background:#1C1C1F}
+.crhero img{width:100%;height:100%;object-fit:cover;display:block}
+.crdesc{margin-top:12px;font-size:15px;line-height:1.55;color:var(--soft);white-space:pre-line}
+.crbuy{margin-top:18px}
+.crbuy .btn[disabled]{opacity:1;background:var(--surface-2);color:var(--fg)}
+.crcode{display:block;margin:22px auto 8px;background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;padding:10px}
+.lcard .llock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(11,11,12,.45)}
+.lcard .llock svg{width:34px;height:34px;padding:8px;border-radius:50%;background:rgba(11,11,12,.75);stroke:#fff;fill:none;stroke-width:2}
+.buysteps{list-style:none;counter-reset:bs;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.buysteps li{counter-increment:bs;position:relative;padding-left:40px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.buysteps li::before{content:counter(bs);position:absolute;left:0;top:-2px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0B0B0C;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.buysteps b{color:var(--fg);font-size:15px}
+.buycode{display:flex;align-items:center;gap:10px;margin-top:2px}
+.buycode code{font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:700;letter-spacing:1.5px;color:var(--fg);padding:8px 12px;border-radius:10px;background:var(--surface-2);border:1px dashed rgba(226,97,26,.6)}
+.buycode .btn{width:auto;padding:0 14px}
+.buypay{margin-top:4px;min-height:50px;text-decoration:none}
+.buypay[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.buywait{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:18px 6px 4px;font-size:14px;line-height:1.45}
+.buywait .big{width:56px;height:56px;border-radius:50%;background:rgba(59,209,111,.15);color:var(--new);font-size:28px;display:flex;align-items:center;justify-content:center}
+.buywait b{font-size:18px}
+.buyalt{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
+.buyalt button{background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:8px 2px;cursor:pointer}
+.buyalt button[hidden]{display:none}
+#codeIn{width:100%;height:50px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font-size:18px;letter-spacing:1px}
+#buySheet .err,#codeSheet .err{color:#FF7A6B;font-size:13px;line-height:1.4}
 .chatorder{display:flex;align-items:center;gap:10px;padding:9px max(14px, env(safe-area-inset-right, 0px)) 9px max(14px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:rgba(226,97,26,.07);font-size:12px;line-height:1.35}
 .chatorder b{font-size:14px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chatorder button{flex:none;background:none;border:none;padding:6px 0;color:var(--accent);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:42%;text-align:right}
@@ -976,12 +1016,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <h1 style="font-size:30px;margin-top:20px">Разделы</h1>
   <div class="grid2" id="sections" style="margin-top:12px"></div>
 
-  <div class="sec" hidden data-later="courses">
-    <h2 style="margin-bottom:12px">Новый курс</h2>
-    <button class="card row" data-go="courses" style="width:100%;padding:16px;gap:12px;justify-content:space-between;color:var(--fg);text-align:left;cursor:pointer">
-      <span class="stack" style="gap:6px"><span class="label" style="font-size:11px">Новичок</span><span class="d" style="font-size:20px;line-height:1.05">Связка для новичка за 1 урок</span></span>
-      <span class="btn btn-accent" style="width:auto;padding:0 14px;min-height:44px">$5</span>
-    </button>
+  <!-- paid courses (owner 12.11.2026): shown only when the admin has published a course -->
+  <div class="sec" hidden id="homeCourses">
+    <div class="sec-head" style="margin-bottom:12px"><h2>Курсы</h2><button class="muted" data-go="courses" style="background:none;border:none;font-size:13px;padding:10px 0;cursor:pointer">Все</button></div>
+    <div class="stack" id="homeCourseList" style="gap:10px"></div>
   </div>
 
   <div class="sec" hidden data-later="articles">
@@ -1144,32 +1182,26 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <!-- КУРСЫ -->
 <section class="screen" id="courses" aria-label="Курсы" hidden>
   <h1>Курсы</h1>
-  <p class="lead">Платные программы. Покупаешь один раз — смотришь сколько угодно.</p>
-  <div class="stack" style="gap:16px;margin-top:22px">
-    <article class="card" style="overflow:hidden">
-      <div class="ph" style="height:150px;position:relative;display:flex;align-items:center;justify-content:center">
-        <span class="label" style="position:absolute;top:14px;left:14px;font-size:11px;color:var(--fg);background:var(--bg);padding:6px 10px;border-radius:6px;letter-spacing:1.5px">Новичок</span>
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      </div>
-      <div class="stack" style="padding:16px;gap:12px">
-        <h2 style="font-size:24px">Связка для новичка за 1 урок</h2>
-        <p class="muted" style="font-size:13px;line-height:1.45">[Короткое описание: что ученик получит после курса]</p>
-        <div class="row" style="justify-content:space-between;gap:12px"><span class="muted" style="font-size:12px">[N] видео · [N] мин</span><button class="btn btn-accent" style="width:auto;padding:0 20px" data-toast="Здесь откроется оплата курса">Купить за $5</button></div>
-      </div>
-    </article>
-    <article class="card" style="overflow:hidden">
-      <div class="ph" style="height:150px;position:relative;display:flex;align-items:center;justify-content:center">
-        <span class="label" style="position:absolute;top:14px;left:14px;font-size:11px;color:var(--fg);background:var(--bg);padding:6px 10px;border-radius:6px;letter-spacing:1.5px">Восстановление</span>
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      </div>
-      <div class="stack" style="padding:16px;gap:12px">
-        <h2 style="font-size:24px">Методы восстановления сил</h2>
-        <p class="muted" style="font-size:13px;line-height:1.45">[Короткое описание: что ученик получит после курса]</p>
-        <div class="row" style="justify-content:space-between;gap:12px"><span class="muted" style="font-size:12px">[N] видео · [N] мин</span><button class="btn btn-accent" style="width:auto;padding:0 20px" data-toast="Здесь откроется оплата курса">Купить за $5</button></div>
-      </div>
-    </article>
-  </div>
+  <p class="lead">Платные видеокурсы. Покупаешь один раз — смотришь сколько угодно.</p>
+  <div class="stack" id="courseList" style="gap:16px;margin-top:22px"></div>
+  <button class="crcode" id="crCodeOpen" type="button">Есть код доступа?</button>
 </section>
+
+<!-- КУРС: обложка, описание, цена, уроки (12.11.2026) -->
+<section class="screen" id="course" aria-label="Курс" hidden>
+  <button class="back" data-back="courses" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <div class="crhero" id="crHero"><img id="crCover" alt=""><span class="crtag" id="crTag" hidden></span></div>
+  <h1 id="crTitle" style="margin-top:16px;font-size:34px"></h1>
+  <p class="muted" id="crMeta" style="margin-top:6px;font-size:13px"></p>
+  <p class="crdesc" id="crDesc"></p>
+  <div class="crbuy" id="crBuyBox">
+    <button class="btn btn-accent" id="crBuy" type="button" style="min-height:56px;font-size:17px;border-radius:16px"></button>
+    <p class="muted" id="crBuyNote" style="margin-top:8px;font-size:12px;text-align:center;line-height:1.4"></p>
+  </div>
+  <span class="label" style="display:block;margin:26px 0 12px">Уроки курса</span>
+  <div class="lgrid" id="crLessons"></div>
+</section>
+
 
 <!-- ЧАТ С ТРЕНЕРОМ (09.11.2026): клиент пишет здесь, тренер отвечает из Telegram -->
 <section class="screen" id="chat" aria-label="Чат с тренером" hidden>
@@ -1257,7 +1289,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
   <div class="sec stack" style="margin-top:14px">
     <button class="list-item" id="shareApp"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--accent)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span style="flex:1;font-weight:600">Поделиться приложением</span><span class="muted" style="font-size:13px">с другом</span></button>
-    <button class="list-item" data-go="courses" hidden data-later="courses"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button class="list-item" data-go="courses" hidden id="myCoursesItem"><span style="flex:1;font-weight:600">Мои курсы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-go="review" hidden data-later="my-reviews"><span style="flex:1;font-weight:600">Мои разборы</span><svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="list-item" data-toast="Во время альфа-теста все уроки бесплатны"><span style="flex:1;font-weight:600">Доступ</span><span class="muted" style="font-size:13px">Бесплатно · альфа-тест</span></button>
     <button class="list-item" id="pushItem" hidden><span style="flex:1;font-weight:600">Уведомления о новых уроках</span><span class="muted" style="font-size:13px" id="pushState">Выключены</span></button>
@@ -1471,6 +1503,48 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div id="rvfBad" class="rvfmsg" hidden><b id="rvfBadT"></b><button class="btn btn-ghost" type="button" data-close>Закрыть</button></div>
   </div>
 </div>
+<!-- покупка курса (12.11.2026): код заказа → PayPal → «Я оплатил» → тренер открывает доступ в админке -->
+<div class="sheet-bg" id="buySheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="buyTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <span class="label" style="font-size:11px">Покупка курса</span>
+    <h2 id="buyTitle" style="font-size:24px;margin-top:4px"></h2>
+    <div class="row" style="gap:8px;align-items:baseline;margin-top:6px"><span class="d" id="buyPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" style="font-size:13px">один раз — навсегда</span></div>
+    <div id="buySteps">
+      <ol class="buysteps">
+        <li><b>Скопируй код заказа</b><span>Вставь его в комментарий к платежу — так тренер поймёт, что оплатил именно ты.</span>
+          <span class="buycode"><code id="buyCode">…</code><button class="btn btn-sm" type="button" id="buyCopy">Копировать</button></span></li>
+        <li><b>Оплати через PayPal</b><span id="buyPayHint">Откроется страница оплаты PayPal.</span>
+          <a class="btn btn-accent buypay" id="buyPay" target="_blank" rel="noopener"></a></li>
+        <li><b>Нажми «Я оплатил»</b><span>Тренер проверит платёж и откроет курс — он появится здесь сам.</span>
+          <button class="btn btn-line" type="button" id="buyPaid">Я оплатил</button></li>
+      </ol>
+      <p class="muted" id="buyNoPay" hidden style="font-size:13px;line-height:1.45;margin-top:14px">Оплата картой скоро откроется. Пока купить курс можно через тренера — напиши ему.</p>
+    </div>
+    <div id="buyWait" class="buywait" hidden>
+      <span class="big">✓</span><b>Спасибо! Проверяем оплату</b>
+      <span class="muted" id="buyWaitT">Тренер откроет курс, как только увидит платёж (обычно в течение суток). Курс откроется в приложении сам.</span>
+      <span class="muted">Код заказа: <b id="buyWaitCode"></b></span>
+      <button class="btn btn-line" type="button" id="buyPush" hidden>Включить уведомления</button>
+    </div>
+    <p class="err" id="buyErr" hidden style="margin-top:10px"></p>
+    <div class="buyalt">
+      <button type="button" id="buyCrypto" hidden>Оплатить криптой (USDT)</button>
+      <button type="button" id="buyAsk">Вопрос? Написать тренеру</button>
+      <button type="button" id="buyHaveCode">Есть код доступа</button>
+    </div>
+  </div>
+</div>
+<div class="sheet-bg" id="codeSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
+    <h2 id="codeTitle" style="font-size:24px">Код доступа к курсу</h2>
+    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4">Тренер присылает код, если ты оплатил другим способом или сменил телефон.</p>
+    <input id="codeIn" maxlength="14" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: k7m2p9qx4t" style="margin-top:14px">
+    <p class="err" id="codeErr" hidden style="margin-top:8px"></p>
+    <button class="btn btn-accent" type="button" id="codeGo" style="margin-top:12px">Открыть курс</button>
+  </div>
+</div>
 <div class="sheet-bg" id="contactSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
@@ -1656,7 +1730,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
   let installWanted = false, watchedNow = false, newRowDirty = false;
-  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',review:'review',svc:'review',chat:'review',promo:'promo',battles:'battles',profile:'profile'};
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',course:'courses',review:'review',svc:'review',chat:'review',promo:'promo',battles:'battles',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== languages =====
@@ -1705,7 +1779,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   // ===== real lessons (alpha) =====
   const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
-  const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden);
+  // course lessons (sec «course:<id>», 12.11.2026) are not in sections, search or «Новые уроки» — only inside their course
+  const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden && !/^course:/.test(l.sec || ''));
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
     ? {month: (CFG.subRub || 199) + ' ₽', year: String(CFG.subYearRub || 1990).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽', currency: 'RUB'}
@@ -1736,6 +1811,27 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (first) goal('app_install');
   })();
   const BY_ID = {}; LESSONS.forEach(l => { BY_ID[l.id] = l; });
+  // ===== paid video courses (owner 12.11.2026) — data; screens and purchase are further down (crsPaintAll…) =====
+  // CFG.courses (admin «Курсы»): [{id, n {ru,en} name, d {ru,en} description, tag {ru,en}, usd, pay (PayPal link), hidden}];
+  // their videos are lessons with sec «course:<id>» (+ free: true = a preview lesson anyone may watch). A course shows
+  // only when it has at least one video; no courses ⇒ no «Курсы» tab at all.
+  const COURSES = (Array.isArray(CFG.courses) ? CFG.courses : []).filter(c => c && /^[a-z0-9]{2,24}$/.test(c.id || '') && !c.hidden);
+  const cTxt = (c, k) => { const o = (c && c[k]) || {}; return String((LANG === 'ru' ? (o.ru || o.en) : (o[LANG] || o.en || o.ru)) || ''); };
+  const crsName = c => cTxt(c, 'n') || c.id;
+  const C_LESSONS = {};
+  (window.LESSONS_DATA || []).forEach(l => {
+    if (l.hidden || !/^course:/.test(l.sec || '')) return;
+    const c = COURSES.find(x => x.id === l.sec.slice(7)); if (!c) return;
+    const x = Object.assign({}, l, { sec: crsName(c), course: c.id });
+    (C_LESSONS[c.id] = C_LESSONS[c.id] || []).push(x); BY_ID[x.id] = x;
+  });
+  const COURSES_ON = COURSES.filter(c => (C_LESSONS[c.id] || []).length);
+  // what this phone bought: own + passes for the videos (24 h, renewed by /course/my) + its orders — copy in fedoskin-crs
+  const CRS = (() => { let j = {}; try { j = JSON.parse(localStorage.getItem('fedoskin-crs') || '{}') || {}; } catch (_) {} return { own: new Set(Array.isArray(j.own) ? j.own : []), pass: j.pass || {}, orders: Array.isArray(j.orders) ? j.orders : [] }; })();
+  const crsOwns = cid => CRS.own.has(cid);
+  const crsCan = l => !l || !l.course || !!l.free || crsOwns(l.course);
+  const crsPassOk = cid => { const x = CRS.pass[cid]; return !!(x && x.p && x.exp > Date.now() / 1000 + 300); };
+  let curCourse = null;
   // cover picture + 3-second animation; `cv` grows when the admin re-cuts them (owner 11.11.2026: start the animation later) ⇒ new address, no stale cache
   const jpgUrl = l => 'v/' + l.id + '.jpg' + (l.cv ? '?c=' + l.cv : '');
   const pvUrl = l => 'v/' + l.id + '-p3.mp4' + (l.cv ? '?c=' + l.cv : '');
@@ -1754,7 +1850,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     paintTiles(); newRowDirty = true;
   }
   const inSec = sec => LESSONS.filter(l => l.sec === sec);
-  const isFree = l => inSec(l.sec).indexOf(l) < 2;
+  const isFree = l => l.course ? !!l.free : inSec(l.sec).indexOf(l) < 2;
   const fmtD = s => Math.floor(s/60) + ':' + String(Math.round(s)%60).padStart(2,'0');
 
   // sections grid
@@ -1785,7 +1881,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function paintNewRow(){
     const row = $('#newRow'); if (!row) return;
     // owner's own order from the admin (CFG.newRow, 10.11.2026); none / nothing left ⇒ the 10 newest by date
-    let list = Array.isArray(CFG.newRow) ? CFG.newRow.map(id => BY_ID[id]).filter(Boolean) : [];
+    let list = Array.isArray(CFG.newRow) ? CFG.newRow.map(id => BY_ID[id]).filter(l => l && !l.course) : [];
     if (!list.length) list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
     row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l, list)));
     $('#newHome').hidden = !list.length;
@@ -1886,10 +1982,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     b.querySelector('.lname').textContent = l.name;
     if (isNew(l)) { const np = newPill(); np.classList.add('covernew'); b.querySelector('.lcover').appendChild(np); b.classList.add('isnew'); }
     if (freshLeft(l.id) > 0) { const f = document.createElement('span'); f.className = 'lfresh'; f.textContent = '+10 ⭐'; f.title = T('+10 очков, если посмотришь в первый час после выхода'); b.querySelector('.lcover').appendChild(f); }
-    if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
-    b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
-    b.addEventListener('pointerdown', () => warmOne(l), { passive: true });
-    b.addEventListener('click', () => openLesson(l.id, list ? { list } : null));
+    if (l.course) { // a course video: preview chip or a lock until the course is bought
+      if (!crsOwns(l.course) && l.free) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Пробный урок'); b.querySelector('.lcover').appendChild(t); }
+      if (!crsCan(l)) { const k = document.createElement('span'); k.className = 'llock'; k.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'; b.querySelector('.lcover').appendChild(k); }
+      b.setAttribute('aria-label', l.name + (crsCan(l) ? '' : T(', доступен после покупки курса')));
+    } else {
+      if (!ALPHA && isFree(l)) { const t = document.createElement('span'); t.className = 'lfree'; t.textContent = T('Бесплатно'); b.querySelector('.lcover').appendChild(t); }
+      b.setAttribute('aria-label', l.name + (isFree(l) ? T(', бесплатно') : ''));
+    }
+    b.addEventListener('pointerdown', () => { if (crsCan(l)) warmOne(l); }, { passive: true });
+    b.addEventListener('click', () => { if (!crsCan(l)) { crsOpenBuy(l.course); return; } openLesson(l.id, list ? { list } : null); });
     return b;
   }
   function openSection(name){
@@ -2107,7 +2209,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   const passFresh = () => !!(vPass && vPass.exp > Date.now() / 1000 + 300);
   if (R2_BASE && (window.LESSONS_DATA || []).some(l => l.r2)) getPass().catch(() => {});
-  const fileFor = l => l.r2 && R2_BASE ? R2_BASE + '/v/' + l.r2 + (passFresh() ? '?p=' + vPass.p : '') : 'v/' + l.id + '.mp4';
+  // a paid course video needs ITS course's pass (12.11.2026); free preview lessons use the ordinary one
+  const paidVid = l => !!(l && l.course && !l.free);
+  const lPassFresh = l => paidVid(l) ? crsPassOk(l.course) : passFresh();
+  const getLPass = l => paidVid(l) ? crsMy().then(() => { if (!crsPassOk(l.course)) throw new Error('course pass'); }) : getPass();
+  const fileFor = l => l.r2 && R2_BASE ? R2_BASE + '/v/' + l.r2 + (paidVid(l) ? (crsPassOk(l.course) ? '?p=' + CRS.pass[l.course].p : '') : (passFresh() ? '?p=' + vPass.p : '')) : 'v/' + l.id + '.mp4';
   const mediaFor = l => !l ? '' : l.ks ? introFor(l) : fileFor(l);
   // short lessons in 1080p60 are 20–35 MB; an iPhone gets less room (under memory pressure it drops the video's picture)
   const MEM_MAX = isApple ? 3 : 5, MEM_FILE_MAX = 40 * 1048576, MEM_TOTAL = (isApple ? 60 : 100) * 1048576;
@@ -2222,10 +2328,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // that is already well under way, or the network
   function introSource(l){
     // an R2 lesson without a pass yet: get one first (offline the saved copy still plays — sw.js ignores the pass)
-    if (l && !l.ks && l.r2 && R2_BASE && !passFresh()) {
+    if (l && !l.ks && l.r2 && R2_BASE && !lPassFresh(l)) {
       // iPhone: a lesson saved earlier plays from the phone even when the pass can't be renewed (offline)
-      if (isApple && swOn()) return { url: fileFor(l), wait: getPass().then(() => fileFor(l), () => fileFor(l)).then(u => savedSv(u).catch(() => u)) };
-      return { url: fileFor(l), wait: getPass().then(() => fileFor(l)) };
+      if (isApple && swOn()) return { url: fileFor(l), wait: getLPass(l).then(() => fileFor(l), () => fileFor(l)).then(u => savedSv(u).catch(() => u)) };
+      return { url: fileFor(l), wait: getLPass(l).then(() => fileFor(l), () => fileFor(l)) };
     }
     if (l && l.r2) getPass().catch(() => {});
     const u = mediaFor(l); if (!u) return null;
@@ -2672,22 +2778,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ['pointerdown', 'touchstart', 'click'].forEach(ev => vpnChip.addEventListener(ev, e => e.stopPropagation()));
   // the lessons a swipe walks through: the row the lesson was opened from («Новые уроки»), else its section
   let curList = null;
-  const lessonList = () => curList && curLesson && curList.includes(curLesson) ? curList : inSec(curSection);
+  const lessonList = () => curList && curLesson && curList.includes(curLesson) ? curList : curLesson && curLesson.course ? (C_LESSONS[curLesson.course] || []).filter(crsCan) : inSec(curSection);
   function openLesson(id, opts){
     { const c = document.getElementById('ctaChip'); if (c) c.classList.remove('show'); }
     const l = BY_ID[id]; if (!l) return;
+    if (!crsCan(l)) { crsOpenBuy(l.course); return; } // a course video before the course is bought
     opts = opts || {};
     if (opts.list && opts.list.includes(l)) curList = opts.list.slice();
     else if (!(navReplace || opts.keep) || !(curList && curList.includes(l))) curList = null; // a swipe keeps the row
     curSection = l.sec; curLesson = l;
     markSeen(l.id);
     goal('lesson', {lesson: l.name, section: l.sec});
-    const inRow = !!curList, list = inRow ? curList : inSec(l.sec), n = list.indexOf(l) + 1;
+    const inRow = !!curList, list = inRow ? curList : l.course ? (C_LESSONS[l.course] || []) : inSec(l.sec), n = list.indexOf(l) + 1;
+    if (l.course) curCourse = l.course;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
     $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
     $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: inRow ? T('Новые уроки') : l.sec, n, m: list.length, dur: fmtD(l.dur)});
-    $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : T('Ещё в разделе');
+    $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : l.course ? T('Ещё в курсе') : T('Ещё в разделе');
     try { ulPaint(l); } catch (_) {} // BT / BT_NAME are defined further down (a lesson can open at start-up)
     $('#badgeOwn').hidden = true;
     loadSubs(l);
@@ -2714,15 +2822,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     warmGen++;
     if (P.playing && (av.paused || av.readyState < 3) && !quietOpen) coverOrNot(l);
     // the lessons next to this one: downloaded once this one plays, so a swipe to them starts from memory
-    const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(Boolean);
+    const at = list.indexOf(l), near = [list[at + 1], list[at - 1], list[at + 2]].filter(x => x && crsCan(x));
     let warmed = false;
-    const warmNear = () => { if (warmed || curLesson !== l) return; warmed = true; warmKs(near.concat(list.filter(x => x !== l && !near.includes(x))), near); };
+    const warmNear = () => { if (warmed || curLesson !== l) return; warmed = true; warmKs(near.concat(list.filter(x => x !== l && !near.includes(x) && crsCan(x))), near); };
     whenPlaying = () => { setTimeout(warmNear, 600); setTimeout(() => { if (curLesson === l) sbLoad(l); }, 300); setTimeout(fqPreload, 2500); setTimeout(() => fcBuild(l), 1800); };
     setTimeout(warmNear, 4000);
     maybeSwipeHint(list.length);
     $('#lesson').scrollTop = 0;
   }
-  $('#lessonBack').addEventListener('click', () => goBack(() => openSection(curSection)));
+  $('#lessonBack').addEventListener('click', () => goBack(() => curLesson && curLesson.course ? crsOpen(curLesson.course) : openSection(curSection)));
 
   // ===== how much of the lesson's video is already on the phone (owner 09.11.2026 «шкалу загрузки в сам ролик») =====
   // A light layer on the timeline grows as the file comes in, and a small label between the times says «Загрузка 45 %»,
@@ -3967,6 +4075,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   // tabs
   const tabsEl = $('#tabs');
+  // «Курсы» tab only while there is a published course (owner 12.11.2026: «пока курсов нет — меню пусть будет без курсов»)
+  if (COURSES_ON.length) TABS.splice(1, 0, ['courses', 'Курсы', '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9.2 5 2.8-5 2.8z"/>']);
   TABS.forEach(([id, label, icon]) => {
     const b = document.createElement('button');
     b.className = 'tab'; b.dataset.tab = id;
@@ -3982,6 +4092,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   function go(id){
     if (id === 'profile') setTimeout(() => { try { stRender(); } catch (_) {} }, 0);
+    if (id === 'courses') setTimeout(() => { try { crsMy(); } catch (_) {} }, 0);
     if (id !== 'lesson' && watchedNow && installWanted) setTimeout(() => { try { installAfterLesson(); } catch (_) {} }, 700);
     if (id !== 'lesson') setTimeout(() => { try { lvlCheck(); btShowNews(); } catch (_) {} }, 900);
     if (id === 'home' && newRowDirty) { newRowDirty = false; setTimeout(() => { try { paintNewRow(); } catch (_) {} }, 0); }
@@ -4569,6 +4680,233 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#cryptoSheet').addEventListener('click', e => { if (e.target.id === 'cryptoSheet') $('#cryptoSheet').hidden = true; });
   $('#contactSheet').addEventListener('click', e => { if (e.target.id === 'contactSheet') $('#contactSheet').hidden = true; });
+
+  // ===== paid video courses — screens and purchase (owner 12.11.2026 «раздел КУРСЫ… ссылку на оплату (paypal)… продумай с оплатой
+  // и получением курса. Он будет чисто в видео формате») =====
+  // No payment API: «Купить» → server order code «FT-XXXXX» (POST /course/order; the coach gets a Telegram note) → the buyer copies
+  // it, pays by the course's PayPal link (CFG.payUrl when the course has none) and writes the code in the payment note → «Я оплатил»
+  // (POST /course/paid) → the coach sees the money and opens the course in the admin → this phone learns it from POST /course/my
+  // (start-up, the courses screens, every 30 s while an order waits and the app is open; a push when notifications are on).
+  // Access codes from the coach (?ca=<code> or «Есть код доступа») open a course without an order. The buyer = a random id +
+  // key of this phone (fedoskin-crs-id / -key), only the key's hash is on the server.
+  const CRS_BASE = String(CFG.pushUrl || '').replace(/\/+$/, '');
+  const crsPrice = c => '$' + (+c.usd || 0).toLocaleString('en-US');
+  const crsPay = c => { const u = String((c && c.pay) || CFG.payUrl || '').trim(); return /^https:\/\//.test(u) ? u : ''; };
+  const crsGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  function crsIds(){
+    let id = crsGet('fedoskin-crs-id'), k = crsGet('fedoskin-crs-key');
+    if (!id || !k) { id = chRand(20); k = chRand(32); try { localStorage.setItem('fedoskin-crs-id', id); localStorage.setItem('fedoskin-crs-key', k); } catch (_) {} }
+    return { id, k };
+  }
+  const crsHasIds = () => !!crsGet('fedoskin-crs-id');
+  function crsSave(){ try { localStorage.setItem('fedoskin-crs', JSON.stringify({ own: [...CRS.own], pass: CRS.pass, orders: CRS.orders })); } catch (_) {} }
+  async function crsApi(path, body){
+    if (!CRS_BASE) throw Object.assign(new Error('no server'), { old: true });
+    const r = await fetch(CRS_BASE + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign(crsIds(), body || {})) });
+    if (r.status === 404 && path !== '/course/order') throw Object.assign(new Error('old server'), { old: true });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 404 && !j.why) throw Object.assign(new Error('old server'), { old: true });
+    return j;
+  }
+  let crsMyP = null;
+  function crsMy(){
+    if (!CRS_BASE || !crsHasIds()) return Promise.resolve();
+    return crsMyP || (crsMyP = crsApi('/course/my').then(j => {
+      if (!j || !j.ok) return;
+      const before = new Set(CRS.own);
+      CRS.own = new Set(j.own || []); CRS.pass = j.pass || {}; CRS.orders = j.orders || [];
+      crsSave();
+      const fresh = [...CRS.own].filter(c => !before.has(c) && COURSES_ON.some(x => x.id === c));
+      if (fresh.length) {
+        const c = COURSES_ON.find(x => x.id === fresh[0]);
+        toast(T('Курс «{n}» открыт! Приятного просмотра 🎉', { n: crsName(c) }));
+        if (!$('#buySheet').hidden) $('#buySheet').hidden = true;
+      }
+      crsPaintAll();
+    }).catch(() => {}).finally(() => { crsMyP = null; }));
+  }
+  const crsOrder = cid => CRS.orders.find(o => o.course === cid && (o.st === 'new' || o.st === 'paid'));
+  const crsMins = c => Math.max(1, Math.round((C_LESSONS[c.id] || []).reduce((a, l) => a + (+l.dur || 0), 0) / 60));
+  const crsMetaTxt = c => { const n = (C_LESSONS[c.id] || []).length; return (n === 1 ? T('1 видео') : T('{n} видео', { n })) + ' · ' + T('{m} мин', { m: crsMins(c) }); };
+  const crsCover = c => { const l = (C_LESSONS[c.id] || [])[0]; return l ? jpgUrl(l) : ''; };
+  const crsBtnTxt = c => crsOwns(c.id) ? T('Смотреть') : (crsOrder(c.id) || {}).st === 'paid' ? T('Проверяем оплату') : T('Купить за {p}', { p: crsPrice(c) });
+  function crsCard(c){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'crcard';
+    b.innerHTML = '<span class="crimg"></span><span class="crbody"><span class="crnm"></span><span class="crds"></span><span class="crft"><span class="muted" style="font-size:12px"></span><span class="btn btn-accent"></span></span></span>';
+    const img = b.querySelector('.crimg'); const cv = crsCover(c); if (cv) img.style.backgroundImage = 'url("' + cv + '")';
+    const tag = cTxt(c, 'tag'); if (tag) { const t = document.createElement('span'); t.className = 'crtag'; t.textContent = tag; img.appendChild(t); }
+    if (crsOwns(c.id)) { const o = document.createElement('span'); o.className = 'crown'; o.textContent = T('Куплен'); img.appendChild(o); }
+    b.querySelector('.crnm').textContent = crsName(c);
+    b.querySelector('.crds').textContent = cTxt(c, 'd');
+    b.querySelector('.crft .muted').textContent = crsMetaTxt(c);
+    const bt = b.querySelector('.crft .btn'); bt.textContent = crsBtnTxt(c); if (crsOwns(c.id)) bt.className = 'btn btn-line';
+    b.addEventListener('click', () => crsOpen(c.id));
+    return b;
+  }
+  function crsMini(c){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'crmini';
+    b.innerHTML = '<img alt="" loading="lazy"><span class="stack" style="gap:4px;flex:1;min-width:0"><span class="label" style="font-size:10px"></span><span class="nm"></span></span><span class="btn btn-accent"></span>';
+    const im = b.querySelector('img'); const cv = crsCover(c); if (cv) im.src = cv;
+    b.querySelector('.label').textContent = cTxt(c, 'tag') || crsMetaTxt(c);
+    b.querySelector('.nm').textContent = crsName(c);
+    const bt = b.querySelector('.btn'); bt.textContent = crsOwns(c.id) ? T('Смотреть') : crsPrice(c); if (crsOwns(c.id)) bt.className = 'btn btn-line';
+    b.addEventListener('click', () => crsOpen(c.id));
+    return b;
+  }
+  function crsPaintAll(){
+    const list = $('#courseList'); list.innerHTML = '';
+    COURSES_ON.forEach(c => list.appendChild(crsCard(c)));
+    if (!COURSES_ON.length) list.innerHTML = '<p class="muted" style="font-size:14px;line-height:1.5">' + T('Курсы скоро появятся.') + '</p>';
+    const hl = $('#homeCourseList'); hl.innerHTML = '';
+    COURSES_ON.slice(0, 3).forEach(c => hl.appendChild(crsMini(c)));
+    $('#homeCourses').hidden = !COURSES_ON.length;
+    $('#myCoursesItem').hidden = !COURSES_ON.some(c => crsOwns(c.id));
+    if (!$('#course').hidden && curCourse) crsPaintCourse();
+    crsTick();
+  }
+  function crsPaintCourse(){
+    const c = COURSES_ON.find(x => x.id === curCourse); if (!c) return;
+    const ls = C_LESSONS[c.id] || [];
+    $('#crCover').src = crsCover(c);
+    const tag = cTxt(c, 'tag'); $('#crTag').hidden = !tag; $('#crTag').textContent = tag;
+    $('#crTitle').textContent = crsName(c);
+    $('#crMeta').textContent = crsMetaTxt(c);
+    $('#crDesc').textContent = cTxt(c, 'd');
+    const own = crsOwns(c.id), o = crsOrder(c.id), free = ls.filter(l => l.free).length;
+    const b = $('#crBuy'); b.textContent = own ? T('Смотреть с первого урока') : o && o.st === 'paid' ? T('Проверяем оплату…') : T('Купить за {p}', { p: crsPrice(c) });
+    b.className = own ? 'btn btn-line' : 'btn btn-accent';
+    $('#crBuyNote').textContent = own ? T('Курс твой — смотри сколько угодно.')
+      : o && o.st === 'paid' ? T('Код заказа {c}. Тренер откроет курс, как только увидит платёж.', { c: o.code })
+      : (free ? T('Пробный урок — бесплатно.') + ' ' : '') + T('Оплата один раз — курс остаётся у тебя навсегда.');
+    const g = $('#crLessons'); g.innerHTML = '';
+    ls.forEach(l => g.appendChild(lessonCard(l)));
+  }
+  function crsOpen(cid){
+    const c = COURSES_ON.find(x => x.id === cid); if (!c) { go('courses'); return; }
+    curCourse = cid;
+    crsPaintCourse();
+    go('course');
+    crsMy();
+  }
+  $('#crBuy').addEventListener('click', () => {
+    const c = COURSES_ON.find(x => x.id === curCourse); if (!c) return;
+    if (crsOwns(c.id)) { const l = (C_LESSONS[c.id] || [])[0]; if (l) openLesson(l.id); return; }
+    crsOpenBuy(c.id);
+  });
+  // the purchase sheet
+  let crsBuyC = null, crsBuyCode = '';
+  function crsBuyView(st){ // 'steps' | 'wait' | 'err'
+    $('#buySteps').hidden = st !== 'steps'; $('#buyWait').hidden = st !== 'wait';
+  }
+  async function crsOpenBuy(cid){
+    const c = COURSES_ON.find(x => x.id === cid); if (!c) return;
+    if (crsOwns(cid)) { crsOpen(cid); return; }
+    crsBuyC = c; crsBuyCode = '';
+    $('#buyTitle').textContent = crsName(c);
+    $('#buyPrice').textContent = crsPrice(c);
+    $('#buyErr').hidden = true;
+    const pay = crsPay(c);
+    $('#buySteps ol').hidden = !pay; $('#buyNoPay').hidden = !!pay;
+    $('#buyPay').textContent = T('Оплатить {p} через PayPal', { p: crsPrice(c) });
+    $('#buyPay').href = pay || '#'; $('#buyPay').setAttribute('aria-disabled', 'true');
+    $('#buyCode').textContent = '…';
+    $('#buyCrypto').hidden = !(String(CFG.usdtTrc20 || '').trim() && LANG !== 'ru' && +c.usd > 0);
+    const o = crsOrder(cid);
+    crsBuyView(o && o.st === 'paid' ? 'wait' : 'steps');
+    if (o) crsShowCode(o.code);
+    $('#buySheet').hidden = false;
+    $('#buySheet .sheet').scrollTop = 0;
+    try { sendEv('cb', cid); } catch (_) {}
+    if (!pay) return;
+    try {
+      const j = await crsApi('/course/order', { course: cid, lang: LANG, pid: prof.id || '', name: prof.nick || '' });
+      if (crsBuyC !== c) return;
+      if (j.own) { await crsMy(); crsOpen(cid); $('#buySheet').hidden = true; return; }
+      if (!j.ok || !j.code) throw Object.assign(new Error(j.why || 'order'), { why: j.why });
+      crsShowCode(j.code);
+      if (!CRS.orders.some(x => x.code === j.code)) CRS.orders.unshift({ code: j.code, course: cid, st: j.st || 'new', t: Date.now() });
+      else CRS.orders.forEach(x => { if (x.code === j.code) x.st = j.st || x.st; });
+      crsSave(); crsTick();
+      if (j.st === 'paid') crsBuyView('wait');
+    } catch (e) {
+      if (crsBuyC !== c) return;
+      $('#buyErr').hidden = false;
+      $('#buyErr').textContent = e.old || e.why === 'course' ? T('Покупка этого курса пока не открыта. Напиши тренеру — он поможет.')
+        : e.why === 'many' ? T('Слишком много неоплаченных заказов. Напиши тренеру.')
+        : T('Нет связи с сервером. Проверь интернет и открой окно ещё раз.');
+      $('#buySteps ol').hidden = true;
+    }
+  }
+  function crsShowCode(code){
+    crsBuyCode = code;
+    $('#buyCode').textContent = code; $('#buyWaitCode').textContent = code;
+    $('#buyPay').setAttribute('aria-disabled', 'false');
+    $('#buyPush').hidden = !(typeof window.fedoskinPushOn === 'function' && 'Notification' in window && Notification.permission !== 'granted');
+  }
+  function crsCopy(text, msg){
+    try { navigator.clipboard.writeText(text).then(() => toast(msg), () => toast(T('Выдели код и скопируй вручную'))); } catch (_) { toast(T('Выдели код и скопируй вручную')); }
+  }
+  $('#buyCopy').addEventListener('click', () => { if (crsBuyCode) crsCopy(crsBuyCode, T('Код заказа скопирован')); });
+  // the code goes to the clipboard on the way to PayPal too — one less thing to remember there
+  $('#buyPay').addEventListener('click', () => {
+    if (!crsBuyCode) return;
+    try { navigator.clipboard && navigator.clipboard.writeText(crsBuyCode).catch(() => {}); } catch (_) {}
+    setTimeout(() => toast(T('Код {c} скопирован — вставь его в комментарий к платежу', { c: crsBuyCode })), 150);
+    try { sendEv('cp', crsBuyC && crsBuyC.id); } catch (_) {}
+  });
+  $('#buyPaid').addEventListener('click', async () => {
+    if (!crsBuyCode || !crsBuyC) return;
+    const b = $('#buyPaid'); b.disabled = true;
+    try {
+      const j = await crsApi('/course/paid', { code: crsBuyCode });
+      if (j && j.st) CRS.orders.forEach(x => { if (x.code === crsBuyCode) x.st = j.st; });
+      crsSave(); crsBuyView('wait'); crsPaintAll();
+      if (j && j.st === 'ok') crsMy();
+    } catch (_) { $('#buyErr').hidden = false; $('#buyErr').textContent = T('Нет связи с сервером. Проверь интернет и нажми ещё раз.'); }
+    b.disabled = false;
+  });
+  $('#buyPush').addEventListener('click', async () => { try { await window.fedoskinPushOn(); } catch (_) {} $('#buyPush').hidden = 'Notification' in window && Notification.permission === 'granted'; });
+  $('#buyAsk').addEventListener('click', () => {
+    const c = crsBuyC; $('#buySheet').hidden = true;
+    const text = T('Привет! Вопрос про курс «{n}»', { n: c ? crsName(c) : '' }) + (crsBuyCode ? ' (' + crsBuyCode + ')' : '') + ': ';
+    setTimeout(() => { if (CHAT.on) openChat(text, 'course'); else openContact(text); }, 250);
+  });
+  $('#buyCrypto').addEventListener('click', () => {
+    const c = crsBuyC; if (!c) return; $('#buySheet').hidden = true;
+    curSvc = { id: 'course', name: crsName(c) + (crsBuyCode ? ' (' + crsBuyCode + ')' : ''), usd: +c.usd };
+    setTimeout(() => openCrypto(false), 250);
+  });
+  $('#buyHaveCode').addEventListener('click', () => { $('#buySheet').hidden = true; setTimeout(crsCodeOpen, 250); });
+  $('#buySheet').addEventListener('click', e => { if (e.target.id === 'buySheet') $('#buySheet').hidden = true; });
+  // access codes from the coach
+  function crsCodeOpen(pre){ $('#codeIn').value = pre || ''; $('#codeErr').hidden = true; $('#codeSheet').hidden = false; if (!pre) setTimeout(() => $('#codeIn').focus(), 200); }
+  $('#crCodeOpen').addEventListener('click', () => crsCodeOpen());
+  $('#codeSheet').addEventListener('click', e => { if (e.target.id === 'codeSheet') $('#codeSheet').hidden = true; });
+  $('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#codeGo').click(); });
+  async function crsRedeem(code){
+    const j = await crsApi('/course/redeem', { code });
+    if (!j || !j.ok) throw Object.assign(new Error(j && j.why || 'bad'), { why: j && j.why });
+    await crsMy();
+    return j.course;
+  }
+  $('#codeGo').addEventListener('click', async () => {
+    const code = $('#codeIn').value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const err = t => { $('#codeErr').hidden = false; $('#codeErr').textContent = t; };
+    if (code.length !== 10) { err(T('В коде 10 букв и цифр — проверь, всё ли скопировано.')); return; }
+    const b = $('#codeGo'); b.disabled = true;
+    try { const cid = await crsRedeem(code); $('#codeSheet').hidden = true; setTimeout(() => crsOpen(cid), 250); }
+    catch (e) { err(e.why === 'used' ? T('Этот код уже использован на другом телефоне. Попроси тренера прислать новый.') : e.why === 'bad' ? T('Код не подошёл — проверь буквы или попроси тренера прислать новый.') : T('Нет связи с сервером. Проверь интернет и нажми ещё раз.')); }
+    b.disabled = false;
+  });
+  // keep asking while an order waits and the app is open (the coach usually opens it within minutes to hours)
+  let crsTimer = 0;
+  function crsTick(){
+    clearInterval(crsTimer); crsTimer = 0;
+    if (CRS.orders.some(o => o.st === 'new' || o.st === 'paid')) crsTimer = setInterval(() => { if (!document.hidden) crsMy(); }, 30e3);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && crsHasIds() && (CRS.orders.some(o => o.st === 'new' || o.st === 'paid') || [...CRS.own].some(c => !crsPassOk(c) || CRS.pass[c].exp - Date.now() / 1000 < 12 * 3600))) crsMy(); });
+  crsPaintAll();
+  if (crsHasIds()) setTimeout(crsMy, 1500);
   $('#copyBtn').addEventListener('click', () => {
     const text = $('#code').textContent;
     try { navigator.clipboard.writeText(text).then(() => toast(T('Код скопирован')), () => toast(T('Выдели код и скопируй вручную'))); }
@@ -5570,9 +5908,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   go = function(id){
     _goNav(id);
     if (restoring) return;
-    const st = { s: id, sec: curSection, lid: curLesson ? curLesson.id : null };
+    const st = { s: id, sec: curSection, lid: curLesson ? curLesson.id : null, crs: curCourse };
     const cur = history.state || {};
-    const same = cur.s === st.s && (st.s !== 'lesson' || cur.lid === st.lid) && (st.s !== 'section' || cur.sec === st.sec);
+    const same = cur.s === st.s && (st.s !== 'lesson' || cur.lid === st.lid) && (st.s !== 'section' || cur.sec === st.sec) && (st.s !== 'course' || cur.crs === st.crs);
     if (navReplace && cur.s === 'lesson' && st.s === 'lesson') { if (cur.fs) st.fs = true; try { history.replaceState(st, ''); } catch (_) {} return; }
     if (!same) { try { history.pushState(st, ''); navDepth++; } catch (_) {} }
   };
@@ -5625,6 +5963,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try {
       if (st.s === 'lesson' && st.lid && BY_ID[st.lid]) { if (!(curLesson && curLesson.id === st.lid && !$('#lesson').hidden)) openLesson(st.lid, { keep: true }); }
       else if (st.s === 'section' && st.sec) openSection(st.sec);
+      else if (st.s === 'course' && st.crs) crsOpen(st.crs);
       else go(st.s || 'home');
     } finally { restoring = false; }
   });
@@ -6042,7 +6381,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BY_ID[id]) { openSection(BY_ID[id].sec); openLesson(id); }
     else toast(T('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить'));
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); if (e.data && e.data.type === 'open-chat') { go('review'); openChat(); } if (e.data && e.data.type === 'open-battle') btInbox(true); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); if (e.data && e.data.type === 'open-chat') { go('review'); openChat(); } if (e.data && e.data.type === 'open-battle') btInbox(true); if (e.data && e.data.type === 'open-course') { crsMy(); crsOpen(e.data.id); } });
 
   // ===== language picker =====
   (function langPicker(){
@@ -6132,6 +6471,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
     if (rvc && /^[a-z0-9]{10}$/.test(rvc)) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openReviewForm(rvc), 300); }
+    // courses (12.11.2026): ?c=<course> = a link to a course (posts, «course is open» push); ?ca=<code> = an access code from the coach
+    const cq = qs.get('c'); if (cq && /^[a-z0-9]{2,24}$/.test(cq)) { history.replaceState(history.state, '', location.pathname); setTimeout(() => crsOpen(cq), 300); }
+    const ca = qs.get('ca'); if (ca && /^[a-z0-9]{10}$/.test(ca)) { history.replaceState(history.state, '', location.pathname); setTimeout(() => { go(COURSES_ON.length ? 'courses' : 'home'); crsCodeOpen(ca); }, 400); }
   } catch (_) {}
 })();
 </script>

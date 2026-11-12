@@ -359,6 +359,34 @@
   /stats returns {subscribers, subDays [[msk day, n]], noDate, tee (hero_own tee count), today} (old records read by value); /visits `sd: 1`.
   Admin «Статистика» → «Уведомления» `#pushDays` (`paintSubDays`): Сегодня / Вчера / 7 дней / с футболкой + 14-day bars. Phones that turned
   notifications off are not counted. Admin «версия 45». The owner must update the server code.
+- Paid video courses (owner 12.11.2026 «раздел КУРСЫ… кнопку добавить курс… пока курсов нет — меню без курсов… место под ссылку на оплату
+  (paypal)… продумай оплату и получение курса. Он будет чисто в видео формате»). Data: config.js `courses` = [{id /^[a-z0-9]{2,24}$/,
+  n {ru,en}, d {ru,en}, tag {ru,en}, usd, pay (own PayPal link), hidden}] + `payUrl` (default PayPal link); course videos = lessons with
+  `sec: 'course:<id>'` (+ `free: true` = preview anyone can watch), ordered like other lessons. Other languages fall back to EN texts.
+  App: LESSONS excludes course lessons (no sections/search/«Новые уроки»/push); `C_LESSONS[cid]` copies with sec = course name + `course`
+  in BY_ID. Tab «Курсы» (`TABS.splice`) and home block `#homeCourses` ONLY when a visible course has ≥1 video. Screens `#courses`
+  (`.crcard`, old look) and `#course` (cover, desc, «Купить за $X», `#crLessons` lesson cards with `.llock` / «Пробный урок»); history
+  state `crs`. Locked card / openLesson / swipe ⇒ `crsOpenBuy` (swipe list = only watchable). Buy sheet `#buySheet`: 1 order code
+  (POST /course/order → «FT-XXXXX», copied also when tapping PayPal) 2 «Оплатить $X через PayPal» (course.pay || CFG.payUrl; none ⇒
+  «напиши тренеру») 3 «Я оплатил» (POST /course/paid) ⇒ wait view; + crypto (curSvc pseudo-service), ask coach (chat/messengers),
+  «Есть код доступа» → `#codeSheet` (POST /course/redeem; link `?ca=<code>`). Buyer = random `fedoskin-crs-id`/`-key` (server keeps the
+  key's hash); state `fedoskin-crs` {own, pass, orders}; POST /course/my at start, on «Курсы», on visible, every 30 s while an order
+  waits ⇒ toast «Курс открыт» + repaint. Video: paid course lesson ⇒ `fileFor` uses the COURSE pass `<cid>.<exp>.<sig>`; `?c=<cid>`
+  opens a course; push `{course}` (sw.js) ⇒ `?c=` / message open-course. Events cb (opened buy) / cp (to PayPal).
+  Worker: R2 files of course videos are `crs-<cid>-<id>-<rand>.mp4`; /v/ → `crsNeed()`: KV `crs` {c names/prices, open [free/moved-out
+  crs- files], lock {file: cid}} ⇒ needs `cpassOk(p, cid)` (fail-closed for crs- prefix), else the normal pass; private cache. D1
+  crs_dev / crs_ord (code, id, pid, course, usd, st new|paid|ok|no, t, tp, td, co, lang, name) / crs_own / crs_code. Telegram note to the
+  coach on order and on «Я оплатил» (crsTell, if the bot is on). Admin endpoints /course/list|grant|deny|undo|code|delcode|sync|apass;
+  grant pushes to the buyer's phone via bt_sub(pid). /visits `crs: 1`.
+  Admin tab «Курсы» (`data-pane="courses"`, admin «версия 46»): how-it-works, PayPal link `#crPayUrl` (+ «Где взять ссылку»), course list
+  `#crList` + sheet `#crSheet` (names/descr/tag ru+en, price, own link, show, videos ↑↓ + «пробный», «+ Добавить видео в курс» → Add tab
+  with the course preselected, R2 forced, id prefix c..), orders `#crOrders` («Оплата пришла — открыть курс» / «Отклонить» / «Забрать
+  доступ», funnel line), access codes with ready messages (EN simple + slang, ES, PT, RU). Lesson list groups «Курс «…»». Publish calls
+  POST /course/sync BEFORE committing (paid course videos ⇒ refuses to publish when the server is old). Kinescope videos in a course are
+  NOT protected (pill warns). Tested: worker on node:sqlite (31 checks: passes, order/paid/grant/undo, codes, funnel), app headless en
+  (no courses ⇒ no tab; tab, home block, list, page, free preview plays with the normal pass, locked ⇒ buy sheet, paid ⇒ wait, grant ⇒
+  toast + paid lesson with the course pass), admin with mocked GitHub (create course, pay link, add-video preset, orders, grant).
+  The owner must update the server code; PayPal confirms by hand (no PayPal API yet — Lemon Squeezy / PayPal webhooks later).
 - Crypto payment (owner 07.11.2026, option 1 «свой кошелёк»): service page `#cryptoBtn` «Оплатить криптой (USDT)» — only
   non-ru UI (rubles there; RU law 259-FZ) and services with a $ price → `#cryptoSheet`: amount = service USD in USDT
   (copy), network USDT · TRON (TRC-20), QR drawn from the address by `vendor/qr.js` (own encoder: byte mode, ECC M, v1–10;

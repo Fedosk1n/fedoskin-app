@@ -61,8 +61,11 @@ export default {
     // lesson videos from R2 — only with a pass the app got a moment ago (owner 09.11.2026: «ссылки на видео открытые — исправь»)
     if (path.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD')) {
       try {
-        if (!(await passOk(env, new URL(req.url).searchParams.get('p')))) return new Response(JSON.stringify({ error: 'pass' }), { status: 403, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
-        return await r2Serve(req, env, path.slice(3), cors);
+        const vkey = path.slice(3), vp = new URL(req.url).searchParams.get('p');
+        // paid course videos (12.11.2026): only with the pass of THAT course, given to phones that bought it
+        const need = await crsNeed(env, vkey);
+        if (!(need ? await cpassOk(env, vp, need) : await passOk(env, vp))) return new Response(JSON.stringify({ error: 'pass' }), { status: 403, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        return await r2Serve(req, env, vkey, cors, need ? { ok: R2_KEY.test(vkey) } : undefined);
       } catch (e) { return json({ error: String(e && e.message || e) }, 500); }
     }
     if (path === '/pass' && req.method === 'GET') {
@@ -97,9 +100,11 @@ export default {
       if (path === '/chat/push' && req.method === 'POST') return await chatPush(req, env, json);
       if (path === '/tg/hook' && req.method === 'POST') return await tgHook(req, env, json);
       if (path === '/rv/submit' && req.method === 'POST') return await rvSubmit(req, env, json);
+      // paid video courses (12.11.2026): order → PayPal → the coach confirms in the admin → the course opens on the phone
+      if (['/course/order', '/course/paid', '/course/my', '/course/redeem'].includes(path) && req.method === 'POST') return await crsPublic(req, env, path, json);
       // hero battles (10.11.2026): challenge anyone from the rating, the judges decide at random
       if ((path.startsWith('/bt/') || path.startsWith('/hero/')) && req.method === 'POST') return await battle(req, env, path, json);
-      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list' && path !== '/tg/status') return json({ error: 'not found' }, 404);
+      if (req.method !== 'POST' && path !== '/stats' && path !== '/visits' && !path.startsWith('/r2/') && path !== '/rv/list' && path !== '/tg/status' && path !== '/course/list' && path !== '/course/apass') return json({ error: 'not found' }, 404);
 
       if (path === '/subscribe') {
         const { sub, lang } = await req.json();
@@ -148,6 +153,7 @@ export default {
       }
       if (path.startsWith('/r2/')) return await r2Admin(req, env, path, json);
       if (path.startsWith('/rv/')) return await rvAdmin(req, env, path, json);
+      if (path.startsWith('/course/')) return await crsAdmin(req, env, path, json);
       if (path === '/tg/setup' || path === '/tg/status' || path === '/tg/trtest') return await tgAdmin(req, env, path, json);
       if (path === '/notify') {
         const body = await req.json();
@@ -222,6 +228,14 @@ async function passOk(env, p) {
   const m = /^([0-9a-z]{1,10})\.([A-Za-z0-9_-]{32})$/.exec(p || ''); if (!m) return false;
   const exp = parseInt(m[1], 36); if (!(exp > Date.now() / 1000) || exp > Date.now() / 1000 + PASS_TTL + 60) return false;
   return (await passSig(env, exp)) === m[2];
+}
+// course passes: "<course>.<expiry, base 36>.<signature>" — the same secret, another message, so a lesson pass never opens a course
+async function cpassSig(env, cid, exp) { return b64u(await crypto.subtle.sign('HMAC', await passKey(env), enc.encode('c1.' + cid + '.' + exp))).slice(0, 32); }
+async function cpassMake(env, cid) { const exp = Math.floor(Date.now() / 1000) + PASS_TTL; return { p: cid + '.' + exp.toString(36) + '.' + await cpassSig(env, cid, exp), exp }; }
+async function cpassOk(env, p, cid) {
+  const m = /^([a-z0-9]{2,24})\.([0-9a-z]{1,10})\.([A-Za-z0-9_-]{32})$/.exec(p || ''); if (!m || m[1] !== cid) return false;
+  const exp = parseInt(m[2], 36); if (!(exp > Date.now() / 1000) || exp > Date.now() / 1000 + PASS_TTL + 60) return false;
+  return (await cpassSig(env, cid, exp)) === m[3];
 }
 async function r2Serve(req, env, key, cors, opt) {
   const h = new Headers(cors);
@@ -878,6 +892,11 @@ function schema(db) {
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
     db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS hero_eq (id TEXT PRIMARY KEY, eq TEXT) WITHOUT ROWID'),
+    // paid courses (12.11.2026): buyer phones (random id + key hash), orders, owned courses, access codes
+    db.prepare('CREATE TABLE IF NOT EXISTS crs_dev (id TEXT PRIMARY KEY, kh TEXT, t INTEGER) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS crs_ord (code TEXT PRIMARY KEY, id TEXT, pid TEXT, course TEXT, usd REAL, st TEXT, t INTEGER, tp INTEGER, td INTEGER, co TEXT, lang TEXT, name TEXT) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS crs_own (id TEXT NOT NULL, course TEXT NOT NULL, t INTEGER, via TEXT, PRIMARY KEY (id, course)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS crs_code (code TEXT PRIMARY KEY, course TEXT, note TEXT, t INTEGER, used INTEGER NOT NULL DEFAULT 0, uid TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
   ]).catch(e => { schemaReady = null; throw e; });
@@ -918,7 +937,7 @@ async function ev(req, env, json) {
   if (!env.DB) return json({ ok: false, nodb: true });
   const b = JSON.parse((await req.text()) || '{}');
   const raw = String(b.id || '').slice(0, 40);
-  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp|sv|so|cta|ctas)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
+  if (!/^[\w-]{4,40}$/.test(raw) || !/^(tg|cr|crp|sv|so|cta|ctas|cb|cp)$/.test(b.e || '')) return json({ error: 'bad event' }, 400);
   const db = env.DB;
   await schema(db);
   const id = await hash('v1:' + raw), day = mskDay(), src = cleanSrc(b.s);
@@ -936,6 +955,10 @@ async function ev(req, env, json) {
   if (b.e === 'cta' || b.e === 'ctas') { // calm «need help?» call in a lesson (08.11.2026): ctas = chip shown, cta = tapped (v = card | chip)
     const where = /^(card|chip)$/.test(b.v || '') ? b.v : '';
     await db.batch([srcAdd(db, day, src, b.e)].concat(b.e === 'cta' && where ? [srcAdd(db, day, src, 'cta:' + where)] : []));
+    return json({ ok: true });
+  }
+  if (b.e === 'cb' || b.e === 'cp') { // courses (12.11.2026): cb = opened «Купить», cp = went to PayPal; once a day per person
+    await db.batch(await seen([b.e]));
     return json({ ok: true });
   }
   if (b.e !== 'tg') { // crypto payment: cr = opened the «Оплата криптой» window, crp = tapped «Я оплатил» (07.11.2026)
@@ -981,7 +1004,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,
@@ -997,6 +1020,182 @@ async function visits(env, json) {
       since: (svSince.results[0] || {}).since || null,
       countries: { today: coT.results.map(r => [r.co, r.e, r.n]), d7: co7.results.map(r => [r.co, r.e, r.n]), all: coA.results.map(r => [r.co, r.e, r.n]) } },
   });
+}
+
+// ===== paid video courses (owner 12.11.2026 «раздел КУРСЫ… ссылку на оплату (paypal)… продумай с оплатой и получением курса») =====
+// No payment API yet, so the coach confirms each payment himself:
+//   app «Купить» → POST /course/order → order code «FT-XXXXX» (the buyer writes it in the PayPal note) + a Telegram note to the coach
+//   → the buyer pays by the course's PayPal link → «Я оплатил» → POST /course/paid (another Telegram note)
+//   → admin «Курсы» → «Оплата пришла — открыть» → POST /course/grant → crs_own row + a push to the buyer's phone
+//   → the app (POST /course/my) gets passes for its courses and plays them.
+// Access codes (POST /course/code) open a course without an order: paid another way, a gift, a new phone.
+// The buyer = a random id + key made by the app (only the key's hash is kept); `pid` = the app's profile id (for the push).
+// Course video files are named crs-<course>-… in R2 and are given only with that course's pass (/v/ above). KV 'crs' (from
+// the admin at every publish, POST /course/sync) = course names and prices + `open` (crs- files that are free preview
+// lessons or moved out of the course) + `lock` (older files that now belong to a course).
+const CRS_ID = /^[a-z0-9]{2,24}$/, CRS_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const crsOrdCode = () => 'FT-' + Array.from(crypto.getRandomValues(new Uint8Array(5)), x => CRS_ABC[x % CRS_ABC.length]).join('');
+const CRS_ORD = /^FT-[A-Z0-9]{5}$/;
+let crsMetaC = null, crsMetaT = 0;
+async function crsMeta(env) {
+  if (crsMetaC && Date.now() - crsMetaT < 60e3) return crsMetaC;
+  let m = null; try { m = JSON.parse((await env.PUSH.get('crs')) || 'null'); } catch (_) {}
+  crsMetaC = m && typeof m === 'object' ? m : { c: {}, open: [], lock: {} }; crsMetaT = Date.now();
+  return crsMetaC;
+}
+async function crsNeed(env, key) {
+  const meta = await crsMeta(env);
+  const l = meta.lock && meta.lock[key]; // a file that belongs to a course now (also one moved from another course)
+  if (l && CRS_ID.test(l)) return l;
+  const m = /^crs-([a-z0-9]{2,24})-/.exec(key || '');
+  return m && !(meta.open || []).includes(key) ? m[1] : ''; // uploaded for a course: closed unless it is a free / moved-out one
+}
+async function crsAuth(db, b) {
+  const id = String(b.id || ''), k = String(b.k || '');
+  if (!/^[A-Za-z0-9_-]{16,40}$/.test(id) || !/^[A-Za-z0-9_-]{24,64}$/.test(k)) return null;
+  const kh = await hash('crs:' + k);
+  const r = await db.prepare('SELECT kh FROM crs_dev WHERE id = ?').bind(id).first();
+  if (!r) { await db.prepare('INSERT OR IGNORE INTO crs_dev (id, kh, t) VALUES (?, ?, ?)').bind(id, kh, Date.now()).run(); const r2 = await db.prepare('SELECT kh FROM crs_dev WHERE id = ?').bind(id).first(); return r2 && r2.kh === kh ? id : null; }
+  return r.kh === kh ? id : null;
+}
+const CRS_LANGS = ['ru', 'en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh'];
+const CRS_PUSH_T = { ru: 'Курс открыт! 🎉', en: 'Your course is open! 🎉', es: '¡Tu curso está abierto! 🎉', pt: 'Seu curso está liberado! 🎉', fr: 'Ton cours est ouvert ! 🎉', de: 'Dein Kurs ist freigeschaltet! 🎉', ja: 'コースが開きました！🎉', ko: '코스가 열렸어요! 🎉', zh: '课程已开通！🎉' };
+const CRS_PUSH_B = { ru: '«{n}» — можно смотреть', en: '“{n}” — start watching', es: '«{n}»: ya puedes verlo', pt: '“{n}” — já pode assistir', fr: '« {n} » — tu peux regarder', de: '„{n}“ — jetzt ansehen', ja: '「{n}」— 視聴できます', ko: '‘{n}’ — 지금 볼 수 있어요', zh: '「{n}」——现在可以观看' };
+async function crsTell(env, text) { // a note to the coach's Telegram (the chat bot), when it is connected
+  try { const owner = await env.PUSH.get('tg:owner'); if (env.TG_TOKEN && owner) await tg(env, 'sendMessage', { chat_id: owner, text }); } catch (_) {}
+}
+const crsFlag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
+async function crsPasses(env, db, id) {
+  const rs = await db.prepare('SELECT course FROM crs_own WHERE id = ?').bind(id).all();
+  const own = (rs.results || []).map(r => r.course), pass = {};
+  for (const c of own) pass[c] = await cpassMake(env, c);
+  return { own, pass };
+}
+async function crsPublic(req, env, path, json) {
+  if (!env.DB) return json({ ok: false, why: 'nodb' }, 409);
+  const db = env.DB; await schema(db);
+  const b = JSON.parse((await req.text()) || '{}');
+  const id = await crsAuth(db, b);
+  if (!id) return json({ ok: false, why: 'auth' }, 403);
+  const meta = await crsMeta(env), now = Date.now();
+  if (path === '/course/my') {
+    const { own, pass } = await crsPasses(env, db, id);
+    const ord = await db.prepare('SELECT code, course, st, t FROM crs_ord WHERE id = ? AND t > ? ORDER BY t DESC LIMIT 20').bind(id, now - 60 * 864e5).all();
+    return json({ ok: true, own, pass, orders: (ord.results || []).map(r => ({ code: r.code, course: r.course, st: r.st, t: r.t })) });
+  }
+  if (path === '/course/order') {
+    const cid = String(b.course || ''), c = meta.c && meta.c[cid];
+    if (!CRS_ID.test(cid) || !c) return json({ ok: false, why: 'course' }, 404);
+    if (await db.prepare('SELECT 1 AS x FROM crs_own WHERE id = ? AND course = ?').bind(id, cid).first()) return json({ ok: true, own: true });
+    const old = await db.prepare("SELECT code, st FROM crs_ord WHERE id = ? AND course = ? AND st IN ('new', 'paid') ORDER BY t DESC LIMIT 1").bind(id, cid).first();
+    if (old) return json({ ok: true, code: old.code, st: old.st });
+    const open = await db.prepare("SELECT COUNT(*) AS n FROM crs_ord WHERE id = ? AND st IN ('new', 'paid')").bind(id).first();
+    if (open && open.n >= 5) return json({ ok: false, why: 'many' }, 429);
+    const co = /^[A-Z]{2}$/.test((req.cf && req.cf.country) || '') ? req.cf.country : 'XX';
+    const lang = CRS_LANGS.includes(b.lang) ? b.lang : 'en', name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    const pid = /^[\w-]{4,40}$/.test(String(b.pid || '')) ? String(b.pid) : '';
+    for (let i = 0; i < 5; i++) {
+      const code = crsOrdCode();
+      const r = await db.prepare("INSERT OR IGNORE INTO crs_ord (code, id, pid, course, usd, st, t, co, lang, name) VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?)").bind(code, id, pid, cid, +c.usd || 0, now, co, lang, name).run();
+      if (r.meta && r.meta.changes) {
+        await crsTell(env, '🛒 Новый заказ курса «' + (c.n || cid) + '» — $' + (+c.usd || 0) + '\nКод заказа: ' + code + '\n' + crsFlag(co) + ' ' + co + ' · язык ' + lang + (name ? ' · ' + name : '') +
+          '\n\nКлиент перешёл к оплате. Когда деньги придут в PayPal (в комментарии будет этот код) — откройте доступ: админка → Курсы → Заказы.');
+        return json({ ok: true, code, st: 'new' });
+      }
+    }
+    return json({ ok: false, why: 'retry' }, 500);
+  }
+  if (path === '/course/paid') {
+    const code = String(b.code || '').toUpperCase();
+    if (!CRS_ORD.test(code)) return json({ ok: false, why: 'bad' }, 400);
+    const r = await db.prepare("UPDATE crs_ord SET st = 'paid', tp = ? WHERE code = ? AND id = ? AND st = 'new'").bind(now, code, id).run();
+    if (r.meta && r.meta.changes) {
+      const o = await db.prepare('SELECT course, usd, co, name FROM crs_ord WHERE code = ?').bind(code).first();
+      const c = (meta.c && meta.c[o.course]) || {};
+      await crsTell(env, '💰 Клиент нажал «Я оплатил»: курс «' + (c.n || o.course) + '» — $' + o.usd + '\nКод заказа: ' + code + ' · ' + crsFlag(o.co) + (o.name ? ' ' + o.name : '') +
+        '\n\nПроверьте PayPal. Деньги пришли → админка → Курсы → Заказы → «Оплата пришла — открыть курс».');
+    }
+    const o = await db.prepare('SELECT st FROM crs_ord WHERE code = ? AND id = ?').bind(code, id).first();
+    return json({ ok: !!o, st: o ? o.st : '' });
+  }
+  if (path === '/course/redeem') {
+    const code = String(b.code || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!rvOkCode(code)) return json({ ok: false, why: 'bad' }, 400);
+    const r = await db.prepare('UPDATE crs_code SET used = ?, uid = ? WHERE code = ? AND used = 0').bind(now, id, code).run();
+    if (!r.meta || !r.meta.changes) {
+      const x = await db.prepare('SELECT used, uid, course FROM crs_code WHERE code = ?').bind(code).first();
+      if (x && x.uid === id) return json({ ok: true, course: x.course, again: true }); // the same phone again: fine
+      return json({ ok: false, why: x ? 'used' : 'bad' });
+    }
+    const x = await db.prepare('SELECT course FROM crs_code WHERE code = ?').bind(code).first();
+    await db.prepare('INSERT OR IGNORE INTO crs_own (id, course, t, via) VALUES (?, ?, ?, ?)').bind(id, x.course, now, 'code:' + code).run();
+    return json({ ok: true, course: x.course });
+  }
+  return json({ ok: false }, 404);
+}
+async function crsAdmin(req, env, path, json) {
+  const meta = await crsMeta(env);
+  if (path === '/course/apass') { // the admin plays and cuts course videos too
+    const pass = {}; for (const c of Object.keys(meta.c || {})) if (CRS_ID.test(c)) pass[c] = (await cpassMake(env, c)).p;
+    return json({ ok: true, pass });
+  }
+  if (path === '/course/sync') {
+    const b = await req.json().catch(() => ({})), c = {}, lock = {};
+    Object.entries(b.c || {}).forEach(([k, v]) => { if (CRS_ID.test(k) && v) c[k] = { n: String(v.n || '').slice(0, 80), usd: +v.usd || 0 }; });
+    const open = (Array.isArray(b.open) ? b.open : []).map(String).filter(x => R2_KEY.test(x)).slice(0, 2000);
+    Object.entries(b.lock || {}).forEach(([k, v]) => { if (R2_KEY.test(k) && CRS_ID.test(String(v))) lock[k] = String(v); });
+    const m = { c, open, lock, t: Date.now() };
+    await env.PUSH.put('crs', JSON.stringify(m)); crsMetaC = m; crsMetaT = Date.now();
+    return json({ ok: true });
+  }
+  if (!env.DB) return json({ error: 'no-db' }, 409);
+  const db = env.DB; await schema(db);
+  if (path === '/course/list') {
+    const [ord, own, codes, fun] = await db.batch([
+      db.prepare('SELECT code, id, course, usd, st, t, tp, td, co, lang, name FROM crs_ord ORDER BY t DESC LIMIT 300'),
+      db.prepare('SELECT course, COUNT(*) AS n FROM crs_own GROUP BY course'),
+      db.prepare('SELECT code, course, note, t, used FROM crs_code ORDER BY t DESC LIMIT 200'),
+      db.prepare("SELECT kind, SUM(n) AS n FROM src WHERE kind IN ('u:cb', 'u:cp') GROUP BY kind"),
+    ]);
+    return json({ ok: true, orders: ord.results || [], owners: Object.fromEntries((own.results || []).map(r => [r.course, r.n])), codes: codes.results || [], funnel: Object.fromEntries((fun.results || []).map(r => [r.kind.slice(2), r.n])), meta });
+  }
+  const b = JSON.parse((await req.text()) || '{}');
+  if (path === '/course/grant' || path === '/course/deny' || path === '/course/undo') {
+    const code = String(b.code || '').toUpperCase(); if (!CRS_ORD.test(code)) return json({ error: 'bad' }, 400);
+    const o = await db.prepare('SELECT * FROM crs_ord WHERE code = ?').bind(code).first(); if (!o) return json({ error: 'not found' }, 404);
+    const now = Date.now();
+    if (path === '/course/deny') { await db.prepare("UPDATE crs_ord SET st = 'no', td = ? WHERE code = ?").bind(now, code).run(); return json({ ok: true }); }
+    if (path === '/course/undo') { // access opened by mistake: take it back
+      await db.batch([db.prepare("UPDATE crs_ord SET st = 'paid', td = NULL WHERE code = ?").bind(code), db.prepare('DELETE FROM crs_own WHERE id = ? AND course = ? AND via = ?').bind(o.id, o.course, 'ord:' + code)]);
+      return json({ ok: true });
+    }
+    await db.batch([db.prepare("UPDATE crs_ord SET st = 'ok', td = ? WHERE code = ?").bind(now, code), db.prepare('INSERT OR IGNORE INTO crs_own (id, course, t, via) VALUES (?, ?, ?, ?)').bind(o.id, o.course, now, 'ord:' + code)]);
+    let pushed = false;
+    try { // tell the buyer's phone
+      const sub = o.pid && await db.prepare('SELECT sub, lang FROM bt_sub WHERE id = ?').bind(o.pid).first();
+      if (sub && sub.sub) {
+        const L = CRS_PUSH_T[o.lang] ? o.lang : (CRS_PUSH_T[sub.lang] ? sub.lang : 'en'), c = (meta.c && meta.c[o.course]) || {};
+        const res = await sendPush(JSON.parse(sub.sub), JSON.stringify({ title: CRS_PUSH_T[L], body: CRS_PUSH_B[L].replace('{n}', c.n || ''), tag: 'course-' + o.course, course: o.course }), await vapid(env)).catch(() => null);
+        pushed = !!(res && res.ok);
+      }
+    } catch (_) {}
+    return json({ ok: true, pushed });
+  }
+  if (path === '/course/code') {
+    const cid = String(b.course || ''); if (!CRS_ID.test(cid)) return json({ error: 'bad' }, 400);
+    for (let i = 0; i < 5; i++) {
+      const code = rvCode();
+      const r = await db.prepare('INSERT OR IGNORE INTO crs_code (code, course, note, t) VALUES (?, ?, ?, ?)').bind(code, cid, String(b.note || '').slice(0, 80), Date.now()).run();
+      if (r.meta && r.meta.changes) return json({ ok: true, code });
+    }
+    return json({ error: 'try again' }, 500);
+  }
+  if (path === '/course/delcode') {
+    if (!rvOkCode(b.code)) return json({ error: 'bad' }, 400);
+    await db.prepare('DELETE FROM crs_code WHERE code = ? AND used = 0').bind(b.code).run();
+    return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
 }
 
 // ===== reviews from paying clients (owner 09.11.2026 «оставить отзыв может только клиент, который оплатил») =====
