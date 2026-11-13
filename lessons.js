@@ -225,6 +225,16 @@ window.LESSONS_DATA = [
   }
  },
  {
+  "id": "fr-one-hand-freeze",
+  "sec": "Freezes",
+  "name": "one hand freeze",
+  "dur": 239,
+  "ru": "",
+  "added": "2026-11-13",
+  "pv": true,
+  "r2": "fr-one-hand-freeze-psj6sn9b.mp4"
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
