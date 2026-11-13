@@ -163,6 +163,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "fr-one-hand-freeze": {
+  "src": "r2:fr-one-hand-freeze-psj6sn9b.mp4",
+  "every": 2,
+  "n": 120,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
  "tk-monkey": {
   "src": "r2:tk-monkey-5l5vx1ua.mp4",
   "every": 0.5,
@@ -289,10 +298,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "fr-one-hand-freeze": {
-  "src": "r2:fr-one-hand-freeze-psj6sn9b.mp4",
-  "every": 2,
-  "n": 120,
+ "fr-turtle-freeze-variations": {
+  "src": "r2:fr-turtle-freeze-variations-qwmri071.mp4",
+  "every": 3,
+  "n": 119,
   "w": 320,
   "h": 180,
   "cols": 10,
