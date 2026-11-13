@@ -497,7 +497,7 @@ body.chatmode .tabs{display:none}
 .gseg button .gh svg{width:100%;height:100%;display:block}
 .gseg button[aria-checked="true"]{border-color:var(--accent);background:rgba(226,97,26,.12)}
 #lessonUl .ulbar{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin:8px 0 6px;overflow:hidden}
-#lessonUl .ulbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+#lessonUl .ulbar i{display:block;height:100%;background:#3BD16F;border-radius:3px}
 #lessonUl small{display:block;font-size:12px;opacity:.8;line-height:1.4}
 .btresr{display:block;font-style:normal;font-size:12px;font-weight:700;color:#F2CC55;margin-top:6px}
 /* mythic (0.5 %): red light, the whole arena trembles slightly, red banner and glow */
@@ -605,6 +605,18 @@ body.chatmode .tabs{display:none}
 .ctacard .ct span{display:block;margin-top:3px;font-size:13px;line-height:1.4;color:var(--soft,#B9B9BE)}
 .ctacard .ct em{display:inline-block;margin-top:7px;font-style:normal;font-size:13px;font-weight:700;color:#7BE3A0}
 .ctacard svg{flex:none;width:18px;height:18px;color:rgba(123,227,160,.7)}
+/* progress of studying the battle move of this lesson (13.11.2026: «не очень заметную шкалу или кружочек… с зелёной шкалой») */
+.ulring{position:absolute;left:12px;bottom:12px;z-index:5;width:32px;height:32px;padding:0;border:0;border-radius:16px;background:rgba(11,11,12,.45);display:grid;place-items:center;opacity:.72;cursor:pointer;transition:opacity .3s}
+.ulring svg{position:absolute;inset:2px;width:28px;height:28px;transform:rotate(-90deg)}
+.ulring circle{fill:none;stroke-width:3.2}
+.ulring .tr{stroke:rgba(255,255,255,.16)}
+.ulring .pg{stroke:#3BD16F;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:94.25;transition:stroke-dashoffset .6s ease}
+.ulring span{font-size:12px;line-height:1;position:relative}
+.ulring.mute{opacity:.5} .ulring.mute .pg{stroke:#8a8a8f}
+.ulring.done{opacity:.95}
+body.fsmode:not(.fs-vert) .ulring{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 72px);left:max(14px, env(safe-area-inset-left,0px))}
+body.fsmode.fs-hide:not(.fs-vert) .ulring{top:calc(env(safe-area-inset-top,0px) + 14px)}
+.stage.swiping .ulring{opacity:0}
 .ctachip{position:absolute;left:12px;top:12px;z-index:6;max-width:calc(100% - 24px);display:flex;align-items:center;gap:2px;padding:0;border-radius:14px;background:rgba(11,11,12,.74);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#F2EFE8;border:1px solid rgba(255,255,255,.08);opacity:0;translate:0 -6px;transition:opacity .45s ease,translate .45s ease;pointer-events:none}
 .ctachip.show{opacity:1;translate:0 0;pointer-events:auto}
 .ctachip .go{display:block;padding:9px 4px 9px 13px;background:none;border:0;color:inherit;font:600 13px/1.3 var(--body,inherit);text-align:left;cursor:pointer}
@@ -1073,6 +1085,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="swlabel" id="pullLabel" aria-hidden="true"><b>↑</b><i id="pullText">Подробнее</i></div>
       <div class="swend" id="swEnd" aria-hidden="true"></div>
       <div class="swhint" id="swHint" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Листай вбок — соседний урок</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
+      <button class="ulring" id="ulRing" type="button" hidden aria-label="Изучение элемента для батла"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="tr" cx="18" cy="18" r="15"/><circle class="pg" id="ulRingPg" cx="18" cy="18" r="15"/></svg><span id="ulRingI">🎬</span></button>
       <div class="ctachip" id="ctaChip" role="status" aria-live="polite"><button class="go" id="ctaGo" type="button">Не получается? Федоскин поможет <i>→</i></button><button class="x" id="ctaX" type="button" aria-label="Скрыть">×</button></div>
       <div class="ctachip vpnchip" id="vpnChip" role="status" aria-live="polite"><span class="go" id="vpnText"></span><button class="x" id="vpnX" type="button" aria-label="Скрыть">×</button></div>
       <div class="vload" id="vload" hidden aria-hidden="true"><video muted loop playsinline preload="auto"></video><i></i></div>
@@ -2830,7 +2843,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       $('#lessonDesc').textContent = txt; $('#lessonDesc').hidden = !txt;
     }
     $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : l.course ? T('Ещё в курсе') : T('Ещё в разделе');
-    try { ulPaint(l); } catch (_) {} // BT / BT_NAME are defined further down (a lesson can open at start-up)
+    try { ulRingDoneT = 0; ulPaint(l); } catch (_) {} // BT / BT_NAME are defined further down (a lesson can open at start-up)
     $('#badgeOwn').hidden = true;
     loadSubs(l);
     setLoop(null);
@@ -2962,7 +2975,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const pt = t => rot ? { x: t.clientY, y: -t.clientX } : { x: t.clientX, y: t.clientY }; // sideways picture (fs-rot): its «sideways» is the screen's up/down
     stage.addEventListener('touchstart', e => {
       if (e.touches.length !== 1 || !curLesson || $('#lesson').hidden || !$('#badgeOwn').hidden) { mode = 0; return; }
-      if (e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom') || n.classList.contains('fsghost')))) { mode = 0; return; }
+      if (e.composedPath().some(n => n.id === 'ulRing' || (n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom') || n.classList.contains('fsghost'))))) { mode = 0; return; }
       const t = e.touches[0];
       // the screen's side edges are for «back» (our gesture on iPhone, the phone's own on Android / in browsers)
       if (t.clientX < EDGE_BACK || t.clientX > window.innerWidth - EDGE_BACK) { mode = 0; return; }
@@ -3603,7 +3616,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#btnPlay').addEventListener('click', () => { if (P.t >= P.dur) seekTo(P.loop ? P.loop.a : 0); setPlaying(!P.playing); });
   $('#stage').addEventListener('click', e => {
     // composedPath: the buttons redraw their icons on click, so e.target may already be gone from the page
-    if (e.composedPath().some(n => n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC' || n.id === 'btnSubs' || n.id === 'fsSubsC')) return;
+    if (e.composedPath().some(n => n.id === 'ulRing' || n.id === 'bigPlay' || n.id === 'btnFs' || n.id === 'btnMute' || n.id === 'fsInfo' || n.id === 'fsFull' || n.id === 'fsSoundC' || n.id === 'btnSubs' || n.id === 'fsSubsC')) return;
     // taps on the full-screen bars are theirs (their buttons may close full screen before this runs)
     if (e.composedPath().some(n => n.id === 'fsGhost')) return;
     const onBar = e.composedPath().some(n => n.classList && (n.classList.contains('fstop') || n.classList.contains('fsbottom')));
@@ -5016,7 +5029,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function ulCovPct(l){ const n = Math.max(1, Math.ceil(l.dur || 1)), bits = ulCovCache[l.id] || (ulCovCache[l.id] = ulBits(l)); let c = 0;
     for (let k = 0; k < n; k++) if (bits[k >> 3] & (1 << (k & 7))) c++; return c / n; }
   const ulFull = l => ulCovPct(l) >= 0.97 || (l.dur > 0 && Math.ceil(l.dur) - Math.round(ulCovPct(l) * Math.ceil(l.dur)) <= 2); // the last second or two may be missed
-  const ulViews = l => Math.min(3, (stats.watched[l.id] || 0) / Math.max(1, l.dur || 1));
+  // only playback WITH SOUND counts for studying (owner 13.11.2026 «без звука не считаются, чтобы не абузили просмотры»; slow motion,
+  // where the app itself turns the sound off, counts): stats.ulw = seconds per lesson, coverage marked only then too
+  if (!stats.ulw || typeof stats.ulw !== 'object') stats.ulw = {};
+  const ulViews = l => Math.min(3, (stats.ulw[l.id] || 0) / Math.max(1, l.dur || 1));
   const ulStudied = l => ulFull(l) && ulViews(l) >= 2.98;
   let ulOld = null; try { ulOld = JSON.parse(localStorage.getItem('fedoskin-ul-old') || 'null'); } catch (_) {}
   if (!Array.isArray(ulOld)) { // first run with the new rule: keep what this phone could already use
@@ -5059,6 +5075,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ulCheck2(true);
   // lesson page: which battle move this lesson opens and how far the person is (3 views, one of them whole)
   function ulPaint(l){
+    try { ulRingPaint(l, soundOff ? false : undefined); } catch (_) {}
     const el = $('#lessonUl'); if (!el) return;
     const ms = Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m));
     el.hidden = !ms.length; if (!ms.length) return;
@@ -5072,9 +5089,30 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     el.innerHTML = T('🎮 Посмотри урок 3 раза — откроешь в батле: {m}', { m: names }) +
       '<span class="ulbar"><i style="width:' + Math.round(p / 3 * 100) + '%"></i></span>' +
       '<small>' + T('{p} из 3 просмотров', { p: String(p).replace('.', LANG === 'en' || LANG === 'ja' || LANG === 'ko' || LANG === 'zh' ? '.' : ',') }) +
-      ' · ' + (ulFull(l) ? T('целиком — есть ✓') : T('ещё нужно один раз досмотреть до конца, без перемотки вперёд')) +
+      ' · ' + (ulFull(l) ? T('целиком — есть ✓') : T('ещё нужно один раз досмотреть до конца, без перемотки вперёд')) + ' · ' + T('считается только со звуком') +
       (lvl < need ? ' · ' + T('и уровень героя {n}', { n: need }) : '') + '</small>';
   }
+  // the little green ring in the video's corner: how far studying this lesson's battle move is (tap = what's left)
+  let ulRingOn = false, ulRingDoneT = 0;
+  function ulRingPaint(l, heard){
+    const r = $('#ulRing'); if (!r) return;
+    const ms = l ? Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m)) : [];
+    const st = ms.length && ulStudied(l);
+    if (st && !ulRingDoneT && r.dataset.l === l.id && !r.hidden) ulRingDoneT = Date.now(); // just finished: show the full ring a moment
+    ulRingOn = !!ms.length && (!st || Date.now() - ulRingDoneT < 5000);
+    r.hidden = !ulRingOn; r.dataset.l = l ? l.id : ''; if (!ulRingOn) return;
+    const p = st ? 1 : Math.min(ulViews(l) / 3, ulFull(l) ? 1 : 0.97);
+    $('#ulRingPg').style.strokeDashoffset = (94.25 * (1 - p)).toFixed(2);
+    r.classList.toggle('mute', heard === false && !st); r.classList.toggle('done', !!st);
+    $('#ulRingI').textContent = st ? '✓' : heard === false ? '🔇' : '🎬';
+    r._info = { ms, p, full: ulFull(l), st };
+  }
+  $('#ulRing').addEventListener('click', e => {
+    e.stopPropagation(); const i = $('#ulRing')._info; if (!i) return;
+    const nm = i.ms.map(m => BT_NAME[m]).join(', ');
+    toast(i.st ? T('🎬 {m} изучено ✓', { m: nm }) : T('Изучение {m} для батла: {p} %', { m: nm, p: Math.floor(i.p * 100) }) +
+      (i.full ? '' : ' · ' + T('один раз досмотри до конца')) + ' · ' + T('считается только со звуком'));
+  });
   function currentStreak(){
     if (!stats.last) return 0;
     const y = new Date(); y.setDate(y.getDate() - 1);
@@ -5175,16 +5213,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   let sessionSec = 0, sessionCounted = false, lastLessonId = null;
   const ulLastT = { id: null, t: -1, st: false };
+  let ulMuteTold = false;
   setInterval(() => {
     // count only real playback of a lesson video, with the app on screen
     if (!P.playing || document.hidden || !curLesson || !$('#badgeOwn').hidden || av.paused) return;
     if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
     stats.sec += 1; sessionSec += 1;
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
-    { // battle moves v2: which seconds were seen + progress on the lesson page
-      const l = curLesson, t = av.currentTime || 0, lt = ulLastT.id === l.id ? ulLastT.t : -1;
-      if (lt >= 0 && t >= lt && t - lt <= 2.5) ulCovMark(l, lt, t); else ulCovMark(l, t, t);
-      ulLastT.id = l.id; ulLastT.t = t;
+    { // battle moves v2: which seconds were seen + progress on the lesson page (only with sound)
+      const l = curLesson, t = av.currentTime || 0, heard = !soundOff, lt = ulLastT.id === l.id ? ulLastT.t : -1;
+      if (heard) {
+        stats.ulw[l.id] = (stats.ulw[l.id] || 0) + 1;
+        if (lt >= 0 && t >= lt && t - lt <= 2.5) ulCovMark(l, lt, t); else ulCovMark(l, t, t);
+        ulLastT.t = t;
+      } else { ulLastT.t = -1; if (ulRingOn && !ulMuteTold) { ulMuteTold = true; toast(T('🔇 Без звука просмотр не засчитывается в изучение элемента для батла')); } }
+      ulLastT.id = l.id; ulRingPaint(l, heard);
       const studied = ulStudied(l);
       if (sessionSec % 5 === 0 || studied !== ulLastT.st) { ulCovSave(l); if (UL_NEED && Object.keys(UL_RX).some(m => UL_RX[m].test(l.name || ''))) ulPaint(l); }
       if (studied && !ulLastT.st) setTimeout(() => { saveStats(); ulCheck2(); }, 0);

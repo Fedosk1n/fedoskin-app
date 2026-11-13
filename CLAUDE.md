@@ -669,6 +669,12 @@
   «Открыто в батле». Toasts `ulCheck2` (`fedoskin-ul2`): usable ⇒ «🎮 Открыто в батле: X», studied early ⇒ «🎬 X изучено — откроется
   в батле на уровне N»; re-checked after a level-up. rhythm.js `?v=9`. Tested headless (states partial / studied lvl 1 / studied lvl 3
   / lvl 3 not studied / old user keeps windmill; setup cards + how-to texts).
+  Ring + sound only (owner 13.11.2026 «незаметный кружочек с зелёной шкалой… без звука не считаются»): `#ulRing` = small green progress ring
+  in the video's bottom-left corner (landscape fs: top-left under the top bar; hidden while swiping), shown only on lessons that teach a
+  move not yet studied/grandfathered; p = views/3 (≤ 97 % until the one full view is there); muted ⇒ grey 🔇; done ⇒ ✓ for 5 s, then
+  hidden; tap ⇒ toast «Изучение X для батла: N %…». Time for studying = `stats.ulw[id]` (seconds played WITH sound; slow motion counts —
+  it mutes without soundOff), NOT stats.watched (progress before 13.11 started over; coverage kept); coverage marked only with sound;
+  one toast «🔇 Без звука просмотр не засчитывается…» per session. rhythm.js `?v=10` (how-to says «со звуком»).
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.

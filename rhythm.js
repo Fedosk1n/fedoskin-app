@@ -106,7 +106,7 @@
   // the locked card's caption and the how-to text (v2: studied 3× AND level)
   const lockLbl = h => { const T = D.T; return !h.lv ? '🔒 🎬 ' + T('Урок') : h.st ? '🎬✓ · ' + T('Ур. {n}', { n: h.lv }) : '🔒 🎬 ' + T('Урок') + (h.lvOk ? '' : ' · ' + T('Ур. {n}', { n: h.lv })); };
   const ulText2 = (h, nm) => { const T = D.T; return h.st ? T('{move} изучено по уроку ✓ — откроется, когда твой герой дорастёт до уровня {n}.', { move: nm, n: h.lv })
-    : (h.id ? T('Открой {move}: посмотри урок «{name}» 3 раза — хотя бы раз целиком, без перемотки вперёд. Сейчас: {p} из 3.', { move: nm, name: esc(h.name), p: h.pf || h.p })
+    : (h.id ? T('Открой {move}: посмотри урок «{name}» 3 раза со звуком — хотя бы раз целиком, без перемотки вперёд. Сейчас: {p} из 3.', { move: nm, name: esc(h.name), p: h.pf || h.p })
       : T('Открой {move}: посмотри целиком уроки раздела {sec} — {n} из {need}.', { move: nm, sec: esc(h.sec), n: h.n, need: h.need })) +
       (h.lvOk ? '' : ' ' + T('И нужен уровень героя {n}.', { n: h.lv })); };
   const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
