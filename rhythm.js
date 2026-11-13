@@ -121,7 +121,10 @@
   const totalOf = (picks, seed, level, beat, hits, brk) => V2() ? RB2.score(picks, seed, beat, hits, brk, level, G.prevPk) : scoreOf(picks, seed, level, beat, hits, brk);
   const maxOf = (picks, seed, level, beat) => V2() ? RB2.score(picks, seed, beat, '1'.repeat(RB2.notes(picks, seed, beat).length), [], level, picks === G.picks ? G.prevPk : null) : maxScore(picks, seed, level, beat);
   // v2 (owner 13.11.2026): the app passes the exact list of usable moves (lesson studied 3× AND the hero's level); else as before
-  const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : needOf(m) <= G.level) : (needOf(m) <= G.level || G.ul.has(m));
+  // city (city.js): street battles and shows — no auto, the DJ's beat, some moves closed (a bruise), the city counts the result
+  const cban = m => !!(G.city && G.city.ban && G.city.ban.includes(m));
+  const know = m => !cban(m) && know0(m);
+  const know0 = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : needOf(m) <= G.level) : (needOf(m) <= G.level || G.ul.has(m));
   // the locked card's caption and the how-to text (v2: studied 3× AND level)
   const lockLbl = h => { const T = D.T; return !h.lv ? '🔒 🎬 ' + T('Урок') : h.st ? '🎬✓ · ' + T('Ур. {n}', { n: h.lv }) : '🔒 🎬 ' + T('Урок') + (h.lvOk ? '' : ' · ' + T('Ур. {n}', { n: h.lv })); };
   const ulText2 = (h, nm) => { const T = D.T; return h.st ? T('{move} изучено по уроку ✓ — откроется, когда твой герой дорастёт до уровня {n}.', { move: nm, n: h.lv })
@@ -414,7 +417,7 @@
   function open(o) {
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
-    G = { coach: !!(D.isCoach && o.opp && D.isCoach(o.opp)), g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
+    G = { coach: !!(D.isCoach && o.opp && D.isCoach(o.opp)), g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, city: o.city || null, onCity: o.onCity || null, mute, mode: '', picks: null, seed: 1,
       battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), allow: o.ul && o.ul.v2 ? new Set(o.ul.allow || []) : null, ulKeys: new Set(o.ul && o.ul.keys || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
@@ -503,14 +506,14 @@
     const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') + ' ' + T('На фризе попади в бит и держи палец, пока не заполнится круг.') + (G.prevPk ? ' ' + T('Новая связка: +2 % за каждый элемент, которого не было в твоём прошлом раунде.') : '') : '') + '</p>' +
       (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
-      (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
+      (G.battle || G.city ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.filter(b => V2() || !b.g).map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
         r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && needOf(m) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(m) + '</i></button>').join('') +
         (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul' + (G.ulHint[r.lock].st ? ' st' : '') + '" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>' + lockLbl(G.ulHint[r.lock]) + '</i></button>'
           : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: needOf(r.lock) }) + '</i></button>') : '') + '</div></div>').join('') +
       '<div class="rbul" id="rbUl" hidden></div>' +
-      '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
+      '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle || G.city ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
     djWire();
     $('#rbSet').querySelectorAll('.rbc[data-m]').forEach(b => b.addEventListener('click', () => {
       const k = +b.dataset.r; G.picks[k] = b.dataset.m; G.prev = b.dataset.m; G.prevAt = performance.now();
@@ -604,8 +607,9 @@
     const s = song(p), pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
     let bestN = null, bd = 9;
     for (const n of G.notes) { if (n.st || n.draw || n.hs) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
-    if (bestN && bd <= W_GOOD && bestN.hold) holdStart(bestN, bd <= W_PERF ? 1 : 2, s, e);
-    else if (bestN && bd <= W_GOOD) { const kind = bd <= W_PERF ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
+    const xw = G.city && G.city.fw && bestN && bestN.ph === 1 ? G.city.fw : 0; // city: sneakers widen the footwork windows a little
+    if (bestN && bd <= W_GOOD + xw && bestN.hold) holdStart(bestN, bd <= W_PERF + xw ? 1 : 2, s, e);
+    else if (bestN && bd <= W_GOOD + xw) { const kind = bd <= W_PERF + xw ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
     else if (G.hold) { /* a second finger while holding the freeze */ }
     else if (G.dns && G.dns.some(n => s > n.t - .1 && s < n.end + .15)) { /* fingers near the trajectory: not a stray tap */ }
     else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { const nx = G.notes.findIndex(n => !n.st && n.t > s); G.brk.push(nx < 0 ? G.notes.length : nx); G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
@@ -627,7 +631,7 @@
     airflare: u => { if (u < .6) { const v = u / .6; return [-1 + 2 * v, .1 - Math.abs(Math.sin(3 * Math.PI * v)) * .75]; } const a = (u - .6) / .4 * Math.PI; return [Math.cos(a), .1 + Math.sin(a) * .75]; } }; // three jumps hand to hand, and the way back under
   const drawCan = () => box && box.querySelector('#rbDraw');
   function drawInit() {
-    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
+    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30) + (G.city && G.city.cor && G.picks[2] === 'headspin' ? G.city.cor : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
     drawCan().hidden = false; drawPlace();
   }
   function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr'); }
@@ -837,6 +841,7 @@
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
     if (G.onEnd) { G.won = res.acc >= .6; sendRound(); return; }
+    if (G.onCity) { cityEnd(res); return; }
     // the trial: the computer dances for the opponent — its picks and accuracy depend on its level
     const ol = G.oppLevel, pk = rowsOf().map(([, all]) => { const have = all.filter(m => needOf(m) <= ol); return have[Math.floor(Math.random() * have.length)]; });
     const opp = Math.round(maxOf(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
@@ -860,6 +865,19 @@
       $('#rbCrowd').classList.toggle('hype', won);
       if (won) { const c = $('#rbConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
     }, 400 + 3 * 550 + 250);
+  }
+
+  // city: city.js gets the round and answers { my, their, votes, won, note } (a battle: the usual judges' screen) or { title }
+  // (a street show), + extra (its own html: money, respect, finds), btn (button text), done (called after the button)
+  function cityEnd(res) {
+    const g = G, end = $('#rbEnd'); res.maxFor = (picks, lvl) => maxOf(picks, G.seed, lvl, G.beat);
+    const r = G.onCity(res) || {};
+    if (r.votes) showResult(r); else { end.innerHTML = '<b class="win" style="font-size:30px">' + (r.title || '') + '</b>'; end.hidden = false; G.won = true; }
+    setTimeout(() => {
+      if (G !== g || D.el.hidden) return;
+      const d = document.createElement('div'); d.className = 'rbcity'; d.innerHTML = (r.extra || '') + '<div class="rbbt"><button type="button" class="btn btn-accent" id="rbCity">' + (r.btn || 'OK') + '</button></div>';
+      end.appendChild(d); $('#rbCity').addEventListener('click', () => { close(); if (r.done) r.done(); });
+    }, r.votes ? 500 + 3 * 600 + 700 : 250);
   }
 
   // battle: after a round by hand the round goes to the server (index.html onEnd → promise). A challenge ⇒ «sent, the other one

@@ -1401,6 +1401,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </section>
 
 <!-- АКЦИИ -->
+<section class="screen" id="city" aria-label="Город" hidden></section>
 <section class="screen" id="promo" aria-label="Акции" hidden>
   <h1>Акции</h1>
   <div class="alphacard" style="margin-top:20px;padding:20px">
@@ -1757,7 +1758,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=12"></script>
-<script src="rhythm.js?v=12"></script>
+<script src="rhythm.js?v=13"></script>
+<script src="city-balance.js?v=1"></script>
+<script src="city-data.js?v=1"></script>
+<script src="city.js?v=1"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -1775,7 +1779,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ];
   // install guide timing (see autoShow): a lesson watched 8+ s in this visit; the guide still to be shown
   let installWanted = false, watchedNow = false, newRowDirty = false;
-  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',course:'courses',review:'review',svc:'review',chat:'review',promo:'promo',battles:'battles',profile:'profile'};
+  const TAB_OF = {home:'home',section:'home',lesson:'home',courses:'courses',course:'courses',review:'review',svc:'review',chat:'review',promo:'promo',battles:'battles',city:'city',profile:'profile'};
   const $ = (s, r=document) => r.querySelector(s);
 
   // ===== languages =====
@@ -4160,6 +4164,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const tabsEl = $('#tabs');
   // «Курсы» tab only while there is a published course (owner 12.11.2026: «пока курсов нет — меню пусть будет без курсов»)
   if (COURSES_ON.length) TABS.splice(1, 0, ['courses', 'Курсы', '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9.2 5 2.8-5 2.8z"/>']);
+  // «Город» (owner 13.11.2026): behind the flag `cityEnabled` (config.js, off by default) or the trial link ?city=play (kept for the session)
+  let CITY_ON = !!CFG.cityEnabled;
+  try { if (new URLSearchParams(location.search).get('city') === 'play') sessionStorage.setItem('fedoskin-city-on', '1'); if (sessionStorage.getItem('fedoskin-city-on') === '1') CITY_ON = true; } catch (_) {}
+  if (CITY_ON && window.CITY) TABS.splice(TABS.length - 1, 0, ['city', 'Город', '<path d="M3 21V9l6-3v15M9 21V4l6 3v14M15 21v-9l6 2v7M2 21h20"/><path d="M5.5 12h1M5.5 15.5h1M11.5 10h1M11.5 13.5h1M11.5 17h1M17.5 16h1" stroke-width="1.6"/>']);
   TABS.forEach(([id, label, icon]) => {
     const b = document.createElement('button');
     b.className = 'tab'; b.dataset.tab = id;
@@ -4188,6 +4196,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (id !== 'lesson' && typeof P !== 'undefined' && P.playing) setPlaying(false);
     if (id !== 'lesson' && document.body.classList.contains('fsmode')) exitFs();
     document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; });
+    if (CITY_ON && window.CITY) { if (id === 'city') CITY.show(); else CITY.hide(); }
     document.body.classList.toggle('chatmode', id === 'chat');
     if (id === 'chat') { try { chShown(); } catch (_) {} } else if (typeof chatHidden === 'function') chatHidden();
     const el = document.getElementById(id); if (el) el.scrollTop = 0;
@@ -6087,6 +6096,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     setTimeout(() => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); }, 350);
   } });
   $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
+  // the city mini-game (city.js): street battles and shows run on the same rhythm game, offline
+  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2,
+    openLesson: h => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
   window.fedoskinRare = kind => {
@@ -6787,6 +6799,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
+    if (qs.get('city') === 'play' && CITY_ON) { history.replaceState(history.state, '', location.pathname); setTimeout(() => go('city'), 300); } // the city trial link
     if (qs.get('battle') === 'play') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRhythm(), 800); } // the rhythm game trial, no server
     if (qs.has('diag')) setTimeout(() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:12px;z-index:9999;background:#0B0B0C;border:1px solid #E2611A;border-radius:14px;padding:14px;color:#ddd;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow:auto';
       d.textContent = 'Fedoskin diag (' + navigator.userAgent.slice(0, 90) + ')\n\n' + (window.fedoskinDiag() || '—') + '\n\n[tap to close]'; d.onclick = () => d.remove(); document.body.appendChild(d); }, 600);
