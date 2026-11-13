@@ -766,6 +766,16 @@
   Apple while hls.js drives it (intro still captured). MMS_OFF values older than `MMS_FIX` (17:45) are ignored, so the
   owner's phone tries the fixed MMS player once more; a new crash sets MMS_OFF anew. The run note also keeps the row
   (`r` = curList ids) ⇒ reopened «Новые уроки · урок n из m».
+  13.11.2026 (owner: «Airflare(airtwist) на ~40 с перезагрузился и начал сначала», iPhone; cause unknown — no log then). Fixed the
+  ways a lesson could come back at 0: (1) the safety-net reopen jumped only after `playing`, and a 5-s intro reset pendingStart
+  to the intro's end ⇒ now `resumeAt {id, t}` makes loadVideo START there (no intro for ks, pendingStart = t ⇒ hls startLoad(t)
+  / currentTime at loadedmetadata), the old jump stays as a fallback only if > 3 s off; (2) toNative (MMS → Apple player)
+  set the moment only at loadedmetadata ⇒ `nativeWant` re-applies it on loadeddata/canplay/playing for 15 s; (3) recoverMediaError
+  now startLoad(at); (4) pull-to-refresh no longer starts from the video (`#stage`), and reloadClean saves the lesson's moment
+  + row (`lt`, `lr` in fedoskin-restore) ⇒ continues there. Diagnostics: `diag()` ring of 40 events in localStorage
+  `fedoskin-diag` (lesson open + player kind, toNative why/at, hls fatal errors, restarts, reloads); `?diag=1` shows it on
+  screen, `window.fedoskinDiag()`. If it recurs: ask the owner for a screenshot of `?diag=1`. Tested: crash at 26 s ⇒
+  reopened «from 26», plays on from 26 (intro skipped); restore after reload at 40 ⇒ plays from 40.
   Owner confirmed on his real iPhone 11.11.2026 13:07: «проверил все работает» (Baby love repeat with our MMS player).
   Load bar for Kinescope lessons (owner 11.11.2026 13:19 screenshot «скачался, но полоска глючит» — it showed only the player's
   ~30 s buffer with holes where he had scrubbed): `KS_HAVE` (ks → Set of saved piece keys; filled once per lesson by

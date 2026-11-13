@@ -2106,6 +2106,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     return hlsLib;
   }
   function dropHls(){ if (hls) { try { hls.destroy(); } catch (_) {} hls = null; } }
+  // what the player did, for checks on the owner's phone (owner 13.11.2026: «Airflare на ~40 с перезагрузился и начал сначала»):
+  // the last 40 events in localStorage `fedoskin-diag`; `?diag=1` shows them on screen (screenshot), window.fedoskinDiag() too
+  function diag(m){ try { const a = JSON.parse(localStorage.getItem('fedoskin-diag') || '[]'); const d = new Date();
+    a.push(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0') + ' ' + m);
+    localStorage.setItem('fedoskin-diag', JSON.stringify(a.slice(-40))); } catch (_) {} }
+  window.fedoskinDiag = () => { try { return JSON.parse(localStorage.getItem('fedoskin-diag') || '[]').join('\n'); } catch (_) { return ''; } };
+  // a lesson opened to continue from a moment (the safety net after the app was closed): the player STARTS there — no intro,
+  // the stream / file loads from that second (before, the jump was made after the start and an intro could swallow it)
+  let resumeAt = null; // {id, t}
+  // Apple's own player taking over (toNative) must keep the moment: set at loadedmetadata, checked again when it plays
+  let nativeWant = null; // {t, until}
+  const nativeKeep = () => { if (!nativeWant) return; if (Date.now() > nativeWant.until || av !== vid) { nativeWant = null; return; }
+    if (vid.readyState >= 1 && Math.abs(vid.currentTime - nativeWant.t) > 1.5 && !vid.seeking) { diag('native: back to ' + nativeWant.t.toFixed(1) + ' (was ' + vid.currentTime.toFixed(1) + ')'); try { vid.currentTime = nativeWant.t; } catch (_) {} }
+    else if (Math.abs(vid.currentTime - nativeWant.t) <= 1.5 && vid.readyState >= 3) nativeWant = null; };
+  ['loadeddata', 'canplay', 'playing'].forEach(e => vid.addEventListener(e, () => setTimeout(nativeKeep, 60)));
   let ksFailTimer = 0;
   function streamFailed(){
     hideLoad();
@@ -2478,6 +2493,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   vin.addEventListener('error', () => { if (introOn && vin.getAttribute('src')) toStream(vin.currentTime || 0); });
 
   function loadVideo(src, poster, ks, intro){
+    const ra = resumeAt && curLesson && resumeAt.id === curLesson.id && resumeAt.t > 3 ? resumeAt.t : 0; resumeAt = null;
+    if (ra) intro = ks ? null : intro; // continuing from a moment: no 5-s intro in front of it
+    nativeWant = null;
     setPlaying(false);
     dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
     clearIntro(); pendingStart = null; scrub = null; sbCan.hidden = true; fqStop(); fqCan.hidden = true; fqCan.fcId = null; if (fcBuilding && (!curLesson || fcBuilding.key !== fcKey(curLesson))) fcStopBuild(); if (fcW) fcW.postMessage({ cmd: 'resume' });
@@ -2500,6 +2518,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       applyMute();
       pendingStart = 5; // the stream loads from the intro's end
     }
+    if (ra) pendingStart = ra; // hls startLoad(ra) / native or file: currentTime at loadedmetadata
     if (!ks) {
       if (intro && intro.wait) {
         const tok = vid._srcTok = {};
@@ -2672,8 +2691,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!isApple || !curLesson || !curLesson.ks || !vid.canPlayType('application/vnd.apple.mpegurl')) return false;
     try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
     const at = vid.currentTime || pendingStart || 0, ks = curLesson.ks;
+    diag('toNative ' + why + ' at ' + at.toFixed(1) + ' ' + curLesson.id);
     dropHls(); vid._ksToken = null; ksPending = false;
-    pendingStart = at > 0.2 ? at : null;
+    pendingStart = at > 0.2 ? at : null; nativeWant = at > 0.2 ? { t: at, until: Date.now() + 15000 } : null;
     vid.src = ksUrl(ks); vid.playbackRate = P.rate;
     if (P.playing && av === vid) playMain();
     return true;
@@ -2727,7 +2747,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       });
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d || !d.fatal) return;
-        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !(isApple && hls._recovered)) { hls._recovered = true; hls.recoverMediaError(); return; }
+        diag('hls fatal ' + d.type + ' ' + d.details + ' at ' + (vid.currentTime || 0).toFixed(1));
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !(isApple && hls._recovered)) { hls._recovered = true; const at = vid.currentTime; hls.recoverMediaError(); if (at > 0.5) try { hls.startLoad(at); } catch (_) {} return; }
         // only a playback problem moves this iPhone to Apple's own player — no internet is not one (that would switch off
         // keeping lessons for a week)
         if (isApple && d.type !== Hls.ErrorTypes.NETWORK_ERROR && toNative('error')) return;
@@ -2808,7 +2829,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.dur = l.dur;
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
-    const srcInfo = introSource(l);
+    const srcInfo = resumeAt && resumeAt.id === l.id && l.ks ? null : introSource(l);
+    diag('open ' + l.id + (l.ks ? ' ks' + (ksSaved[l.ks] ? ' saved' : '') + (isApple ? (mmsOk() ? ' mms' : ' apple-player') : '') : ' file') + (resumeAt && resumeAt.id === l.id ? ' from ' + resumeAt.t : ''));
     loadVideo(fileFor(l), jpgUrl(l), l.ks, srcInfo); fcOwn = false;
     vpnArm(l);
     ldStart(l);
@@ -5872,6 +5894,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       scr = [...document.querySelectorAll('.screen')].find(x => !x.hidden) || null;
       if (!scr || scr.scrollTop > 0) { scr = null; return; }
       const t = e.touches[0]; if (t.clientX < 28) { scr = null; return; } // left edge is the back swipe
+      // not from the lesson's video (owner 13.11.2026: a long lesson «перезагрузился и начал сначала» — a drag down on the
+      // video could reload the whole app)
+      if (e.target && e.target.closest && e.target.closest('#stage, .stage, #lessonPlayer')) { scr = null; return; }
       sy = t.clientY; sx = t.clientX; dy = 0; active = true; decided = false;
     }, { passive: true });
     document.addEventListener('touchmove', e => {
@@ -5928,7 +5953,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // reload went to screens from before it (e.g. a section seen long ago) instead of staying in the app
   function reloadClean(){
     const n = navDepth;
-    try { sessionStorage.setItem('fedoskin-restore', JSON.stringify(history.state || {})); } catch (_) {} // the screen to come back to
+    // the screen to come back to; on a lesson also the moment and the row, so it continues where it was (13.11.2026)
+    const st = Object.assign({}, history.state || {});
+    if (curLesson && !$('#lesson').hidden) { st.lt = Math.floor(av.currentTime || 0); st.lr = curList ? curList.map(x => x.id) : null; diag('reload (pull/language) on ' + curLesson.id + ' at ' + st.lt); }
+    try { sessionStorage.setItem('fedoskin-restore', JSON.stringify(st)); } catch (_) {}
     if (n > 0) { let done = false; const r = () => { if (!done) { done = true; location.reload(); } }; window.addEventListener('popstate', r, { once: true }); setTimeout(r, 600); history.go(-n); }
     else location.reload();
   }
@@ -6431,7 +6459,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   try { history.replaceState({ s: 'home' }, ''); } catch (_) {}
   // after "pull to refresh" reopen the same section / lesson
   if (startState && startState.s && startState.s !== 'home') {
-    if (startState.s === 'lesson' && startState.lid && BY_ID[startState.lid]) { openSection(BY_ID[startState.lid].sec); openLesson(startState.lid); }
+    if (startState.s === 'lesson' && startState.lid && BY_ID[startState.lid]) {
+      const l = BY_ID[startState.lid], row = Array.isArray(startState.lr) ? startState.lr.map(id => BY_ID[id]).filter(Boolean) : null;
+      if (startState.lt > 3) resumeAt = { id: l.id, t: startState.lt };
+      if (row && row.includes(l)) openLesson(l.id, { list: row }); else { openSection(l.sec); openLesson(l.id); }
+    }
     else if (startState.s === 'section' && startState.sec) openSection(startState.sec);
     else if (document.getElementById(startState.s)) go(startState.s);
   }
@@ -6459,10 +6491,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try { localStorage.setItem(REC, String(Date.now())); } catch (_) {}
     const l = BY_ID[r.id];
     const row = Array.isArray(r.r) ? r.r.map(id => BY_ID[id]).filter(Boolean) : null; // opened from «Новые уроки» ⇒ the same row again
+    diag('restart after close: ' + l.id + ' at ' + r.t + (r.m ? ' (our iPhone player ⇒ Apple player now)' : ''));
+    resumeAt = r.t > 3 ? { id: l.id, t: r.t } : null;
     if (row && row.includes(l)) openLesson(l.id, { list: row }); else { openSection(l.sec); openLesson(l.id); }
-    if (r.t > 3) {
+    if (r.t > 3) { // a second line of defence: if it still began elsewhere, jump once it plays
       const at = r.t, done = () => { [vid, vin].forEach(el => el.removeEventListener('playing', on)); };
-      const on = () => { done(); if (curLesson === l) setTimeout(() => { if (curLesson === l) seekTo(at); }, 150); };
+      const on = () => { done(); if (curLesson === l) setTimeout(() => { if (curLesson === l && Math.abs(av.currentTime - at) > 3) { diag('restart: jump to ' + at); seekTo(at); } }, 400); };
       [vid, vin].forEach(el => el.addEventListener('playing', on));
       setTimeout(done, 30000);
     }
@@ -6475,6 +6509,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
     if (qs.get('battle') === 'play') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRhythm(), 800); } // the rhythm game trial, no server
+    if (qs.has('diag')) setTimeout(() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:12px;z-index:9999;background:#0B0B0C;border:1px solid #E2611A;border-radius:14px;padding:14px;color:#ddd;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow:auto';
+      d.textContent = 'Fedoskin diag (' + navigator.userAgent.slice(0, 90) + ')\n\n' + (window.fedoskinDiag() || '—') + '\n\n[tap to close]'; d.onclick = () => d.remove(); document.body.appendChild(d); }, 600);
     const rq = /^rare([1-6])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback) / mythic: rare4 (real one hand) / rare5 (corkscrew) / rare6 (planche)
     if (rq) { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRare(rq[1] ? +rq[1] : 0), 800); }
     else if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
