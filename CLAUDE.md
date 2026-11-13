@@ -1038,7 +1038,7 @@
   Subtitles and app-language sheets scroll the checked row into view on open. Tested headless iPhone 390×664, 844×340
   (touch swipes reach 中文, tap selects, reopen shows it) and a tablet 820×1180 (unchanged).
 - City mini-game «Город» (owner 13.11.2026; design + status = Project doc `claude/fedoskin-city-game-plan.md`): top-down city behind the flag
-  `cityEnabled` (config.js — switched ON for everyone 13.11.2026 20:53, owner «запускай в приложении, у нас альфа») or the trial link `?city=play` (kept in sessionStorage `fedoskin-city-on`) ⇒ tab «Город» before «Профиль»
+  `cityEnabled` (config.js; ON for everyone 13.11.2026 20:53, OFF again 21:02 — owner «надо улучшать… скрой город»: graphics rework first) or the trial link `?city=play` (kept in sessionStorage `fedoskin-city-on`) ⇒ tab «Город» before «Профиль»
   (5 tabs; with a published course it would be 6 — ASK the owner, options are in the doc). Files: `city-balance.js` (ALL numbers,
   `window.CITY_BAL`), `city-data.js` (map rows, places, NPCs, items, schedules — `window.CITY_DATA`; a new district = data only), `city.js`
   (`window.CITY` {init, show, hide}; canvas 2D drawn by code, 44-px tiles, fog, BFS path on tap, clock 1 game hour = 1 real minute only
