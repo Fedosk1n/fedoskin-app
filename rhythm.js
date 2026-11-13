@@ -12,7 +12,14 @@
     { id: 'funk', name: 'FUNK BREAK', bpm: 114, up: 0, mult: 1.25, lv: 3 },
     { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 }];
   const beatOf = id => BEATS.find(b => b.id === id) || BEATS[1];
-  const know = m => (NEED[m] || 1) <= G.level || G.ul.has(m); // by level or by its lesson
+  // v2 (owner 13.11.2026): the app passes the exact list of usable moves (lesson studied 3× AND the hero's level); else as before
+  const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : (NEED[m] || 1) <= G.level) : ((NEED[m] || 1) <= G.level || G.ul.has(m));
+  // the locked card's caption and the how-to text (v2: studied 3× AND level)
+  const lockLbl = h => { const T = D.T; return !h.lv ? '🔒 🎬 ' + T('Урок') : h.st ? '🎬✓ · ' + T('Ур. {n}', { n: h.lv }) : '🔒 🎬 ' + T('Урок') + (h.lvOk ? '' : ' · ' + T('Ур. {n}', { n: h.lv })); };
+  const ulText2 = (h, nm) => { const T = D.T; return h.st ? T('{move} изучено по уроку ✓ — откроется, когда твой герой дорастёт до уровня {n}.', { move: nm, n: h.lv })
+    : (h.id ? T('Открой {move}: посмотри урок «{name}» 3 раза — хотя бы раз целиком, без перемотки вперёд. Сейчас: {p} из 3.', { move: nm, name: esc(h.name), p: h.pf || h.p })
+      : T('Открой {move}: посмотри целиком уроки раздела {sec} — {n} из {need}.', { move: nm, sec: esc(h.sec), n: h.n, need: h.need })) +
+      (h.lvOk ? '' : ' ' + T('И нужен уровень героя {n}.', { n: h.lv })); };
   const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   let BEAT = .6;
   // a set as in real breaking (owner 11.11.2026 «CC — это футворк»): toprock → footwork → power → freeze
@@ -173,6 +180,7 @@
 .rbc.on{border-color:var(--accent);background:rgba(226,97,26,.16)}
 .rbc.lock{opacity:.45}
 .rbc.lock.ul{opacity:.8;border-style:dashed;border-color:#5A4A2A} .rbc.lock.ul i{color:#F2CC55}
+.rbc.lock.ul.st{opacity:.95;border-style:solid;border-color:rgba(59,209,111,.5)} .rbc.lock.ul.st i{color:#7BE3A0}
 .rbc.fr:after{content:"🎬";position:absolute;top:3px;right:5px;font-size:10px}
 .rbcards.b4 .rbc{padding:9px 2px 7px} .rbcards.b4 .rbc b{font-size:11.5px;letter-spacing:0} .rbcards.b4 .rbc i{letter-spacing:.3px}
 .rbul{margin-top:9px;padding:10px 12px;border-radius:12px;border:1px dashed #5A4A2A;background:rgba(242,204,85,.07);font-size:12.5px;line-height:1.4;color:var(--soft)}
@@ -265,7 +273,7 @@
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
     G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
-      battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
+      battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), allow: o.ul && o.ul.v2 ? new Set(o.ul.allow || []) : null, ulKeys: new Set(o.ul && o.ul.keys || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
@@ -350,12 +358,12 @@
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
-      (G.ulOn ? '<p class="rbulnote">' + T('🎬 Смотри уроки — открывай новые движения раньше уровня') + '</p>' : '') +
+      (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
         r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && (NEED[m] || 1) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
-        (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>🔒 🎬 ' + T('Урок') + '</i></button>'
+        (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul' + (G.ulHint[r.lock].st ? ' st' : '') + '" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>' + lockLbl(G.ulHint[r.lock]) + '</i></button>'
           : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>') : '') + '</div></div>').join('') +
       '<div class="rbul" id="rbUl" hidden></div>' +
       '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
@@ -371,10 +379,10 @@
       if (!h || !box2) return;
       if (!box2.hidden && box2.dataset.m === m) { box2.hidden = true; return; }
       box2.dataset.m = m; box2.hidden = false;
-      box2.innerHTML = (h.id ? T('Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).', { move: nm, name: esc(h.name) })
+      box2.innerHTML = (h.lv ? ulText2(h, nm) : (h.id ? T('Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).', { move: nm, name: esc(h.name) })
         : T('Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.', { move: nm, sec: esc(h.sec), n: h.n, need: h.need })) +
-        ' ' + T('Или дорасти до уровня {n}.', { n: NEED[m] || 1 }) +
-        (D.onUl ? '<button type="button" class="btn btn-accent" id="rbUlGo">' + (h.id ? T('Открыть урок') : T('Открыть раздел')) + '</button>' : '');
+        ' ' + T('Или дорасти до уровня {n}.', { n: NEED[m] || 1 })) +
+        (D.onUl && !h.st ? '<button type="button" class="btn btn-accent" id="rbUlGo">' + (h.id ? T('Открыть урок') : T('Открыть раздел')) + '</button>' : '');
       const go = $('#rbUlGo'); if (go) go.addEventListener('click', () => D.onUl(h));
       box2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }));

@@ -654,6 +654,21 @@
   first lesson-locked card (arrow at the card via --ax, card pulses) «Это движение откроется, если посмотреть его урок. Нажми на
   карточку.» + «Понятно»; tapping the card or «Понятно» removes it. rhythm.js `?v=8`. Tested: worker rbCheck (u accepted / not
   for other moves), app headless ru/en (cards, hint, button → lesson, toast once, round.u).
+  v2 RULE (owner 13.11.2026 «элемент открывается только после 3 полных просмотров одной обучалки: 1 раз от начала до конца и 2 раза —
+  сумма минут, равная двум просмотрам» + «как бы открылся, но ждал уровня героя»): a move of UL_NEED (level > 1) is usable only
+  when its lesson is STUDIED (coverage: every second seen at least once — `fedoskin-ulcov` {lesson id: base64 bitset, 1 bit per
+  second}, filled by the 1-s playback tick from the last position, a jump/`seeking` breaks the run; full = ≥ 97 % or ≤ 2 s
+  missing — AND real playback stats.watched ≥ 3 × dur; loops / slow motion count) AND the hero level ≥ NEED. Section moves
+  (UL_SEC): N section lessons each seen whole. Moves without lessons: level alone. Already usable before (snapshot at the first
+  run of v2: moves of the level then + the old toasted `fedoskin-ul`) stay: `fedoskin-ul-old`. `ulState2()` → {allow, have,
+  hint {id, name, p, pf, full, st, lvOk, lv} | {sec, n, need, st, lvOk, lv}, v2, keys}; always passed to RB.open (no BT.ul gate —
+  the rule is client-side; the server still accepts by level + round.u). rhythm.js know(): keys ⇒ allow, others ⇒ level; locked
+  teaser captions «🔒 🎬 Урок · Ур. N» / studied «🎬✓ · Ур. N» (green `.st`), how-to `ulText2`, note «🎬 Новые движения открывают
+  уроки: посмотри урок 3 раза и дорасти до нужного уровня героя». Lesson page `#lessonUl`: progress bar + «{p} из 3 просмотров ·
+  целиком — есть ✓ / ещё нужно один раз досмотреть…» (+ level), studied ⇒ «изучено ✓ — откроется на уровне N (сейчас c)», open ⇒
+  «Открыто в батле». Toasts `ulCheck2` (`fedoskin-ul2`): usable ⇒ «🎮 Открыто в батле: X», studied early ⇒ «🎬 X изучено — откроется
+  в батле на уровне N»; re-checked after a level-up. rhythm.js `?v=9`. Tested headless (states partial / studied lvl 1 / studied lvl 3
+  / lvl 3 not studied / old user keeps windmill; setup cards + how-to texts).
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.
