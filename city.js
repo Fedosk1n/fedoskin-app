@@ -6,7 +6,7 @@
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
   const BLOCK = 'F#bGTKSXctD', TS = 44, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
-  let MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
+  let padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   const T = (s, v) => D.T(s, v);
   const $ = q => el.querySelector(q);
   const cl = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -115,9 +115,9 @@
   function draw(now) {
     if (!W) size(); if (!W) return;
     cx.setTransform(dpr, 0, 0, dpr, 0, 0); R(0, 0, W, H, '#0B0B0C');
-    const vw = W / TS, vh = H / TS;
+    const vw = W / TS, vh = (H - padB) / TS;
     cam.x = cl(hero.x + .5, Math.min(vw / 2, MW / 2), Math.max(MW - vw / 2, MW / 2)); cam.y = cl(hero.y + .5, Math.min(vh / 2, MH / 2), Math.max(MH - vh / 2, MH / 2));
-    const ox = Math.round(W / 2 - cam.x * TS), oy = Math.round(H / 2 - cam.y * TS), ng = night();
+    const ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS), ng = night();
     const x0 = Math.max(0, Math.floor(-ox / TS)), x1 = Math.min(MW - 1, Math.ceil((W - ox) / TS)), y0 = Math.max(0, Math.floor(-oy / TS)), y1 = Math.min(MH - 1, Math.ceil((H - oy) / TS));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (seen(x, y)) drawTile(MAP[y][x], x, y, ox + x * TS, oy + y * TS, ng);
     if (path.length) { const g = path[path.length - 1]; cx.strokeStyle = '#E2611A'; cx.lineWidth = 2; cx.beginPath(); cx.arc(ox + g[0] * TS + TS / 2, oy + g[1] * TS + TS / 2, 9 + 2 * Math.sin(now / 150), 0, 7); cx.stroke(); }
@@ -130,7 +130,7 @@
       if (!seen(n.at[0], n.at[1])) return;
       const px = ox + n.at[0] * TS + TS / 2, py = oy + n.at[1] * TS + TS / 2;
       person(px, py, n.col, false, Math.sin(now / 260 + n.lvl) * 1.5);
-      label(px, py - 34, n.name.split(' ')[0] + ' · ' + n.lvl, n.boss ? '#F2CC55' : '#F2EFE8');
+      label(px, py - 40, nm(n).split(' ')[0] + ' · ' + n.lvl, n.boss ? '#F2CC55' : '#F2EFE8');
       if (!daily('b:' + n.id)) { cx.font = '900 16px Inter, sans-serif'; cx.fillStyle = '#E2611A'; cx.fillText('!', px + 15, py - 16); }
     });
     const mv = path.length ? Math.sin(now / 70) * 3 : 0;
@@ -166,6 +166,7 @@
   }
   const p = s => '<p>' + s + '</p>';
   const say = (who, s) => '<p class="cysay"><b>' + esc(who) + ':</b> ' + esc(T(s)) + '</p>';
+  const nm = n => T(n.name);   // names are translated too (the audience is mostly not Russian)
   const item = id => DATA.items[id];
   const give = id => { if (item(id).use) S.inv[id] = (S.inv[id] || 0) + 1; else if (!S.own.includes(id)) S.own.push(id); };
   const found = id => '<p class="cygot">' + item(id).ico + ' ' + T('Находка: {x}', { x: T(item(id).name) }) + '<br><small>' + T(item(id).info) + '</small></p>';
@@ -225,7 +226,7 @@
     }
     if (pl.type === 'gate') {
       const boss = DIST.npcs.find(n => n.boss), won = boss && S.npc[boss.id] && S.npc[boss.id].w > 0;
-      if (S.rep < B.district[pl.to] || !won) return dlg(T(pl.name), p(T('В Центр пускают своих: нужно {n} респекта и победа над хозяином двора.', { n: B.district[pl.to] })) + p('★ ' + S.rep + ' / ' + B.district[pl.to] + ' · ' + (won ? '✓ ' : '✗ ') + esc(boss.name)), []);
+      if (S.rep < B.district[pl.to] || !won) return dlg(T(pl.name), p(T('В Центр пускают своих: нужно {n} респекта и победа над хозяином двора.', { n: B.district[pl.to] })) + p('★ ' + S.rep + ' / ' + B.district[pl.to] + ' · ' + (won ? '✓ ' : '✗ ') + esc(nm(boss))), []);
       return dlg(T(pl.name), p(T('Двор твой! Центр скоро откроется — район уже строится.')), []);
     }
     if (pl.type === 'show') return showSpot(pl);
@@ -295,25 +296,25 @@
   }
   function openNpc(n) {
     const st = S.npc[n.id] || (S.npc[n.id] = { w: 0, l: 0, last: null, met: 0 });
-    let html = say(n.name, n.boss && S.rep < (n.needRep || 0) ? n.early : n.hi);
-    if (!st.met && n.rumor) { const pl = DIST.places.find(q => q.id === n.rumor.mark); if (pl && !S.got[pl.id] && !S.marks.includes(pl.id)) { S.marks.push(pl.id); html += say(n.name, n.rumor.text) + p('📍 ' + T('На карте появилась метка.')); } }
+    let html = say(nm(n), n.boss && S.rep < (n.needRep || 0) ? n.early : n.hi);
+    if (!st.met && n.rumor) { const pl = DIST.places.find(q => q.id === n.rumor.mark); if (pl && !S.got[pl.id] && !S.marks.includes(pl.id)) { S.marks.push(pl.id); html += say(nm(n), n.rumor.text) + p('📍 ' + T('На карте появилась метка.')); } }
     st.met = 1;
     const styles = ['Топрокер', 'Футворкер', 'Пауэрмувер', 'Фризер'];
     html += p('<small>' + T('Уровень {n}', { n: n.lvl }) + ' · ' + T(styles[n.style]) + ' · ' + T('побед {w}, поражений {l}', { w: st.w, l: st.l }) + '</small>');
-    if (n.boss && S.rep < (n.needRep || 0)) return dlg(n.name, html + p('★ ' + S.rep + ' / ' + n.needRep), []);
-    if (daily('b:' + n.id)) return dlg(n.name, html + p(T('Сегодня вы уже батлили. Приходи завтра.')), []);
+    if (n.boss && S.rep < (n.needRep || 0)) return dlg(nm(n), html + p('★ ' + S.rep + ' / ' + n.needRep), []);
+    if (daily('b:' + n.id)) return dlg(nm(n), html + p(T('Сегодня вы уже батлили. Приходи завтра.')), []);
     html += p(T('Пол') + ': <b>' + floorName() + '</b> · ' + T('батл −{n} ⚡', { n: B.energy.battle })) + (st.last ? p('<small>' + T('Он помнит твою прошлую связку — повторишь, и судьи срежут очки.') + '</small>') : '');
     const stakes = [n.stake[0], Math.round((n.stake[0] + n.stake[1]) / 2 / 5) * 5, n.stake[1]].filter((v, i, a) => a.indexOf(v) === i);
-    dlg(n.name, html, stakes.map((v, i) => ({ t: T('Ставка') + ' 💵 ' + v, cls: i ? 'btn-line' : 'btn-accent', off: S.cash < v || S.en < B.energy.battle, fn: () => battle(n, st, v) }))
+    dlg(nm(n), html, stakes.map((v, i) => ({ t: T('Ставка') + ' 💵 ' + v, cls: i ? 'btn-line' : 'btn-accent', off: S.cash < v || S.en < B.energy.battle, fn: () => battle(n, st, v) }))
       .concat(S.en < B.energy.battle ? [{ t: T('Мало энергии — поешь или выспись'), off: true }] : S.cash < stakes[0] ? [{ t: T('Не хватает кэша на ставку — выступи на улице'), off: true }] : []));
   }
   function battle(n, st, stake) {
     const fl = floorId(), pool = B.beats.find(b => n.lvl <= b[0])[1], beat = pool[Math.floor(Math.random() * pool.length)];
-    if (!openRound({ beat, opp: { name: n.name }, pend: { kind: 'battle', name: n.name } }, (r, ms) => {
+    if (!openRound({ beat, opp: { name: nm(n) }, pend: { kind: 'battle', name: nm(n) } }, (r, ms) => {
       const R2 = D.RB.RB2, F = B.floor[fl], lines = [], hard = R2.mult(r.picks[2]) >= B.powerFrom;
       let k = F.mult; if (F.pen && hard) { k *= 1 - F.pen; lines.push('⚠️ ' + T('Асфальт: −{n} % за пауэрмув', { n: Math.round(F.pen * 100) })); }
       const same = st.last ? r.picks.filter((m, i) => m === st.last[i]).length : 0, rd = Math.min(B.read.max, same * B.read.per);
-      if (rd) { k *= 1 - rd; lines.push('👀 ' + T('{name} прочитал твою связку: −{n} %', { name: n.name.split(' ')[0], n: Math.round(rd * 100) })); }
+      if (rd) { k *= 1 - rd; lines.push('👀 ' + T('{name} прочитал твою связку: −{n} %', { name: nm(n).split(' ')[0], n: Math.round(rd * 100) })); }
       const my = Math.round(r.score * k), pk = npcPicks(n), N = B.npc;
       const acc = cl(N.acc0 + N.accLvl * n.lvl + (Math.random() * 2 - 1) * N.spread + N.style, .2, .97), their = Math.round(r.maxFor(pk, Math.max(1, Math.ceil(n.lvl * .8))) * acc);
       const pMe = 1 / (1 + Math.exp(-(my - their) / (N.judge * Math.max(my, their, 1))));
@@ -328,7 +329,7 @@
       } else { st.l++; S.en = Math.max(0, S.en - B.energy.lose); }
       st.last = r.picks.slice(); S.t += 20;
       wearFloor(fl, lines); bruiseRoll(fl, r.picks, lines);
-      lines.unshift('<i>' + esc(n.name) + ': ' + esc(T(won ? n.win : n.lose)) + '</i>');
+      lines.unshift('<i>' + esc(nm(n)) + ': ' + esc(T(won ? n.win : n.lose)) + '</i>');
       return { my: { sc: my, pf: r.perfect, gd: r.good, ms: r.miss, dr: r.draw, g: 2, fc: r.full, nv: r.fresh }, their: { sc: their }, votes, won, extra: res(won ? stake : -stake, rep, lines) };
     })) return;
     S.en -= B.energy.battle; S.cash -= stake; mark('b:' + n.id);
@@ -337,7 +338,7 @@
   // ---- input + loop ----
   function tapAt(e) {
     if (!dlgEl.hidden) return;
-    const r = can.getBoundingClientRect(), ox = W / 2 - cam.x * TS, oy = H / 2 - cam.y * TS;
+    const r = can.getBoundingClientRect(), ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS);
     const tx = Math.floor((e.clientX - r.left - ox) / TS), ty = Math.floor((e.clientY - r.top - oy) / TS);
     if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return;
     const n = npcsNow().find(q => seen(q.at[0], q.at[1]) && q.at[0] === tx && (q.at[1] === ty || q.at[1] - 1 === ty)); // the b-boy or the name above him
@@ -381,7 +382,7 @@
     '.cyst{display:flex;flex-direction:column;font:700 12px/1.25 Inter,sans-serif;white-space:nowrap}' +
     '.cybag{pointer-events:auto;font-size:18px;width:44px;height:44px;padding:0;color:inherit;cursor:pointer}' +
     '.cyfl{grid-column:1/-1;justify-self:start;font-size:11px;color:#C9C5BC;padding:4px 10px}' +
-    '.cydlg{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:10px}' +
+    '.cydlg{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:10px 10px calc(10px + var(--cyb,0px))}' +
     '.cyd{width:100%;max-width:480px;max-height:78%;overflow-y:auto;background:#151517;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px;color:#F2EFE8;font-family:Inter,system-ui,sans-serif}' +
     '.cyd h3{font:400 24px/1.1 Anton,Inter,sans-serif;letter-spacing:.5px;margin:0 0 8px;text-transform:uppercase}.cyd p{margin:0 0 8px;font-size:14px;line-height:1.4;color:#D8D4CB}' +
     '.cysay{background:rgba(226,97,26,.1);border-left:3px solid #E2611A;border-radius:8px;padding:8px 10px}.cygot{background:rgba(59,209,111,.08);border:1px solid rgba(59,209,111,.3);border-radius:10px;padding:8px 10px;color:#7BE3A0!important}' +
@@ -403,7 +404,7 @@
     new MutationObserver(() => { if (!D.rbEl.hidden) return; if (pend) { const k = pend.kind; pend = null; if (shown) D.toast(k === 'battle' ? T('Ты ушёл из круга — ставка сгорела') : T('Шоу сорвалось — энергия потрачена')); save(); } hudKey = ''; kick(); })
       .observe(D.rbEl, { attributes: true, attributeFilter: ['hidden'] });
   }
-  function show() { if (!el) return; shown = true; W = 0; hudKey = ''; kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
+  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
-  window.CITY = { init, show, hide, _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

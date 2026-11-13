@@ -50,7 +50,7 @@ window.CITY_DATA = {
         { id: 'home', type: 'home', at: [6, 5], name: 'Дом' },
         { id: 'trash', type: 'trash', at: [25, 7], name: 'Мусорка' },
         { id: 'kiosk', type: 'kiosk', at: [24, 13], name: 'Ларёк «Шаурма»', open: [8, 23] },
-        { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['pads', 'kicks', 'tape'] },
+        { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['pads', 'kicks', 'hat'] },
         { id: 'spot1', type: 'show', at: [8, 8], name: 'Пятачок у подъезда' },
         { id: 'gate', type: 'gate', at: [29, 10], name: 'Дорога в Центр', to: 'center' },
         { id: 'st1', type: 'stash', at: [1, 20], name: 'Тайник за гаражами', item: 'cassette' },
