@@ -675,6 +675,17 @@
   hidden; tap ⇒ toast «Изучение X для батла: N %…». Time for studying = `stats.ulw[id]` (seconds played WITH sound; slow motion counts —
   it mutes without soundOff), NOT stats.watched (progress before 13.11 started over; coverage kept); coverage marked only with sound;
   one toast «🔇 Без звука просмотр не засчитывается…» per session. rhythm.js `?v=10` (how-to says «со звуком»).
+  Starter battles (owner 13.11.2026 «для новичков сделай батлы закрытыми с подсказкой… посмотри видео и выучи элемент… Теперь ты выучил
+  кросс степ… но этого мало для полноценного раунда»; my recommended option «по 1 элементу на каждую часть» — the owner didn't object):
+  `fedoskin-starter` = new | open | old, set at the first run: old if the phone ever touched battles (fedoskin-bt-rest / rb-beat / ul-tip /
+  rb-mute / eq), else new; `?starter=new|old` for checks. new/open ⇒ the basic moves WITH a lesson (ST_RX: cross step, kick step, indian,
+  6-step, CC, swipe; `freeze` = any lesson of section Freezes) are in ulState2 keys and open only when that lesson is studied (same 3-views-
+  with-sound rule, no level); salsa / backspin (no lesson) by level. new ⇒ battles locked (`stGate()` at the top of btStart / btAnswer ⇒
+  sheet `#skSheet`) until each part of the round (ST_ROWS TOPROCK / FOOTWORK / POWER / FREEZE) has a studied move ⇒ stMode 'open'.
+  Battles tab card `#skCard` (4 part chips with progress, «Смотреть: <next lesson>» — order Cross step → 6-step → Easy chair → Swipes,
+  or the one already started); ring + #lessonUl work for these lessons (`ulMovesOf`). Studied a basic move (stCheck from ulCheck2):
+  toast at once, sheet «Теперь ты выучил X! Он доступен у тебя в батлах, но этого мало…» (gendered) after leaving the lesson
+  (stShowPending in go()); last part ⇒ «Батлы открыты! 🔥». `fedoskin-st-seen`, `window.fedoskinStarter()`. Server unchanged.
   `?battle=play` / `window.fedoskinRhythm()` = the old trial vs the computer, kept for checks only (no UI). Sound mute
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.
@@ -877,6 +888,12 @@
   the lesson list (dragStart handles `data-nr` rows), × removes, «+ Добавить урок в ряд…» puts one first, «Вернуть по дате»
   deletes `newRow`. A lesson added via «Добавить видео» goes first in a manual row. Save bar item «порядок в ряду «Новые
   уроки»» (newRow is left out of normCfg). Admin «версия 27».
+- Home row «Недавно просмотренные» (owner 13.11.2026 «поменять "новые уроки" на "недавно просмотренные"… хочется вернуться к тому видео,
+  которое он смотрел последний раз»): `#newHome/#newRow` (ids kept) = `fedoskin-recent` (lesson ids, last opened first, ≤ 20, shown 15;
+  `noteRecent` in openLesson, no course lessons), hidden while empty; row playlist labels «Недавно просмотренные · урок n из m» /
+  «Ещё из недавних» / «Это последний/первый из недавних». Admin `newRow` card is hidden (data-later="newrow"), config key unused.
+  NEW badge = 24 h (owner «new в течение суток»): lesson `at` (ms, set by the admin on add and when NEW is switched on again) else the
+  start of its `added` day Moscow time; `newDays` unused (admin field hidden data-later="newdays"). Admin «версия 49».
 - Usability pass (owner 09.11.2026 «переделай все это»): home row «Новые уроки» (`#newHome/#newRow`, `paintNewRow()`:
   10 newest by `added`, repainted on going home after a lesson was seen — `newRowDirty`); section tiles say «N новых»
   (1 новый); NEW pill sits on the lesson cover (`.covernew`). Tab «Онлайн» renamed «Коучинг» with a chat icon. Lesson page:

@@ -496,6 +496,20 @@ body.chatmode .tabs{display:none}
 .gseg button .gh{width:46px;height:46px;border-radius:12px;overflow:hidden;background:#1E1E22;flex:none}
 .gseg button .gh svg{width:100%;height:100%;display:block}
 .gseg button[aria-checked="true"]{border-color:var(--accent);background:rgba(226,97,26,.12)}
+.skcard{margin-top:14px;padding:16px;border-radius:16px;border-color:rgba(59,209,111,.35);background:rgba(59,209,111,.05)}
+.skb h2{font-size:21px;line-height:1.2;margin:0}
+.skb>p{margin:8px 0 0;font-size:14px;line-height:1.45;color:var(--muted)}
+.skb>p.skrule{font-size:12px;margin-top:10px}
+.skrows{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.skr{display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:12px;background:#17171A;border:1px solid #26262A;text-align:left;min-width:0}
+.skr small{font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.skr b{font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+.skr.ok{border-color:rgba(59,209,111,.45)}.skr.ok b{color:#7BE3A0}
+.skr.no b{color:#cfcfd4;font-weight:600}
+.skr .ulbar{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:3px}
+.skr .ulbar i{display:block;height:100%;background:#3BD16F}
+.skgo{display:flex;gap:10px;margin-top:14px}
+.skgo .btn{flex:1}.skgo .btn-accent{flex:2}
 #lessonUl .ulbar{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin:8px 0 6px;overflow:hidden}
 #lessonUl .ulbar i{display:block;height:100%;background:#3BD16F;border-radius:3px}
 #lessonUl small{display:block;font-size:12px;opacity:.8;line-height:1.4}
@@ -1030,7 +1044,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="chips" id="savedChips"></div>
   </div>
   <div id="newHome" hidden style="margin-top:20px">
-    <h2 style="margin-bottom:10px">Новые уроки</h2>
+    <h2 style="margin-bottom:10px">Недавно просмотренные</h2>
     <div class="hrow" id="newRow"></div>
   </div>
   <h1 style="font-size:30px;margin-top:20px">Разделы</h1>
@@ -1353,6 +1367,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </button>
   <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Гардероб и магазин</b><small>+10 за победу · +20 за час уроков · +10 за новый урок</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 
+  <div class="card skcard" id="skCard" hidden></div>
   <div class="sec">
     <div class="sec-head"><h2>Рейтинг</h2></div>
     <p class="muted" id="rankSoon" style="font-size:14px;line-height:1.45">Общий рейтинг с другими брейкерами появится вместе с аккаунтами. А пока набирай минуты и делись своей статистикой в сторис.</p>
@@ -1682,6 +1697,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="row" style="gap:10px;margin-top:16px"><button class="btn btn-ghost" id="vsLater" type="button" style="flex:1">Позже</button><button class="btn btn-accent" id="vsGo" type="button" style="flex:2">Принять вызов</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="skSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skT">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px"></div>
+    <div id="skBody"></div>
+  </div>
+</div>
 <div class="sheet-bg" id="btCallSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="btCallT" style="text-align:center">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px"></div>
@@ -1856,12 +1877,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // cover picture + 3-second animation; `cv` grows when the admin re-cuts them (owner 11.11.2026: start the animation later) ⇒ new address, no stale cache
   const jpgUrl = l => 'v/' + l.id + '.jpg' + (l.cv ? '?c=' + l.cv : '');
   const pvUrl = l => 'v/' + l.id + '-p3.mp4' + (l.cv ? '?c=' + l.cv : '');
-  // "NEW": lesson added in the last 14 days and not opened by this user yet
+  // "NEW": lesson added in the last 24 hours and not opened by this user yet
   const NEW_DAYS = +CFG.newDays || 14, DEFAULT_ADDED = '2026-10-01';
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem('fedoskin-seen') || '[]'); } catch (_) { seen = []; }
   if (!Array.isArray(seen)) seen = [];
-  const isNew = l => l.new !== false && !seen.includes(l.id) && (Date.now() - Date.parse(l.added || DEFAULT_ADDED)) <= NEW_DAYS * 864e5;
+  // owner 13.11.2026 «новые уроки пусть будут new в течение суток»: 24 h from `at` (the admin's publish time); older lessons without
+  // `at` count from the start of their `added` day, Moscow time
+  const newAt = l => +l.at || Date.parse((l.added || DEFAULT_ADDED) + 'T00:00:00+03:00');
+  const isNew = l => l.new !== false && !seen.includes(l.id) && (Date.now() - newAt(l)) <= 864e5;
   const secHasNew = sec => LESSONS.some(l => l.sec === sec && isNew(l));
   const newPill = () => { const t = document.createElement('span'); t.className = 'newpill'; t.textContent = 'NEW'; return t; };
   function markSeen(id){
@@ -1898,12 +1922,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     });
   }
   paintTiles();
-  // the newest lessons in one swipeable row on the home screen
+  // home row «Недавно просмотренные» (owner 13.11.2026: it replaced «Новые уроки» — «человек учит и ему хочется вернуться к тому
+  // видео, которое он смотрел последний раз»): the lessons this phone opened, the last one first; none yet ⇒ the row is hidden
+  let recent = []; try { recent = JSON.parse(localStorage.getItem('fedoskin-recent') || '[]'); } catch (_) {} if (!Array.isArray(recent)) recent = [];
+  function noteRecent(l){
+    if (!l || l.course) return;
+    recent = [l.id].concat(recent.filter(x => x !== l.id)).slice(0, 20); newRowDirty = true;
+    try { localStorage.setItem('fedoskin-recent', JSON.stringify(recent)); } catch (_) {}
+  }
   function paintNewRow(){
     const row = $('#newRow'); if (!row) return;
-    // owner's own order from the admin (CFG.newRow, 10.11.2026); none / nothing left ⇒ the 10 newest by date
-    let list = Array.isArray(CFG.newRow) ? CFG.newRow.map(id => BY_ID[id]).filter(l => l && !l.course) : [];
-    if (!list.length) list = LESSONS.slice().sort((a, b) => String(b.added || DEFAULT_ADDED).localeCompare(String(a.added || DEFAULT_ADDED))).slice(0, 10);
+    const ok = new Set(LESSONS.map(l => l.id)), list = recent.filter(id => ok.has(id)).map(id => BY_ID[id]).slice(0, 15);
     row.innerHTML = ''; list.forEach(l => row.appendChild(lessonCard(l, list)));
     $('#newHome').hidden = !list.length;
   }
@@ -2830,19 +2859,19 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (opts.list && opts.list.includes(l)) curList = opts.list.slice();
     else if (!(navReplace || opts.keep) || !(curList && curList.includes(l))) curList = null; // a swipe keeps the row
     curSection = l.sec; curLesson = l;
-    markSeen(l.id);
+    markSeen(l.id); noteRecent(l);
     goal('lesson', {lesson: l.name, section: l.sec});
     const inRow = !!curList, list = inRow ? curList : l.course ? (C_LESSONS[l.course] || []) : inSec(l.sec), n = list.indexOf(l) + 1;
     if (l.course) curCourse = l.course;
     $('#lessonCrumb').textContent = l.sec;
     $('#lessonTitle').textContent = l.name;
     $('#fsName').textContent = l.name; $('#fsName').style.opacity = '';
-    $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: inRow ? T('Новые уроки') : l.sec, n, m: list.length, dur: fmtD(l.dur)});
+    $('#lessonMeta').textContent = T('{sec} · урок {n} из {m} · {dur}', {sec: inRow ? T('Недавно просмотренные') : l.sec, n, m: list.length, dur: fmtD(l.dur)});
     { // lesson description: own language, else English (other languages), Russian only in the ru UI; none ⇒ hidden
       const d = l.desc || {}, txt = (d[LANG] || (LANG !== 'ru' ? d.en : '') || '').trim();
       $('#lessonDesc').textContent = txt; $('#lessonDesc').hidden = !txt;
     }
-    $('#nextHead').textContent = inRow ? T('Ещё новые уроки') : l.course ? T('Ещё в курсе') : T('Ещё в разделе');
+    $('#nextHead').textContent = inRow ? T('Ещё из недавних') : l.course ? T('Ещё в курсе') : T('Ещё в разделе');
     try { ulRingDoneT = 0; ulPaint(l); } catch (_) {} // BT / BT_NAME are defined further down (a lesson can open at start-up)
     $('#badgeOwn').hidden = true;
     loadSubs(l);
@@ -3024,7 +3053,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           $('#swPeekName').textContent = nb.name;
         } else {
           $('#swPeek').style.backgroundImage = 'none';
-          $('#swEnd').textContent = curList ? (dir > 0 ? T('Это последний из новых уроков') : T('Это первый из новых уроков')) : dir > 0 ? T('Это последний урок раздела') : T('Это первый урок раздела');
+          $('#swEnd').textContent = curList ? (dir > 0 ? T('Это последний из недавних') : T('Это первый из недавних')) : dir > 0 ? T('Это последний урок раздела') : T('Это первый урок раздела');
           $('#swEnd').classList.add('on');
         }
         hideSwipeHint();
@@ -4145,7 +4174,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (id === 'profile') setTimeout(() => { try { stRender(); } catch (_) {} }, 0);
     if (id === 'courses') setTimeout(() => { try { crsMy(); } catch (_) {} }, 0);
     if (id !== 'lesson' && watchedNow && installWanted) setTimeout(() => { try { installAfterLesson(); } catch (_) {} }, 700);
-    if (id !== 'lesson') setTimeout(() => { try { lvlCheck(); btShowNews(); } catch (_) {} }, 900);
+    if (id !== 'lesson') setTimeout(() => { try { lvlCheck(); btShowNews(); stShowPending(); } catch (_) {} }, 900);
+    if (id === 'battles') setTimeout(() => { try { stPaint(); } catch (_) {} }, 0);
     if (id === 'home' && newRowDirty) { newRowDirty = false; setTimeout(() => { try { paintNewRow(); } catch (_) {} }, 0); }
     // interest in online services (07.11.2026): the tab opened by the person — not the start-up restore, not «back» from a service
     if (id === 'review' && performance.now() > 2500) {
@@ -5041,6 +5071,35 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ulOld = Object.keys(UL_NEED).filter(m => UL_NEED[m] <= lv0).concat(known.filter(m => UL_NEED[m]));
     try { localStorage.setItem('fedoskin-ul-old', JSON.stringify(ulOld)); } catch (_) {}
   }
+  // ===== starter battles (owner 13.11.2026 «для новичков сделай батлы закрытыми с подсказкой… сначала посмотри видео и выучи элемент…
+  // Теперь ты выучил кросс степ… но этого мало для полноценного раунда, изучай другие элементы») =====
+  // For a NEW phone the basic moves that have a lesson open only by studying it (same rule: 3 views with sound, one of them whole),
+  // and battles stay closed until there is a studied move for each part of the round: toprock, footwork, power, freeze.
+  // Basic moves with no lesson (salsa, backspin) come free once battles open. Phones that already battled keep everything ('old').
+  const ST_RX = { toprock: /cross\s*-?\s*step/i, kickstep: /kick\s*-?\s*step/i, indian: /indian/i, sixstep: /(^|[^0-9])6\s*-?\s*step|six\s*-?\s*step/i, ccs: /^\s*cc\b/i, swipe: /swipe/i };
+  const ST_ROWS = [['TOPROCK', ['toprock', 'kickstep', 'indian']], ['FOOTWORK', ['sixstep', 'ccs']], ['POWER', ['swipe']], ['FREEZE', ['freeze']]];
+  const ST_ORDER = [0, 1, 3, 2]; // which part to suggest first: the short lessons first, the long power lesson last
+  let stMode = ''; try { stMode = localStorage.getItem('fedoskin-starter') || ''; } catch (_) {}
+  try { const q = new URLSearchParams(location.search).get('starter'); if (q === 'new' || q === 'old') { stMode = q; localStorage.removeItem('fedoskin-st-seen'); } } catch (_) {} // for checks
+  if (!stMode) { let old = false; try { old = ['fedoskin-bt-rest', 'fedoskin-rb-beat', 'fedoskin-ul-tip', 'fedoskin-rb-mute', 'fedoskin-eq'].some(x => localStorage.getItem(x) != null); } catch (_) {} stMode = old ? 'old' : 'new'; }
+  const stSave = () => { try { localStorage.setItem('fedoskin-starter', stMode); } catch (_) {} };
+  stSave();
+  const stOn = () => stMode === 'new' || stMode === 'open';
+  const stLessons = m => m === 'freeze' ? LESSONS.filter(l => l.sec === 'Freezes') : ST_RX[m] ? LESSONS.filter(l => ST_RX[m].test(l.name || '')) : [];
+  const stBest = ls => ls.slice().sort((a, b) => ulViews(b) - ulViews(a) || (a.dur || 0) - (b.dur || 0))[0];
+  const stKnows = m => { const ls = stLessons(m); return !ls.length || ls.some(ulStudied); };
+  function stState(){
+    const rows = ST_ROWS.map(([title, ms]) => {
+      const have = ms.filter(stKnows), l = stBest(stLessons(ms[0]).length ? stLessons(ms[0]) : [].concat(...ms.map(stLessons)));
+      // the lesson to suggest: the one already started, else the first move's shortest (Cross step, 6-step, Easy chair, Swipes)
+      const started = stBest([].concat(...ms.map(stLessons)).filter(x => ulViews(x) > 0 && !ulStudied(x)));
+      return { title, have, ok: have.length > 0, l: started || l };
+    });
+    const next = ST_ORDER.map(k => rows[k]).find(r => !r.ok && r.l);
+    return { rows, open: rows.every(r => r.ok), next: next ? next.l : null, known: [].concat(...rows.map(r => r.have)) };
+  }
+  const stLocked = () => stMode === 'new' && !stState().open;
+  try { if (localStorage.getItem('fedoskin-st-seen') == null) localStorage.setItem('fedoskin-st-seen', JSON.stringify(stState().known)); } catch (_) {}
   function ulState2(){
     const lvl = statsView().level, allow = [], have = [], hint = {};
     Object.keys(UL_NEED).forEach(m => {
@@ -5060,7 +5119,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (n >= s[1] && lvOk) { allow.push(m); return; }
       hint[m] = { sec: s[0], n: Math.min(n, s[1]), need: s[1], st: n >= s[1], lvOk, lv: UL_NEED[m] };
     });
-    return { allow, have, hint, v2: true, keys: Object.keys(UL_NEED) };
+    const keys = Object.keys(UL_NEED);
+    if (stOn()) ST_ROWS.forEach(([, ms]) => ms.forEach(m => { // a new phone: the basic moves open by their lessons too (no level needed)
+      const ls = stLessons(m); if (!ls.length) return; keys.push(m);
+      if (ls.some(ulStudied)) { allow.push(m); return; }
+      const l = stBest(ls), p = Math.floor(ulViews(l) * 10) / 10;
+      hint[m] = { id: l.id, name: l.name, p, pf: String(p).replace('.', /^(en|ja|ko|zh)$/.test(LANG) ? '.' : ','), full: ulFull(l), st: false, lvOk: true, lv: 1 };
+    }));
+    return { allow, have, hint, v2: true, keys };
   }
   // toasts: «🎮 Открыто в батле: X» when a move becomes usable, «🎬 X изучено — откроется на уровне N» when studied too early
   function ulCheck2(quiet){
@@ -5069,17 +5135,22 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const fresh = Array.isArray(kn) ? st.allow.filter(m => !kn.includes(m)) : [], freshSt = Array.isArray(kn) ? studied.filter(m => !kn.includes('s:' + m)) : [];
     try { localStorage.setItem('fedoskin-ul2', JSON.stringify([...new Set([...(kn || []), ...st.allow, ...studied.map(m => 's:' + m)])])); } catch (_) {}
     if (quiet) return;
+    if (stOn() && stCheck()) return;
     if (fresh.length) toast(T('🎮 Открыто в батле: {m}', { m: fresh.map(m => BT_NAME[m]).join(', ') }));
     else if (freshSt.length) toast(T('🎬 {m} изучено — откроется в батле на уровне {n}', { m: freshSt.map(m => BT_NAME[m]).join(', '), n: Math.min(...freshSt.map(m => UL_NEED[m])) }));
   }
   ulCheck2(true);
+  // the battle moves this lesson opens: moves above level 1 (not already open before the rule) + for a new phone the basic ones
+  // (not if that basic move is already studied by another of its lessons)
+  const ulMovesOf = l => Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m))
+    .concat(stOn() ? [].concat(...ST_ROWS.map(r => r[1])).filter(m => stLessons(m).includes(l) && (ulStudied(l) || !stKnows(m))) : []);
   // lesson page: which battle move this lesson opens and how far the person is (3 views, one of them whole)
   function ulPaint(l){
     try { ulRingPaint(l, soundOff ? false : undefined); } catch (_) {}
     const el = $('#lessonUl'); if (!el) return;
-    const ms = Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m));
+    const ms = ulMovesOf(l);
     el.hidden = !ms.length; if (!ms.length) return;
-    const names = '<b>' + ms.map(m => BT_NAME[m]).join(', ') + '</b>', lvl = statsView().level, need = Math.max(...ms.map(m => UL_NEED[m]));
+    const names = '<b>' + ms.map(m => BT_NAME[m]).join(', ') + '</b>', lvl = statsView().level, need = Math.max(...ms.map(m => UL_NEED[m] || 1));
     if (ulStudied(l)) {
       el.innerHTML = lvl >= need ? T('🎮 Открыто в батле: {m}', { m: names })
         : T('🎬 {m} изучено ✓ — откроется в батле, когда твой герой дорастёт до уровня {n} (сейчас {c})', { m: names, n: need, c: lvl });
@@ -5092,11 +5163,69 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       ' · ' + (ulFull(l) ? T('целиком — есть ✓') : T('ещё нужно один раз досмотреть до конца, без перемотки вперёд')) + ' · ' + T('считается только со звуком') +
       (lvl < need ? ' · ' + T('и уровень героя {n}', { n: need }) : '') + '</small>';
   }
+  // ---- starter battles: the card on the Battles tab, the sheet, the moment a move is learned ----
+  const stName = m => m === 'freeze' ? 'FREEZE' : BT_NAME[m];
+  function stHtml(kind, ms){
+    const st = stState(), girl = prof.g === 'f', esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    let h = '', p = '';
+    if (kind === 'open') { h = T('Батлы открыты! 🔥'); p = T('У тебя есть элементы на весь раунд: топрок, футворк, пауэр и фриз. Вызывай соперника! А новые уроки и дальше пополняют твой арсенал.'); }
+    else if (kind === 'learned') { h = T(girl ? 'Теперь ты выучила {m}!' : 'Теперь ты выучил {m}!', { m: (ms || []).map(stName).join(', ') }); p = T('Он доступен у тебя в батлах, но этого мало для полноценного раунда. Изучай другие элементы и пополняй свой арсенал.'); }
+    else { h = T('🔒 Батлы пока закрыты'); p = st.known.filter(m => stLessons(m).length).length ? T('Для полноценного раунда нужен свой элемент на каждую часть: топрок, футворк, пауэр и фриз. Изучай уроки и пополняй свой арсенал.') : T('Чтобы начать батлить, сначала посмотри видео и выучи элемент.'); }
+    const rows = st.rows.map(r => {
+      if (r.ok) return '<span class="skr ok"><small>' + r.title + '</small><b>✓ ' + r.have.map(stName).join(', ') + '</b></span>';
+      const v = r.l ? ulViews(r.l) : 0;
+      return '<span class="skr no"><small>' + r.title + '</small><b>🔒 ' + esc(r.l ? r.l.name : '') + '</b><span class="ulbar"><i style="width:' + Math.round(v / 3 * 100) + '%"></i></span></span>';
+    }).join('');
+    const nx = st.next;
+    return '<div class="skb"><h2 id="skT">' + h + '</h2><p>' + p + '</p><div class="skrows">' + rows + '</div>' +
+      (kind !== 'open' ? '<p class="skrule">' + T('Выучить элемент = посмотреть его урок 3 раза со звуком, хотя бы раз целиком, без перемотки вперёд. Зелёный кружок на видео покажет, сколько осталось.') + '</p>' : '') +
+      '<div class="skgo">' + (kind === 'card' ? '' : '<button class="btn btn-ghost" type="button" data-sk="x">' + (kind === 'open' ? T('Закрыть') : T('Позже')) + '</button>') +
+      (kind === 'open' ? '<button class="btn btn-accent" type="button" data-sk="bt">' + T('К батлам') + '</button>'
+        : nx ? '<button class="btn btn-accent" type="button" data-sk="l" data-id="' + esc(nx.id) + '">' + T('Смотреть: {name}', { name: esc(nx.name) }) + '</button>' : '') + '</div></div>';
+  }
+  function stWire(box, inSheet){
+    box.querySelectorAll('[data-sk]').forEach(b => b.addEventListener('click', () => {
+      const a = b.dataset.sk, id = b.dataset.id;
+      if (inSheet) $('#skSheet').hidden = true;
+      const run = () => { if (a === 'l' && BY_ID[id]) openLesson(id); else if (a === 'bt') go('battles'); };
+      if (a !== 'x') setTimeout(run, inSheet ? 350 : 0); // the sheet's own history step goes back first
+    }));
+  }
+  function stPaint(){
+    const c = $('#skCard'); if (!c) return;
+    const on = stLocked(); c.hidden = !on; if (!on) { c.innerHTML = ''; return; }
+    c.innerHTML = stHtml('card'); stWire(c, false);
+  }
+  function stSheetShow(kind, ms){
+    const open = () => { $('#skBody').innerHTML = stHtml(kind, ms); stWire($('#skBody'), true); $('#skSheet').hidden = false; };
+    if (history.state && history.state.ov) setTimeout(open, 380); else open(); // another sheet is still closing
+  }
+  let stPend = null;
+  // after a lesson: a basic move studied (new phone) ⇒ toast now, the sheet once the person is out of the lesson
+  function stCheck(){
+    const st = stState(); let seen = null; try { seen = JSON.parse(localStorage.getItem('fedoskin-st-seen') || 'null'); } catch (_) {}
+    const fresh = Array.isArray(seen) ? st.known.filter(m => !seen.includes(m) && stLessons(m).length) : [];
+    try { localStorage.setItem('fedoskin-st-seen', JSON.stringify([...new Set((seen || []).concat(st.known))])); } catch (_) {}
+    let r = false;
+    if (stMode === 'new' && st.open) { stMode = 'open'; stSave(); stPend = { kind: 'open' }; toast(T('🔥 Батлы открыты!')); r = true; }
+    else if (stMode === 'new' && fresh.length) { stPend = { kind: 'learned', ms: fresh }; toast(T('🎮 {m} — теперь в твоих батлах', { m: fresh.map(stName).join(', ') })); r = true; }
+    stPaint(); if (r) setTimeout(stShowPending, 2500);
+    return r;
+  }
+  function stShowPending(){
+    if (!stPend) return;
+    const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || !$('#lvlUp').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
+    if (busy) return;
+    const p = stPend; stPend = null; stSheetShow(p.kind, p.ms);
+  }
+  const stGate = () => { if (!stLocked()) return false; stSheetShow('lock'); return true; };
+  setTimeout(() => { try { stPaint(); } catch (_) {} }, 0);
+  window.fedoskinStarter = () => ({ mode: stMode, state: stState() }); // for checks
   // the little green ring in the video's corner: how far studying this lesson's battle move is (tap = what's left)
   let ulRingOn = false, ulRingDoneT = 0;
   function ulRingPaint(l, heard){
     const r = $('#ulRing'); if (!r) return;
-    const ms = l ? Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m)) : [];
+    const ms = l ? ulMovesOf(l) : [];
     const st = ms.length && ulStudied(l);
     if (st && !ulRingDoneT && r.dataset.l === l.id && !r.hidden) ulRingDoneT = Date.now(); // just finished: show the full ring a moment
     ulRingOn = !!ms.length && (!st || Date.now() - ulRingDoneT < 5000);
@@ -5229,7 +5358,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       } else { ulLastT.t = -1; if (ulRingOn && !ulMuteTold) { ulMuteTold = true; toast(T('🔇 Без звука просмотр не засчитывается в изучение элемента для батла')); } }
       ulLastT.id = l.id; ulRingPaint(l, heard);
       const studied = ulStudied(l);
-      if (sessionSec % 5 === 0 || studied !== ulLastT.st) { ulCovSave(l); if (UL_NEED && Object.keys(UL_RX).some(m => UL_RX[m].test(l.name || ''))) ulPaint(l); }
+      if (sessionSec % 5 === 0 || studied !== ulLastT.st) { ulCovSave(l); ulPaint(l); }
       if (studied && !ulLastT.st) setTimeout(() => { saveStats(); ulCheck2(); }, 0);
       ulLastT.st = studied;
     }
@@ -5578,6 +5707,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     return '';
   };
   async function btStart(r, btn){
+    if (stGate()) return; // a new phone: battles open once there is a studied move for each part of the round
     if (!lbShow) { toast(T('Включи «Показывать меня в рейтинге», чтобы батлить')); return; }
     if (BT.rest > Date.now()) { toast(T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает — следующий батл через {t}' : 'Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt((BT.rest - Date.now()) / 60e3) })); return; }
     if (btn) btn.disabled = true;
@@ -5631,6 +5761,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   // answering a challenge: the same DJ track; by hand or auto, the judges decide at once
   function btAnswer(bt){
+    if (stGate()) return;
     const post = async body => {
       let res, j;
       try { res = await btPost('/bt/answer', Object.assign({ n: bt.n }, body)); j = await res.json().catch(() => ({})); }

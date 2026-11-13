@@ -348,7 +348,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
           <button class="btn btn-sm" id="moveGo" type="button" hidden>Перенести</button>
         </div>
       </div>
-      <div class="card" id="nrCard" style="margin-top:12px">
+      <!-- owner 13.11.2026: the home row is now «Недавно просмотренные» (each phone's own) — this order is not used, kept for later -->
+      <div class="card" id="nrCard" style="margin-top:12px" hidden data-later="newrow">
         <div class="row" style="justify-content:space-between;align-items:center;gap:10px">
           <b>Ряд «Новые уроки» на главной</b>
           <span class="pill" id="nrMode"></span>
@@ -545,8 +546,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         <label class="f"><span>Месяц, $</span><input type="number" id="sSubUsd" min="0" step="0.01" inputmode="decimal"></label>
         <label class="f"><span>Год, $</span><input type="number" id="sSubYearUsd" min="0" step="0.01" inputmode="decimal"></label>
       </div>
-      <h3>Уроки</h3>
-      <label class="f"><span>Сколько дней урок со значком NEW</span><input type="number" id="sNewDays" min="1" max="90" step="1" inputmode="numeric"></label>
+      <h3 hidden data-later="newdays">Уроки</h3>
+      <label class="f" hidden data-later="newdays"><span>Сколько дней урок со значком NEW</span><input type="number" id="sNewDays" min="1" max="90" step="1" inputmode="numeric"></label>
       <!-- Яндекс Метрика отключена по решению владельца (29.10.2026). Код оставлен: вернуть = убрать hidden ниже и в renderStats. -->
       <h3 hidden data-later="metrika">Статистика</h3>
       <label class="f" hidden data-later="metrika"><span>Номер счётчика Яндекс Метрики</span><input type="text" id="sMetrika" placeholder="например 98765432" inputmode="numeric"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Как получить — во вкладке «Статистика».</span></label>
@@ -878,8 +879,10 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const fmtD = s => { s = Math.round(s || 0); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
   const fmtMB = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',') + ' МБ';
   const clone = o => JSON.parse(JSON.stringify(o));
-  const newDays = () => +cfg.newDays || 14;
-  const inNewWindow = l => (Date.now() - Date.parse(l.added || '2026-10-01')) <= newDays() * 864e5;
+  // NEW = 24 h (owner 13.11.2026 «new в течение суток»): from `at` (set when the lesson is added / NEW turned on again), else from the
+  // start of its `added` day, Moscow time — the same rule as the app
+  const newAt = l => +l.at || Date.parse((l.added || '2026-10-01') + 'T00:00:00+03:00');
+  const inNewWindow = l => (Date.now() - newAt(l)) <= 864e5;
   const showsNew = l => l.new !== false && inNewWindow(l);
   function toast(text, bad){
     document.querySelectorAll('.toast').forEach(x => x.remove());
@@ -1762,7 +1765,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     DESC_LANGS.forEach(c => { $(descSel(c)).value = (l.desc && l.desc[c]) || ''; });
     $('#eDescMore').open = false;
     $('#eDate').value = l.added || '';
-    $('#eNew').checked = showsNew(l);
+    eBump = false; $('#eNew').checked = showsNew(l);
     paintNewHint();
     $('#eShow').checked = !l.hidden;
     $('#editSheet').hidden = false;
@@ -1843,16 +1846,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     if (editing !== l) return;
     $('#eKsState').textContent = st === 'ok' ? 'Видео готово и играет. Не забудьте «Готово» и «Опубликовать».' : st === 'wait' ? 'Kinescope пока не отдаёт это видео: оно ещё обрабатывается, или ссылка не та. Подождите пару минут и проверьте снова.' : 'Нет связи с Kinescope — попробуйте ещё раз.';
   });
+  let eBump = false; // NEW switched on again for an old lesson ⇒ 24 h from now
+  const eAt = () => eBump ? Date.now() : editing && editing.at && $('#eDate').value === editing.added ? +editing.at : Date.parse(($('#eDate').value || today()) + 'T00:00:00+03:00');
   function paintNewHint(){
-    const d = $('#eDate').value || today();
-    const until = new Date(Date.parse(d) + newDays() * 864e5);
-    $('#eNewHint').textContent = $('#eNew').checked ? 'Виден до ' + until.toLocaleDateString('ru-RU') + ' (или пока человек не откроет урок)' : 'Выключен';
+    const until = new Date(eAt() + 864e5);
+    $('#eNewHint').textContent = $('#eNew').checked ? 'Виден сутки: до ' + until.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' (или пока человек не откроет урок)' : 'Выключен';
   }
   $('#eNew').addEventListener('change', () => {
-    if ($('#eNew').checked && (Date.now() - Date.parse($('#eDate').value || '2000-01-01')) > newDays() * 864e5) $('#eDate').value = today();
+    eBump = false;
+    if ($('#eNew').checked && Date.now() - eAt() > 864e5) { $('#eDate').value = today(); eBump = true; }
     paintNewHint();
   });
-  $('#eDate').addEventListener('change', paintNewHint);
+  $('#eDate').addEventListener('change', () => { eBump = false; paintNewHint(); });
   function closeEdit(){ $('#editSheet').hidden = true; editing = null; pvClose(); }
   $('#eClose').addEventListener('click', closeEdit);
   $('#editSheet').addEventListener('click', e => { if (e.target.id === 'editSheet') closeEdit(); });
@@ -1881,6 +1886,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       if (Object.keys(d).length) l.desc = d; else delete l.desc;
       if (stale) setTimeout(() => toast('Русское описание изменилось, а переводы остались старые — обновите их (или попросите Claude перевести)'), 400);
     }
+    if (eBump) l.at = Date.now(); else if ($('#eDate').value && $('#eDate').value !== l.added) delete l.at; // a new date ⇒ its day counts
     if ($('#eDate').value) l.added = $('#eDate').value;
     delete l.new;
     if (!$('#eNew').checked && inNewWindow(l)) l.new = false;
@@ -2293,7 +2299,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       // add to the list as unpublished. Name, section, words and date are read NOW, so whatever was typed
       // while the video was uploading counts too.
       const fName = $('#aName').value.trim() || name, fSec = $('#aSec').value || sec, fRu = $('#aRu').value.trim(), fAdded = $('#aDate').value || today();
-      const lesson = {id, sec: fSec, name: fName, dur: Math.round(dur), ru: fRu, added: fAdded, pv: !!p3};
+      const lesson = {id, sec: fSec, name: fName, dur: Math.round(dur), ru: fRu, added: fAdded, at: Date.now(), pv: !!p3};
       if (meta.h > meta.w) lesson.vertical = true; // the app opens vertical videos straight in full screen
       if (ksId) { lesson.ks = ksId; ksState[ksId] = 'wait'; ksWatch(ksId, fName); }
       if (r2) lesson.r2 = r2;
