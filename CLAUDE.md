@@ -1055,4 +1055,8 @@
   Joystick (13.11 evening): a drag on the map (> 16 px) = joystick (pointer down/move/up on the canvas; hero walks while held, axis-separated
   collision, settles on the cell at release); a short touch = tap-to-walk. city.js `?v=2`. City maths checked with a stubbed RB.open
   (win, −12 % asphalt, bruise, «read» −20 %, boss drops lace + patch, loss) — `CITY._pos()`.
+  «Разогрет уроком» (owner 13.11.2026 20:38 «делай»): index.html counts real lesson seconds of today (`stats.dk` = todayKey, `stats.ds`);
+  CITY deps `todaySec / day / home`; ≥ `CITY_BAL.warm.sec` (300) ⇒ warm(): energy cap +20 (`emax()`; +20 given once a real day, `S.warmDay`,
+  toast), respect of a win ×1.1 (line in the result), HUD chip «🔥 Разогрет»; not warm ⇒ the tip in «Как играть» / backpack + «К урокам».
+  city.js `?v=3`, city-balance.js `?v=2`. Tested headless en (cold tip, warm toast, en 120, win +22 instead of +20).
   Not done yet: stretch mini-game, guard, other districts, city items on the hero's look, balance by real play (no hand-played win yet).

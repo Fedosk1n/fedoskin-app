@@ -30,6 +30,12 @@
   const inH = (h, r) => !r || (r[0] <= r[1] ? h >= r[0] && h < r[1] : h >= r[0] || h < r[1]);
   const clock = () => { const m = Math.floor(S.t) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
   const night = () => { const h = (S.t / 60) % 24; return h >= 22 || h < 5 ? .55 : h >= 19 ? .55 * (h - 19) / 3 : h < 7 ? .55 * (7 - h) / 2 : 0; };
+  // warmed up by a real lesson today: more energy and respect (the game leads to the lessons every day)
+  const warm = () => !!D.todaySec && D.todaySec() >= B.warm.sec;
+  const emax = () => B.energy.max + (warm() ? B.warm.energy : 0);
+  const warmTxt = () => '🔥 ' + T('Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня', { e: B.warm.energy, r: Math.round(B.warm.rep * 100) });
+  function warmCheck() { if (!warm() || S.warmDay === D.day()) return; S.warmDay = D.day(); S.en = Math.min(emax(), S.en + B.warm.energy); hudKey = ''; D.toast(warmTxt()); save(); }
+  const warmTip = () => '<p>' + (warm() ? warmTxt() : '🔥 ' + T('Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.', { m: Math.round(B.warm.sec / 60), e: B.warm.energy, r: Math.round(B.warm.rep * 100) })) + '</p>';
   const daily = k => S.day[k] === dayN();           // already done this game day?
   const mark = k => { S.day[k] = dayN(); };
 
@@ -150,12 +156,12 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length].join('|'); if (k === hudKey) return; hudKey = k;
+    const k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm()].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
-      '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
+      '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
       '<button type="button" class="cybag" id="cyBag" aria-label="' + T('Рюкзак') + '">🎒</button>' +
-      '<div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + '</div>';
+      '<div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>';
     hud.querySelector('#cyBag').addEventListener('click', bag);
   }
   // buttons: [{ t: text, fn, cls, off }] — a button without fn just closes
@@ -179,8 +185,9 @@
       .concat(Object.keys(S.inv).filter(id => S.inv[id] > 0).map(id => '<li>' + item(id).ico + ' <b>' + T(item(id).name) + ' ×' + S.inv[id] + '</b><small>' + T(item(id).info) + '</small></li>'));
     dlg(T('Рюкзак'), p(T('Пол') + ': <b>' + floorName() + '</b>' + (S.bruise ? '<br>🤕 ' + T('Ушиб: из пауэра доступен только backspin, пока не выспишься.') : '')) +
       (rows.length ? '<ul class="cyls">' + rows.join('') + '</ul>' : p(T('Пока пусто. Вещи можно купить в палатке или найти в городе.'))) +
-      p('<small>' + T('Уровень героя и новые движения дают только настоящие уроки. Город даёт кэш, респект и вещи.') + '</small>'), [
-      S.inv.thermos > 0 && { t: T('Выпить чай из термоса') + ' (+' + B.food.thermos + ' ⚡)', fn: () => { S.inv.thermos--; S.en = Math.min(B.energy.max, S.en + B.food.thermos); } },
+      warmTip() + p('<small>' + T('Уровень героя и новые движения дают только настоящие уроки. Город даёт кэш, респект и вещи.') + '</small>'), [
+      !warm() && D.home && { t: T('К урокам'), cls: 'btn-accent', fn: () => D.home() },
+      S.inv.thermos > 0 && { t: T('Выпить чай из термоса') + ' (+' + B.food.thermos + ' ⚡)', fn: () => { S.inv.thermos--; S.en = Math.min(emax(), S.en + B.food.thermos); } },
       S.inv.tape > 0 && S.card > 0 && { t: T('Починить картон изолентой') + ' (+' + B.item.tapeUses + ')', fn: () => { S.inv.tape--; S.card += B.item.tapeUses; } },
       { t: T('Как играть'), fn: intro }
     ].filter(Boolean));
@@ -191,7 +198,7 @@
       p(T('Батл стоит 20 энергии, шоу — 10. Энергию возвращают сон дома и еда.')) +
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
       p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
-      p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>'), []);
+      p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>') + warmTip(), []);
   }
 
   // ---- places ----
@@ -201,8 +208,8 @@
     if (pl.type === 'home') {
       const late = h >= 21 || h < 6;
       return dlg(T('Дом'), p(T('Здесь можно выспаться. Игра сохраняется сама.')) + (S.bruise ? p('🤕 ' + T('Сон вылечит ушиб.')) : ''), [
-        { t: late ? T('Спать до утра') : T('Спать до утра') + ' — ' + T('ещё не вечер (после 21:00)'), cls: 'btn-accent', off: !late, fn: () => { S.t = (Math.floor((S.t - 6 * 60) / 1440) + 1) * 1440 + B.startHour * 60; S.en = B.energy.max; S.bruise = 0; D.toast(T('Доброе утро! Энергия восстановлена')); } },
-        { t: T('Вздремнуть часок') + ' (+' + B.energy.stretch + ' ⚡)', off: daily('nap') || S.en >= B.energy.max, fn: () => { mark('nap'); S.t += 60; S.en = Math.min(B.energy.max, S.en + B.energy.stretch); } }
+        { t: late ? T('Спать до утра') : T('Спать до утра') + ' — ' + T('ещё не вечер (после 21:00)'), cls: 'btn-accent', off: !late, fn: () => { S.t = (Math.floor((S.t - 6 * 60) / 1440) + 1) * 1440 + B.startHour * 60; S.en = emax(); S.bruise = 0; D.toast(T('Доброе утро! Энергия восстановлена')); } },
+        { t: T('Вздремнуть часок') + ' (+' + B.energy.stretch + ' ⚡)', off: daily('nap') || S.en >= emax(), fn: () => { mark('nap'); S.t += 60; S.en = Math.min(emax(), S.en + B.energy.stretch); } }
       ]);
     }
     if (pl.type === 'trash') {
@@ -216,7 +223,7 @@
         } }]);
     }
     if (pl.type === 'kiosk') {
-      const buy = (k, name) => ({ t: T(name) + ' · 💵 ' + B.price[k] + ' (+' + B.food[k] + ' ⚡)', off: S.cash < B.price[k] || S.en >= B.energy.max, fn: () => { S.cash -= B.price[k]; S.en = Math.min(B.energy.max, S.en + B.food[k]); openPlace(pl); } });
+      const buy = (k, name) => ({ t: T(name) + ' · 💵 ' + B.price[k] + ' (+' + B.food[k] + ' ⚡)', off: S.cash < B.price[k] || S.en >= emax(), fn: () => { S.cash -= B.price[k]; S.en = Math.min(emax(), S.en + B.food[k]); openPlace(pl); } });
       return dlg(T(pl.name), p(T('Горячее и сытное. Еда возвращает энергию.')), [buy('shawarma', 'Шаурма'), buy('tea', 'Чай')]);
     }
     if (pl.type === 'shop') {
@@ -327,7 +334,9 @@
       if (S.own.includes('lace') && Math.abs(my - their) < B.lace * Math.max(my, their, 1) && votes.includes('r')) { votes[votes.indexOf('r')] = 'l'; lines.push('🍀 ' + T('Счастливый шнурок: один судья передумал.')); }
       const won = votes.filter(v => v === 'l').length >= 2; let rep = 0;
       if (won) {
-        rep = (B.rep.base + B.rep.perLvl * n.lvl) * (st.w ? 1 : B.rep.first); S.cash += stake * 2; S.rep += rep;
+        rep = (B.rep.base + B.rep.perLvl * n.lvl) * (st.w ? 1 : B.rep.first);
+        if (warm()) { rep = Math.round(rep * (1 + B.warm.rep)); lines.push('🔥 ' + T('Разогрет уроком: респект +{r} %', { r: Math.round(B.warm.rep * 100) })); }
+        S.cash += stake * 2; S.rep += rep;
         if (!st.w && n.drop) n.drop.forEach(id => { if (!S.own.includes(id)) { give(id); lines.push(found(id)); } });
         if (Math.random() < B.drop.tapeWin) { give('tape'); lines.push(found('tape')); }
         st.w++;
@@ -429,7 +438,7 @@
     new MutationObserver(() => { if (!D.rbEl.hidden) return; if (pend) { const k = pend.kind; pend = null; if (shown) D.toast(k === 'battle' ? T('Ты ушёл из круга — ставка сгорела') : T('Шоу сорвалось — энергия потрачена')); save(); } hudKey = ''; kick(); })
       .observe(D.rbEl, { attributes: true, attributeFilter: ['hidden'] });
   }
-  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
+  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
   window.CITY = { init, show, hide, _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

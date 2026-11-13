@@ -867,7 +867,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "not evening yet (after 21:00)",
  "куплено": "bought",
  "побед {w}, поражений {l}": "wins {w}, losses {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Joystick works too: put a finger on the map and drag — the hero walks while you hold."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Joystick works too: put a finger on the map and drag — the hero walks while you hold.",
+ "Разогрет": "Warmed up",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Warmed up by a lesson: +{e} energy and +{r}% respect until the end of the day",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Train with the lessons for {m} minutes today and your hero is warmed up: +{e} energy and +{r}% respect.",
+ "К урокам": "Go to lessons",
+ "Разогрет уроком: респект +{r} %": "Warmed up by a lesson: respect +{r}%"
  },
  "es": {
  "Главная": "Inicio",
@@ -1734,7 +1739,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "aún no es de noche (después de las 21:00)",
  "куплено": "comprado",
  "побед {w}, поражений {l}": "victorias {w}, derrotas {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "También hay joystick: pon el dedo en el mapa y arrastra; el héroe camina mientras mantienes."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "También hay joystick: pon el dedo en el mapa y arrastra; el héroe camina mientras mantienes.",
+ "Разогрет": "En calor",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "En calor por una lección: +{e} de energía y +{r} % de respeto hasta el final del día",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Entrena hoy {m} minutos con las lecciones y tu héroe entra en calor: +{e} de energía y +{r} % de respeto.",
+ "К урокам": "Ir a las lecciones",
+ "Разогрет уроком: респект +{r} %": "En calor por una lección: respeto +{r} %"
  },
  "pt": {
  "Главная": "Início",
@@ -2601,7 +2611,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "ainda não é noite (depois das 21:00)",
  "куплено": "comprado",
  "побед {w}, поражений {l}": "vitórias {w}, derrotas {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Também dá para usar joystick: ponha o dedo no mapa e arraste — o herói anda enquanto você segura."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Também dá para usar joystick: ponha o dedo no mapa e arraste — o herói anda enquanto você segura.",
+ "Разогрет": "Aquecido",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Aquecido por uma aula: +{e} de energia e +{r}% de respeito até o fim do dia",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Treine hoje {m} minutos com as aulas e seu herói fica aquecido: +{e} de energia e +{r}% de respeito.",
+ "К урокам": "Ir para as aulas",
+ "Разогрет уроком: респект +{r} %": "Aquecido por uma aula: respeito +{r}%"
  },
  "fr": {
  "Главная": "Accueil",
@@ -3468,7 +3483,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "pas encore le soir (après 21h00)",
  "куплено": "acheté",
  "побед {w}, поражений {l}": "victoires {w}, défaites {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Le joystick marche aussi : pose le doigt sur la carte et fais glisser, le héros avance tant que tu tiens."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Le joystick marche aussi : pose le doigt sur la carte et fais glisser, le héros avance tant que tu tiens.",
+ "Разогрет": "Échauffé",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Échauffé par une leçon : +{e} d’énergie et +{r} % de respect jusqu’à la fin de la journée",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Entraîne-toi {m} minutes avec les leçons aujourd’hui et ton héros est échauffé : +{e} d’énergie et +{r} % de respect.",
+ "К урокам": "Aller aux leçons",
+ "Разогрет уроком: респект +{r} %": "Échauffé par une leçon : respect +{r} %"
  },
  "de": {
  "Главная": "Start",
@@ -4335,7 +4355,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "noch nicht Abend (ab 21:00)",
  "куплено": "gekauft",
  "побед {w}, поражений {l}": "Siege {w}, Niederlagen {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Joystick geht auch: Finger auf die Karte und ziehen – der Held läuft, solange du hältst."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "Joystick geht auch: Finger auf die Karte und ziehen – der Held läuft, solange du hältst.",
+ "Разогрет": "Aufgewärmt",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Durch eine Lektion aufgewärmt: +{e} Energie und +{r} % Respekt bis zum Tagesende",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Trainiere heute {m} Minuten mit den Lektionen, dann ist dein Held aufgewärmt: +{e} Energie und +{r} % Respekt.",
+ "К урокам": "Zu den Lektionen",
+ "Разогрет уроком: респект +{r} %": "Durch eine Lektion aufgewärmt: Respekt +{r} %"
  },
  "ja": {
  "Главная": "ホーム",
@@ -5202,7 +5227,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "まだ夜じゃない（21:00以降）",
  "куплено": "購入済み",
  "побед {w}, поражений {l}": "{w}勝 {l}敗",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "ジョイスティックも使える：マップに指を置いてドラッグすると、押している間ヒーローが歩く。"
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "ジョイスティックも使える：マップに指を置いてドラッグすると、押している間ヒーローが歩く。",
+ "Разогрет": "ウォームアップ済み",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "レッスンでウォームアップ：今日中はエナジー+{e}、リスペクト+{r}%",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "今日レッスンで{m}分練習するとヒーローがウォームアップ：エナジー+{e}、リスペクト+{r}%。",
+ "К урокам": "レッスンへ",
+ "Разогрет уроком: респект +{r} %": "レッスンでウォームアップ：リスペクト+{r}%"
  },
  "ko": {
  "Главная": "홈",
@@ -6069,7 +6099,12 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "아직 저녁이 아니다 (21:00 이후)",
  "куплено": "구매함",
  "побед {w}, поражений {l}": "{w}승 {l}패",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "조이스틱도 된다: 지도에 손가락을 대고 끌면, 누르는 동안 히어로가 걷는다."
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "조이스틱도 된다: 지도에 손가락을 대고 끌면, 누르는 동안 히어로가 걷는다.",
+ "Разогрет": "워밍업 완료",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "레슨으로 워밍업: 오늘 하루 에너지 +{e}, 리스펙트 +{r}%",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "오늘 레슨으로 {m}분 연습하면 히어로가 워밍업된다: 에너지 +{e}, 리스펙트 +{r}%.",
+ "К урокам": "레슨으로",
+ "Разогрет уроком: респект +{r} %": "레슨으로 워밍업: 리스펙트 +{r}%"
  },
  "zh": {
  "Главная": "首页",
@@ -6936,6 +6971,11 @@ window.I18N = {
  "ещё не вечер (после 21:00)": "还没到晚上（21:00 以后）",
  "куплено": "已购买",
  "побед {w}, поражений {l}": "胜 {w}，负 {l}",
- "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "也可以用摇杆：手指按住地图拖动，按住时角色会一直走。"
+ "Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.": "也可以用摇杆：手指按住地图拖动，按住时角色会一直走。",
+ "Разогрет": "已热身",
+ "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "上课热身：今天之内体力 +{e}、尊重 +{r}%",
+ "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "今天跟着课程练 {m} 分钟，角色就会热身：体力 +{e}、尊重 +{r}%。",
+ "К урокам": "去上课",
+ "Разогрет уроком: респект +{r} %": "上课热身：尊重 +{r}%"
  }
 };

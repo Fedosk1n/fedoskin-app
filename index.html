@@ -1759,9 +1759,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="reviews.js"></script>
 <script src="hero.js?v=12"></script>
 <script src="rhythm.js?v=13"></script>
-<script src="city-balance.js?v=1"></script>
+<script src="city-balance.js?v=2"></script>
 <script src="city-data.js?v=1"></script>
-<script src="city.js?v=2"></script>
+<script src="city.js?v=3"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5360,6 +5360,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!P.playing || document.hidden || !curLesson || !$('#badgeOwn').hidden || av.paused) return;
     if (curLesson.id !== lastLessonId) { lastLessonId = curLesson.id; sessionSec = 0; sessionCounted = false; }
     stats.sec += 1; sessionSec += 1;
+    { const dk = todayKey(); if (stats.dk !== dk) { stats.dk = dk; stats.ds = 0; } stats.ds = (stats.ds || 0) + 1; } // real lesson seconds today (the city's «warmed up by a lesson»)
     stats.watched[curLesson.id] = (stats.watched[curLesson.id] || 0) + 1;
     { // battle moves v2: which seconds were seen + progress on the lesson page (only with sound)
       const l = curLesson, t = av.currentTime || 0, heard = !soundOff, lt = ulLastT.id === l.id ? ulLastT.t : -1;
@@ -6097,7 +6098,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   } });
   $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
   // the city mini-game (city.js): street battles and shows run on the same rhythm game, offline
-  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate,
+  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate, todaySec: () => stats.dk === todayKey() ? (stats.ds || 0) : 0, day: todayKey, home: () => go('home'),
     openLesson: h => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer

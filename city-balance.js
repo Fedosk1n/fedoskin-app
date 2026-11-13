@@ -6,6 +6,8 @@ window.CITY_BAL = {
   startHour: 7,
   energy: { max: 100, battle: 20, show: 10, lose: 10, stretch: 15 },
   start: { cash: 30, rep: 0 },
+  // «Разогрет уроком» (owner 13.11.2026 «делай»): сегодня по-настоящему занимался в уроках sec секунд ⇒ до конца дня +energy к энергии и +rep к респекту
+  warm: { sec: 300, energy: 20, rep: .1 },
   // пол: mult — множитель очков раунда; pen — штраф за пауэрмув от ×1.3 (доля очков); bruise — шанс ушиба; uses — сколько выступлений живёт
   floor: {
     asphalt: { mult: 1, pen: .12, bruise: .25 },
