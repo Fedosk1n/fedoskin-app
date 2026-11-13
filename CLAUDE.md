@@ -1037,3 +1037,19 @@
   (10 rows ≈ 870 px) was bottom-aligned with no scroll ⇒ its top (Off, Русский…; sideways also EN–FR) was off screen.
   Subtitles and app-language sheets scroll the checked row into view on open. Tested headless iPhone 390×664, 844×340
   (touch swipes reach 中文, tap selects, reopen shows it) and a tablet 820×1180 (unchanged).
+- City mini-game «Город» (owner 13.11.2026; design + status = Project doc `claude/fedoskin-city-game-plan.md`): top-down city behind the flag
+  `cityEnabled` (config.js, false) or the trial link `?city=play` (kept in sessionStorage `fedoskin-city-on`) ⇒ tab «Город» before «Профиль»
+  (5 tabs; with a published course it would be 6 — ASK the owner, options are in the doc). Files: `city-balance.js` (ALL numbers,
+  `window.CITY_BAL`), `city-data.js` (map rows, places, NPCs, items, schedules — `window.CITY_DATA`; a new district = data only), `city.js`
+  (`window.CITY` {init, show, hide}; canvas 2D drawn by code, 44-px tiles, fog, BFS path on tap, clock 1 game hour = 1 real minute only
+  while the tab is shown, 60 fps only while walking else a 240-ms tick, pause on hidden; DOM HUD + dialogs; save `fedoskin-city` {v: 1}).
+  No server, no rating. Strength comes ONLY from lessons: moves = ulState2 (same as battles), new phones go through `stGate`.
+  Battles / shows run on rhythm.js: `RB.open({ city: {ban, fw, cor}, dj, opp, ul, onCity })` — no auto, DJ chip instead of the beat row,
+  `ban` closes moves (a bruise leaves only backspin in POWER — the engine needs 4 picks), `fw` = extra tap window (s) in footwork (sneakers),
+  `cor` = extra headspin corridor px (beanie); finish() → `cityEnd(res)` (res.maxFor(picks, lvl) for the NPC's score) → city returns
+  {my, their, votes, won, extra, btn, done} (battle: showResult) or {title, extra} (show). rhythm.js `?v=13`. Leaving the round early = stake/energy lost.
+  Slice done: district «Двор» (home/sleep, dumpster cardboard, kiosk, tent shop pads/kicks/beanie, show spot, 3 b-boys Витёк 1 / Лёха 2 /
+  Гарик 3 boss, 2 stashes, gate to Центр = «скоро»). City-only finds (owner «добавь вещи, которые выпадают только в городе»): tape, thermos,
+  chalk, cassette, lucky lace, district patch (more planned in the doc). 112 i18n keys (names of NPCs are translated too). Checks:
+  `CITY._s()` state, `_reset()`, `_go(x, y)`, `_t(hour)`, `_cam()`. Tested headless 390×844 / 375×667 ru + en; NOT on a real phone.
+  Not done yet: joystick, stretch mini-game, guard, other districts, city items on the hero's look, balance by real play.

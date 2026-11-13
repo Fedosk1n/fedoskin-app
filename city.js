@@ -254,6 +254,7 @@
     if (Math.random() < (S.own.includes('pads') ? B.padsBruise : F.bruise)) { S.bruise = 1; lines.push('🤕 ' + T('Ушиб на асфальте! Пауэр отдыхает, пока не выспишься.')); }
   }
   function openRound(opt, onCity) {
+    if (D.gate && D.gate()) return false;   // a new phone: battles are closed until the basic lessons are studied — the app's own sheet leads to them
     const ms = movesState(); if (ms.hole >= 0) { needBase(ms); return false; }
     pend = opt.pend; save();
     D.RB.open({ level: ms.lvl, eq: D.look(), me: D.me(), opp: opt.opp || null, dj: opt.beat, ul: ms.ul,

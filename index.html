@@ -6097,7 +6097,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   } });
   $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
   // the city mini-game (city.js): street battles and shows run on the same rhythm game, offline
-  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2,
+  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate,
     openLesson: h => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
