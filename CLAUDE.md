@@ -721,6 +721,21 @@
   New hero moves in hero.js (`?v=12`): hook, kickout, babylove, onestep, russian, rninety, twok, onehand, nike — quick drafts by
   Claude, NOT reviewed by the owner (ask him how they look). SHAPES rninety / twok. index.html: BT_NAME, UL_NEED / UL_RX babylove
   (lesson «Baby love») and rninety («Reverse 1990»; ninety's regex now skips «reverse»). rhythm.js `?v=11`.
+  Revision 3 (owner 13.11.2026 14:24, the three ideas from the plan — «делай и запускай, хочу попробовать»), `RB2.R = 3`, rhythm.js `?v=12`:
+  (1) HELD FREEZE: the last note is `hold` (beat 31 → 33, weight 4): hit in time, keep the finger down and within 48 px for 2 beats
+  (`holdStart/holdEnd/holdPaint`, ring over the hero fills; `n.hs` = started); held ≥ 92 % = the hit's grade, ≥ 50 % = GOOD, else MISS;
+  still ONE char in the hits string. (2) SECOND TRAJECTORY for moves ≥ ×2 (1990, reverse 1990, 2000, flare, airflare): the power phase
+  has no taps — draw at beats 20–23.5 and a mirrored one (`mir`) at 24–27.5; `G.dns` = all draw notes, `G.dn` = the current one
+  (drawTick switches). (3) NEW SET bonus: +2 % per move that differs from the same row of this phone's previous round (max +8 %):
+  `RB2.score(…, prev)`, `RB2.fresh`; server prev = bt_def picks read BEFORE saving (`rbPrev`), round gets `nv`; app keeps
+  `fedoskin-rb-prev` (battles) / `fedoskin-rb-prev-t` (practice) — the two can differ (other phone, failed send): the server's
+  score is the real one. /visits rb2 = 3 (admin wants ≥ 3; «версия 50»).
+  Bridge to coaching: after a battle with the coach (config `coachId` = his rating id if ever set, else nick ~ fedosk1n / федоскин —
+  the owner was told a same-named player would trigger it too) the hand-battle result / «round sent» screen (rhythm.js `coachCard`,
+  D.isCoach / D.onCoach) and the cartoon result (`#btCoach`) show a calm green card «Ты батлил с Федоскиным… Онлайн-ведение →» ⇒
+  Коучинг tab, sendEv('cta', 'battle'); at most once a day (`fedoskin-bt-coach`). Tested headless: full hold PERFECT, let go at 60 %
+  GOOD, at 20 % MISS; flare / airflare two trajectories; parity phone = server incl. prev; coach card → Коучинг, not twice a day.
+  NOT done: hiring an animator (the owner's decision, not code).
 - Rating moved to D1 (owner 10.11.2026 «сотни тысяч пользователей… все захотят батлить»; also a friend «много смотрел, а в
   рейтинге нет» — the single KV key was read-modify-written by everyone: lost updates between edge locations + KV free plan's
   1000 writes/day ⇒ people silently missing): D1 table `lb` (id, n, nl lower-case nick, c, cn normalised city, co, a, m, v, s,

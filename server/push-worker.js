@@ -605,7 +605,7 @@ const RB2 = (() => {
     cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
   // R = the revision of these tables: the phone and the server play by v2 only when both have the same one (bump it on ANY change
   // of M / ROWS / NEED / beats / patterns — otherwise a phone with old code sends rounds the server counts differently)
-  const R = 2;
+  const R = 3;
   // the score multiplier of every move = how hard it is in real breaking. THE OWNER'S NUMBERS (13.11.2026 «исправь: indian 1.3,
   // airflare 2.5, 1990 2, reverse 1990 2, 2000 2, airchair 1.8, flare 2.2, headspin 1.4…» + new footwork). It also sets how dense
   // the taps are (tier: ≤ ×1.1 sparse, ≤ ×1.4 medium, above — dense) and how narrow the trajectory's corridor is
@@ -647,8 +647,9 @@ const RB2 = (() => {
     dblH: [null, [[0, 2]], [[0, 2, 3], [0, 1.5, 2]], [[0, 1.5, 2, 3], [0, 2, 2.5, 3]], [[0, 1.5, 2, 3, 3.5], [0, .5, 2, 2.5, 3]]] };
   const PF = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5], [0, .5, 1, 1.5, 2, 2.5]];
   // the round in beats: count-in 4, toprock 8, footwork 8, power 4 of taps + the trajectory, freeze 4 (the big hit on its 4th)
-  const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31;
-  const W_DRAW = 5, W_BIG = 3; // a drawn trajectory counts as 5 taps, the freeze hit as 3
+  const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31, B_HOLD_END = 33;
+  const W_DRAW = 5, W_BIG = 4; // a drawn trajectory counts as 5 taps, the held freeze as 4
+  const TWO = 2, FRESH = .02; // moves from ×2 get a second trajectory; a new set: +2 % per move that wasn't in the previous round
   function bar(fam, L, i, rnd) {
     let set;
     if (fam === 'trip') set = rnd() < .3 ? P.st[Math.min(L, 3)] : P.trip[L];
@@ -661,22 +662,26 @@ const RB2 = (() => {
     const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(m) + B[1], 1, 4);
     let i = 0;
     const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
-    bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
-    out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true });
+    bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1);
+    // the hardest power moves (from ×2): no taps at all — two trajectories, the second one mirrored (owner 13.11.2026 «делай»)
+    const two = mult(picks[2]) >= TWO;
+    if (two) { i++; out.push({ b: B_POW, end: B_POW + 3.5, ph: 2, w: W_DRAW, draw: true }); } else bars(B_POW, 1, 2);
+    out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true, mir: two });
     PF[L(picks[3])].forEach(x => out.push({ b: B_FRZ + x, ph: 3, w: 1 }));
-    out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
+    out.push({ b: B_BIG, end: B_HOLD_END, ph: 3, w: W_BIG, big: true, hold: true }); // the freeze: hit it in time and HOLD the finger for 2 beats
     return out;
   }
   const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(picks[n.ph]) * BEATS[beat][2];
   const combo = c => 1 + Math.min(c, 30) * .02;
   // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
   // (no miss, no stray tap) = FULL COMBO, +10 %
-  function score(picks, seed, beat, hits, brk, level) {
+  const fresh = (picks, prev) => Array.isArray(prev) && prev.length === 4 ? picks.filter((m, k) => m !== prev[k]).length : 0;
+  function score(picks, seed, beat, hits, brk, level, prev) {
     const br = new Set(brk || []); let s = 0, c = 0, clean = !(brk && brk.length);
     notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
-    return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
+    return Math.round(s * (clean ? 1.1 : 1) * (1 + FRESH * fresh(picks, prev)) * (1 + .01 * (level || 1)));
   }
-  return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+  return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, fresh, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
 })();
 // </RB2>
 function rbNotes(picks, seed, beat) { // only the phase and «big» of each note, in the same order as rhythm.js
@@ -700,7 +705,7 @@ const rbPool = (la, lb) => Math.min(la, lb) >= 3 ? 7 : 5;
 const rbG = x => { try { return (typeof x === 'string' ? JSON.parse(x) : x).g === 2 ? 2 : 1; } catch (_) { return 1; } };
 const rbR = x => { try { return +(typeof x === 'string' ? JSON.parse(x) : x).r || 0; } catch (_) { return 0; } }; // which revision of the v2 tables
 // a round the server checks: picks the hero knows, the DJ's track, one result per note; returns the stored form or null
-function rbCheck(r, level, beat) {
+function rbCheck(r, level, beat, prev) { // prev = the picks of this phone's previous round (a new set earns a bonus in v2)
   if (!r || typeof r !== 'object' || r.b !== beat) return null;
   const g2 = r.g === 2; if (!(g2 ? RB2.BEATS : RB_BEATS)[beat]) return null; // g = which rules the phone played by
   if (g2 && +r.r !== RB2.R) return null; // v2 tables of another revision (the phone's code is older or newer than this server)
@@ -713,8 +718,8 @@ function rbCheck(r, level, beat) {
   const seed = Math.floor(+r.s || 0); if (!(seed >= 1 && seed < 4294967296)) return null;
   const h = String(r.h || ''), n = (g2 ? RB2.notes(p, seed, beat) : rbNotes(p, seed, beat)).length; if (h.length !== n || /[^123]/.test(h)) return null;
   const k = (Array.isArray(r.k) ? r.k : []).slice(0, 300).map(x => Math.floor(+x)).filter(x => x >= 0 && x < n);
-  const o = { p, s: seed, b: beat, h, k, au: r.au ? 1 : 0, sc: g2 ? RB2.score(p, seed, beat, h, k, level) : rbScore(p, seed, beat, h, k, level) };
-  if (g2) { o.g = 2; o.r = RB2.R; }
+  const o = { p, s: seed, b: beat, h, k, au: r.au ? 1 : 0, sc: g2 ? RB2.score(p, seed, beat, h, k, level, prev) : rbScore(p, seed, beat, h, k, level) };
+  if (g2) { o.g = 2; o.r = RB2.R; o.nv = RB2.fresh(p, prev); }
   return o;
 }
 // the other dancer: its own last round's picks (if it still knows them) and hit shares, on the DJ's track; else by level
@@ -734,7 +739,8 @@ function rbStand(def, level, beat, g) {
   return o;
 }
 const rbPub = r => r && { p: r.p, b: r.b, sc: r.sc, pf: (r.h.match(/1/g) || []).length, gd: (r.h.match(/2/g) || []).length, ms: (r.h.match(/3/g) || []).length, fz: r.h.slice(-1) !== '3' ? 1 : 0, au: r.au, st: r.st || 0, g: r.g === 2 ? 2 : 1, r: +r.r || 0, fc: r.g === 2 && !/3/.test(r.h) && !(r.k && r.k.length) ? 1 : 0,
-  dr: r.g === 2 ? +r.h[RB2.notes(r.p, r.s, r.b).findIndex(n => n.draw)] || 3 : undefined }; // dr = how the trajectory was drawn (1 / 2 / 3)
+  nv: r.nv || 0,
+  dr: r.g === 2 ? Math.max(...RB2.notes(r.p, r.s, r.b).map((n, i) => n.draw ? +r.h[i] || 3 : 0)) : undefined }; // dr = how the trajectory was drawn (1 / 2 / 3)
 async function heroEq(db, ids) {
   const out = {}; if (!ids.length) return out;
   const rs = await db.prepare('SELECT id, eq FROM hero_eq WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
@@ -748,6 +754,7 @@ async function btScore(db, a, b, win) {
 // a phone's last round by hand = how its dancer dances when it doesn't answer in time
 const btDefSave = (db, id, r, now) => db.prepare('INSERT INTO bt_def (id, d, t) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET d = excluded.d, t = excluded.t')
   .bind(id, JSON.stringify({ p: r.p, n: r.h.length, m: (r.h.match(/3/g) || []).length, f: (r.h.match(/1/g) || []).length }), now);
+const rbPrev = async (db, id) => { try { const x = await db.prepare('SELECT d FROM bt_def WHERE id = ?').bind(id).first(); return x ? JSON.parse(x.d).p : null; } catch (_) { return null; } };
 const btGet = (db, n) => db.prepare('SELECT bt.*, bt_h.ra AS hra, bt_h.rb AS hrb, bt_h.dj, bt_h.exp, bt_h.st AS hst, bt_h.late FROM bt LEFT JOIN bt_h ON bt_h.n = bt.n WHERE bt.n = ?').bind(n).first();
 // the judges vote by the scores: 10 % ahead ⇒ each judge ~92 % for you; close scores ⇒ they may disagree
 async function btResolve(env, n, rb, late) {
@@ -845,7 +852,7 @@ async function battle(req, env, path, json) {
     if (b.round) { // a round by hand: the DJ's track of this half hour (or the one before — the round takes ~20 s); the battle waits
       const slot = Math.floor(now / DJ_SLOT), djs = [];
       for (const pool of (b.round.g === 2 ? [rbPool(la, lb), 7, 5] : [0])) djs.push(await rbDj(id, to, slot, pool), await rbDj(id, to, slot - 1, pool));
-      ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0]);
+      ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0], await rbPrev(db, id));
       if (!ra) return json({ error: 'round' }, 400);
     }
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 1;
@@ -897,7 +904,7 @@ async function battle(req, env, path, json) {
     const lvl = heroLevel(me.m);
     // both dance by the challenger's rules (g). An app that doesn't know rules v2 yet answers a v2 challenge ⇒ its dancer dances for it
     const g = rbG(row.hra), same = !!b.round && (b.round.g === 2 ? 2 : 1) === g && (g === 1 || (+b.round.r === RB2.R && rbR(row.hra) === RB2.R)), hand = !b.auto && same;
-    const rb = hand ? rbCheck(b.round, lvl, row.dj) : b.auto || g === 2 ? rbStand(null, lvl, row.dj, g) : null;
+    const rb = hand ? rbCheck(b.round, lvl, row.dj, await rbPrev(db, id)) : b.auto || g === 2 ? rbStand(null, lvl, row.dj, g) : null;
     if (!rb) return json({ error: 'round' }, 400);
     if (hand) rb.au = 0;
     if (!(await btResolve(env, n, rb, false))) { const r2 = await btGet(db, n); return json({ ok: true, late: 1, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])) }); }

@@ -559,6 +559,9 @@ body.chatmode .tabs{display:none}
 .judge svg{width:34px;height:34px}
 .judge small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .btres{text-align:center;margin-top:6px}
+.rbcoach{margin-top:12px;padding:12px 14px;border:1px solid rgba(59,209,111,.28);background:rgba(59,209,111,.07);border-radius:14px;text-align:left}
+.rbcoach p{margin:0 0 8px;font-size:13px;line-height:1.35}
+.rbcoach button{background:none;border:0;padding:0;color:#7BE3A0;font-weight:700;font-size:14px}
 .btres b{display:block;font-family:var(--display);font-size:40px;line-height:1;animation:vspop .5s cubic-bezier(.2,1.6,.4,1) both}
 .btres b.win{color:var(--accent)} .btres b.lose{color:var(--muted)}
 .btres span{font-size:13px;color:var(--soft)}
@@ -1683,7 +1686,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div class="confetti" id="btConf"></div>
     </div>
     <div class="judges" id="btJudges"><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div><div class="judge"><span class="card"></span><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="10" r="7" fill="#2E2E34"/><path d="M5 34 Q5 19 17 19 Q29 19 29 34Z" fill="#2E2E34"/><rect x="11" y="8" width="12" height="4" rx="2" fill="#0B0B0C"/></svg><small>Судья</small></div></div>
-    <div class="btres" id="btRes" hidden><b id="btResT"></b><span id="btResS"></span><em class="btresr" id="btResR" hidden></em></div>
+    <div class="btres" id="btRes" hidden><b id="btResT"></b><span id="btResS"></span><em class="btresr" id="btResR" hidden></em><div class="rbcoach" id="btCoach" hidden><p>Ты батлил с Федоскиным — тренером и автором этих уроков. Он ведёт учеников онлайн.</p><button type="button" id="btCoachGo">Онлайн-ведение →</button></div></div>
     <div class="btbtns"><button class="btn btn-ghost" id="btSkip" type="button">Пропустить</button><button class="btn btn-ghost" id="btClose" type="button" hidden>Закрыть</button></div>
   </div>
 </div>
@@ -1754,7 +1757,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=12"></script>
-<script src="rhythm.js?v=11"></script>
+<script src="rhythm.js?v=12"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5829,7 +5832,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#battle').hidden = false;
     const rnd = mulberry(bt.seed || 1), pick = a => a[Math.floor(rnd() * a.length)];
     const arena = $('#btArena'), cam = $('#btCam'), fx = $('#btFx');
-    cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake', 'legend', 'myth'); $('#btLegend').className = 'btlegend'; $('#btResR').hidden = true; $('#btResR').classList.remove('myth');
+    cam.style.transform = ''; arena.classList.remove('on-l', 'on-r', 'flash', 'shake', 'legend', 'myth'); $('#btLegend').className = 'btlegend'; $('#btCoach').hidden = true; $('#btResR').hidden = true; $('#btResR').classList.remove('myth');
     const shout = (left, txt) => { const s = $('#btShout'); s.textContent = txt; s.style.left = left ? '10%' : ''; s.style.right = left ? '' : '10%'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); };
     const caption = (left, txt) => { const c = $('#btMove'); if (!txt) return; c.textContent = txt; c.className = 'btmove ' + (left ? 'l' : 'r'); void c.offsetWidth; c.classList.add('show'); };
     const round = t => { const r = $('#btRound'); r.textContent = t; r.classList.remove('show'); void r.offsetWidth; r.classList.add('show'); };
@@ -5934,6 +5937,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
         if (rare) { const rr = $('#btResR'); rr.textContent = rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); if (rareLeft && bt.n) rr.textContent += ' · ' + T('+{n} ⭐ за редкий приём', { n: rare.myth ? 10 : 5 }); rr.hidden = false; }
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
+        { const cb = $('#btCoach'), day = new Date().toISOString().slice(0, 10); let ok = bt.n > 0 && isCoach(opp); try { if (ok && localStorage.getItem('fedoskin-bt-coach') === day) ok = false; if (ok) localStorage.setItem('fedoskin-bt-coach', day); } catch (_) {} cb.hidden = !ok; }
         hype(true);
         if (won) { const c = $('#btConf'); for (let k = 0; k < 36; k++) { const i = document.createElement('i'); i.style.left = (Math.random() * 100).toFixed(1) + '%'; i.style.background = ['#E2611A', '#F2CC55', '#F2EFE8', '#3BD16F'][k % 4]; i.style.animationDelay = (Math.random() * .8).toFixed(2) + 's'; c.appendChild(i); } if (navigator.vibrate) try { navigator.vibrate([30, 60, 30, 60, 80]); } catch (_) {} }
       }, 300 + votes.length * 550 + 250);
@@ -6073,11 +6077,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   window.fedoskinPushed = () => { if (LB_URL && lbShow) teeAfterPush(); };
   // rhythm battle (rhythm.js): every battle starts with a round of it — btStart; fedoskinRhythm = the old trial vs the computer (checks only)
-  RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN, onUl: h => {
+  // The coach's own dancer: by the rating id from config (`coachId`) or, until it is set, by his nick. After a battle with him the
+  // result screens offer his online coaching — calmly, at most once a day (owner 13.11.2026).
+  const isCoach = o => !!o && (CFG.coachId ? o.id === CFG.coachId : /fedosk[1i]n|федоскин/i.test(String(o.name || o.n || '')));
+  const toCoaching = where => { try { sendEv('cta', where); } catch (_) {} $('#rbGame').hidden = true; $('#battle').hidden = true; setTimeout(() => go('review'), 350); };
+  RB.init({ el: $('#rbGame'), T, names: BT_NAME, spin: BT_SPIN, isCoach, onCoach: () => toCoaching('battle'), onUl: h => {
     // «Открыть урок» from a locked card: close the battle (its history step goes first), then the lesson / section
     $('#rbGame').hidden = true;
     setTimeout(() => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); }, 350);
   } });
+  $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
   window.fedoskinRare = kind => {

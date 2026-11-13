@@ -26,7 +26,7 @@
       cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
     // R = the revision of these tables: the phone and the server play by v2 only when both have the same one (bump it on ANY change
     // of M / ROWS / NEED / beats / patterns — otherwise a phone with old code sends rounds the server counts differently)
-    const R = 2;
+    const R = 3;
     // the score multiplier of every move = how hard it is in real breaking. THE OWNER'S NUMBERS (13.11.2026 «исправь: indian 1.3,
     // airflare 2.5, 1990 2, reverse 1990 2, 2000 2, airchair 1.8, flare 2.2, headspin 1.4…» + new footwork). It also sets how dense
     // the taps are (tier: ≤ ×1.1 sparse, ≤ ×1.4 medium, above — dense) and how narrow the trajectory's corridor is
@@ -68,8 +68,9 @@
       dblH: [null, [[0, 2]], [[0, 2, 3], [0, 1.5, 2]], [[0, 1.5, 2, 3], [0, 2, 2.5, 3]], [[0, 1.5, 2, 3, 3.5], [0, .5, 2, 2.5, 3]]] };
     const PF = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5], [0, .5, 1, 1.5, 2, 2.5]];
     // the round in beats: count-in 4, toprock 8, footwork 8, power 4 of taps + the trajectory, freeze 4 (the big hit on its 4th)
-    const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31;
-    const W_DRAW = 5, W_BIG = 3; // a drawn trajectory counts as 5 taps, the freeze hit as 3
+    const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31, B_HOLD_END = 33;
+    const W_DRAW = 5, W_BIG = 4; // a drawn trajectory counts as 5 taps, the held freeze as 4
+    const TWO = 2, FRESH = .02; // moves from ×2 get a second trajectory; a new set: +2 % per move that wasn't in the previous round
     function bar(fam, L, i, rnd) {
       let set;
       if (fam === 'trip') set = rnd() < .3 ? P.st[Math.min(L, 3)] : P.trip[L];
@@ -82,38 +83,43 @@
       const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(m) + B[1], 1, 4);
       let i = 0;
       const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
-      bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
-      out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true });
+      bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1);
+      // the hardest power moves (from ×2): no taps at all — two trajectories, the second one mirrored (owner 13.11.2026 «делай»)
+      const two = mult(picks[2]) >= TWO;
+      if (two) { i++; out.push({ b: B_POW, end: B_POW + 3.5, ph: 2, w: W_DRAW, draw: true }); } else bars(B_POW, 1, 2);
+      out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true, mir: two });
       PF[L(picks[3])].forEach(x => out.push({ b: B_FRZ + x, ph: 3, w: 1 }));
-      out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
+      out.push({ b: B_BIG, end: B_HOLD_END, ph: 3, w: W_BIG, big: true, hold: true }); // the freeze: hit it in time and HOLD the finger for 2 beats
       return out;
     }
     const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(picks[n.ph]) * BEATS[beat][2];
     const combo = c => 1 + Math.min(c, 30) * .02;
     // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
     // (no miss, no stray tap) = FULL COMBO, +10 %
-    function score(picks, seed, beat, hits, brk, level) {
+    const fresh = (picks, prev) => Array.isArray(prev) && prev.length === 4 ? picks.filter((m, k) => m !== prev[k]).length : 0;
+    function score(picks, seed, beat, hits, brk, level, prev) {
       const br = new Set(brk || []); let s = 0, c = 0, clean = !(brk && brk.length);
       notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
-      return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
+      return Math.round(s * (clean ? 1.1 : 1) * (1 + FRESH * fresh(picks, prev)) * (1 + .01 * (level || 1)));
     }
-    return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+    return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, fresh, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
   })();
   // </RB2>
   // which rules this round is played by: 2 = RB2 (difficulty 1–10, hard beats, the trajectory to draw, FULL COMBO), 1 = the old ones
   // (a battle with a server or an opponent's challenge that doesn't know v2 yet)
   const V2 = () => !!G && G.g === 2;
+  const prevKey = () => G.battle ? 'fedoskin-rb-prev' : 'fedoskin-rb-prev-t'; // the set of the previous round (battles: the same one the server remembers)
   const diffOf = m => V2() ? RB2.mult(m) : DIFF[m];
   const tierOf = m => V2() ? RB2.tier(m) : DIFF[m];
   const multOf = m => V2() ? RB2.mult(m) : MULT[DIFF[m]];
   const rowsOf = () => V2() ? RB2.ROWS.map((r, k) => [ROWS[k][0], r]) : ROWS; // v2 has its own moves (owner 13.11.2026: more footwork, 2000, reverse 1990…)
   const needOf = m => (V2() ? RB2.NEED[m] : NEED[m]) || 1;
   const lvOf = (m, beat) => V2() ? RB2.lv(m, beat) : clamp(DIFF[m] + beatOf(beat).up, 1, 3);
-  const notes2 = (picks, seed, beat) => { const bt = 60 / beatOf(beat).bpm; return RB2.notes(picks, seed, beat).map(n => ({ t: n.b * bt, end: n.end ? n.end * bt : 0, ph: n.ph, w: n.w, big: !!n.big, draw: !!n.draw, st: 0 })); };
+  const notes2 = (picks, seed, beat) => { const bt = 60 / beatOf(beat).bpm; return RB2.notes(picks, seed, beat).map(n => ({ t: n.b * bt, end: n.end ? n.end * bt : 0, ph: n.ph, w: n.w, big: !!n.big, draw: !!n.draw, hold: !!n.hold, mir: !!n.mir, st: 0 })); };
   const notesOf = (picks, seed, beat) => V2() ? notes2(picks, seed, beat) : notesFor(picks, seed, beat);
   const ptsOf = (n, kind, combo) => V2() ? RB2.base(n, G.picks, kind, G.beat) * RB2.combo(combo) : noteBase(n, G.picks, kind, G.beat) * comboMult(combo);
-  const totalOf = (picks, seed, level, beat, hits, brk) => V2() ? RB2.score(picks, seed, beat, hits, brk, level) : scoreOf(picks, seed, level, beat, hits, brk);
-  const maxOf = (picks, seed, level, beat) => V2() ? RB2.score(picks, seed, beat, '1'.repeat(RB2.notes(picks, seed, beat).length), [], level) : maxScore(picks, seed, level, beat);
+  const totalOf = (picks, seed, level, beat, hits, brk) => V2() ? RB2.score(picks, seed, beat, hits, brk, level, G.prevPk) : scoreOf(picks, seed, level, beat, hits, brk);
+  const maxOf = (picks, seed, level, beat) => V2() ? RB2.score(picks, seed, beat, '1'.repeat(RB2.notes(picks, seed, beat).length), [], level, picks === G.picks ? G.prevPk : null) : maxScore(picks, seed, level, beat);
   // v2 (owner 13.11.2026): the app passes the exact list of usable moves (lesson studied 3× AND the hero's level); else as before
   const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : needOf(m) <= G.level) : (needOf(m) <= G.level || G.ul.has(m));
   // the locked card's caption and the how-to text (v2: studied 3× AND level)
@@ -283,6 +289,9 @@
 .rbpad.dr{border-color:#F2CC55;background:rgba(242,204,85,.14);color:#F2CC55}
 .rbend p.fc{color:#F2CC55;font-family:var(--display);font-size:18px;letter-spacing:1px;margin-top:6px}
 .rbc i u{text-decoration:none;color:var(--fg)}
+.rbcoach{margin-top:12px;padding:12px 14px;border:1px solid rgba(59,209,111,.28);background:rgba(59,209,111,.07);border-radius:14px;text-align:left}
+.rbcoach p{margin:0 0 8px;font-size:13px;line-height:1.35;color:var(--fg)}
+.rbcoach button{background:none;border:0;padding:0;color:#7BE3A0;font-weight:700;font-size:14px}
 .rbhead{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
 .rbhead small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .rbhead b{font-family:var(--display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
@@ -390,10 +399,10 @@
       if (!G || G.mode !== 'play') return;
       if (e.target.closest && e.target.closest('[data-nt]')) return;
       e.preventDefault();
-      if (drawOpen(e.timeStamp)) { try { box.setPointerCapture(e.pointerId); } catch (_) {} drawDown(e); } else tap(e.timeStamp);
+      if (drawOpen(e.timeStamp)) { try { box.setPointerCapture(e.pointerId); } catch (_) {} drawDown(e); } else tap(e.timeStamp, e);
     });
-    box.addEventListener('pointermove', e => { if (G && G.mode === 'play' && G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
-    ['pointerup', 'pointercancel'].forEach(ev => box.addEventListener(ev, () => { if (G && G.dr) { G.dr.on = false; G.dr.last = null; } }));
+    box.addEventListener('pointermove', e => { if (!G || G.mode !== 'play') return; if (G.hold && !G.hold.auto && e.pointerId === G.hold.id && Math.hypot(e.clientX - G.hold.x, e.clientY - G.hold.y) > 48) holdEnd(stampS(e.timeStamp)); if (G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
+    ['pointerup', 'pointercancel'].forEach(ev => box.addEventListener(ev, e => { if (G && G.mode === 'play' && G.hold && !G.hold.auto && e.pointerId === G.hold.id) holdEnd(stampS(e.timeStamp)); if (G && G.dr) { G.dr.on = false; G.dr.last = null; } }));
     box.addEventListener('touchstart', e => { if (G && G.mode === 'play' && !(e.target.closest && e.target.closest('[data-nt]'))) e.preventDefault(); }, { passive: false });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') again(); });
     new MutationObserver(() => { if (D.el.hidden) stop(); }).observe(D.el, { attributes: true, attributeFilter: ['hidden'] });
@@ -405,7 +414,7 @@
   function open(o) {
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
-    G = { g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
+    G = { coach: !!(D.isCoach && o.opp && D.isCoach(o.opp)), g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
       battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), allow: o.ul && o.ul.v2 ? new Set(o.ul.allow || []) : null, ulKeys: new Set(o.ul && o.ul.keys || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
@@ -469,6 +478,7 @@
   function setup() {
     const T = D.T; killBeat();
     G.mode = 'setup'; G.seed = Math.floor(Math.random() * 1e9) + 1; drawOff();
+    G.prevPk = null; if (V2()) try { const pv = JSON.parse(localStorage.getItem(prevKey()) || 'null'); if (Array.isArray(pv) && pv.length === 4) G.prevPk = pv; } catch (_) {}
     const rnd = mulberry(G.seed);
     $('#rbPlay').hidden = true; $('#rbEnd').hidden = true; $('#rbSet').hidden = false; $('#rbConf').innerHTML = '';
     $('#rbScore').textContent = '0'; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); $('#rbPhase').textContent = '';
@@ -491,7 +501,7 @@
     if (!V2() && beatOf(G.beat).g) G.beat = null;
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
-    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') : '') + '</p>' +
+    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') + ' ' + T('На фризе попади в бит и держи палец, пока не заполнится круг.') + (G.prevPk ? ' ' + T('Новая связка: +2 % за каждый элемент, которого не было в твоём прошлом раунде.') : '') : '') + '</p>' +
       (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.filter(b => V2() || !b.g).map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
@@ -558,7 +568,7 @@
     if (G.auto) G.picks = rowsOf().map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
-    G.notes = notesOf(G.picks, G.seed, G.beat); G.dn = G.notes.find(n => n.draw) || null; G.dr = null;
+    G.notes = notesOf(G.picks, G.seed, G.beat); G.dns = G.notes.filter(n => n.draw); G.dn = G.dns[0] || null; G.dr = null; G.hold = null; G.bigAt = 0;
     if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (lvOf(G.picks[n.ph], G.beat) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
     $('#rbSkip').hidden = !G.auto; G.brk = [];
@@ -581,21 +591,23 @@
     if (kind === 3) { G.combo = 0; G.missAt = s; }
     else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += ptsOf(n, kind, G.combo) * (1 + .01 * G.level); }
     if (n.big) {
-      G.bigSt = kind;
+      G.bigSt = kind; if (n.hold) G.bigAt = s;
       const ar = $('#rbArena');
       if (kind !== 3) { ar.classList.remove('shake', 'flash'); void ar.offsetWidth; ar.classList.add('shake', 'flash'); stars(); puff(); $('#rbCrowd').classList.add('hype'); if (navigator.vibrate) try { navigator.vibrate(22); } catch (_) {} }
     }
     say(kind);
     $('#rbScore').textContent = Math.round(G.score); $('#rbCombo').textContent = G.combo; $('#rbCombo').classList.toggle('hot', G.combo >= 8);
   }
-  function tap(stamp) {
+  function tap(stamp, e) {
     if (G.auto) return;
     let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp;
     const s = song(p), pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
     let bestN = null, bd = 9;
-    for (const n of G.notes) { if (n.st || n.draw) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
-    if (bestN && bd <= W_GOOD) { const kind = bd <= W_PERF ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
-    else if (G.dn && s > G.dn.t - .1 && s < G.dn.end + .15) { /* fingers near the trajectory: not a stray tap */ }
+    for (const n of G.notes) { if (n.st || n.draw || n.hs) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
+    if (bestN && bd <= W_GOOD && bestN.hold) holdStart(bestN, bd <= W_PERF ? 1 : 2, s, e);
+    else if (bestN && bd <= W_GOOD) { const kind = bd <= W_PERF ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
+    else if (G.hold) { /* a second finger while holding the freeze */ }
+    else if (G.dns && G.dns.some(n => s > n.t - .1 && s < n.end + .15)) { /* fingers near the trajectory: not a stray tap */ }
     else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { const nx = G.notes.findIndex(n => !n.st && n.t > s); G.brk.push(nx < 0 ? G.notes.length : nx); G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
   }
   // ---- the trajectory (rules v2, owner 13.11.2026 «тапаешь, тапаешь и затем нарисуй траекторию ноги в полёте на флаере») ----
@@ -627,7 +639,7 @@
     c.style.left = (a.left - b.left) + 'px'; c.style.top = (a.top - b.top) + 'px'; c.style.width = R.W + 'px'; c.style.height = R.H + 'px';
     c.width = Math.round(R.W * R.d); c.height = Math.round(R.H * R.d);
     const f = SHAPES[G.picks[2]] || SHAPES.backspin, S = Math.min(R.W * .4, R.H * .4, 135), cx = R.W / 2, cy = R.H * .5, raw = [];
-    for (let k = 0; k <= 400; k++) { const q = f(k / 400); raw.push([cx + q[0] * S, cy + q[1] * S]); }
+    for (let k = 0; k <= 400; k++) { const q = f(k / 400); raw.push([cx + (G.dn.mir ? -q[0] : q[0]) * S, cy + q[1] * S]); }
     const keep = R.pts.length ? R.idx / (R.pts.length - 1) : 0, pts = [raw[0]], STEP = 7; let acc = 0; // points 7 px apart along the line
     for (let k = 1; k < raw.length; k++) {
       let ax = raw[k - 1][0], ay = raw[k - 1][1]; const bx = raw[k][0], by = raw[k][1]; let seg = Math.hypot(bx - ax, by - ay);
@@ -661,6 +673,9 @@
     if (kind !== 3) { stars(); if (navigator.vibrate) try { navigator.vibrate(16); } catch (_) {} }
   }
   function drawTick(n, s) {
+    if (n !== G.dn) { // the second trajectory takes over when the first one is done
+      if (!n.st && G.dn.st && G.dns.indexOf(n) > G.dns.indexOf(G.dn) && (s - ((G.dr && G.dr.doneAt) || 0) > .35 || s >= n.t - .15)) { G.dn = n; drawInit(); } else return;
+    }
     const R = G.dr, pad = $('#rbPad'); if (!R) return;
     if (!n.st) {
       if (!R.lab && s >= n.t - BEAT) { R.lab = 1; pad.textContent = D.T('Рисуй!'); pad.classList.add('dr'); }
@@ -707,6 +722,7 @@
         continue;
       }
       const px = hx + dt * pps, r = (n.big ? 20 : 13) * d;
+      if (n.hold && n.st !== 3) { const x1 = hx + (n.end - s) * pps; if (x1 > 0) { x.globalAlpha = .45; x.fillStyle = '#F2CC55'; x.fillRect(Math.max(px, 0), cy - 7 * d, x1 - Math.max(px, 0), 14 * d); x.globalAlpha = 1; } }
       if (n.st === 1 || n.st === 2) { const k = Math.max(0, (s - n.jt) / .25); if (k < 1) { x.globalAlpha = 1 - k; x.strokeStyle = n.st === 1 ? '#F2CC55' : '#F2EFE8'; x.lineWidth = 3 * d; x.beginPath(); x.arc(hx, cy, r * (1 + k * 1.2), 0, 7); x.stroke(); x.globalAlpha = 1; } continue; }
       if (px < -r) continue;
       x.globalAlpha = n.st === 3 ? .3 : 1;
@@ -715,6 +731,36 @@
       if (n.big && !n.st) { x.fillStyle = '#0B0B0C'; x.font = (11 * d) + 'px Anton, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('FRZ', px, cy + d); }
       x.globalAlpha = 1;
     }
+  }
+  // ---- the held freeze (rules v2, owner 13.11.2026 «удержать палец в точке = зафиксировать фриз») ----
+  // The last note: hit it in time, then keep the finger down and still (within 48 px) for two beats while the ring fills.
+  // Held to the end = the grade of the hit; let go after half = GOOD; earlier = MISS.
+  function holdStart(n, kind, s, e) {
+    n.hs = true; G.hold = { n, kind, x: e ? e.clientX : 0, y: e ? e.clientY : 0, id: e ? e.pointerId : -1, auto: !e };
+    const ar = $('#rbArena'); ar.classList.remove('shake', 'flash'); void ar.offsetWidth; ar.classList.add('shake', 'flash'); puff(); blip(kind);
+    const j = $('#rbJ'); j.textContent = 'HOLD!'; j.className = 'rbj g'; void j.offsetWidth; j.classList.add('show');
+    const pad = $('#rbPad'); pad.textContent = D.T('Держи!'); pad.classList.add('dr');
+    if (navigator.vibrate) try { navigator.vibrate(18); } catch (_) {}
+  }
+  function holdEnd(s) {
+    const H = G.hold; if (!H || H.n.st) return; G.hold = null;
+    const n = H.n, k = clamp((s - n.t) / (n.end - n.t), 0, 1), kind = k >= .92 ? H.kind : k >= .5 ? 2 : 3;
+    judge(n, kind, s); if (kind === 3) blip(3);
+    const pad = $('#rbPad'); pad.classList.remove('dr'); pad.textContent = G.auto ? D.T('Авто') : D.T('Тапай!');
+  }
+  function holdPaint(s) {
+    const n = G.notes[G.notes.length - 1], R = G.dr; if (!n || !n.hold || !R || !R.W) return;
+    if (s < n.t - 2 * BEAT || s > n.end + .5 || (n.st && s - n.jt > .5)) return;
+    const c = drawCan(), x = c.getContext('2d'), cx = R.W / 2, cy = Math.min(R.H * .3, 150), r0 = 34;
+    x.setTransform(R.d, 0, 0, R.d, 0, 0);
+    const fade = n.st ? clamp(1 - (s - n.jt) / .5, 0, 1) : 1; x.globalAlpha = fade;
+    x.lineWidth = 6; x.strokeStyle = 'rgba(11,11,12,.6)'; x.beginPath(); x.arc(cx, cy, r0, 0, 7); x.stroke();
+    x.lineWidth = 4; x.strokeStyle = n.st === 3 ? '#6A6A72' : 'rgba(242,239,232,.55)'; x.beginPath(); x.arc(cx, cy, r0, 0, 7); x.stroke();
+    if (!n.hs && !n.st && s < n.t) { const k = clamp((n.t - s) / (2 * BEAT), 0, 1); x.strokeStyle = '#F2CC55'; x.lineWidth = 3; x.beginPath(); x.arc(cx, cy, r0 + 46 * k, 0, 7); x.stroke(); } // closes in on the beat
+    const k = n.st && n.st !== 3 ? clamp((n.jt - n.t) / (n.end - n.t), 0, 1) : n.hs && !n.st ? clamp((s - n.t) / (n.end - n.t), 0, 1) : 0;
+    if (k > 0) { x.strokeStyle = n.st === 2 ? '#F2EFE8' : '#F2CC55'; x.lineWidth = 7; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, r0, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); x.stroke(); }
+    x.fillStyle = n.st === 3 ? '#6A6A72' : '#F2CC55'; x.font = '15px Anton, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(n.hs || n.st ? 'HOLD' : 'FRZ', cx, cy + 1);
+    x.globalAlpha = 1;
   }
   // which pose the hero is in at song second s
   function pose(s) {
@@ -727,7 +773,7 @@
     else if (s < tPow) { key = 'foot'; p = span(G.picks[1], tFoot, FOOT); }
     else if (s < tFrz) { key = 'pow'; p = span(G.picks[2], tPow, POW); }
     else if (s < fStart) { key = 'pre'; p = loop(G.picks[0], s - tFrz, .75); }
-    else if (G.bigSt === 3) { const t = s - (tBig + W_GOOD); key = 'fail'; p = t < M.shock.dur ? M.shock.f(clamp(t / M.shock.dur, 0, 1)) : loop('lose2', t); }
+    else if (G.bigSt === 3) { const t = s - (G.bigAt || (tBig + W_GOOD)); key = 'fail'; p = t < M.shock.dur ? M.shock.f(clamp(t / M.shock.dur, 0, 1)) : loop('lose2', t); }
     else { const u = (s - fStart) / fz.dur; if (u < 1) { key = 'frz'; p = fz.f(clamp(u, 0, 1)); } else { key = 'after'; p = loop('win', s - fStart - fz.dur); } }
     return [key, p];
   }
@@ -752,8 +798,8 @@
     // keep the clock on the sound (the audio clock is the truth; small corrections only)
     if (G.audio && ctx.state === 'running') { const diff = (ctx.currentTime - G.aud0 - G.lat) - song(now); if (Math.abs(diff) > .04) G.perf0 -= diff * 1000 * .15; }
     const s = song(now), T = D.T;
-    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
-    for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
+    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.hs && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; if (n.hold) { holdStart(n, kind, s); continue; } judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
+    for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && !n.hs && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
     const beat = Math.floor(s / BEAT);
     if (beat !== G.lastBeat) {
       G.lastBeat = beat;
@@ -762,7 +808,8 @@
       if (ph !== G.shown) { G.shown = ph; if (ph >= 0) $('#rbPhase').textContent = D.names[G.picks[ph]]; $('#rbF').classList.toggle('spin', (ph === 1 || ph === 2) && D.spin.includes(G.picks[ph])); if (ph === 1 || ph === 2) puff(); }
       if (ph < 3) $('#rbCrowd').classList.toggle('hype', G.combo >= 8);
     }
-    draw(s); if (G.dr) drawPaint(s);
+    if (G.hold && s >= G.hold.n.end) holdEnd(s);
+    draw(s); if (G.dr) { drawPaint(s); holdPaint(s); }
     let [key, p] = pose(s);
     p = drive(key, p, s);
     const w = 1 - (s - G.missAt) / .35; if (w > 0 && key !== 'fail') p = mix(p, M.shock.f(.5), w * .6); // a miss: the hero stumbles for a moment
@@ -784,7 +831,8 @@
     const score = totalOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
     const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
       round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
-    if (V2()) { res.round.g = 2; res.round.r = RB2.R; res.draw = G.dn ? G.dn.st : 0; res.full = !G.cnt[3] && !G.brk.length; }
+    if (V2()) { res.round.g = 2; res.round.r = RB2.R; res.draw = G.dns.length ? Math.max(...G.dns.map(n => n.st)) : 0; res.full = !G.cnt[3] && !G.brk.length; res.fresh = RB2.fresh(G.picks, G.prevPk);
+      try { localStorage.setItem(prevKey(), JSON.stringify(G.picks)); } catch (_) {} }
     const viaL = G.picks.filter(m => needOf(m) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
@@ -799,7 +847,7 @@
     const end = $('#rbEnd');
     end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
       '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + score + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + T('Соперник') + '</small><b>' + opp + '</b></span></div>' +
-      '<p>PERFECT ' + res.perfect + ' · GOOD ' + res.good + ' · MISS ' + res.miss + ' · ' + T('Комбо') + ' ' + res.combo + (res.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][res.draw] : '') + '</p>' + (res.full ? '<p class="fc">FULL COMBO +10%</p>' : '') +
+      '<p>PERFECT ' + res.perfect + ' · GOOD ' + res.good + ' · MISS ' + res.miss + ' · ' + T('Комбо') + ' ' + res.combo + (res.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][res.draw] : '') + '</p>' + (res.full ? '<p class="fc">FULL COMBO +10%</p>' : '') + (res.fresh ? '<p class="fc">' + T('Новая связка +{n} %', { n: res.fresh * 2 }) + '</p>' : '') +
       '<p class="n">' + T('Это пробная версия игры: соперник здесь — компьютер.') + '</p>' +
       '<div class="rbbt"><button type="button" class="btn btn-ghost" id="rbAgain">' + T('Ещё раз') + '</button></div>';
     end.hidden = false;
@@ -820,9 +868,18 @@
     const T = D.T, r = G.res;
     const head = '<b class="win" style="font-size:30px">' + T('Твой раунд') + '</b>' +
       '<div class="rbvs" style="grid-template-columns:1fr"><span class="me"><small>' + T('Счёт') + '</small><b>' + r.score + '</b></span></div>' +
-      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + (r.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][r.draw] : '') + '</p>' + (r.full ? '<p class="fc">FULL COMBO +10%</p>' : '');
+      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + (r.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][r.draw] : '') + '</p>' + (r.full ? '<p class="fc">FULL COMBO +10%</p>' : '') + (r.fresh ? '<p class="fc">' + T('Новая связка +{n} %', { n: r.fresh * 2 }) + '</p>' : '');
     $('#rbCrowd').classList.toggle('hype', r.acc >= .6);
     wait(G.answer ? T('Судьи смотрят батл…') : T('Отправляем раунд…'), head, () => G.onEnd(r));
+  }
+  // after a battle with the coach himself: a calm offer of his online coaching (owner 13.11.2026 «делай»; at most once a day)
+  function coachCard() {
+    const end = $('#rbEnd'); if (!G || !G.coach || !D.onCoach || end.querySelector('.rbcoach')) return;
+    const day = new Date().toISOString().slice(0, 10); try { if (localStorage.getItem('fedoskin-bt-coach') === day) return; localStorage.setItem('fedoskin-bt-coach', day); } catch (_) {}
+    const d = document.createElement('div'); d.className = 'rbcoach'; d.setAttribute('data-nt', '');
+    d.innerHTML = '<p>' + D.T('Ты батлил с Федоскиным — тренером и автором этих уроков. Он ведёт учеников онлайн.') + '</p><button type="button">' + D.T('Онлайн-ведение →') + '</button>';
+    d.querySelector('button').addEventListener('click', () => D.onCoach());
+    const bt = end.querySelector('.rbbt'); if (bt) end.insertBefore(d, bt); else end.appendChild(d);
   }
   function wait(text, head, job) {
     const T = D.T, end = $('#rbEnd'), g = G;
@@ -835,7 +892,7 @@
       if (x.result) return showResult(x.result);
       const w = $('#rbWait'); if (!w) return;
       w.outerHTML = '<p class="sent">' + (x.text || '') + '</p><div class="rbbt"><button type="button" class="btn btn-accent" id="rbDone">' + T('Готово') + '</button></div>';
-      $('#rbDone').addEventListener('click', close);
+      $('#rbDone').addEventListener('click', close); coachCard();
     }).catch(e => {
       if (G !== g || D.el.hidden) return;
       const w = $('#rbWait'); if (!w) return;
@@ -853,9 +910,9 @@
     const jd = '<div class="judge"><span class="card"></span></div>', esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
       '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + (my.sc || 0) + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + esc(G.opp ? G.opp.name : T('Соперник')) + '</small><b>' + (th.sc || 0) + '</b></span></div>' +
-      (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + (my.dr ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][my.dr] : '') + '</p>' + (my.g === 2 && my.ms === 0 && my.fc ? '<p class="fc">FULL COMBO +10%</p>' : '') : '') +
+      (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + (my.dr ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][my.dr] : '') + '</p>' + (my.g === 2 && my.ms === 0 && my.fc ? '<p class="fc">FULL COMBO +10%</p>' : '') + (my.nv ? '<p class="fc">' + T('Новая связка +{n} %', { n: my.nv * 2 }) + '</p>' : '') : '') +
       (r.note ? '<p class="n">' + esc(r.note) + '</p>' : '');
-    end.hidden = false;
+    end.hidden = false; setTimeout(() => { if (G === g && g.mode === 'end') coachCard(); }, 500 + ((r.votes || []).length) * 600 + 900);
     const cards = end.querySelectorAll('.card'), votes = r.votes || [];
     votes.forEach((v, k) => setTimeout(() => { if (G !== g || g.mode !== 'end') return; cards[k].className = 'card ' + v; if (navigator.vibrate) try { navigator.vibrate(12); } catch (_) {} }, 500 + k * 600));
     setTimeout(() => {
