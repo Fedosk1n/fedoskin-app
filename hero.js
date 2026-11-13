@@ -35,17 +35,53 @@
   ];
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
   const OR = '#E2611A', OR_D = '#B44812', BLK = '#18181B', BLK2 = '#232328', WH = '#F2EFE8', WH_D = '#D6D1C6';
+  // ---- the outfit table: ONE source for the profile drawing (svg) and for the city's top-down sprite (topDown) ----
+  const FIT = {
+    hat: [null, null, 'cap', 'cap', 'beanie', 'bucket', 'capBack', 'capGold', 'capGold'],
+    top: [null, 'tee', 'tee', 'teeBig', 'track', 'track', 'bomber', 'trackGold', 'trackGold'],
+    pants: [null, 'jeans', 'jeans', 'trackp', 'trackp', 'trackp', 'wind', 'trackpGold', 'trackpGold'],
+    shoe: [null, 'canvas', 'leather', 'leather', 'runner', 'runner', 'high', 'highGold', 'highGold'],
+  };
+  function lookOf(level, accArr){
+    const arr = Array.isArray(accArr) ? accArr : [], pick = arr.map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
+    const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8)), acc = new Set(arr), has = k => acc.has(k);
+    return { L, has, fit: { hat: has('bandana') ? 'bandana' : FIT.hat[L], top: has('tee') ? 'teeTeam' : FIT.top[L], pants: FIT.pants[L], shoe: FIT.shoe[L] } };
+  }
+  // The same look as plain data for a view from above (city mini-game, 13.11.2026): types + flat colours, no SVG.
+  function topDown(level, accArr){
+    const k = lookOf(level, accArr), L = k.L, has = k.has, f = k.fit, G = '#E7B23C', t = f.shoe;
+    const long = /track|bomber/.test(f.top);
+    return {
+      L, girl: has('girl'), hat: f.hat, top: f.top, pants: f.pants, shoe: f.shoe,
+      phones: L === 4 || L === 5, chain: L >= 7 ? 2 : L >= 5 ? 1 : 0, wrist: L >= 7 ? G : L >= 3 ? OR : null, belt: L >= 8,
+      knee: has('knee'), gloves: has('gloves'), box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
+      col: {
+        skin: SKIN, hair: HAIR, ink: INK, gold: G,
+        top: { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[f.top],
+        yoke: f.top === 'track' ? BLK : null,
+        sleeve: long ? { track: OR, bomber: BLK, trackGold: BLK }[f.top] : null,          // null = short sleeve, bare arm
+        cuff: { track: BLK, bomber: OR, trackGold: G }[f.top] || null,
+        trim: { track: WH, trackGold: G, bomber: '#9A968E' }[f.top] || null,
+        pants: { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[f.pants],
+        stripe: { trackp: WH, trackpGold: G }[f.pants] || null,
+        shoe: has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t],
+        shoe2: has('red') ? (t === 'highGold' ? G : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: G }[t],
+        sole: { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: G }[t],
+        lace: has('neon') ? '#B6FF3B' : t === 'highGold' ? G : WH,
+        hat: { cap: [BLK, L >= 3 ? OR : BLK], capBack: [BLK, OR], capGold: [G, BLK], beanie: ['#2A2A2F', OR], bucket: [BLK, OR], bandana: ['#C8102E', WH] }[f.hat] || null,
+      },
+    };
+  }
   function levelFor(mins){ let l = 1; for (let i = 0; i < LEVELS.length; i++) if (mins >= LEVELS[i]) l = i + 1; return l; }
 
   function svg(level, opt){
     opt = opt || {};
     // an older look chosen in the wardrobe (owner 11.11.2026 «инвентарь»): 'lv<N>' in acc draws the outfit of level N (never higher)
-    const pick = (Array.isArray(opt.acc) ? opt.acc : []).map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
-    const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8));
+    const LK = lookOf(level, opt.acc), L = LK.L;
     const id = 'h' + L + (opt.uid || '');
     const GOLD = 'url(#' + id + 'gold)';
     const o = [];
-    const acc = new Set(Array.isArray(opt.acc) ? opt.acc : []), has = k => acc.has(k);
+    const has = LK.has;
     const P = (d, fill, ex) => o.push('<path d="' + d + '" fill="' + (fill || 'none') + '"' + (ex || '') + '/>');
     const S = (w) => ' stroke="' + INK + '" stroke-width="' + (w || 2.2) + '" stroke-linejoin="round" stroke-linecap="round"';
     const LN = (d, col, w, ex) => o.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"' + (ex || '') + '/>');
@@ -54,12 +90,7 @@
     const rig = !!opt.rig, cap = fn => { const n = o.length; fn(); return o.splice(n).join(''); };
 
     // ---- the outfit of this level ----
-    const fit = {
-      hat: has('bandana') ? 'bandana' : [null, null, 'cap', 'cap', 'beanie', 'bucket', 'capBack', 'capGold', 'capGold'][L],
-      top: has('tee') ? 'teeTeam' : [null, 'tee', 'tee', 'teeBig', 'track', 'track', 'bomber', 'trackGold', 'trackGold'][L],
-      pants: [null, 'jeans', 'jeans', 'trackp', 'trackp', 'trackp', 'wind', 'trackpGold', 'trackpGold'][L],
-      shoe: [null, 'canvas', 'leather', 'leather', 'runner', 'runner', 'high', 'highGold', 'highGold'][L],
-    };
+    const fit = LK.fit;
     const W = 200, H = 240;
     const vb = opt.bust ? [50, 16, 100, 100] : [0, 0, W, H]; // bust = head and shoulders (small icons)
     o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb.join(' ') + '"' + (opt.size ? ' width="' + opt.size + '" height="' + Math.round(opt.size * vb[3] / vb[2]) + '"' : '') + '>');
@@ -683,5 +714,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();

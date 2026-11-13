@@ -1059,4 +1059,23 @@
   CITY deps `todaySec / day / home`; ≥ `CITY_BAL.warm.sec` (300) ⇒ warm(): energy cap +20 (`emax()`; +20 given once a real day, `S.warmDay`,
   toast), respect of a win ×1.1 (line in the result), HUD chip «🔥 Разогрет»; not warm ⇒ the tip in «Как играть» / backpack + «К урокам».
   city.js `?v=3`, city-balance.js `?v=2`. Tested headless en (cold tip, warm toast, en 120, win +22 instead of +20).
-  Not done yet: stretch mini-game, guard, other districts, city items on the hero's look, balance by real play (no hand-played win yet).
+  Graphics rework (owner 13.11.2026 21:02 «надо улучшать» → picked variant 2 of 3 sketches: «чёткая графика, строго сверху», spirit of
+  early top-down city games, nothing copied): new file `city-gfx.js` (`window.CITY_GFX`, `?v=1`) = ALL the picture, no game logic; city.js
+  only says what goes where. Tile 52 px (was 44). Map: drawn once in 6×6-tile pieces (`chunk`, ≤ 12 kept, oldest freed — iPhone memory),
+  ground + shadows of tall things + things (roofs with parapets / vents / hatches / antennas / skylights, garages with rust + graffiti tags,
+  concrete fence, kiosk, tent umbrella, dumpsters, made-up cars, lamps, benches, sandbox, cracks / patches / manholes / puddles / litter by
+  the cell's hash). New blocked cells in city-data.js: `C` car (two in a row), `L` lamp, `B` bench (BLOCK in city.js; all places still
+  reachable — checked by flood fill). People: `GFX.person(ctx, x, y, look, dir 0–7, frame)` — sprite cache look × direction × frame
+  (`w0…w5` walk, `i0 i1` sway, `t0…t3` toprock on the spot); the hero turns where he walks, now and then does a toprock; b-boys sway, turn
+  to the hero when he is near, warm up (toprock) when you come up to them (`warmUp`). Clothes: ONE table in hero.js — `FIT` + `lookOf()`
+  feed both `svg()` (output byte-identical to before — compared on 200 drawings) and the new `HERO.topDown(level, acc)` (types + flat
+  colours); city adds its own things on top (`heroLook()`: headspin hat = blue beanie with a pad, city kicks = teal, pads, cardboard on the
+  back while S.card > 0). B-boys: `look` in city-data.js {base level look, acc, col overrides, big}. hero.js `?v=13`.
+  Night: half-resolution darkness layer with holes of light (lamps, door, kiosk while open, some skylights / windows — new every game day,
+  a small glow round the hero, fire aura) + warm additive glow. Fog: 1 px per cell texture stretched with smoothing = soft darkness.
+  Signs over places = drawn badges (`GFX.sign`), dimmed when the place is closed, faded when they would cover the hero; pigeons
+  (`birds` in the data) fly off when you come close. HUD emoji (cash, bag, energy) unchanged. city.js `?v=4`, city-data.js `?v=2`.
+  Tested headless 390×844 ru + 375×667 en: day / dusk / night in every corner, tap walk, joystick, dialogs, a round opens from the city,
+  save, fog, no tab without the link, 60 fps while walking (desktop Chrome), no errors. NOT on a real phone (smoothness, memory, how
+  readable the clothes are on a small screen).
+  Not done yet: stretch mini-game, guard, other districts, balance by real play (no hand-played win yet), passers-by.

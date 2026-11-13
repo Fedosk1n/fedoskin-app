@@ -4,9 +4,10 @@
 (function () {
   'use strict';
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
-  const BLOCK = 'F#bGTKSXctD', TS = 44, SPEED = 5.5, SEE = 4.6;
+  const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLB', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
   let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
+  let hdir = 0, hdist = 0, moved = 0, lookKey = '', lookNow = null, npcLook = {}, warmUp = {}, birdAway = {};
   const T = (s, v) => D.T(s, v);
   const $ = q => el.querySelector(q);
   const cl = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -43,7 +44,7 @@
   function setMap() {
     DIST = DATA.districts[S.d]; MAP = DIST.map; MH = MAP.length; MW = MAP[0].length;
     if (!S.fog[S.d] || S.fog[S.d].length !== MW * MH) S.fog[S.d] = '0'.repeat(MW * MH);
-    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; reveal();
+    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; npcLook = {}; GFX.setMap(DIST, dpr); reveal();
   }
   const tile = (x, y) => x < 0 || y < 0 || x >= MW || y >= MH ? 'F' : MAP[y][x];
   const walk = (x, y) => !BLOCK.includes(tile(x, y));
@@ -77,42 +78,32 @@
   }
   const around = (x, y) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].filter(c => walk(c[0], c[1]));
 
-  // ---- drawing (everything is drawn by code) ----
+  // ---- drawing: the picture itself lives in city-gfx.js (cached map pieces and sprites); here — only what goes where ----
   function size() {
-    const r = can.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = r.width; H = r.height;
+    const r = can.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); W = r.width; H = r.height;
+    if (d !== dpr) { dpr = d; GFX.setMap(DIST, dpr); }
     can.width = Math.round(W * dpr); can.height = Math.round(H * dpr);
   }
   const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(x, y, w, h); };
-  function drawTile(c, x, y, px, py, ng) {
-    const s = TS, h = hash(x, y);
-    const ground = c === 'g' || c === 't' ? '#1E3A27' : c === 'p' ? '#6E5C3C' : c === '=' ? '#37373E' : c === 'r' ? '#1A1A1E' : '#28282D';
-    R(px, py, s + 1, s + 1, ground);
-    if (c === '.' || c === '*' || c === 'c') { if (h < .16) R(px + h * 200 % s, py + h * 911 % s, 3, 2, '#32323A'); if (h > .93) R(px + 8, py + 14, 14, 2, '#1F1F23'); }
-    if (c === 'g' && h < .3) R(px + h * 120 % s, py + h * 613 % s, 2, 5, '#2C5A38');
-    if (c === '=') { cx.strokeStyle = '#2B2B31'; cx.lineWidth = 1; cx.strokeRect(px + .5, py + .5, s, s); }
-    if (c === 'r' && y === 21) for (let k = 0; k < 2; k++) R(px + 4 + k * 22, py + s - 2, 12, 3, '#C9B458');
-    if (c === '#' || c === 'b') {
-      R(px, py, s + 1, s + 1, c === '#' ? '#4A3B33' : '#353946'); R(px + 3, py + 3, s - 5, s - 5, c === '#' ? '#56453B' : '#3E4352');
-      const lit = ng > .2 && hash(x * 3, y * 7 + dayN()) < .45; R(px + 10, py + 10, 10, 12, lit ? '#F2CC55' : '#22252E'); R(px + 26, py + 10, 10, 12, ng > .2 && h < .3 ? '#F2CC55' : '#22252E');
-    }
-    if (c === 'D') { R(px, py, s + 1, s + 1, '#4A3B33'); R(px + 9, py + 6, s - 18, s - 6, '#E2611A'); R(px + 13, py + 10, s - 26, 12, '#F2CC55'); R(px + s - 16, py + 26, 3, 3, '#0B0B0C'); }
-    if (c === 'G') { R(px, py, s + 1, s + 1, '#4B4B54'); if (y === 18) { R(px + 5, py + 8, s - 9, s - 8, '#3A3A42'); for (let k = 0; k < 4; k++) R(px + 5, py + 12 + k * 8, s - 9, 1, '#2A2A30'); } else R(px + 2, py + 2, s - 3, s - 3, '#56565F'); }
-    if (c === 'F') { R(px, py, s + 1, s + 1, '#131316'); R(px + 4, py + s / 2 - 2, s - 8, 4, '#24242A'); R(px + s / 2 - 2, py + 6, 4, s - 12, '#24242A'); }
-    if (c === 't') { cx.fillStyle = '#17301F'; cx.beginPath(); cx.arc(px + s / 2 + 3, py + s / 2 + 4, 17, 0, 7); cx.fill(); cx.fillStyle = '#2F7A44'; cx.beginPath(); cx.arc(px + s / 2, py + s / 2, 17, 0, 7); cx.fill(); cx.fillStyle = '#3C9455'; cx.beginPath(); cx.arc(px + s / 2 - 5, py + s / 2 - 5, 8, 0, 7); cx.fill(); }
-    if (c === 'T') { R(px + 6, py + 10, s - 12, s - 14, '#2F6B45'); R(px + 4, py + 7, s - 8, 6, '#3C8A58'); R(px + 12, py + 20, s - 24, 3, '#1E4630'); }
-    if (c === 'K') { R(px, py, s + 1, s + 1, '#5A4630'); if (y === 13) { for (let k = 0; k < 4; k++) R(px + k * 11, py + s - 14, 11, 14, k % 2 ? '#F2EFE8' : '#E2611A'); } else R(px + 3, py + 3, s - 5, s - 5, '#6B5338'); }
-    if (c === 'S') { for (let k = 0; k < 4; k++) R(px + k * 11, py, 12, s + 1, k % 2 ? '#2A6FA8' : '#F2EFE8'); if (y === 15) R(px, py + s - 8, s + 1, 8, '#1B4A72'); }
-    if (c === 'X') { R(px, py, s + 1, s + 1, '#1A1A1E'); R(px + 4, py + 4, 6, s - 8, '#E2611A'); R(px + 4, py + 4, s - 8, 5, '#E2611A'); R(px + 4, py + s - 9, s - 8, 5, '#E2611A'); }
-    if (c === '*') { cx.strokeStyle = 'rgba(242,239,232,.55)'; cx.lineWidth = 2; cx.setLineDash([5, 5]); cx.beginPath(); cx.arc(px + s / 2, py + s / 2, 16, 0, 7); cx.stroke(); cx.setLineDash([]); }
-    if (c === 'c') { const p = placeAt(x, y); if (p && !S.got[p.id]) { R(px + 9, py + 12, s - 18, s - 20, '#7A5A34'); R(px + 9, py + 20, s - 18, 3, '#55401F'); R(px + s / 2 - 2, py + 12, 4, s - 20, '#55401F'); } }
+  // the hero's clothes come from hero.js (level look + wardrobe + shop accessories) plus the things bought or found in the city
+  function heroLook() {
+    const lv = D.level(), eq = D.look() || [], k = lv + '|' + eq.join(',') + '|' + ['hat', 'kicks', 'pads'].map(i => +S.own.includes(i)).join('') + (S.card > 0 ? 'c' : '');
+    if (k === lookKey) return lookNow;
+    const f = window.HERO.topDown(lv, eq); f.col = Object.assign({}, f.col);
+    if (S.own.includes('hat')) { f.hat = 'spin'; f.col.hat = ['#2A6FA8', '#E2611A']; }
+    if (S.own.includes('kicks')) { f.col.shoe = '#19B5A5'; f.col.shoe2 = '#F2EFE8'; f.col.sole = '#F2EFE8'; }
+    if (S.own.includes('pads')) f.knee = true;
+    if (S.card > 0) f.carry = true;
+    lookKey = k; return (lookNow = { key: 'me:' + k, f });
   }
-  function person(px, py, col, me, bob) {
-    cx.fillStyle = 'rgba(0,0,0,.35)'; cx.beginPath(); cx.ellipse(px, py + 13, 12, 5, 0, 0, 7); cx.fill();
-    cx.fillStyle = '#17171A'; cx.fillRect(px - 8, py + 4 + bob, 6, 9); cx.fillRect(px + 2, py + 4 - bob, 6, 9);     // legs
-    cx.fillStyle = col; cx.beginPath(); cx.roundRect(px - 11, py - 9, 22, 17, 6); cx.fill();                        // jacket
-    cx.fillStyle = '#E8B48A'; cx.beginPath(); cx.arc(px, py - 12, 8, 0, 7); cx.fill();                               // head
-    cx.fillStyle = me ? '#0B0B0C' : '#2A2A30'; cx.beginPath(); cx.arc(px, py - 14, 8, Math.PI, 0); cx.fill(); cx.fillRect(px - 2, py - 15, 12, 3); // cap
+  function lookOf(n) {
+    if (npcLook[n.id]) return npcLook[n.id];
+    const L = n.look || {}, f = window.HERO.topDown(L.base || Math.min(8, n.lvl + 1), L.acc || []);
+    f.col = Object.assign({}, f.col, L.col || {}); ['hat', 'chain', 'box', 'phones', 'wrist', 'girl'].forEach(k => { if (k in L) f[k] = L[k]; });
+    return (npcLook[n.id] = { key: 'n:' + n.id, f, big: L.big || 1 });
   }
+  const dirOf = (dx, dy) => ((Math.round(Math.atan2(-dx, dy) / (Math.PI / 4)) % 8) + 8) % 8;
+  const busy = now => Object.keys(warmUp).some(k => warmUp[k] > now);
   function label(px, py, txt, col) {
     cx.font = '700 11px Inter, system-ui, sans-serif'; const w = cx.measureText(txt).width + 12;
     cx.fillStyle = 'rgba(11,11,12,.82)'; cx.beginPath(); cx.roundRect(px - w / 2, py - 9, w, 18, 9); cx.fill();
@@ -120,36 +111,53 @@
   }
   function draw(now) {
     if (!W) size(); if (!W) return;
-    cx.setTransform(dpr, 0, 0, dpr, 0, 0); R(0, 0, W, H, '#0B0B0C');
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.imageSmoothingEnabled = false; R(0, 0, W, H, '#0B0B0C');
     const vw = W / TS, vh = (H - padB) / TS;
     cam.x = cl(hero.x + .5, Math.min(vw / 2, MW / 2), Math.max(MW - vw / 2, MW / 2)); cam.y = cl(hero.y + .5, Math.min(vh / 2, MH / 2), Math.max(MH - vh / 2, MH / 2));
-    const ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS), ng = night();
-    const x0 = Math.max(0, Math.floor(-ox / TS)), x1 = Math.min(MW - 1, Math.ceil((W - ox) / TS)), y0 = Math.max(0, Math.floor(-oy / TS)), y1 = Math.min(MH - 1, Math.ceil((H - oy) / TS));
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (seen(x, y)) drawTile(MAP[y][x], x, y, ox + x * TS, oy + y * TS, ng);
-    if (path.length) { const g = path[path.length - 1]; cx.strokeStyle = '#E2611A'; cx.lineWidth = 2; cx.beginPath(); cx.arc(ox + g[0] * TS + TS / 2, oy + g[1] * TS + TS / 2, 9 + 2 * Math.sin(now / 150), 0, 7); cx.stroke(); }
+    const ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS), ng = night(), h = hour();
+    const vis = (x, y, m) => { const px = ox + x * TS, py = oy + y * TS; return px > -m && py > -m && px < W + m && py < H + m; };
+    GFX.drawMap(cx, ox, oy, W, H);
+    DIST.places.forEach(p => { if (p.type === 'stash' && !S.got[p.id] && seen(p.at[0], p.at[1]) && vis(p.at[0], p.at[1], TS)) GFX.crate(cx, ox + p.at[0] * TS, oy + p.at[1] * TS); });
+    if (path.length) { const g = path[path.length - 1]; cx.strokeStyle = '#E2611A'; cx.lineWidth = 2; cx.beginPath(); cx.arc(ox + g[0] * TS + TS / 2, oy + g[1] * TS + TS / 2, 10 + 2 * Math.sin(now / 150), 0, 7); cx.stroke(); }
+    (DIST.birds || []).forEach((b, i) => {
+      if (Math.hypot(b[0] - hero.x - .5, b[1] - hero.y - .5) < 1.3) birdAway[i] = S.t + 90;
+      if (birdAway[i] > S.t || !seen(Math.floor(b[0]), Math.floor(b[1])) || !vis(b[0], b[1], 20)) return;
+      GFX.bird(cx, ox + b[0] * TS, oy + b[1] * TS, i * 2.1 + Math.floor(now / 2600 + i) % 3, Math.floor(now / 480 + i) % 3 === 0);
+    });
+    // people: the b-boys sway, warm up now and then (and when you come up to them), and turn to the hero when he is near
+    const mv = moved > now - 120, me = heroLook();
+    npcsNow().forEach(n => {
+      if (!seen(n.at[0], n.at[1]) || !vis(n.at[0], n.at[1], 2 * TS)) return;
+      const px = ox + n.at[0] * TS + TS / 2, py = oy + n.at[1] * TS + TS / 2, dx = hero.x - n.at[0], dy = hero.y - n.at[1], near = Math.hypot(dx, dy) < 3.2;
+      const hot = warmUp[n.id] > now || (!daily('b:' + n.id) && (now + n.lvl * 2300) % 9000 < 1600);
+      GFX.person(cx, px, py, lookOf(n), near ? dirOf(dx, dy) : 0, hot ? 't' + Math.floor(now / 200) % 4 : 'i' + Math.floor(now / 700 + n.lvl) % 2);
+    });
+    const hx = ox + hero.x * TS + TS / 2, hy = oy + hero.y * TS + TS / 2;
+    if (me.f.fire) GFX.aura(cx, hx, hy, now);
+    GFX.person(cx, hx, hy, me, hdir, mv ? 'w' + Math.floor(hdist * 4.3) % 6 : (now % 14000 < 1800 ? 't' + Math.floor(now / 200) % 4 : 'i' + Math.floor(now / 700) % 2));
+    GFX.trees().forEach(t => { if (seen(t[0], t[1]) && vis(t[0], t[1], 2 * TS)) GFX.crown(cx, ox + t[0] * TS, oy + t[1] * TS, t[0], t[1]); });
+    // night: darkness, pools of light under the lamps, the kiosk and some windows glow
+    if (ng > 0) {
+      const ki = DIST.places.find(p => p.type === 'kiosk'), L = GFX.lightsNow(ox, oy, W, H, dayN(), !!ki && inH(h, ki.open));
+      L.push(me.f.fire ? { px: hx, py: hy, r: 1.6 * TS, a: .8 } : { px: hx, py: hy, r: 1.25 * TS, a: .42 });   // the hero is always readable in the dark
+      GFX.night(cx, W, H, ng, L); GFX.glow(cx, ox, oy, L, ng); cx.imageSmoothingEnabled = false;
+    }
+    GFX.fog(cx, S.fog[S.d], ox, oy);
     DIST.places.forEach(p => {
-      if (!seen(p.at[0], p.at[1])) return; if (p.type === 'stash' && S.got[p.id]) return;
-      const ic = { home: '🏠', trash: '📦', kiosk: '🌯', shop: '🛍️', show: '🎩', gate: '➡️', stash: '❔' }[p.type];
-      cx.font = '18px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(ic, ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS - 6 + 2 * Math.sin(now / 400 + p.at[0]));
+      if (!seen(p.at[0], p.at[1]) || !vis(p.at[0], p.at[1], TS)) return; if (p.type === 'stash' && S.got[p.id]) return;
+      const near = Math.hypot(p.at[0] - hero.x, p.at[1] - .7 - hero.y) < .9;   // do not cover the hero with the sign
+      cx.globalAlpha = near ? .3 : 1; GFX.sign(cx, ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS - 10 + Math.round(2 * Math.sin(now / 400 + p.at[0])), p.type, !!p.open && !inH(h, p.open)); cx.globalAlpha = 1;
     });
     npcsNow().forEach(n => {
-      if (!seen(n.at[0], n.at[1])) return;
+      if (!seen(n.at[0], n.at[1]) || !vis(n.at[0], n.at[1], 2 * TS)) return;
       const px = ox + n.at[0] * TS + TS / 2, py = oy + n.at[1] * TS + TS / 2;
-      person(px, py, n.col, false, Math.sin(now / 260 + n.lvl) * 1.5);
-      label(px, py - 40, nm(n).split(' ')[0] + ' · ' + n.lvl, n.boss ? '#F2CC55' : '#F2EFE8');
-      if (!daily('b:' + n.id)) { cx.font = '900 16px Inter, sans-serif'; cx.fillStyle = '#E2611A'; cx.fillText('!', px + 15, py - 16); }
+      label(px, py - 42, nm(n).split(' ')[0] + ' · ' + n.lvl, n.boss ? '#F2CC55' : '#F2EFE8');
+      if (!daily('b:' + n.id)) { cx.fillStyle = '#E2611A'; cx.beginPath(); cx.arc(px + 22, py - 24, 7, 0, 7); cx.fill(); cx.font = '900 11px Inter, sans-serif'; cx.fillStyle = '#0B0B0C'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('!', px + 22, py - 23.5); }
     });
-    const mv = path.length || (joy && joy.on) ? Math.sin(now / 70) * 3 : 0;
-    person(ox + hero.x * TS + TS / 2, oy + hero.y * TS + TS / 2, '#E2611A', true, mv);
+    S.marks.forEach(id => { const p = DIST.places.find(q => q.id === id); if (!p || S.got[id]) return; label(ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS + TS + 2 - 4 * Math.abs(Math.sin(now / 300)), T('Слух'), '#E2611A'); });
     if (joy && joy.on) { const r = can.getBoundingClientRect(), jx = joy.x0 - r.left, jy = joy.y0 - r.top;
       cx.strokeStyle = 'rgba(242,239,232,.35)'; cx.lineWidth = 2; cx.beginPath(); cx.arc(jx, jy, 46, 0, 7); cx.stroke();
       cx.fillStyle = 'rgba(226,97,26,.7)'; cx.beginPath(); cx.arc(jx + joy.dx * 46, jy + joy.dy * 46, 18, 0, 7); cx.fill(); }
-    if (ng > 0) { R(0, 0, W, H, 'rgba(8,10,34,' + ng.toFixed(3) + ')'); }
-    // fog: unexplored cells stay black; a soft edge on explored cells next to them
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      if (seen(x, y)) continue; R(ox + x * TS - 6, oy + y * TS - 6, TS + 12, TS + 12, 'rgba(11,11,12,.55)'); R(ox + x * TS, oy + y * TS, TS + 1, TS + 1, '#0B0B0C');
-    }
-    S.marks.forEach(id => { const p = DIST.places.find(q => q.id === id); if (!p || S.got[id]) return; label(ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS + TS / 2 - 4 * Math.abs(Math.sin(now / 300)), '📍 ' + T('Слух'), '#E2611A'); });
   }
 
   // ---- HUD + dialogs (DOM) ----
@@ -308,6 +316,7 @@
   }
   function openNpc(n) {
     const st = S.npc[n.id] || (S.npc[n.id] = { w: 0, l: 0, last: null, met: 0 });
+    warmUp[n.id] = performance.now() + 2600; kick();
     let html = say(nm(n), n.boss && S.rep < (n.needRep || 0) ? n.early : n.hi);
     if (!st.met && n.rumor) { const pl = DIST.places.find(q => q.id === n.rumor.mark); if (pl && !S.got[pl.id] && !S.marks.includes(pl.id)) { S.marks.push(pl.id); html += say(nm(n), n.rumor.text) + p('📍 ' + T('На карте появилась метка.')); } }
     st.met = 1;
@@ -385,13 +394,17 @@
     S.t += dt * 1440 / (B.dayMin * 60);
     if (joy && joy.on) {
       const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
+      const bx = hero.x, by = hero.y;
       if (walk(Math.round(nx + Math.sign(joy.dx) * m), Math.round(hero.y))) hero.x = nx;
       if (walk(Math.round(hero.x), Math.round(ny + Math.sign(joy.dy) * m))) hero.y = ny;
+      if (Math.hypot(joy.dx, joy.dy) > .15) hdir = dirOf(joy.dx, joy.dy);
+      const dd = Math.hypot(hero.x - bx, hero.y - by); if (dd > 0) { hdist += dd; moved = performance.now(); }
       reveal(); return;
     }
     let left = SPEED * dt;
     while (path.length && left > 0) {
       const [tx, ty] = path[0], dx = tx - hero.x, dy = ty - hero.y, d = Math.hypot(dx, dy);
+      if (d > .01) { hdir = dirOf(dx, dy); hdist += Math.min(d, left); moved = performance.now(); }
       if (d <= left) { hero.x = tx; hero.y = ty; left -= d; path.shift(); reveal(); if (!path.length) { save(); if (goal) { const g = goal; goal = null; g(); } } }
       else { hero.x += dx / d * left; hero.y += dy / d * left; left = 0; }
     }
@@ -402,7 +415,7 @@
     if (D.rbEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
-    if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 240);
+    if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, busy(now) || now % 14000 < 1800 ? 100 : 220);
   }
   function kick() { if (!shown || document.hidden) return; clearTimeout(timer); timer = 0; if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function halt() { cancelAnimationFrame(raf); clearTimeout(timer); raf = 0; timer = 0; }
