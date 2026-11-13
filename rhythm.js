@@ -24,13 +24,24 @@
     // the DJ's tracks: bpm, `up` (shifts how dense the notes are), score multiplier, hardness 1–7, note family
     const BEATS = { lofi: [84, -1, .8, 1, 'st'], boom: [100, 0, 1, 2, 'st'], funk: [114, 0, 1.25, 3, 'st'], raw: [128, 1, 1.55, 4, 'st'],
       cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
-    // how hard a move is in real breaking, 1–10 (the owner corrects this table): it sets the score multiplier (×1.0 … ×1.9),
-    // how dense the notes are (tier 1–3) and how long the trajectory to draw is
-    const D = { toprock: 1, kickstep: 2, salsa: 2, indian: 3, sixstep: 2, ccs: 3,
-      backspin: 2, swipe: 4, windmill: 5, headspin: 7, flare: 7, ninety: 8, airflare: 10,
-      freeze: 2, headstand: 3, handstand: 4, airchair: 6, hollowback: 8 };
-    const tier = d => d <= 2 ? 1 : d <= 5 ? 2 : 3;
-    const mult = d => Math.round((1 + .1 * (d - 1)) * 100) / 100;
+    // R = the revision of these tables: the phone and the server play by v2 only when both have the same one (bump it on ANY change
+    // of M / ROWS / NEED / beats / patterns — otherwise a phone with old code sends rounds the server counts differently)
+    const R = 2;
+    // the score multiplier of every move = how hard it is in real breaking. THE OWNER'S NUMBERS (13.11.2026 «исправь: indian 1.3,
+    // airflare 2.5, 1990 2, reverse 1990 2, 2000 2, airchair 1.8, flare 2.2, headspin 1.4…» + new footwork). It also sets how dense
+    // the taps are (tier: ≤ ×1.1 sparse, ≤ ×1.4 medium, above — dense) and how narrow the trajectory's corridor is
+    const M = { toprock: 1, kickstep: 1.1, salsa: 1.1, indian: 1.3,
+      hook: 1, sixstep: 1.1, kickout: 1.1, ccs: 1.2, babylove: 1.3, onestep: 1.3, russian: 1.3,
+      backspin: 1.1, swipe: 1.3, windmill: 1.4, headspin: 1.4, ninety: 2, rninety: 2, twok: 2, flare: 2.2, airflare: 2.5,
+      freeze: 1.1, nike: 1.3, onehand: 1.4, hollowback: 1.7, airchair: 1.8,
+      headstand: 1.2, handstand: 1.3 }; // the last two left the game (replaced by nike / onehand); kept for rounds already stored
+    const ROWS = [['toprock', 'kickstep', 'salsa', 'indian'], ['hook', 'sixstep', 'kickout', 'ccs', 'babylove', 'onestep', 'russian'],
+      ['backspin', 'swipe', 'windmill', 'headspin', 'ninety', 'rninety', 'twok', 'flare', 'airflare'],
+      ['freeze', 'nike', 'onehand', 'hollowback', 'airchair']];
+    const NEED = { babylove: 2, onestep: 2, russian: 2, windmill: 3, onehand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5,
+      hollowback: 5, rninety: 6, twok: 6 }; // the hero's level a move needs
+    const mult = m => M[m] || 1;
+    const tier = m => mult(m) <= 1.1 ? 1 : mult(m) <= 1.4 ? 2 : 3;
     const cl = (x, a, b) => Math.max(a, Math.min(b, x));
     const mul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
     const th = a => a.map(x => x / 3); // triplets: thirds of a beat
@@ -68,7 +79,7 @@
     }
     // every note: b = its beat, ph = which move it belongs to (0 toprock … 3 freeze), w = weight; draw ⇒ a trajectory until `end`
     function notes(picks, seed, beat) {
-      const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(D[m]) + B[1], 1, 4);
+      const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(m) + B[1], 1, 4);
       let i = 0;
       const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
       bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
@@ -77,7 +88,7 @@
       out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
       return out;
     }
-    const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(D[picks[n.ph]]) * BEATS[beat][2];
+    const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(picks[n.ph]) * BEATS[beat][2];
     const combo = c => 1 + Math.min(c, 30) * .02;
     // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
     // (no miss, no stray tap) = FULL COMBO, +10 %
@@ -86,15 +97,17 @@
       notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
       return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
     }
-    return { BEATS, D, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(D[m]) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+    return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
   })();
   // </RB2>
   // which rules this round is played by: 2 = RB2 (difficulty 1–10, hard beats, the trajectory to draw, FULL COMBO), 1 = the old ones
   // (a battle with a server or an opponent's challenge that doesn't know v2 yet)
   const V2 = () => !!G && G.g === 2;
-  const diffOf = m => V2() ? RB2.D[m] : DIFF[m];
-  const tierOf = m => V2() ? RB2.tier(RB2.D[m]) : DIFF[m];
-  const multOf = m => V2() ? RB2.mult(RB2.D[m]) : MULT[DIFF[m]];
+  const diffOf = m => V2() ? RB2.mult(m) : DIFF[m];
+  const tierOf = m => V2() ? RB2.tier(m) : DIFF[m];
+  const multOf = m => V2() ? RB2.mult(m) : MULT[DIFF[m]];
+  const rowsOf = () => V2() ? RB2.ROWS.map((r, k) => [ROWS[k][0], r]) : ROWS; // v2 has its own moves (owner 13.11.2026: more footwork, 2000, reverse 1990…)
+  const needOf = m => (V2() ? RB2.NEED[m] : NEED[m]) || 1;
   const lvOf = (m, beat) => V2() ? RB2.lv(m, beat) : clamp(DIFF[m] + beatOf(beat).up, 1, 3);
   const notes2 = (picks, seed, beat) => { const bt = 60 / beatOf(beat).bpm; return RB2.notes(picks, seed, beat).map(n => ({ t: n.b * bt, end: n.end ? n.end * bt : 0, ph: n.ph, w: n.w, big: !!n.big, draw: !!n.draw, st: 0 })); };
   const notesOf = (picks, seed, beat) => V2() ? notes2(picks, seed, beat) : notesFor(picks, seed, beat);
@@ -102,7 +115,7 @@
   const totalOf = (picks, seed, level, beat, hits, brk) => V2() ? RB2.score(picks, seed, beat, hits, brk, level) : scoreOf(picks, seed, level, beat, hits, brk);
   const maxOf = (picks, seed, level, beat) => V2() ? RB2.score(picks, seed, beat, '1'.repeat(RB2.notes(picks, seed, beat).length), [], level) : maxScore(picks, seed, level, beat);
   // v2 (owner 13.11.2026): the app passes the exact list of usable moves (lesson studied 3× AND the hero's level); else as before
-  const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : (NEED[m] || 1) <= G.level) : ((NEED[m] || 1) <= G.level || G.ul.has(m));
+  const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : needOf(m) <= G.level) : (needOf(m) <= G.level || G.ul.has(m));
   // the locked card's caption and the how-to text (v2: studied 3× AND level)
   const lockLbl = h => { const T = D.T; return !h.lv ? '🔒 🎬 ' + T('Урок') : h.st ? '🎬✓ · ' + T('Ур. {n}', { n: h.lv }) : '🔒 🎬 ' + T('Урок') + (h.lvOk ? '' : ' · ' + T('Ур. {n}', { n: h.lv })); };
   const ulText2 = (h, nm) => { const T = D.T; return h.st ? T('{move} изучено по уроку ✓ — откроется, когда твой герой дорастёт до уровня {n}.', { move: nm, n: h.lv })
@@ -463,10 +476,10 @@
     // three cards a row: the moves this hero knows (a shuffled three, easy to hard) + the next one still locked as a teaser.
     // Moves open by the hero's level OR by watching their lesson (owner 11.11.2026 «открывать движения в игре через уроки»):
     // up to two moves opened by lessons always get a card (🎬); a locked move that a lesson opens is always shown as a teaser.
-    const rows = ROWS.map(([title, all]) => {
+    const rows = rowsOf().map(([title, all]) => {
       const have = all.filter(know), locked = all.filter(m => !know(m));
       const sh = have.map(m => [rnd(), m]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-      const take = sh.filter(m => G.ul.has(m) && (NEED[m] || 1) > G.level).slice(0, 2), byD = d => sh.find(m => tierOf(m) === d && !take.includes(m));
+      const take = sh.filter(m => G.ul.has(m) && needOf(m) > G.level).slice(0, 2), byD = d => sh.find(m => tierOf(m) === d && !take.includes(m));
       [1, 2, 3].forEach(d => { const m = take.length < 3 && byD(d); if (m) take.push(m); });
       sh.forEach(m => { if (take.length < 3 && !take.includes(m)) take.push(m); });
       take.sort((a, b) => diffOf(a) - diffOf(b));
@@ -474,7 +487,7 @@
       return { title, take, lock };
     });
     G.picks = rows.map(r => r.take[0]); G.prev = G.picks[0]; G.prevAt = performance.now();
-    const dots = m => V2() ? '<em>' + diffOf(m) + '</em>/10 <u>×' + multOf(m) + '</u>' : '<em>' + '●'.repeat(DIFF[m]) + '</em>' + '○'.repeat(3 - DIFF[m]) + ' ×' + MULT[DIFF[m]];
+    const dots = m => V2() ? '<em>×' + multOf(m) + '</em>' : '<em>' + '●'.repeat(DIFF[m]) + '</em>' + '○'.repeat(3 - DIFF[m]) + ' ×' + MULT[DIFF[m]];
     if (!V2() && beatOf(G.beat).g) G.beat = null;
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
@@ -483,9 +496,9 @@
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.filter(b => V2() || !b.g).map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
-        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && (NEED[m] || 1) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(m) + '</i></button>').join('') +
+        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && needOf(m) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(m) + '</i></button>').join('') +
         (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul' + (G.ulHint[r.lock].st ? ' st' : '') + '" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>' + lockLbl(G.ulHint[r.lock]) + '</i></button>'
-          : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>') : '') + '</div></div>').join('') +
+          : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: needOf(r.lock) }) + '</i></button>') : '') + '</div></div>').join('') +
       '<div class="rbul" id="rbUl" hidden></div>' +
       '<div class="rbgo"><button type="button" class="btn btn-accent" id="rbGo">' + T('Начать батл') + '</button>' + (G.battle ? '' : '<button type="button" class="btn btn-ghost" id="rbAuto">' + T('Играть на авто') + '</button>') + '</div>';
     djWire();
@@ -502,7 +515,7 @@
       box2.dataset.m = m; box2.hidden = false;
       box2.innerHTML = (h.lv ? ulText2(h, nm) : (h.id ? T('Открой {move}: посмотри урок «{name}» — хотя бы половину (до 2 минут).', { move: nm, name: esc(h.name) })
         : T('Открой {move}: посмотри уроки раздела {sec} — {n} из {need}.', { move: nm, sec: esc(h.sec), n: h.n, need: h.need })) +
-        ' ' + T('Или дорасти до уровня {n}.', { n: NEED[m] || 1 })) +
+        ' ' + T('Или дорасти до уровня {n}.', { n: needOf(m) })) +
         (D.onUl && !h.st ? '<button type="button" class="btn btn-accent" id="rbUlGo">' + (h.id ? T('Открыть урок') : T('Открыть раздел')) + '</button>' : '');
       const go = $('#rbUlGo'); if (go) go.addEventListener('click', () => D.onUl(h));
       box2.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -542,7 +555,7 @@
   function start(auto) {
     const T = D.T;
     G.auto = !!auto;
-    if (G.auto) G.picks = ROWS.map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
+    if (G.auto) G.picks = rowsOf().map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
     G.notes = notesOf(G.picks, G.seed, G.beat); G.dn = G.notes.find(n => n.draw) || null; G.dr = null;
@@ -596,11 +609,13 @@
     windmill: u => { const a = Math.PI + u * 3 * Math.PI, r = 1 - .4 * u; return [Math.cos(a) * r * .95, Math.sin(a) * r * .6]; }, // a circle and a half, winding in
     headspin: u => { const a = Math.PI + u * 4 * Math.PI; return [Math.cos(a) * (.75 - .3 * u), .8 - 1.6 * u + Math.sin(a) * .22]; }, // a spiral going up
     flare: u => { const a = Math.PI + u * 3 * Math.PI, r = 1 - .22 * u, c = Math.cos(a); return [c * r, (.5 * Math.sin(a) - .5 * c * c + .25) * r]; }, // the legs' saddle: high at the sides, low in front
+    rninety: u => { const a = u * 5 * Math.PI; return [Math.cos(a) * .55 * (1 - .8 * u), .85 - 1.7 * u + Math.sin(a) * .16 * (1 - .5 * u)]; }, // the same spiral, the other way round
+    twok: u => { const a = Math.PI + u * 6 * Math.PI; return [Math.cos(a) * (.7 - .15 * u), .85 - 1.7 * u + Math.sin(a) * .2]; }, // 2000: a wide fast spiral, three turns
     ninety: u => { const a = Math.PI + u * 5 * Math.PI; return [Math.cos(a) * .55 * (1 - .8 * u), .85 - 1.7 * u + Math.sin(a) * .16 * (1 - .5 * u)]; }, // a narrow spiral closing at the top
     airflare: u => { if (u < .6) { const v = u / .6; return [-1 + 2 * v, .1 - Math.abs(Math.sin(3 * Math.PI * v)) * .75]; } const a = (u - .6) / .4 * Math.PI; return [Math.cos(a), .1 + Math.sin(a) * .75]; } }; // three jumps hand to hand, and the way back under
   const drawCan = () => box && box.querySelector('#rbDraw');
   function drawInit() {
-    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: 30 - (RB2.D[G.picks[2]] || 5), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
+    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
     drawCan().hidden = false; drawPlace();
   }
   function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr'); }
@@ -769,13 +784,13 @@
     const score = totalOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
     const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
       round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
-    if (V2()) { res.round.g = 2; res.draw = G.dn ? G.dn.st : 0; res.full = !G.cnt[3] && !G.brk.length; }
-    const viaL = G.picks.filter(m => (NEED[m] || 1) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
+    if (V2()) { res.round.g = 2; res.round.r = RB2.R; res.draw = G.dn ? G.dn.st : 0; res.full = !G.cnt[3] && !G.brk.length; }
+    const viaL = G.picks.filter(m => needOf(m) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
     if (G.onEnd) { G.won = res.acc >= .6; sendRound(); return; }
     // the trial: the computer dances for the opponent — its picks and accuracy depend on its level
-    const ol = G.oppLevel, pk = ROWS.map(([, all]) => { const have = all.filter(m => (NEED[m] || 1) <= ol); return have[Math.floor(Math.random() * have.length)]; });
+    const ol = G.oppLevel, pk = rowsOf().map(([, all]) => { const have = all.filter(m => needOf(m) <= ol); return have[Math.floor(Math.random() * have.length)]; });
     const opp = Math.round(maxOf(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
     const pMe = 1 / (1 + Math.exp(-(score - opp) / (.1 * Math.max(score, opp, 1))));
     const votes = [0, 1, 2].map(() => Math.random() < pMe ? 'l' : 'r'), mine = votes.filter(v => v === 'l').length, won = mine >= 2;

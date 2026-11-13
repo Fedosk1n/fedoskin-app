@@ -591,6 +591,33 @@
     ccs: { dur: 1.6, f: u => { const k = env(u, .15, .85), s = Math.sin(ss(.12, .88, u) * TAU * 3), a = up(s), b = up(-s);
       return { root: { y: 48 * k, x: 7 * k * s }, torso: 13 * k * s, head: -8 * k * s, hipL: k * (55 + 13 * a), kneeL: -125 * k * (1 - a), ankL: 30 * k * (1 - a), hipR: k * (55 + 13 * b), kneeR: -125 * k * (1 - b), ankR: 30 * k * (1 - b),
         shL: k * (-8 + 46 * b), elL: 0, shR: k * (-8 + 46 * a), elR: 0 }; } },
+    // ---- rhythm battle v2 (owner 13.11.2026: more footwork, reverse 1990, 2000, one hand freeze, headfreeze nike) ----
+    hook: { dur: 1.6, f: u => { const k = env(u, .15, .85), s = Math.sin(ss(.12, .88, u) * TAU * 2), a = up(s), b = up(-s);
+      return { root: { y: 46 * k, x: 5 * k * s }, torso: 10 * k * s, head: -6 * k * s, hipL: k * (60 - 24 * a), kneeL: -k * (118 - 40 * a), ankL: 34 * k, hipR: k * (60 + 28 * b), kneeR: -k * (118 + 22 * b), ankR: 34 * k,
+        shL: k * (-6 + 36 * b), elL: 8 * k, shR: k * (-6 + 36 * a), elR: 8 * k }; } },
+    kickout: { dur: 1.6, f: u => { const k = env(u, .15, .85), s = Math.sin(ss(.12, .88, u) * TAU * 3), a = up(s), b = up(-s);
+      return { root: { y: 46 * k - 5 * k * Math.abs(s) }, torso: -8 * k, head: 4 * k, hipL: k * (58 + 30 * a), kneeL: -122 * k * (1 - a), ankL: 30 * k * (1 - a) - 16 * k * a, hipR: k * (58 + 30 * b), kneeR: -122 * k * (1 - b), ankR: 30 * k * (1 - b) - 16 * k * b,
+        shL: k * (-14 + 26 * a), elL: -20 * k, shR: k * (-14 + 26 * b), elR: -20 * k }; } },
+    babylove: { dur: 1.7, f: u => { const k = env(u, .15, .85), th = ss(.12, .88, u) * TAU * 3, s = Math.sin(th), c = Math.cos(th);
+      return { root: { y: 52 * k, x: 12 * k * s, r: 12 * k * s, px: 100, py: 150 }, torso: 14 * k * s, head: -10 * k * s, hipL: k * (64 + 22 * s), kneeL: -k * (104 - 30 * c), ankL: 30 * k, hipR: k * (64 - 22 * s), kneeR: -k * (104 + 30 * c), ankR: 30 * k,
+        shL: k * (10 + 34 * up(s)), elL: 6 * k, shR: k * (10 + 34 * up(-s)), elR: 6 * k }; } },
+    onestep: { dur: 1.6, f: u => { const k = env(u, .15, .85), th = ss(.12, .88, u) * TAU * 3, sn = Math.sin(th), c = Math.cos(th);
+      return { root: { y: 46 * k, sx: (1 - k) + k * (c >= 0 ? 1 : -1) * Math.max(.7, Math.abs(c)), px: 100, py: 150 },
+        hipL: k * (72 + 26 * sn), kneeL: -k * (30 + 20 * up(-sn)), ankL: -10 * k, hipR: 66 * k, kneeR: -128 * k, ankR: 40 * k,
+        shL: k * (-12 + 30 * up(sn)), elL: 10 * k, shR: k * (-12 + 30 * up(-sn)), elR: 10 * k, torso: 6 * k * sn }; } },
+    russian: { dur: 1.6, f: u => { const k = env(u, .15, .85), s = Math.sin(ss(.12, .88, u) * TAU * 3), a = up(s), b = up(-s);
+      return { root: { y: 44 * k - 7 * k * Math.abs(s) }, torso: -4 * k, hipL: k * (62 + 30 * a), kneeL: -124 * k * (1 - a), ankL: 34 * k * (1 - a) - 18 * k * a, hipR: k * (62 + 30 * b), kneeR: -124 * k * (1 - b), ankR: 34 * k * (1 - b) - 18 * k * b,
+        shL: -32 * k, elL: -118 * k, shR: -32 * k, elR: -112 * k, head: 3 * k * s }; } },
+    rninety: { dur: 1.7, f: u => { const k = env(u, .2, .82), th = -ss(.2, .82, u) * TAU * 3, c = Math.cos(th);
+      return { root: { y: 196 * k, r: -180 * k, sx: (1 - k) + k * c, px: 100, py: 30 }, hipL: 5 * k, hipR: 5 * k, kneeL: -8 * k, kneeR: -24 * k,
+        shL: 177 * k, elL: 0, shR: 88 * k, elR: 12 * k, head: -6 * k }; } },
+    twok: { dur: 1.8, f: u => { const k = env(u, .18, .84), th = ss(.18, .84, u) * TAU * 4, c = Math.cos(th);
+      return { root: { y: 196 * k, r: 180 * k, sx: (1 - k) + k * c, px: 100, py: 30 }, shL: 176 * k, elL: 0, shR: 176 * k, elR: 0,
+        hipL: 14 * k, hipR: 14 * k, kneeL: 0, kneeR: 0, ankL: -10 * k, ankR: -10 * k, head: -6 * k }; } },
+    onehand: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .34 ? Math.sin(u * 280) * 2 : 0;
+      return { root: { y: 196 * k, r: 180 * k + w, px: 100, py: 30 }, torso: -6 * k, shR: 177 * k, elR: 0, shL: 62 * k, elL: 18 * k, hipL: 58 * k, kneeL: -70 * k, hipR: -20 * k, kneeR: 34 * k, head: -6 * k }; } },
+    nike: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .32 ? Math.sin(u * 280) * 1.5 : 0;
+      return { root: { y: 205 * k, r: 180 * k + w, px: 100, py: 26 }, hipL: 74 * k, kneeL: -96 * k, ankL: 20 * k, hipR: -34 * k, kneeR: 92 * k, ankR: -14 * k, shL: 55 * k, elL: 70 * k, shR: 55 * k, elR: 70 * k }; } },
     // ---- freezes ----
     handstand: { dur: 1.4, f: u => { const k = ss(0, .22, u) * (1 - ss(.8, 1, u)), w = u > .22 && u < .32 ? Math.sin(u * 280) * 1.6 : 0;
       return { root: { y: 198 * k, r: 180 * k + w, px: 100, py: 30 }, shL: 176 * k, shR: 176 * k, elL: 0, elR: 0, hipL: 52 * k, kneeL: -78 * k, hipR: 12 * k, kneeR: 0, head: -4 * k }; } },

@@ -1732,8 +1732,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=11"></script>
-<script src="rhythm.js?v=10"></script>
+<script src="hero.js?v=12"></script>
+<script src="rhythm.js?v=11"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -4980,9 +4980,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // real playback (stats.watched seconds). Its lessons are found by name, so a new lesson «Air chair» opens AIRCHAIR by itself.
   // Moves with no lesson of their own: N watched lessons of a section (UL_SEC). The server accepts them (round.u) only when it
   // says `ul: 1` (/bt/ready, /bt/inbox) — an older server would refuse the round, so then only the level counts.
-  const UL_NEED = { windmill: 3, handstand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5, hollowback: 5 }; // = rhythm.js NEED
+  const UL_NEED = { windmill: 3, handstand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5, hollowback: 5, babylove: 2, rninety: 6 }; // = rhythm.js NEED (+ RB2.NEED for the v2 moves that have a lesson)
   const UL_RX = { windmill: /windmill/i, handstand: /handstand/i, airchair: /air\s*-?\s*chair/i, headspin: /head\s*-?\s*spin/i,
-    flare: /(^|[^a-z])flare/i, airflare: /air\s*-?\s*flare|airtwist/i, ninety: /1990/, hollowback: /hollow\s*-?\s*back/i };
+    flare: /(^|[^a-z])flare/i, airflare: /air\s*-?\s*flare|airtwist/i, ninety: /^(?!.*reverse).*1990/i, hollowback: /hollow\s*-?\s*back/i, babylove: /baby\s*-?\s*love/i, rninety: /reverse.*1990/i };
   const UL_SEC = { airchair: ['Freezes', 2], hollowback: ['Freezes', 3] };
   const ulThr = l => Math.max(5, Math.min((l.dur || 0) * 0.5, 120));
   const ulDone = l => (stats.watched[l.id] || 0) >= ulThr(l);
@@ -5584,10 +5584,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     let lvl = statsView().level;
     let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false, g = 1;
     try {
-      const res = await btPost('/bt/ready', r ? { to: r.id, g: 2 } : { find: 1, g: 2 }), j = await res.json().catch(() => ({}));
+      const res = await btPost('/bt/ready', r ? { to: r.id, r: RB.RB2.R } : { find: 1, r: RB.RB2.R }), j = await res.json().catch(() => ({}));
       if (res.status === 404 && j.error === 'not found') old = true; // the server code is older than the app
       else if (!j.ok) { toast(btErr(res, j) || T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
-      else { opp = j.opp; dj = j.dj; g = j.g === 2 ? 2 : 1; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // g: 2 = the server knows rules v2 (difficulty 1–10, hard beats, the trajectory) // the server's level decides which moves count — the game uses the same
+      else { opp = j.opp; dj = j.dj; g = j.g === 2 && j.r === RB.RB2.R ? 2 : 1; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // g: 2 = the server knows rules v2 (difficulty 1–10, hard beats, the trajectory) // the server's level decides which moves count — the game uses the same
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
@@ -5640,7 +5640,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
       return { result: btRes(j.battle, 'b') };
     };
-    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, g: bt.ra && bt.ra.g === 2 ? 2 : 1, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
+    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, g: bt.ra && bt.ra.g === 2 && bt.ra.r === RB.RB2.R ? 2 : 1, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -5656,10 +5656,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const BT_FRZ = l => ['freeze', 'headstand'].concat(l >= 3 ? ['handstand', 'airchair'] : [], l >= 5 ? ['hollowback'] : []);
   const BT_TAUNT = { burn: 'BURN!', brush: 'TOO EASY!', comehere: 'COME ON!' };
   const BT_REACT = ['idle', 'bounce', 'clap', 'nah'];
-  const BT_SPIN = ['windmill', 'headspin', 'flare', 'airflare', 'ninety', 'backspin', 'swipe', 'sixstep'];
+  const BT_SPIN = ['windmill', 'headspin', 'flare', 'airflare', 'ninety', 'backspin', 'swipe', 'sixstep', 'rninety', 'twok', 'onestep'];
   const BT_NAME = { toprock: 'CROSS STEP', kickstep: 'KICK STEP', salsa: 'SALSA STEP', indian: 'INDIAN STEP', sixstep: '6-STEP', ccs: 'CC', backspin: 'BACKSPIN', swipe: 'SWIPE',
     windmill: 'WINDMILL', backflip: 'BACKFLIP', headspin: 'HEADSPIN', flare: 'FLARE', airflare: 'AIRFLARE', ninety: '1990', freeze: 'BABY FREEZE', headstand: 'HEADSTAND FREEZE',
-    handstand: 'HANDSTAND FREEZE', airchair: 'AIRCHAIR', hollowback: 'HOLLOWBACK' };
+    handstand: 'HANDSTAND FREEZE', airchair: 'AIRCHAIR', hollowback: 'HOLLOWBACK',
+    // rhythm battle rules v2 (owner 13.11.2026)
+    babylove: 'BABY LOVE', onestep: 'ONE STEP', russian: 'RUSSIAN STEP', kickout: 'KICK OUT', hook: 'HOOK', rninety: 'REVERSE 1990', twok: '2000',
+    onehand: 'ONE HAND FREEZE', nike: 'HEADFREEZE NIKE' };
   // Rare battle-deciding moves (owner 11.11.2026: 1 % of auto battles, decisive; 3 kinds — spin / acrobatics / stance).
   // Decided by the battle's seed with the SAME formula as the server (push-worker.js btRare — keep equal): the server then
   // gives all three judges to that dancer. An older server doesn't know it ⇒ shown only if the result agrees.

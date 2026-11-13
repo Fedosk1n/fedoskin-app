@@ -5,13 +5,24 @@ const RB2 = (() => {
   // the DJ's tracks: bpm, `up` (shifts how dense the notes are), score multiplier, hardness 1–7, note family
   const BEATS = { lofi: [84, -1, .8, 1, 'st'], boom: [100, 0, 1, 2, 'st'], funk: [114, 0, 1.25, 3, 'st'], raw: [128, 1, 1.55, 4, 'st'],
     cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
-  // how hard a move is in real breaking, 1–10 (the owner corrects this table): it sets the score multiplier (×1.0 … ×1.9),
-  // how dense the notes are (tier 1–3) and how long the trajectory to draw is
-  const D = { toprock: 1, kickstep: 2, salsa: 2, indian: 3, sixstep: 2, ccs: 3,
-    backspin: 2, swipe: 4, windmill: 5, headspin: 7, flare: 7, ninety: 8, airflare: 10,
-    freeze: 2, headstand: 3, handstand: 4, airchair: 6, hollowback: 8 };
-  const tier = d => d <= 2 ? 1 : d <= 5 ? 2 : 3;
-  const mult = d => Math.round((1 + .1 * (d - 1)) * 100) / 100;
+  // R = the revision of these tables: the phone and the server play by v2 only when both have the same one (bump it on ANY change
+  // of M / ROWS / NEED / beats / patterns — otherwise a phone with old code sends rounds the server counts differently)
+  const R = 2;
+  // the score multiplier of every move = how hard it is in real breaking. THE OWNER'S NUMBERS (13.11.2026 «исправь: indian 1.3,
+  // airflare 2.5, 1990 2, reverse 1990 2, 2000 2, airchair 1.8, flare 2.2, headspin 1.4…» + new footwork). It also sets how dense
+  // the taps are (tier: ≤ ×1.1 sparse, ≤ ×1.4 medium, above — dense) and how narrow the trajectory's corridor is
+  const M = { toprock: 1, kickstep: 1.1, salsa: 1.1, indian: 1.3,
+    hook: 1, sixstep: 1.1, kickout: 1.1, ccs: 1.2, babylove: 1.3, onestep: 1.3, russian: 1.3,
+    backspin: 1.1, swipe: 1.3, windmill: 1.4, headspin: 1.4, ninety: 2, rninety: 2, twok: 2, flare: 2.2, airflare: 2.5,
+    freeze: 1.1, nike: 1.3, onehand: 1.4, hollowback: 1.7, airchair: 1.8,
+    headstand: 1.2, handstand: 1.3 }; // the last two left the game (replaced by nike / onehand); kept for rounds already stored
+  const ROWS = [['toprock', 'kickstep', 'salsa', 'indian'], ['hook', 'sixstep', 'kickout', 'ccs', 'babylove', 'onestep', 'russian'],
+    ['backspin', 'swipe', 'windmill', 'headspin', 'ninety', 'rninety', 'twok', 'flare', 'airflare'],
+    ['freeze', 'nike', 'onehand', 'hollowback', 'airchair']];
+  const NEED = { babylove: 2, onestep: 2, russian: 2, windmill: 3, onehand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5,
+    hollowback: 5, rninety: 6, twok: 6 }; // the hero's level a move needs
+  const mult = m => M[m] || 1;
+  const tier = m => mult(m) <= 1.1 ? 1 : mult(m) <= 1.4 ? 2 : 3;
   const cl = (x, a, b) => Math.max(a, Math.min(b, x));
   const mul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const th = a => a.map(x => x / 3); // triplets: thirds of a beat
@@ -49,7 +60,7 @@ const RB2 = (() => {
   }
   // every note: b = its beat, ph = which move it belongs to (0 toprock … 3 freeze), w = weight; draw ⇒ a trajectory until `end`
   function notes(picks, seed, beat) {
-    const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(D[m]) + B[1], 1, 4);
+    const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(m) + B[1], 1, 4);
     let i = 0;
     const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
     bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
@@ -58,7 +69,7 @@ const RB2 = (() => {
     out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
     return out;
   }
-  const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(D[picks[n.ph]]) * BEATS[beat][2];
+  const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(picks[n.ph]) * BEATS[beat][2];
   const combo = c => 1 + Math.min(c, 30) * .02;
   // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
   // (no miss, no stray tap) = FULL COMBO, +10 %
@@ -67,6 +78,6 @@ const RB2 = (() => {
     notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
     return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
   }
-  return { BEATS, D, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(D[m]) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+  return { R, BEATS, M, ROWS, NEED, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(m) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
 })();
 // </RB2>

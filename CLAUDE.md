@@ -698,6 +698,18 @@
   phone = server score on 2 800 random rounds, old rounds pass, old round on a new beat refused, DJ pools; headless phone — full
   rounds by hand on 5 beats with drawn flare / airflare / headspin / 1990 / windmill (perfect, sloppy ⇒ GOOD, a third ⇒ MISS),
   v1 battle round unchanged, result screen. NOT tested on a real phone (finger feel, tap windows on 140 BPM).
+  Owner's table (13.11.2026 10:48 «добавь ещё… исправь…»): RB2 now holds MULTIPLIERS `RB2.M` (his numbers, no 1–10 scale): toprock 1,
+  kickstep 1.1, salsa 1.1, indian 1.3 · footwork hook 1, sixstep 1.1, kickout 1.1, ccs 1.2, babylove / onestep / russian 1.3 · power
+  backspin 1.1, swipe 1.3, windmill 1.4, headspin 1.4, ninety 2, rninety (REVERSE 1990) 2, twok (2000) 2, flare 2.2, airflare 2.5 ·
+  freeze 1.1, nike (HEADFREEZE NIKE, replaced headstand) 1.3, onehand (ONE HAND FREEZE, replaced handstand) 1.4, hollowback 1.7,
+  airchair 1.8. Tier (tap density) by multiplier: ≤ 1.1 / ≤ 1.4 / above; corridor 30 − 8·(m − 1) px, ≥ 17. v2 has its OWN `RB2.ROWS` and
+  `RB2.NEED` (babylove / onestep / russian 2, onehand 3, rninety / twok 6; rest as before) — rhythm.js `rowsOf()` / `needOf()`, worker
+  rbCheck / rbStand; v1 rows untouched. `RB2.R` = tables revision (now 2): the app sends `r` to /bt/ready (NOT g — a server with the
+  first v2 tables would accept g), the server plays v2 only when r === its R; rounds carry r; rbCheck refuses another revision; an
+  answer by another revision ⇒ stand-in. BUMP R on any change of the tables. /visits `rb2: R` (admin wants ≥ 2; «версия 49»).
+  New hero moves in hero.js (`?v=12`): hook, kickout, babylove, onestep, russian, rninety, twok, onehand, nike — quick drafts by
+  Claude, NOT reviewed by the owner (ask him how they look). SHAPES rninety / twok. index.html: BT_NAME, UL_NEED / UL_RX babylove
+  (lesson «Baby love») and rninety («Reverse 1990»; ninety's regex now skips «reverse»). rhythm.js `?v=11`.
 - Rating moved to D1 (owner 10.11.2026 «сотни тысяч пользователей… все захотят батлить»; also a friend «много смотрел, а в
   рейтинге нет» — the single KV key was read-modify-written by everyone: lost updates between edge locations + KV free plan's
   1000 writes/day ⇒ people silently missing): D1 table `lb` (id, n, nl lower-case nick, c, cn normalised city, co, a, m, v, s,
