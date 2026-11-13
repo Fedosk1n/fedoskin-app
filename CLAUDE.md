@@ -12,6 +12,10 @@
   id, sec, name, dur, ru, added, pv (false = no -p3 preview), hidden, new (false = no NEW badge), ks (Kinescope video id),
   vertical (true = portrait video → opens straight in full screen; admin sets it from the file's size on upload).
   r2 (file name in Cloudflare R2, e.g. `tr-x-<random>.mp4` — see «Cloudflare R2» below).
+  desc {ru,en,es,pt,fr,de,ja,ko,zh} = lesson description (13.11.2026, owner «делай»: the lesson page showed the placeholder
+  «[Описание урока…]» to everyone) — app `#lessonDesc`: own language, else en (non-ru), none ⇒ hidden; admin lesson card «Описание
+  по-русски / по-английски» + «Описание на других языках» (toast when ru changed but translations stayed; admin «версия 47»).
+  The 14 lessons with subtitles got descriptions drafted by Claude from the subtitles (move names in English); short clips have none.
   `vendor/mediabunny.min.mjs` (MPL-2.0) does in-browser compression: admin quality choice 720p (~1 Mbit/s) / 1080p
   (~3.5 Mbit/s at 60 fps) / «Без сжатия» (`fedoskin-admin-quality`).
   Vendored mediabunny is PATCHED (04.11.2026): line 2 sets `Symbol.dispose ??= Symbol.for('Symbol.dispose')` (+asyncDispose) —
@@ -943,6 +947,7 @@
   → llama-3.3-70b → gemma-3-12b → llama-3.1-8b-fp8-fast), first that answers is kept in tgs 'trModel', refused ones (5018 /
   not found) skipped for 24 h in 'trBad'; all refused ⇒ m2m100-1.2b (no detection: thread language / 'en' as source).
   /tg/trtest returns `model`; admin shows «Переводит: …». Admin «версия 35». 10.11.2026 (owner: no copy button on «Статистика»): always-visible «Скопировать код сервера» `#visCopyTop` next to «Обновить»; /visits returns `bt: 1` and the `#wkNew` banner also shows when the server lacks it (battles/points/shop). Admin «версия 36». Services by country (owner 10.11.2026): /visits `svc.countries {today, d7, all}` = [country, sv/so/tg, people] (evu ⋈ devices, first-seen country, XX unknown); admin table `#svCountry` «По странам» under the per-service table, follows the period switch. Admin «версия 37».
+- Swipe tip `#swHint` wraps (max-width 100 % − 20 px) — on a landscape lesson in the narrow page player it was cut off (13.11.2026).
 - Sheets never taller than the screen (owner 12.11.2026 «ощущение будто нельзя доскролить до своего языка»): `.sheet` got
   max-height calc(100dvh − max(12px, safe-area top)) + overflow-y auto + overscroll contain. Before, the subtitles sheet
   (10 rows ≈ 870 px) was bottom-aligned with no scroll ⇒ its top (Off, Русский…; sideways also EN–FR) was off screen.

@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 46</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 47</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -806,6 +806,17 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     <label class="f"><span>Название</span><input type="text" id="eName"></label>
     <label class="f"><span>Раздел</span><select id="eSec"></select></label>
     <label class="f"><span>Слова для поиска по-русски</span><input type="text" id="eRu"><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Слова через пробел. Окончания и предлоги не важны: «флай твист» найдётся и по запросу «с флая в твист».</span></label>
+    <label class="f"><span>Описание по-русски</span><textarea id="eDescRu" rows="3" placeholder="Что разбираем в уроке, на что обратить внимание"></textarea></label>
+    <label class="f"><span>Описание по-английски</span><textarea id="eDescEn" rows="3"></textarea><span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400">Его видят все иностранные языки, у которых нет своего перевода. Нет описания — в приложении этого блока просто нет.</span></label>
+    <details class="f" id="eDescMore" style="margin-top:4px"><summary class="hint" style="cursor:pointer">Описание на других языках</summary>
+      <label class="f"><span>Испанский</span><textarea id="eDesc_es" rows="2"></textarea></label>
+      <label class="f"><span>Португальский</span><textarea id="eDesc_pt" rows="2"></textarea></label>
+      <label class="f"><span>Французский</span><textarea id="eDesc_fr" rows="2"></textarea></label>
+      <label class="f"><span>Немецкий</span><textarea id="eDesc_de" rows="2"></textarea></label>
+      <label class="f"><span>Японский</span><textarea id="eDesc_ja" rows="2"></textarea></label>
+      <label class="f"><span>Корейский</span><textarea id="eDesc_ko" rows="2"></textarea></label>
+      <label class="f"><span>Китайский</span><textarea id="eDesc_zh" rows="2"></textarea></label>
+    </details>
     <label class="f"><span>Дата добавления</span><input type="date" id="eDate"></label>
     <label class="sw green"><input type="checkbox" id="eNew"><span><b>Значок NEW</b><br><span class="hint" id="eNewHint"></span></span></label>
     <label class="sw"><input type="checkbox" id="eShow"><span><b>Показывать в приложении</b><br><span class="hint">Выключите, чтобы спрятать урок, не удаляя</span></span></label>
@@ -828,6 +839,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   const crById = id => crList().find(c => c.id === id);
   const secLabel = sec => isCrsSec(sec) ? 'Курс «' + crName(crById(sec.slice(7)) || {id: sec.slice(7)}) + '»' : sec;
   const crLessons = id => lessons.filter(l => l.sec === 'course:' + id);
+  const DESC_LANGS = ['ru','en','es','pt','fr','de','ja','ko','zh'];
+  const descSel = c => c === 'ru' ? '#eDescRu' : c === 'en' ? '#eDescEn' : '#eDesc_' + c;
   let crAPass = {};
   async function crGetAPass(){ try { const j = await pushApi('/course/apass'); crAPass = (j && j.pass) || {}; } catch (_) {} }
   // which course's pass opens this R2 file (as the server will decide after the next publish)
@@ -1391,6 +1404,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
         if (diff(l.name, r.name)) what.push('название');
         if (diff(l.sec, r.sec)) what.push('раздел');
         if (diff(l.ru, r.ru)) what.push('слова для поиска');
+        if (diff(l.desc, r.desc)) what.push('описание');
         if (diff(l.added, r.added) || (l.new === false) !== (r.new === false)) what.push('дата / NEW');
         if (!!l.hidden !== !!r.hidden) what.push(l.hidden ? 'скрыть' : 'показать');
         if (!rep && diff(l.ks, r.ks)) what.push(l.ks ? 'видео из Kinescope' : 'отвязать Kinescope');
@@ -1745,6 +1759,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#eName').value = l.name;
     fillSecSelect($('#eSec')); $('#eSec').value = l.sec;
     $('#eRu').value = l.ru || '';
+    DESC_LANGS.forEach(c => { $(descSel(c)).value = (l.desc && l.desc[c]) || ''; });
+    $('#eDescMore').open = false;
     $('#eDate').value = l.added || '';
     $('#eNew').checked = showsNew(l);
     paintNewHint();
@@ -1858,6 +1874,13 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     dropGh = dropGh.filter(x => x !== l.id);
     if (l.ks && !$('#eKsDropRow').hidden && $('#eKsDrop').checked) dropGh.push(l.id);
     l.ru = $('#eRu').value.trim();
+    { // lesson description per language (app: own language, else English; none ⇒ hidden)
+      const old = l.desc || {}, d = {};
+      DESC_LANGS.forEach(c => { const v = $(descSel(c)).value.trim(); if (v) d[c] = v; });
+      const stale = (old.ru || '') !== (d.ru || '') && DESC_LANGS.some(c => c !== 'ru' && d[c] && d[c] === old[c]);
+      if (Object.keys(d).length) l.desc = d; else delete l.desc;
+      if (stale) setTimeout(() => toast('Русское описание изменилось, а переводы остались старые — обновите их (или попросите Claude перевести)'), 400);
+    }
     if ($('#eDate').value) l.added = $('#eDate').value;
     delete l.new;
     if (!$('#eNew').checked && inNewWindow(l)) l.new = false;
