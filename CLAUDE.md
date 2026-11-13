@@ -1094,4 +1094,22 @@
   stay (saves). The rest of the list is for the next districts (Project doc). WORDING RULE (owner): toprock and footwork are DANCED
   («танцуют»), only powermoves are spun («крутят») — never «крутит топрок / футворк».
   Pull-to-refresh no longer starts from the city map (`#city` in the ptr touchstart guard): a drag down there is the joystick.
-  Not done yet: stretch mini-game, guard, other districts, balance by real play (no hand-played win yet), passers-by.
+  Things to do, v3 (owner 13.11.2026 22:11 «ещё улучшай графику и добавь активностей… просто бегает по большой карте и нечем заняться…
+  затягивающий»). All numbers in city-balance.js (`goals`, `pick`, `tag`, `job`, `stretch`); new save fields are filled from `fresh()` on load
+  (old saves work). (1) DAILY FINDS: `picks()` = B.pick.n things per game day on reachable free cells (`freeCells()`, same places all day):
+  coins (+2…5 cash), spray cans (item `can`), apples (+8 energy); `collect()` in step() when the hero is within .62 cell; numbers fly up
+  (`pop` / `floats`). (2) TO-DO LIST: `goals()` = 3 of coins / win / show / deliver / stretch / tag per game day, `bump(kind)` from the
+  events; +10 cash each, all three ⇒ +5 respect + a random find; HUD button `#cyGoals` «📋 n / 3» ⇒ `goalsDlg`. (3) TAGS: places type
+  `wall` (3 in the yard, `ty` = where the wall is on the picture) — 2 cans ⇒ the player's tag stays there for good (`S.tags`, drawn by
+  `GFX.mytag`: crown + «FT×»), +6 respect, all walls +10. (4) DELIVERY: kiosk button ⇒ `takeJob()` picks a door from `drops` (path > 8
+  cells), timer in real seconds (4 + .3 × path), HUD chip «🌯 s», green ring at the door or an arrow at the screen edge; in time ⇒ pay
+  6 + .4 × path (+5 tip when > 35 % of the time is left), late ⇒ nothing; 3 a game day, −3 energy; the timer waits while a dialog is open.
+  (5) WARM-UP: place `gym` at the court ⇒ `stretch()` mini-game in the dialog (a runner on a bar, 4 taps in the green zone, faster each
+  time): +5 energy a hit, 4 of 4 also cures the bruise; once a game day. Life (picture only): `walkers` (residents on the pavements 7–22 h,
+  `walkerAt`), `traffic` (a car along the road), kiosk smoke, pink dawn / orange sunset tint. The idle loop is now a steady ~15 fps (66 ms)
+  instead of the rare tick; 60 fps while walking, with a delivery or flying numbers. The camera may slide the map down from under the top
+  panel (cam.y clamp − 112 px) so the far wall is visible. Signs `wall` / `gym` / `job`. 31 new i18n keys (901). city.js `?v=6`,
+  city-gfx.js `?v=3`, city-data.js `?v=4`, city-balance.js `?v=3`. `CITY._picks()` for checks. Tested headless ru 390×844 + en 375×667 from
+  an OLD save: finds, to-do sheet, tag, delivery in time / late, warm-up 4 of 4, reload keeps everything, day / sunset / night pictures,
+  no errors. NOT on a real phone (battery at 15 fps, how tight the delivery timer feels with a finger).
+  Not done yet: guard, other districts, balance by real play (no hand-played win yet), passers-by.

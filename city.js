@@ -6,6 +6,7 @@
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
   const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLBhuPkM', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
+  let FREE = [], pkDay = -1, pkList = [], floats = [], walkLook = [];
   let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   let hdir = 0, hdist = 0, moved = 0, lookKey = '', lookNow = null, npcLook = {}, warmUp = {}, birdAway = {};
   const T = (s, v) => D.T(s, v);
@@ -18,10 +19,10 @@
   function fresh() {
     const d = DATA.districts.yard;
     return { v: B.save, d: 'yard', x: d.start[0], y: d.start[1], t: B.startHour * 60, en: B.energy.max, cash: B.start.cash, rep: B.start.rep, card: 0, own: [], inv: {},
-      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0 };
+      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0, tags: {}, pk: { day: -1, got: [] }, goals: { day: -1, list: [] }, dl: { day: -1, n: 0 }, job: null };
   }
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === B.save && DATA.districts[s.d]) return s; } catch (_) {}
+    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === B.save && DATA.districts[s.d]) return Object.assign(fresh(), s); } catch (_) {}   // older saves get the new fields
     return fresh();
   }
   const save = () => { try { S.x = Math.round(hero.x); S.y = Math.round(hero.y); localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} };
@@ -44,7 +45,7 @@
   function setMap() {
     DIST = DATA.districts[S.d]; MAP = DIST.map; MH = MAP.length; MW = MAP[0].length;
     if (!S.fog[S.d] || S.fog[S.d].length !== MW * MH) S.fog[S.d] = '0'.repeat(MW * MH);
-    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; npcLook = {}; GFX.setMap(DIST, dpr); reveal();
+    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; npcLook = {}; GFX.setMap(DIST, dpr); freeCells(); pkDay = -1; walkLook = []; reveal();
   }
   const tile = (x, y) => x < 0 || y < 0 || x >= MW || y >= MH ? 'F' : MAP[y][x];
   const walk = (x, y) => !BLOCK.includes(tile(x, y));
@@ -77,6 +78,117 @@
     return null;
   }
   const around = (x, y) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].filter(c => walk(c[0], c[1]));
+
+  // ---- things to do in the yard (owner 13.11.2026 «добавь активностей… затягивающий») ----
+  // free ground cells the hero can reach: the daily finds lie there
+  function freeCells() {
+    const st = DIST.start, key = (x, y) => y * MW + x, seenC = new Set([key(st[0], st[1])]), q = [st], busyC = new Set();
+    DIST.places.forEach(p => busyC.add(key(p.at[0], p.at[1]))); DIST.npcs.forEach(n => busyC.add(key(n.at[0], n.at[1]))); (DIST.drops || []).forEach(p => busyC.add(key(p[0], p[1])));
+    FREE = [];
+    for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; if ('.='.includes(tile(x, y)) && !busyC.has(key(x, y)) && Math.hypot(x - st[0], y - st[1]) > 2) FREE.push([x, y]);
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const k = key(x + dx, y + dy); if (!seenC.has(k) && walk(x + dx, y + dy)) { seenC.add(k); q.push([x + dx, y + dy]); } }); }
+  }
+  // what lies on the ground today (the same for the whole game day): coins, spray cans, apples
+  function picks() {
+    const d = dayN(); if (pkDay === d) return pkList;
+    pkDay = d; pkList = []; if (S.pk.day !== d) S.pk = { day: d, got: [] };
+    const used = new Set(), P = B.pick;
+    for (let i = 0; i < P.n && FREE.length; i++) {
+      let k = Math.floor(hash(d * 31 + i * 7 + 3, i * 13 + d) * FREE.length), g = 0; while (used.has(k) && g++ < 20) k = (k + 7) % FREE.length; used.add(k);
+      const r = hash(d + i * 5, 77 + i), kind = r < P.can ? 'can' : r < P.can + P.snackP ? 'snack' : 'coin';
+      pkList.push({ i, x: FREE[k][0], y: FREE[k][1], kind, val: P.coin[0] + Math.floor(hash(i, d + 5) * (P.coin[1] - P.coin[0] + 1)) });
+    }
+    return pkList;
+  }
+  const pop = (txt, col) => { floats.push({ x: hero.x, y: hero.y, txt, col: col || '#F2CC55', t: performance.now() }); if (floats.length > 6) floats.shift(); };
+  function collect() {
+    picks().forEach(k => {
+      if (S.pk.got.includes(k.i) || Math.hypot(k.x - hero.x, k.y - hero.y) > .62) return;
+      S.pk.got.push(k.i);
+      if (k.kind === 'coin') { S.cash += k.val; pop('+' + k.val + ' 💵'); bump('coins'); }
+      else if (k.kind === 'can') { give('can'); pop('+1 🎨', '#7CE0FF'); }
+      else { S.en = Math.min(emax(), S.en + B.pick.snack); pop('+' + B.pick.snack + ' ⚡', '#7BE3A0'); }
+      hudKey = '';
+    });
+  }
+  // three things to do for every game day: a small prize for each, a better one for all three
+  const GOALS = { coins: 'Собери монеты', win: 'Выиграй батл', show: 'Выступи с шоу', deliver: 'Доставь заказ из ларька', stretch: 'Разомнись на площадке', tag: 'Нарисуй тег на стене' };
+  const wallsLeft = () => DIST.places.filter(p => p.type === 'wall' && !S.tags[p.id]).length;
+  function goals() {
+    const d = dayN(); if (S.goals.day === d) return S.goals;
+    const pool = ['coins', 'win', 'show', 'deliver', 'stretch'].concat(wallsLeft() ? ['tag'] : []), list = [];
+    for (let i = 0; i < 3; i++) { const k = pool.splice(Math.floor(hash(d * 17 + i, i * 29 + 5) * pool.length), 1)[0]; list.push({ k, a: 0, n: B.goals[k] || 1, done: 0 }); }
+    return (S.goals = { day: d, list, all: 0 });
+  }
+  function bump(k) {
+    const G = goals(), g = G.list.find(q => q.k === k && !q.done); if (!g) return;
+    g.a++; hudKey = ''; if (g.a < g.n) return;
+    g.done = 1; S.cash += B.goals.cash; D.toast('✓ ' + T('Дело сделано: {x}', { x: T(GOALS[k]) }) + ' · +' + B.goals.cash + ' 💵');
+    if (!G.all && G.list.every(q => q.done)) { G.all = 1; S.rep += B.goals.rep; const it = ['tape', 'thermos', 'can'][Math.floor(Math.random() * 3)]; give(it);
+      setTimeout(() => D.toast('🎁 ' + T('Все дела дня сделаны!') + ' +' + B.goals.rep + ' ★ · ' + T(item(it).name)), 1800); }
+    save();
+  }
+  function goalsDlg() {
+    const G = goals();
+    dlg(T('Дела на сегодня'), '<ul class="cyls">' + G.list.map(g => '<li>' + (g.done ? '✅ ' : '⬜ ') + '<b>' + T(GOALS[g.k]) + (g.n > 1 ? ' · ' + Math.min(g.a, g.n) + ' / ' + g.n : '') + '</b></li>').join('') + '</ul>' +
+      p('<small>' + T('За каждое дело — {n} кэша, за все три — {r} респекта и находка. Завтра будут новые.', { n: B.goals.cash, r: B.goals.rep }) + '</small>'), []);
+  }
+  // a tag on a clean wall: costs spray cans (they lie around the yard), stays on the wall for good
+  function wallSpot(pl) {
+    if (S.tags[pl.id]) return dlg(T(pl.name), p('👑 ' + T('Твой тег на стене. Двор его видит.')), []);
+    const have = S.inv.can || 0, need = B.tag.cans;
+    dlg(T(pl.name), p(T('Баллончиков на тег: {n}. У тебя: {a}. Они лежат по двору — ищи.', { n: need, a: have })), [
+      { t: '🎨 ' + T('Нарисовать тег') + ' (+' + B.tag.rep + ' ★)', cls: 'btn-accent', off: have < need, fn: () => {
+        S.inv.can -= need; S.tags[pl.id] = 1; S.rep += B.tag.rep; pop('+' + B.tag.rep + ' ★', '#FF9A4F'); bump('tag');
+        if (!wallsLeft()) { S.rep += B.tag.all; D.toast('👑 ' + T('Весь двор в твоих тегах!') + ' +' + B.tag.all + ' ★'); }
+      } }]);
+  }
+  // a delivery from the kiosk: run to the door before the food gets cold (the timer runs in real seconds)
+  function jobsLeft() { if (S.dl.day !== dayN()) S.dl = { day: dayN(), n: 0 }; return B.job.perDay - S.dl.n; }
+  function takeJob() {
+    const J = B.job, drops = (DIST.drops || []).map(to => ({ to, way: route([to]) })).filter(q => q.way && q.way.length > 8); if (!drops.length) return;
+    const pick = drops[Math.floor(Math.random() * drops.length)], len = pick.way.length, sec = Math.round(J.secBase + J.secCell * len);
+    jobsLeft(); S.dl.n++; S.en = Math.max(0, S.en - J.energy);
+    S.job = { to: pick.to, left: sec, all: sec, pay: Math.round(J.base + J.perCell * len) };
+    D.toast('🌯 ' + T('Отнеси заказ, пока не остыл: {s} с. Смотри на стрелку.', { s: sec }));
+  }
+  function jobTick(dt) {
+    const j = S.job; if (!j) return;
+    if (Math.hypot(j.to[0] - hero.x, j.to[1] - hero.y) < .7) {
+      const tip = j.left / j.all > B.job.tipLeft ? B.job.tip : 0; S.cash += j.pay + tip; S.job = null; hudKey = '';
+      pop('+' + (j.pay + tip) + ' 💵'); D.toast('🌯 ' + T('Заказ доставлен') + ': +' + j.pay + ' 💵' + (tip ? ' · ' + T('Чаевые за скорость') + ' +' + tip : '')); bump('deliver'); save(); return;
+    }
+    if (!dlgEl.hidden) return;   // the timer waits while a window is open
+    j.left -= dt; if (j.left <= 0) { S.job = null; hudKey = ''; D.toast('🥶 ' + T('Заказ остыл — клиент не заплатил')); save(); }
+  }
+  // the warm-up at the court: catch the runner in the green zone
+  function stretch(pl) {
+    if (daily('gym')) return dlg(T(pl.name), p(T('Сегодня ты уже разминался. Приходи завтра.')), []);
+    dlg(T(pl.name), p(T('Жми «Тянись», когда бегунок в зелёной зоне. Четыре попытки — чем точнее, тем больше энергии.')), [{ t: T('Размяться'), cls: 'btn-accent', fn: () => {
+      path = []; goal = null; const N = B.stretch.tries; let n = 0, hits = 0, z = .5, t0 = performance.now(), on = true;
+      dlgEl.innerHTML = '<div class="cyd"><h3>' + esc(T(pl.name)) + '</h3><div class="cybar"><i></i><b></b></div><p class="cyln" id="cySt">&nbsp;</p><div class="cybt"><button type="button" class="btn btn-accent" id="cyGo">' + T('Тянись!') + '</button></div></div>';
+      dlgEl.hidden = false; const zone = dlgEl.querySelector('.cybar i'), mk = dlgEl.querySelector('.cybar b'), st = dlgEl.querySelector('#cySt');
+      const posAt = now => { const u = ((now - t0) / (1050 - n * 110)) % 2; return u < 1 ? u : 2 - u; };
+      const place = () => { z = .18 + Math.random() * .64; zone.style.left = (z - .11) * 100 + '%'; };
+      const loop = now => { if (!on || dlgEl.hidden || !mk.isConnected) return; mk.style.left = posAt(now) * 100 + '%'; requestAnimationFrame(loop); };
+      place(); requestAnimationFrame(loop);
+      dlgEl.querySelector('#cyGo').addEventListener('click', () => {
+        const ok = Math.abs(posAt(performance.now()) - z) <= .11; if (ok) hits++; n++; t0 = performance.now() - Math.random() * 600;
+        st.textContent = (ok ? '✓ ' : '✗ ') + T('Попаданий: {a} из {n}', { a: hits, n: N }); zone.style.background = ok ? '#3BD16F' : '#E2483A'; setTimeout(() => { zone.style.background = ''; }, 160);
+        if (n < N) return place();
+        on = false; mark('gym'); const gain = hits * B.stretch.per; S.en = Math.min(emax(), S.en + gain); let extra = '';
+        if (hits === N && S.bruise) { S.bruise = 0; extra = p('💪 ' + T('Чисто размялся — ушиб прошёл.')); }
+        bump('stretch'); dlg(T(pl.name), p(T('Попаданий: {a} из {n}', { a: hits, n: N }) + ' · +' + gain + ' ⚡') + extra, []); paintHud(); save();
+      });
+    } }]);
+  }
+  // residents walk along the pavements there and back (only a picture)
+  function walkerAt(w, now) {
+    const P = w.path; let len = 0; const segs = []; for (let i = 1; i < P.length; i++) { const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); segs.push(l); len += l; }
+    let u = (now / 1000 * w.speed + w.path[0][0] * 3) % (2 * len); const back = u > len; if (back) u = 2 * len - u;
+    for (let i = 0; i < segs.length; i++) { if (u <= segs[i] || i === segs.length - 1) { const k = Math.min(1, u / segs[i]), a = P[i], b = P[i + 1], dx = (b[0] - a[0]) * (back ? -1 : 1), dy = (b[1] - a[1]) * (back ? -1 : 1);
+      return { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, dir: dirOf(dx, dy), d: now / 1000 * w.speed }; } u -= segs[i]; }
+  }
 
   // ---- drawing: the picture itself lives in city-gfx.js (cached map pieces and sprites); here — only what goes where ----
   function size() {
@@ -113,11 +225,13 @@
     if (!W) size(); if (!W) return;
     cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.imageSmoothingEnabled = false; R(0, 0, W, H, '#0B0B0C');
     const vw = W / TS, vh = (H - padB) / TS;
-    cam.x = cl(hero.x + .5, Math.min(vw / 2, MW / 2), Math.max(MW - vw / 2, MW / 2)); cam.y = cl(hero.y + .5, Math.min(vh / 2, MH / 2), Math.max(MH - vh / 2, MH / 2));
+    cam.x = cl(hero.x + .5, Math.min(vw / 2, MW / 2), Math.max(MW - vw / 2, MW / 2)); cam.y = cl(hero.y + .5, Math.min(vh / 2 - 112 / TS, MH / 2), Math.max(MH - vh / 2, MH / 2));   // the map may slide down from under the top panel: the far wall (tags!) stays visible
     const ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS), ng = night(), h = hour();
     const vis = (x, y, m) => { const px = ox + x * TS, py = oy + y * TS; return px > -m && py > -m && px < W + m && py < H + m; };
     GFX.drawMap(cx, ox, oy, W, H);
     DIST.places.forEach(p => { if (p.type === 'stash' && !S.got[p.id] && seen(p.at[0], p.at[1]) && vis(p.at[0], p.at[1], TS)) GFX.crate(cx, ox + p.at[0] * TS, oy + p.at[1] * TS); });
+    DIST.places.forEach(p => { if (p.type === 'wall' && S.tags[p.id] && vis(p.at[0], p.at[1], 2 * TS)) GFX.mytag(cx, ox + p.at[0] * TS + 3, oy + p.at[1] * TS + (p.ty || -27)); });
+    picks().forEach(k => { if (!S.pk.got.includes(k.i) && seen(k.x, k.y) && vis(k.x, k.y, TS)) GFX.pickup(cx, ox + k.x * TS + TS / 2, oy + k.y * TS + TS / 2, k.kind, now, k.i * 3 + k.x); });
     if (path.length) { const g = path[path.length - 1]; cx.strokeStyle = '#E2611A'; cx.lineWidth = 2; cx.beginPath(); cx.arc(ox + g[0] * TS + TS / 2, oy + g[1] * TS + TS / 2, 10 + 2 * Math.sin(now / 150), 0, 7); cx.stroke(); }
     (DIST.birds || []).forEach((b, i) => {
       if (Math.hypot(b[0] - hero.x - .5, b[1] - hero.y - .5) < 1.3) birdAway[i] = S.t + 90;
@@ -132,10 +246,22 @@
       const hot = warmUp[n.id] > now || (!daily('b:' + n.id) && (now + n.lvl * 2300) % 9000 < 1600);
       GFX.person(cx, px, py, lookOf(n), near ? dirOf(dx, dy) : 0, hot ? 't' + Math.floor(now / 200) % 4 : 'i' + Math.floor(now / 700 + n.lvl) % 2);
     });
+    if (h >= 7 && h < 22) (DIST.walkers || []).forEach((w, i) => {
+      const q = walkerAt(w, now); if (!q || !seen(Math.round(q.x), Math.round(q.y)) || !vis(q.x, q.y, 2 * TS)) return;
+      if (!walkLook[i]) { const L = w.look || {}, f = window.HERO.topDown(L.base || 1, L.girl ? ['girl'] : []); f.col = Object.assign({}, f.col, L.col || {}); walkLook[i] = { key: 'w:' + i, f, big: .94 }; }
+      GFX.person(cx, ox + q.x * TS + TS / 2, oy + q.y * TS + TS / 2, walkLook[i], q.dir, 'w' + Math.floor(q.d * 4.3) % 6);
+    });
     const hx = ox + hero.x * TS + TS / 2, hy = oy + hero.y * TS + TS / 2;
     if (me.f.fire) GFX.aura(cx, hx, hy, now);
     GFX.person(cx, hx, hy, me, hdir, mv ? 'w' + Math.floor(hdist * 4.3) % 6 : (now % 14000 < 1800 ? 't' + Math.floor(now / 200) % 4 : 'i' + Math.floor(now / 700) % 2));
     GFX.trees().forEach(t => { if (seen(t[0], t[1]) && vis(t[0], t[1], 2 * TS)) GFX.crown(cx, ox + t[0] * TS, oy + t[1] * TS, t[0], t[1]); });
+    // life: a car passes along the road, the kiosk smokes while it works
+    const TR = DIST.traffic, kiosk = DIST.places.find(p => p.type === 'kiosk');
+    if (TR) { const u = (now / 1000) % TR.period; if (u < TR.dur) { const carX = ox + (MW + 2 - u / TR.dur * (MW + 5)) * TS, carY = oy + TR.row * TS + TS / 2; if (carX > -100 && carX < W + 140 && seen(cl(Math.round((carX - ox) / TS), 0, MW - 1), TR.row)) GFX.carAt(cx, carX, carY, Math.floor(now / 1000 / TR.period), ng > .2); } }
+    if (kiosk && inH(h, kiosk.open) && seen(kiosk.at[0], kiosk.at[1]) && vis(kiosk.at[0], kiosk.at[1], 3 * TS)) GFX.smoke(cx, ox + kiosk.at[0] * TS + 30, oy + (kiosk.at[1] - 1) * TS + 22, now);
+    // the light of the day: pink at dawn, orange at sunset
+    { const hf = (S.t / 60) % 24, dusk = Math.max(0, 1 - Math.abs(hf - 19) / 1.7), dawn = Math.max(0, 1 - Math.abs(hf - 6.3) / 1.2);
+      if (dusk > 0) R(0, 0, W, H, 'rgba(255,120,50,' + (.17 * dusk).toFixed(3) + ')'); if (dawn > 0) R(0, 0, W, H, 'rgba(255,150,175,' + (.13 * dawn).toFixed(3) + ')'); }
     // night: darkness, pools of light under the lamps, the kiosk and some windows glow
     if (ng > 0) {
       const ki = DIST.places.find(p => p.type === 'kiosk'), L = GFX.lightsNow(ox, oy, W, H, dayN(), !!ki && inH(h, ki.open));
@@ -144,7 +270,7 @@
     }
     GFX.fog(cx, S.fog[S.d], ox, oy);
     DIST.places.forEach(p => {
-      if (!seen(p.at[0], p.at[1]) || !vis(p.at[0], p.at[1], TS)) return; if (p.type === 'stash' && S.got[p.id]) return;
+      if (!seen(p.at[0], p.at[1]) || !vis(p.at[0], p.at[1], TS)) return; if (p.type === 'stash' && S.got[p.id]) return; if (p.type === 'wall' && S.tags[p.id]) return;
       const near = Math.hypot(p.at[0] - hero.x, p.at[1] - .7 - hero.y) < .9;   // do not cover the hero with the sign
       cx.globalAlpha = near ? .3 : 1; GFX.sign(cx, ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS - 10 + Math.round(2 * Math.sin(now / 400 + p.at[0])), p.type, !!p.open && !inH(h, p.open)); cx.globalAlpha = 1;
     });
@@ -155,6 +281,17 @@
       if (!daily('b:' + n.id)) { cx.fillStyle = '#E2611A'; cx.beginPath(); cx.arc(px + 22, py - 24, 7, 0, 7); cx.fill(); cx.font = '900 11px Inter, sans-serif'; cx.fillStyle = '#0B0B0C'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('!', px + 22, py - 23.5); }
     });
     S.marks.forEach(id => { const p = DIST.places.find(q => q.id === id); if (!p || S.got[id]) return; label(ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS + TS + 2 - 4 * Math.abs(Math.sin(now / 300)), T('Слух'), '#E2611A'); });
+    // the delivery: a mark at the door, or an arrow at the edge of the screen while the door is out of sight
+    if (S.job) {
+      const tx = ox + S.job.to[0] * TS + TS / 2, ty = oy + S.job.to[1] * TS + TS / 2, top = 118, bot = H - padB - 26, pulse = 4 * Math.abs(Math.sin(now / 220));
+      if (tx > 20 && tx < W - 20 && ty > top && ty < bot) { cx.strokeStyle = '#3BD16F'; cx.lineWidth = 3; cx.beginPath(); cx.arc(tx, ty, 17 + pulse, 0, 7); cx.stroke(); GFX.sign(cx, tx, ty - 34 - pulse, 'job'); }
+      else { const ax = cl(tx, 26, W - 26), ay = cl(ty, top, bot), an = Math.atan2(ty - hy, tx - hx);
+        cx.save(); cx.translate(ax, ay); cx.rotate(an); cx.fillStyle = '#0B0B0C'; cx.beginPath(); cx.arc(0, 0, 19, 0, 7); cx.fill(); cx.fillStyle = '#3BD16F'; cx.beginPath(); cx.moveTo(13 + pulse / 2, 0); cx.lineTo(-5, -9); cx.lineTo(-1, 0); cx.lineTo(-5, 9); cx.fill(); cx.restore(); }
+    }
+    // little numbers that fly up when you pick something up
+    floats = floats.filter(f => now - f.t < 1100);
+    floats.forEach(f => { const a = (now - f.t) / 1100; cx.globalAlpha = 1 - a * a; cx.font = '800 15px Inter, system-ui, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.lineWidth = 3.5; cx.strokeStyle = 'rgba(11,11,12,.85)';
+      const fx = ox + f.x * TS + TS / 2, fy = oy + f.y * TS - 6 - a * 46; cx.strokeText(f.txt, fx, fy); cx.fillStyle = f.col; cx.fillText(f.txt, fx, fy); cx.globalAlpha = 1; });
     if (joy && joy.on) { const r = can.getBoundingClientRect(), jx = joy.x0 - r.left, jy = joy.y0 - r.top;
       cx.strokeStyle = 'rgba(242,239,232,.35)'; cx.lineWidth = 2; cx.beginPath(); cx.arc(jx, jy, 46, 0, 7); cx.stroke();
       cx.fillStyle = 'rgba(226,97,26,.7)'; cx.beginPath(); cx.arc(jx + joy.dx * 46, jy + joy.dy * 46, 18, 0, 7); cx.fill(); }
@@ -164,13 +301,16 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm()].join('|'); if (k === hudKey) return; hudKey = k;
+    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
       '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
       '<button type="button" class="cybag" id="cyBag" aria-label="' + T('Рюкзак') + '">🎒</button>' +
-      '<div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>';
-    hud.querySelector('#cyBag').addEventListener('click', bag);
+      '<div class="cyrow2"><div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>' +
+      '<button type="button" class="cygl' + (gd === 3 ? ' ok' : '') + '" id="cyGoals" aria-label="' + T('Дела на сегодня') + '">📋 ' + gd + ' / 3</button>' +
+      (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') +
+      (S.job ? '<div class="cyjob' + (S.job.left < 6 ? ' hot' : '') + '">🌯 ' + Math.max(0, Math.ceil(S.job.left)) + '</div>' : '') + '</div>';
+    hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg);
   }
   // buttons: [{ t: text, fn, cls, off }] — a button without fn just closes
   function dlg(title, html, btns) {
@@ -206,6 +346,7 @@
       p(T('Батл стоит 20 энергии, шоу — 10. Энергию возвращают сон дома и еда.')) +
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
       p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
+      p('📋 ' + T('Собирай монеты и баллончики, бери заказы в ларьке, разминайся на площадке, рисуй теги — дела дня открываются кнопкой 📋.')) +
       p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>') + warmTip(), []);
   }
 
@@ -232,7 +373,9 @@
     }
     if (pl.type === 'kiosk') {
       const buy = (k, name) => ({ t: T(name) + ' · 💵 ' + B.price[k] + ' (+' + B.food[k] + ' ⚡)', off: S.cash < B.price[k] || S.en >= emax(), fn: () => { S.cash -= B.price[k]; S.en = Math.min(emax(), S.en + B.food[k]); openPlace(pl); } });
-      return dlg(T(pl.name), p(T('Горячее и сытное. Еда возвращает энергию.')), [buy('shawarma', 'Шаурма'), buy('tea', 'Чай')]);
+      const left = jobsLeft();
+      return dlg(T(pl.name), p(T('Горячее и сытное. Еда возвращает энергию.')), [buy('shawarma', 'Шаурма'), buy('tea', 'Чай'),
+        S.job ? null : left > 0 ? { t: '🌯 ' + T('Взять заказ на доставку') + ' (−' + B.job.energy + ' ⚡) · ' + left + ' / ' + B.job.perDay, off: S.en < B.job.energy, fn: takeJob } : { t: T('Сегодня заказов больше нет'), off: true }].filter(Boolean));
     }
     if (pl.type === 'shop') {
       return dlg(T(pl.name), p(T('Вещи дают маленький бонус. Навык важнее.')) + '<ul class="cyls">' + pl.sell.map(id => '<li>' + item(id).ico + ' <b>' + T(item(id).name) + '</b><small>' + T(item(id).info) + '</small></li>').join('') + '</ul>',
@@ -249,6 +392,8 @@
       return dlg(T(pl.name), p(T('Двор твой! Центр скоро откроется — район уже строится.')), []);
     }
     if (pl.type === 'show') return showSpot(pl);
+    if (pl.type === 'wall') return wallSpot(pl);
+    if (pl.type === 'gym') return stretch(pl);
   }
 
   // ---- moves: only what the lessons opened (the same rule as in the battles) ----
@@ -303,6 +448,7 @@
           if (sp.n > 1) lines.push(T('Толпа устаёт — в следующий раз заплатит меньше. Дай месту отдохнуть.'));
           wearFloor(fl, lines); bruiseRoll(fl, r.picks, lines);
           if (Math.random() < B.drop.tapeHat) { give('tape'); lines.push(found('tape')); }
+          bump('show');
           return { title: T('Шляпа собрана'), extra: res(cash, 0, lines) };
         })) return;
         S.en -= B.energy.show;
@@ -348,7 +494,7 @@
         S.cash += stake * 2; S.rep += rep;
         if (!st.w && n.drop) n.drop.forEach(id => { if (!S.own.includes(id)) { give(id); lines.push(found(id)); } });
         if (Math.random() < B.drop.tapeWin) { give('tape'); lines.push(found('tape')); }
-        st.w++;
+        st.w++; bump('win');
       } else { st.l++; S.en = Math.max(0, S.en - B.energy.lose); }
       st.last = r.picks.slice(); S.t += 20;
       wearFloor(fl, lines); bruiseRoll(fl, r.picks, lines);
@@ -391,7 +537,7 @@
     kick();
   }
   function step(dt) {
-    S.t += dt * 1440 / (B.dayMin * 60);
+    S.t += dt * 1440 / (B.dayMin * 60); jobTick(dt); collect();
     if (joy && joy.on) {
       const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
       const bx = hero.x, by = hero.y;
@@ -415,7 +561,7 @@
     if (D.rbEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
-    if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, busy(now) || now % 14000 < 1800 ? 100 : 220);
+    if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else if (S.job || floats.length) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 66);   // ~15 frames a second: residents, the car, coins move
   }
   function kick() { if (!shown || document.hidden) return; clearTimeout(timer); timer = 0; if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function halt() { cancelAnimationFrame(raf); clearTimeout(timer); raf = 0; timer = 0; }
@@ -428,7 +574,11 @@
     '.cyen{position:relative;height:34px;padding:0;overflow:hidden}.cyen i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#B84A10,#E2611A)}.cyen span{position:relative;display:block;text-align:center;font:700 13px/34px Inter,sans-serif}' +
     '.cyst{display:flex;flex-direction:column;font:700 12px/1.25 Inter,sans-serif;white-space:nowrap}' +
     '.cybag{pointer-events:auto;font-size:18px;width:44px;height:44px;padding:0;color:inherit;cursor:pointer}' +
-    '.cyfl{grid-column:1/-1;justify-self:start;font-size:11px;color:#C9C5BC;padding:4px 10px}' +
+    '.cyhud>.cyrow2{grid-column:1/-1;background:none;border:0;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center}' +
+    '.cyrow2>*{background:rgba(11,11,12,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;font:600 11px/1.2 Inter,sans-serif;color:#C9C5BC;padding:6px 10px;white-space:nowrap}' +
+    '.cygl{pointer-events:auto;cursor:pointer;color:#F2EFE8!important;border-color:rgba(226,97,26,.6)!important;min-height:30px}.cygl.ok{border-color:#3BD16F!important;color:#7BE3A0!important}' +
+    '.cyjob{color:#7BE3A0!important;border-color:#3BD16F!important;font-weight:800!important}.cyjob.hot{color:#FF8A6A!important;border-color:#E2483A!important}' +
+    '.cybar{position:relative;height:34px;border-radius:17px;background:#26262B;margin:6px 0 10px;overflow:hidden}.cybar i{position:absolute;top:0;bottom:0;width:22%;background:rgba(59,209,111,.55);border-radius:8px}.cybar b{position:absolute;top:3px;bottom:3px;width:6px;margin-left:-3px;border-radius:3px;background:#F2EFE8;box-shadow:0 0 8px #fff}' +
     '.cydlg{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);padding:10px 10px calc(10px + var(--cyb,0px))}' +
     '.cyd{width:100%;max-width:480px;max-height:78%;overflow-y:auto;background:#151517;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px;color:#F2EFE8;font-family:Inter,system-ui,sans-serif}' +
     '.cyd h3{font:400 24px/1.1 Anton,Inter,sans-serif;letter-spacing:.5px;margin:0 0 8px;text-transform:uppercase}.cyd p{margin:0 0 8px;font-size:14px;line-height:1.4;color:#D8D4CB}' +
@@ -453,5 +603,5 @@
   }
   function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
-  window.CITY = { init, show, hide, _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

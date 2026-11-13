@@ -492,6 +492,30 @@
   }
   function bird(c, px, py, a, peck) { c.save(); c.translate(px, py); c.rotate(a); const E = (x, y, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); }; E(1, 1.5, 4.4, 2.8, 'rgba(0,0,0,.3)'); E(0, 0, 4, 2.6, '#8D919B'); E(-1, 0, 2, 1.6, '#A9ADB6'); E(3.4 + (peck ? 1 : 0), 0, 1.7, 1.5, '#5E626B'); E(-3.8, 0, 1.8, 1.1, '#5E626B'); c.restore(); }
 
+  // ================= v3: things to pick up, the player's own tag, smoke, traffic (owner 13.11.2026 «ещё улучшай графику и добавь активностей») =================
+  function pickup(c, px, py, kind, now, seed) {
+    const bob = Math.sin(now / 260 + seed) * 2.5, E = (a, b, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(a, b, rx, ry, 0, 0, 7); c.fill(); }, R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a, b, w, h); };
+    E(px + 2, py + 10, 8, 3.4, 'rgba(8,10,24,.3)'); const y = py - 4 + bob;
+    if (kind === 'coin') { const w = Math.abs(Math.cos(now / 300 + seed)) * 7 + 1.5; E(px, y, w + 1.4, 8.8, '#7A5410'); E(px, y, w, 7.4, '#F2B31F'); E(px, y, w * .62, 4.8, '#FFD95A'); if (w > 5) R(px - 1, y - 3.6, 2, 7.2, '#B8860F'); E(px - w * .4, y - 3, w * .22, 1.6, 'rgba(255,255,255,.8)'); }
+    else if (kind === 'can') { const col = SPRAY[seed % 8]; R(px - 5.5, y - 7, 11, 16, INK); R(px - 4.5, y - 6, 9, 14, col); R(px - 4.5, y - 1, 9, 4, WH); R(px - 4.5, y - 6, 2.4, 14, 'rgba(255,255,255,.35)'); R(px - 3.5, y - 10, 7, 4, INK); R(px - 2.5, y - 9.4, 5, 3, '#C9CCD2'); R(px - 1, y - 12, 3.4, 3, '#E2483A'); }
+    else { E(px, y, 8, 8, INK); E(px, y, 6.8, 6.8, '#E2483A'); E(px - 2.4, y - 2.4, 2.2, 1.8, 'rgba(255,255,255,.55)'); R(px - .8, y - 10.5, 1.8, 4.4, '#5A3B25'); E(px + 3.4, y - 8.6, 3.4, 1.8, '#3FA845'); }
+    const tw = (now / 900 + seed * .37) % 1; if (tw < .35) { const a = Math.sin(tw / .35 * Math.PI), sx = px + 7, sy = y - 8; c.strokeStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sx - 4 * a, sy); c.lineTo(sx + 4 * a, sy); c.moveTo(sx, sy - 4 * a); c.lineTo(sx, sy + 4 * a); c.stroke(); }
+  }
+  // the player's tag on a wall: an orange crown over fat letters — the same on every wall, so the yard learns it
+  function mytag(c, x, y) {
+    c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
+    c.globalAlpha = .9; c.fillStyle = WH; c.beginPath(); c.ellipse(22, 11, 27, 13, 0, 0, 7); c.fill(); c.globalAlpha = 1;
+    const crown = () => { c.beginPath(); c.moveTo(11, 6); c.lineTo(9, -4); c.lineTo(16, 1); c.lineTo(22, -6); c.lineTo(28, 1); c.lineTo(35, -4); c.lineTo(33, 6); c.closePath(); };
+    crown(); c.fillStyle = INK; c.lineWidth = 3; c.strokeStyle = INK; c.stroke(); crown(); c.fillStyle = '#FFD93B'; c.fill();
+    [[INK, 6.6], [OR, 4], ['rgba(255,255,255,.65)', 1]].forEach(([k, w], ps) => { c.strokeStyle = k; c.lineWidth = w; const o = ps === 2 ? -1 : 0; c.beginPath();
+      c.moveTo(12 + o, 10 + o); c.lineTo(4 + o, 10 + o); c.lineTo(4 + o, 22 + o); c.moveTo(4 + o, 16 + o); c.lineTo(10 + o, 16 + o);          // F
+      c.moveTo(16 + o, 10 + o); c.lineTo(28 + o, 10 + o); c.moveTo(22 + o, 10 + o); c.lineTo(22 + o, 22 + o);                              // T
+      c.moveTo(33 + o, 10 + o); c.lineTo(41 + o, 22 + o); c.moveTo(41 + o, 10 + o); c.lineTo(33 + o, 22 + o); c.stroke(); });            // a cross: the b-boy's mark
+    c.restore();
+  }
+  function smoke(c, px, py, now) { for (let i = 0; i < 4; i++) { const u = ((now / 2600) + i / 4) % 1; c.fillStyle = 'rgba(240,240,244,' + (.34 * (1 - u)).toFixed(3) + ')'; c.beginPath(); c.ellipse(px - u * 16 + Math.sin(u * 6 + i) * 3, py - u * 34, 4 + u * 9, 3 + u * 7, 0, 0, 7); c.fill(); } }
+  function carAt(c, px, py, i, lights) { car(c, px, py, CARS[i % CARS.length]); if (lights) { const g = c.createLinearGradient(px - 44, 0, px - 120, 0); g.addColorStop(0, 'rgba(255,243,184,.5)'); g.addColorStop(1, 'rgba(255,243,184,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(px - 44, py - 14); c.lineTo(px - 120, py - 30); c.lineTo(px - 120, py + 26); c.lineTo(px - 44, py + 10); c.fill(); } }
+
   // ================= signs instead of emoji =================
   function sign(c, x, y, type, dim) {
     const col = dim ? '#6C6F78' : WH, ac = dim ? '#6C6F78' : OR;
@@ -504,6 +528,9 @@
     else if (type === 'shop') { c.fillRect(x - 6, y - 2, 12, 9); c.beginPath(); c.arc(x, y - 2, 3.6, Math.PI, 0); c.stroke(); c.fillStyle = ac; c.fillRect(x - 6, y + 1, 12, 2); }
     else if (type === 'show') { c.beginPath(); c.ellipse(x, y - 3, 8, 2.6, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(x - 5, y - 2.4); c.lineTo(x - 4, y + 6); c.lineTo(x + 4, y + 6); c.lineTo(x + 5, y - 2.4); c.fill(); c.fillStyle = '#C9B458'; c.beginPath(); c.arc(x - 1, y - 7.4, 1.8, 0, 7); c.arc(x + 3.4, y - 8.6, 1.5, 0, 7); c.fill(); }
     else if (type === 'gate') { c.beginPath(); c.moveTo(x - 7, y - 2); c.lineTo(x + 1, y - 2); c.lineTo(x + 1, y - 6); c.lineTo(x + 8, y); c.lineTo(x + 1, y + 6); c.lineTo(x + 1, y + 2); c.lineTo(x - 7, y + 2); c.fill(); }
+    else if (type === 'wall') { c.fillRect(x - 3.5, y - 3, 7, 10); c.fillStyle = ac; c.fillRect(x - 3.5, y + 1, 7, 3); c.fillStyle = col; c.fillRect(x - 2.5, y - 6, 5, 3); c.fillStyle = ac; c.beginPath(); c.arc(x + 6, y - 6, 1.4, 0, 7); c.arc(x + 8.4, y - 3, 1.1, 0, 7); c.arc(x + 8, y - 8.6, 1, 0, 7); c.fill(); }
+    else if (type === 'gym') { c.fillRect(x - 6, y - 1.2, 12, 2.4); c.fillRect(x - 8.6, y - 5, 3, 10); c.fillRect(x + 5.6, y - 5, 3, 10); c.fillStyle = ac; c.fillRect(x - 10.4, y - 3, 2, 6); c.fillRect(x + 8.4, y - 3, 2, 6); }
+    else if (type === 'job') { c.fillStyle = '#F2E2B8'; c.beginPath(); c.moveTo(x - 6, y - 6); c.lineTo(x + 7, y - 3); c.lineTo(x - 2, y + 8); c.fill(); c.fillStyle = '#3BD16F'; c.fillRect(x - 3, y - 4, 7, 2); c.fillStyle = '#C8102E'; c.fillRect(x - 3, y - 1, 5, 2); }
     else { c.font = '400 17px Anton, Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ac; c.fillText('?', x, y + 1); }
   }
 
@@ -560,5 +587,5 @@
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(fogCan, ox, oy, MW * TS, MH * TS); c.imageSmoothingEnabled = false;
   }
 
-  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
+  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, pickup, mytag, smoke, carAt, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
 })();

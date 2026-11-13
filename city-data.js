@@ -19,12 +19,24 @@ window.CITY_DATA = {
     chalk: { name: 'Мел би-боя', info: 'Раз в день толпа на шоу не устаёт', ico: '✏️', city: true },
     cassette: { name: 'Кассета «Золотой брейк»', info: 'В шляпу падает на 15 % больше', ico: '📼', city: true },
     lace: { name: 'Счастливый шнурок', info: 'При почти равном счёте один судья за тебя', ico: '🍀', city: true },
+    can: { name: 'Баллончик с краской', info: 'Нужен, чтобы нарисовать тег на стене', ico: '🎨', use: true, city: true },
     patchYard: { name: 'Нашивка «Двор»', info: 'Трофей: ты хозяин двора', ico: '🏅', city: true }
   },
   districts: {
     yard: {
       name: 'Двор', start: [6, 6],
       birds: [[13.4, 13.6], [14.1, 13.2], [13.0, 12.9], [24.5, 18.3], [25.2, 18.8], [17.6, 1.5]],   // голуби: улетают, если подойти
+      // куда носят заказы из ларька (клетки у дверей)
+      drops: [[2, 10], [2, 14], [6, 6], [20, 6], [8, 13], [18, 20], [26, 17], [13, 3], [26, 20], [5, 19]],
+      // жители: ходят по тротуарам туда-обратно (только картинка, 7:00–22:00)
+      walkers: [
+        { path: [[5, 7], [5, 14], [15, 14]], speed: 1.5, look: { base: 1, girl: true, col: { top: '#C96F8B' } } },
+        { path: [[2, 6], [11, 6]], speed: 1.1, look: { base: 2, col: { top: '#3F9590', hat: ['#F2EFE8', '#3F9590'] } } },
+        { path: [[21, 13], [21, 7], [21, 10], [28, 10]], speed: 1.7, look: { base: 3, col: { top: '#DDA945' } } },
+        { path: [[16, 6], [26, 6]], speed: 1.2, look: { base: 1, girl: true, col: { top: '#5E86C9' } } },
+        { path: [[1, 19], [13, 19]], speed: 1.4, look: { base: 5, col: { top: '#84A552', hat: ['#C9C2B0', '#84A552'] } } }
+      ],
+      traffic: { row: 21, period: 23, dur: 7 },   // машина проезжает по дороге раз в period секунд
       map: [
         'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
         'F.........f.hhh............c.F',
@@ -58,6 +70,10 @@ window.CITY_DATA = {
         { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['pads', 'kicks', 'hat'] },
         { id: 'spot1', type: 'show', at: [8, 8], name: 'Пятачок у подъезда' },
         { id: 'gate', type: 'gate', at: [29, 10], name: 'Дорога в Центр', to: 'center' },
+        { id: 'gym', type: 'gym', at: [12, 15], name: 'Разминка' },
+        { id: 'wall1', type: 'wall', at: [5, 1], name: 'Чистая стена', ty: -27 },       // ty: где на картинке стена относительно клетки (px)
+        { id: 'wall2', type: 'wall', at: [20, 1], name: 'Чистая стена', ty: -27 },
+        { id: 'wall3', type: 'wall', at: [8, 19], name: 'Чистая стена', ty: -42 },
         { id: 'st1', type: 'stash', at: [1, 20], name: 'Тайник за гаражами', item: 'cassette' },
         { id: 'st2', type: 'stash', at: [27, 1], name: 'Тайник за домом', item: 'chalk' }
       ],
