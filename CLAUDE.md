@@ -1052,4 +1052,7 @@
   Гарик 3 boss, 2 stashes, gate to Центр = «скоро»). City-only finds (owner «добавь вещи, которые выпадают только в городе»): tape, thermos,
   chalk, cassette, lucky lace, district patch (more planned in the doc). 112 i18n keys (names of NPCs are translated too). Checks:
   `CITY._s()` state, `_reset()`, `_go(x, y)`, `_t(hour)`, `_cam()`. Tested headless 390×844 / 375×667 ru + en; NOT on a real phone.
-  Not done yet: joystick, stretch mini-game, guard, other districts, city items on the hero's look, balance by real play.
+  Joystick (13.11 evening): a drag on the map (> 16 px) = joystick (pointer down/move/up on the canvas; hero walks while held, axis-separated
+  collision, settles on the cell at release); a short touch = tap-to-walk. city.js `?v=2`. City maths checked with a stubbed RB.open
+  (win, −12 % asphalt, bruise, «read» −20 %, boss drops lace + patch, loss) — `CITY._pos()`.
+  Not done yet: stretch mini-game, guard, other districts, city items on the hero's look, balance by real play (no hand-played win yet).

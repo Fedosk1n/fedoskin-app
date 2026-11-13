@@ -767,6 +767,8 @@ t('ещё не вечер (после 21:00)', 'not evening yet (after 21:00)', 
 t('куплено', 'bought', 'comprado', 'comprado', 'acheté', 'gekauft', '購入済み', '구매함', '已购买')
 t('побед {w}, поражений {l}', 'wins {w}, losses {l}', 'victorias {w}, derrotas {l}', 'vitórias {w}, derrotas {l}', 'victoires {w}, défaites {l}', 'Siege {w}, Niederlagen {l}', '{w}勝 {l}敗', '{w}승 {l}패', '胜 {w}，负 {l}')
 
+t('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.', 'Joystick works too: put a finger on the map and drag — the hero walks while you hold.', 'También hay joystick: pon el dedo en el mapa y arrastra; el héroe camina mientras mantienes.', 'Também dá para usar joystick: ponha o dedo no mapa e arraste — o herói anda enquanto você segura.', 'Le joystick marche aussi : pose le doigt sur la carte et fais glisser, le héros avance tant que tu tiens.', 'Joystick geht auch: Finger auf die Karte und ziehen – der Held läuft, solange du hältst.', 'ジョイスティックも使える：マップに指を置いてドラッグすると、押している間ヒーローが歩く。', '조이스틱도 된다: 지도에 손가락을 대고 끌면, 누르는 동안 히어로가 걷는다.', '也可以用摇杆：手指按住地图拖动，按住时角色会一直走。')
+
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'

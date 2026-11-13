@@ -6,7 +6,7 @@
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
   const BLOCK = 'F#bGTKSXctD', TS = 44, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
-  let padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
+  let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   const T = (s, v) => D.T(s, v);
   const $ = q => el.querySelector(q);
   const cl = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -133,8 +133,11 @@
       label(px, py - 40, nm(n).split(' ')[0] + ' · ' + n.lvl, n.boss ? '#F2CC55' : '#F2EFE8');
       if (!daily('b:' + n.id)) { cx.font = '900 16px Inter, sans-serif'; cx.fillStyle = '#E2611A'; cx.fillText('!', px + 15, py - 16); }
     });
-    const mv = path.length ? Math.sin(now / 70) * 3 : 0;
+    const mv = path.length || (joy && joy.on) ? Math.sin(now / 70) * 3 : 0;
     person(ox + hero.x * TS + TS / 2, oy + hero.y * TS + TS / 2, '#E2611A', true, mv);
+    if (joy && joy.on) { const r = can.getBoundingClientRect(), jx = joy.x0 - r.left, jy = joy.y0 - r.top;
+      cx.strokeStyle = 'rgba(242,239,232,.35)'; cx.lineWidth = 2; cx.beginPath(); cx.arc(jx, jy, 46, 0, 7); cx.stroke();
+      cx.fillStyle = 'rgba(226,97,26,.7)'; cx.beginPath(); cx.arc(jx + joy.dx * 46, jy + joy.dy * 46, 18, 0, 7); cx.fill(); }
     if (ng > 0) { R(0, 0, W, H, 'rgba(8,10,34,' + ng.toFixed(3) + ')'); }
     // fog: unexplored cells stay black; a soft edge on explored cells next to them
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -187,6 +190,7 @@
     dlg(T('Город'), p(T('Тапни по карте — герой пойдёт туда сам. Заходи в места, знакомься с би-боями, зарабатывай кэш и респект.')) +
       p(T('Батл стоит 20 энергии, шоу — 10. Энергию возвращают сон дома и еда.')) +
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
+      p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
       p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>'), []);
   }
 
@@ -337,6 +341,20 @@
   }
 
   // ---- input + loop ----
+  // joystick (optional): put the finger down and drag — the hero walks that way while the finger is held; a short touch = a tap
+  function down(e) { if (!dlgEl.hidden) return; joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, on: false }; try { can.setPointerCapture(e.pointerId); } catch (_) {} }
+  function move(e) {
+    if (!joy || e.pointerId !== joy.id) return;
+    const dx = e.clientX - joy.x0, dy = e.clientY - joy.y0, d = Math.hypot(dx, dy);
+    if (!joy.on && d > 16) { joy.on = true; path = []; goal = null; }
+    if (joy.on) { const k = d > 8 ? Math.min(1, d / 46) / d : 0; joy.dx = dx * k; joy.dy = dy * k; kick(); }
+  }
+  function up(e) {
+    if (!joy || e.pointerId !== joy.id) return;
+    const j = joy; joy = null;
+    if (!j.on) return tapAt(e);
+    const tx = Math.round(hero.x), ty = Math.round(hero.y); path = walk(tx, ty) ? [[tx, ty]] : []; kick();   // settle on the cell
+  }
   function tapAt(e) {
     if (!dlgEl.hidden) return;
     const r = can.getBoundingClientRect(), ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS);
@@ -356,6 +374,12 @@
   }
   function step(dt) {
     S.t += dt * 1440 / (B.dayMin * 60);
+    if (joy && joy.on) {
+      const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
+      if (walk(Math.round(nx + Math.sign(joy.dx) * m), Math.round(hero.y))) hero.x = nx;
+      if (walk(Math.round(hero.x), Math.round(ny + Math.sign(joy.dy) * m))) hero.y = ny;
+      reveal(); return;
+    }
     let left = SPEED * dt;
     while (path.length && left > 0) {
       const [tx, ty] = path[0], dx = tx - hero.x, dy = ty - hero.y, d = Math.hypot(dx, dy);
@@ -369,7 +393,7 @@
     if (D.rbEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
-    if (path.length) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 240);
+    if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 240);
   }
   function kick() { if (!shown || document.hidden) return; clearTimeout(timer); timer = 0; if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function halt() { cancelAnimationFrame(raf); clearTimeout(timer); raf = 0; timer = 0; }
@@ -397,7 +421,7 @@
     el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div>';
     can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg');
     setMap();
-    can.addEventListener('pointerdown', tapAt);
+    can.addEventListener('pointerdown', down); can.addEventListener('pointermove', move); can.addEventListener('pointerup', up); can.addEventListener('pointercancel', () => { joy = null; });
     window.addEventListener('resize', () => { W = 0; kick(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) { halt(); if (shown) save(); } else kick(); });   // pause when the app is folded
     window.addEventListener('pagehide', () => { if (shown) save(); });
@@ -407,5 +431,5 @@
   }
   function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
-  window.CITY = { init, show, hide, _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();
