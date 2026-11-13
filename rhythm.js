@@ -10,8 +10,97 @@
     { id: 'lofi', name: 'LO-FI', bpm: 84, up: -1, mult: .8, lv: 1 },
     { id: 'boom', name: 'BOOM BAP', bpm: 100, up: 0, mult: 1, lv: 2 },
     { id: 'funk', name: 'FUNK BREAK', bpm: 114, up: 0, mult: 1.25, lv: 3 },
-    { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 }];
+    { id: 'raw', name: 'RAW BREAKS', bpm: 128, up: 1, mult: 1.55, lv: 4 },
+    // rules v2 only (owner 13.11.2026 «добавь сложные диджейские биты для тапания»): the taps follow what the DJ does —
+    // syncopation with the sound cut out, triplets, double time / half time. A wood block plays every tap, so it can be heard.
+    { id: 'cut', name: 'DJ CUTS', bpm: 104, up: 0, mult: 1.75, lv: 5, g: 2 },
+    { id: 'trip', name: 'TRIPLET FLIP', bpm: 96, up: 0, mult: 1.9, lv: 6, g: 2 },
+    { id: 'dbl', name: 'DOUBLE TIME', bpm: 140, up: 0, mult: 2.1, lv: 7, g: 2 }];
   const beatOf = id => BEATS.find(b => b.id === id) || BEATS[1];
+  // <RB2> rules v2 of the rhythm battle (owner 13.11.2026 «продумай систему батлов, сложность элементов, подсчёт очков, сложные
+  // диджейские биты, рисование траектории»). SOURCE = tools/rb2.js; `python3 tools/rb2_sync.py` copies this block into rhythm.js
+  // and server/push-worker.js — the phone and the server must count a round exactly the same way. Do not edit the copies.
+  const RB2 = (() => {
+    // the DJ's tracks: bpm, `up` (shifts how dense the notes are), score multiplier, hardness 1–7, note family
+    const BEATS = { lofi: [84, -1, .8, 1, 'st'], boom: [100, 0, 1, 2, 'st'], funk: [114, 0, 1.25, 3, 'st'], raw: [128, 1, 1.55, 4, 'st'],
+      cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
+    // how hard a move is in real breaking, 1–10 (the owner corrects this table): it sets the score multiplier (×1.0 … ×1.9),
+    // how dense the notes are (tier 1–3) and how long the trajectory to draw is
+    const D = { toprock: 1, kickstep: 2, salsa: 2, indian: 3, sixstep: 2, ccs: 3,
+      backspin: 2, swipe: 4, windmill: 5, headspin: 7, flare: 7, ninety: 8, airflare: 10,
+      freeze: 2, headstand: 3, handstand: 4, airchair: 6, hollowback: 8 };
+    const tier = d => d <= 2 ? 1 : d <= 5 ? 2 : 3;
+    const mult = d => Math.round((1 + .1 * (d - 1)) * 100) / 100;
+    const cl = (x, a, b) => Math.max(a, Math.min(b, x));
+    const mul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const th = a => a.map(x => x / 3); // triplets: thirds of a beat
+    // one bar (4 beats) of taps per note family and density level 1–4
+    const P = {
+      st: [null, [[0, 1, 2, 3]],
+        [[0, 1, 1.5, 2, 3], [0, .5, 1, 2, 3], [0, 1, 2, 2.5, 3], [0, 1, 2, 3, 3.5]],
+        [[0, .5, 1, 1.5, 2, 3, 3.5], [0, .5, 1.5, 2, 2.5, 3], [0, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 2, 2.5, 3.5]],
+        [[0, .5, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.5, 2, 2.75, 3, 3.5], [0, .75, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.75, 2, 2.5, 3.25, 3.5]]],
+      // DJ CUTS: the taps sit between the beats (syncopation)
+      sync: [null, [[0, 1.5, 2, 3], [0, 1, 2.5, 3]],
+        [[0, .75, 1.5, 2, 3], [0, 1, 1.75, 2.5, 3], [.5, 1, 2, 2.5, 3.5]],
+        [[0, .75, 1.5, 2, 2.75, 3.5], [0, .5, 1.25, 2, 2.5, 3.25], [0, .75, 1, 1.75, 2.5, 3, 3.5]],
+        [[0, .25, .75, 1.5, 2, 2.25, 2.75, 3.5], [0, .75, 1, 1.5, 1.75, 2.5, 3, 3.25, 3.5], [0, .5, .75, 1.5, 2, 2.5, 2.75, 3.5]]],
+      // TRIPLET FLIP: three taps a beat, and now and then a straight bar
+      trip: [null, [th([0, 3, 6, 9]), th([0, 3, 6, 8, 9])],
+        [th([0, 3, 4, 5, 6, 9]), th([0, 2, 3, 6, 8, 9]), th([0, 3, 6, 7, 8, 9])],
+        [th([0, 2, 3, 5, 6, 8, 9]), th([0, 1, 2, 3, 6, 7, 8, 9]), th([0, 3, 4, 5, 6, 9, 10, 11])],
+        [th([0, 1, 2, 3, 4, 5, 6, 9, 10, 11]), th([0, 2, 3, 4, 5, 6, 8, 9, 10, 11]), th([0, 1, 2, 3, 6, 7, 8, 9, 10, 11])]],
+      // DOUBLE TIME: a fast bar, then a half-time bar
+      dblD: [null, [[0, 1, 2, 3]], [[0, .5, 1, 2, 3], [0, 1, 2, 2.5, 3]],
+        [[0, .5, 1, 1.5, 2, 3, 3.5], [0, 1, 1.5, 2, 2.5, 3, 3.5]],
+        [[0, .5, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.5, 2, 3, 3.5]]],
+      dblH: [null, [[0, 2]], [[0, 2, 3], [0, 1.5, 2]], [[0, 1.5, 2, 3], [0, 2, 2.5, 3]], [[0, 1.5, 2, 3, 3.5], [0, .5, 2, 2.5, 3]]] };
+    const PF = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5], [0, .5, 1, 1.5, 2, 2.5]];
+    // the round in beats: count-in 4, toprock 8, footwork 8, power 4 of taps + the trajectory, freeze 4 (the big hit on its 4th)
+    const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31;
+    const W_DRAW = 5, W_BIG = 3; // a drawn trajectory counts as 5 taps, the freeze hit as 3
+    function bar(fam, L, i, rnd) {
+      let set;
+      if (fam === 'trip') set = rnd() < .3 ? P.st[Math.min(L, 3)] : P.trip[L];
+      else if (fam === 'dbl') set = i % 2 ? P.dblH[L] : P.dblD[L];
+      else set = P[fam][L];
+      return set[Math.floor(rnd() * set.length)];
+    }
+    // every note: b = its beat, ph = which move it belongs to (0 toprock … 3 freeze), w = weight; draw ⇒ a trajectory until `end`
+    function notes(picks, seed, beat) {
+      const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(D[m]) + B[1], 1, 4);
+      let i = 0;
+      const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
+      bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
+      out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true });
+      PF[L(picks[3])].forEach(x => out.push({ b: B_FRZ + x, ph: 3, w: 1 }));
+      out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
+      return out;
+    }
+    const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(D[picks[n.ph]]) * BEATS[beat][2];
+    const combo = c => 1 + Math.min(c, 30) * .02;
+    // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
+    // (no miss, no stray tap) = FULL COMBO, +10 %
+    function score(picks, seed, beat, hits, brk, level) {
+      const br = new Set(brk || []); let s = 0, c = 0, clean = !(brk && brk.length);
+      notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
+      return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
+    }
+    return { BEATS, D, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(D[m]) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+  })();
+  // </RB2>
+  // which rules this round is played by: 2 = RB2 (difficulty 1–10, hard beats, the trajectory to draw, FULL COMBO), 1 = the old ones
+  // (a battle with a server or an opponent's challenge that doesn't know v2 yet)
+  const V2 = () => !!G && G.g === 2;
+  const diffOf = m => V2() ? RB2.D[m] : DIFF[m];
+  const tierOf = m => V2() ? RB2.tier(RB2.D[m]) : DIFF[m];
+  const multOf = m => V2() ? RB2.mult(RB2.D[m]) : MULT[DIFF[m]];
+  const lvOf = (m, beat) => V2() ? RB2.lv(m, beat) : clamp(DIFF[m] + beatOf(beat).up, 1, 3);
+  const notes2 = (picks, seed, beat) => { const bt = 60 / beatOf(beat).bpm; return RB2.notes(picks, seed, beat).map(n => ({ t: n.b * bt, end: n.end ? n.end * bt : 0, ph: n.ph, w: n.w, big: !!n.big, draw: !!n.draw, st: 0 })); };
+  const notesOf = (picks, seed, beat) => V2() ? notes2(picks, seed, beat) : notesFor(picks, seed, beat);
+  const ptsOf = (n, kind, combo) => V2() ? RB2.base(n, G.picks, kind, G.beat) * RB2.combo(combo) : noteBase(n, G.picks, kind, G.beat) * comboMult(combo);
+  const totalOf = (picks, seed, level, beat, hits, brk) => V2() ? RB2.score(picks, seed, beat, hits, brk, level) : scoreOf(picks, seed, level, beat, hits, brk);
+  const maxOf = (picks, seed, level, beat) => V2() ? RB2.score(picks, seed, beat, '1'.repeat(RB2.notes(picks, seed, beat).length), [], level) : maxScore(picks, seed, level, beat);
   // v2 (owner 13.11.2026): the app passes the exact list of usable moves (lesson studied 3× AND the hero's level); else as before
   const know = m => G.allow ? (G.ulKeys.has(m) ? G.allow.has(m) : (NEED[m] || 1) <= G.level) : ((NEED[m] || 1) <= G.level || G.ul.has(m));
   // the locked card's caption and the how-to text (v2: studied 3× AND level)
@@ -99,6 +188,10 @@
   function bass(o, t, f, d, wave, lp, a) { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave || 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = lp || 520; env(g, t, a || .34, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02); }
   function chord(o, t, f, iv, wave, lp, a, d) { iv.forEach(m => { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave; os.frequency.value = f * m; fl.type = 'lowpass'; fl.frequency.value = lp; env(g, t, a, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .04); }); }
   const stab = (o, t, f) => chord(o, t, f, [1, 1.189, 1.498], 'sawtooth', 1500, .06, .32);
+  // the DJ's hand on the record: a short noise sweep up or down
+  function scratch(o, t, up, a) { const sc = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); sc.buffer = noise; fl.type = 'bandpass'; fl.Q.value = 6; fl.frequency.setValueAtTime(up ? 500 : 2600, t); fl.frequency.exponentialRampToValueAtTime(up ? 2600 : 500, t + .09); g.gain.setValueAtTime(.001, t); g.gain.linearRampToValueAtTime(a || .5, t + .015); g.gain.exponentialRampToValueAtTime(.001, t + .11); sc.connect(fl); fl.connect(g); g.connect(o); sc.start(t, Math.random() * .5, .14); }
+  const wood = (o, t) => { tone(o, t, 'triangle', 1250, 0, .2, .05); tone(o, t, 'square', 620, 0, .05, .04); }; // every tap of a hard beat is heard
+  const tom = (o, t, f) => tone(o, t, 'sine', f, f * .6, .5, .16);
   // each beat's own sound: drum pattern per 16th, swing (share of a 16th), bass, chords
   const STY = {
     lofi: { sw: .3, kicks: [[0, 10], [0, 7, 10], [0, 9, 11]], sn: [4, 12], snA: .55, rim: [10], hats: 8, hatA: .11, ghostHat: .25, open: [],
@@ -112,9 +205,24 @@
       ch: (o, t, f, bar, S) => { [6, 14].forEach(x => chord(o, t + x * S, f * 4, [1, 1.26, 1.498], 'sawtooth', 2600, .045, .11)); }, crash: [2, 4] },
     raw: { sw: .1, kicks: [[0, 2, 10, 11], [0, 2, 10], [0, 3, 10, 11]], sn: [4, 12], ghost: [7, 9, 15], ghostA: .45, hats: 16, hatA: .2, open: [6],
       roots: [82.4, 87.3, 73.4], walk: [1, 1.189, 1, 1.498], bw: 'sawtooth', blp: 950, ba: .3, bd: .14,
-      ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4] } };
+      ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4] },
+    // DJ CUTS: boom bap, but on every second bar the DJ cuts the sound for a beat and a half (scratch out, scratch back in)
+    cut: { sw: .16, kicks: [[0, 3, 10], [0, 7, 10, 11], [0, 6, 10]], sn: [4, 12], ghost: [15], hats: 8, hatA: .18, ghostHat: .5, open: [],
+      roots: [92.5, 82.4, 98], walk: [1, 1, 1.189, .891], bw: 'sawtooth', blp: 600, ba: .3,
+      ch: (o, t, f, bar) => { if (bar % 2 === 0) stab(o, t, f * 4); }, crash: [0, 4],
+      gap: (bar, x) => bar % 2 === 1 && x >= 8 && x < 14,
+      fx: (o, tb, bar, bt) => { if (bar % 2 === 1) { scratch(o, tb + 2 * bt - .1, false); scratch(o, tb + 3.5 * bt - .12, true); } else { scratch(o, tb + 3.5 * bt, true, .3); scratch(o, tb + 3.75 * bt, false, .3); } } },
+    // TRIPLET FLIP: slow and heavy, the hi-hat plays three to a beat, tom fills in triplets
+    trip: { sw: 0, kicks: [[0, 8], [0, 8, 14], [0, 6, 8]], sn: [4, 12], snA: .9, hats: 0, hatA: .17, open: [],
+      roots: [77.8, 87.3, 69.3], walk: [1, 1.189, 1.335, 1.189], bw: 'sine', blp: 400, ba: .5, bd: .4,
+      ch: (o, t, f, bar) => { chord(o, t, f * 4, [1, 1.189, 1.498], 'triangle', 1400, .05, .9); if (bar % 2) chord(o, t + 2.667 * 60 / 96, f * 4 * 1.122, [1, 1.189, 1.498], 'triangle', 1400, .04, .5); }, crash: [0, 4],
+      fx: (o, tb, bar, bt, last) => { for (let k = 0; k < (last ? 9 : 12); k++) hat(o, tb + k * bt / 3, k % 3 === 0 ? .17 : .09); if (bar % 2 === 1 && !last) [0, 1, 2].forEach(k => tom(o, tb + (3 + k / 3) * bt, 190 - k * 35)); } },
+    // DOUBLE TIME: a fast break, and every second bar the drummer drops to half time
+    dbl: { sw: .06, kicks: [[0, 2, 7, 10], [0, 3, 6, 10, 11], [0, 2, 10, 11]], sn: [4, 12], ghost: [7, 9, 14, 15], ghostA: .4, hats: 16, hatA: .2, open: [6, 14],
+      roots: [73.4, 82.4, 77.8], walk: [1, 1, 1.189, 1.498], bw: 'sawtooth', blp: 1100, ba: .3, bd: .12,
+      ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4], half: { kicks: [0, 11], sn: [8], hats: 8 } } };
   // the whole round is scheduled at once (~300 short sounds): no timers to be throttled. preview = only `bars` bars, no count-in
-  function schedule(t0, seed, beat, preview) {
+  function schedule(t0, seed, beat, preview, cues) {
     const out = ctx.createGain(); out.connect(master);
     const Y = STY[beatOf(beat).id], bt = 60 / beatOf(beat).bpm, S = bt / 4;
     const rnd = mulberry(seed * 7 + 3), kp = Y.kicks[Math.floor(rnd() * Y.kicks.length)];
@@ -123,22 +231,27 @@
     const bars = preview || (B_FRZ + FRZ - COUNT) / 4, tb0 = preview ? t0 : t0 + COUNT * bt;
     for (let bar = 0; bar < bars; bar++) {
       const tb = tb0 + bar * 4 * bt, last = !preview && bar === bars - 1, f = root * Y.walk[bar % 4];
+      const hf = Y.half && bar % 2 === 1 ? Y.half : null, kpB = hf ? hf.kicks : kp, snB = hf ? hf.sn : Y.sn, hatsB = hf ? hf.hats : Y.hats;
       let kn = 0;
       for (let s = 0; s < 16; s++) {
         const t = tb + s * S + (s % 2 ? Y.sw * S : 0);
         if (last && s >= 12) break; // the freeze hit lands in silence
-        if (kp.includes(s)) { kick(out, t); bass(out, t, Y.oct && kn % 2 ? f * 2 : f, s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18), Y.bw, Y.blp, Y.ba); kn++; }
-        if (Y.sn.includes(s)) snare(out, t, Y.snA);
-        if (Y.ghost && Y.ghost.includes(s) && rnd() < .7) snare(out, t, Y.ghostA || .22);
+        if (Y.gap && Y.gap(bar, s)) continue; // the DJ cut the sound
+        if (kpB.includes(s)) { kick(out, t); bass(out, t, Y.oct && kn % 2 ? f * 2 : f, s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18), Y.bw, Y.blp, Y.ba); kn++; }
+        if (snB.includes(s)) snare(out, t, Y.snA);
+        if (!hf && Y.ghost && Y.ghost.includes(s) && rnd() < .7) snare(out, t, Y.ghostA || .22);
         if (Y.rim && Y.rim.includes(s) && bar % 2) rim(out, t);
-        if (Y.open.includes(s)) ohat(out, t, .13);
-        else if (Y.hats === 16) hat(out, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
+        if (!hf && Y.open.includes(s)) ohat(out, t, .13);
+        else if (!hatsB) { /* the style plays its own hi-hat (fx) */ }
+        else if (hatsB === 16) hat(out, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
         else if (s % 2 === 0) hat(out, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(out, t, Y.hatA * .5);
         if (Y.crackle && rnd() < .35) hiss(out, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
       }
       if (!last || Y === STY.raw) Y.ch(out, tb, f, bar, S);
       if (!preview && Y.crash.includes(bar)) crash(out, tb);
+      if (Y.fx) Y.fx(out, tb, bar, bt, last);
     }
+    if (cues) cues.forEach(c => wood(out, (preview ? tb0 : t0) + c));
     if (!preview) { const tBig = t0 + B_BIG * bt; kick(out, tBig); snare(out, tBig); crash(out, tBig); stab(out, tBig, root * 4); }
     return out;
   }
@@ -152,7 +265,11 @@
   const $ = s => box.querySelector(s);
   const CSS = `
 .sheet-bg.rb{background:#0B0B0C}
-.rb .btlbox{touch-action:none;user-select:none;-webkit-user-select:none}
+.rb .btlbox{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+#rbDraw{position:absolute;left:0;top:0;z-index:8;pointer-events:none}
+.rbpad.dr{border-color:#F2CC55;background:rgba(242,204,85,.14);color:#F2CC55}
+.rbend p.fc{color:#F2CC55;font-family:var(--display);font-size:18px;letter-spacing:1px;margin-top:6px}
+.rbc i u{text-decoration:none;color:var(--fg)}
 .rbhead{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
 .rbhead small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .rbhead b{font-family:var(--display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
@@ -250,7 +367,7 @@
       '<div class="crowd" id="rbCrowd">' + '<i></i>'.repeat(13) + '</div><div class="confetti" id="rbConf"></div></div>' +
       '<div id="rbSet" class="rbset" data-nt></div>' +
       '<div id="rbPlay" hidden><div class="rbtrack"><canvas id="rbCan"></canvas></div><div class="rbpad" id="rbPad">' + T('Тапай!') + '</div><button type="button" class="rbskip" id="rbSkip" data-nt hidden>' + T('Пропустить') + '</button></div>' +
-      '<div id="rbEnd" class="rbend" data-nt hidden></div>' +
+      '<div id="rbEnd" class="rbend" data-nt hidden></div><canvas id="rbDraw" hidden></canvas>' +
       '<div class="btbtns" data-nt><button class="btn btn-ghost" id="rbClose" type="button">' + T('Закрыть') + '</button></div>';
     box.querySelectorAll('#rbCrowd i').forEach((i, k) => { i.style.animationDelay = (-(k * 0.13) % 0.5).toFixed(2) + 's'; });
     $('#rbClose').addEventListener('click', close);
@@ -259,12 +376,15 @@
     box.addEventListener('pointerdown', e => {
       if (!G || G.mode !== 'play') return;
       if (e.target.closest && e.target.closest('[data-nt]')) return;
-      e.preventDefault(); tap(e.timeStamp);
+      e.preventDefault();
+      if (drawOpen(e.timeStamp)) { try { box.setPointerCapture(e.pointerId); } catch (_) {} drawDown(e); } else tap(e.timeStamp);
     });
+    box.addEventListener('pointermove', e => { if (G && G.mode === 'play' && G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
+    ['pointerup', 'pointercancel'].forEach(ev => box.addEventListener(ev, () => { if (G && G.dr) { G.dr.on = false; G.dr.last = null; } }));
     box.addEventListener('touchstart', e => { if (G && G.mode === 'play' && !(e.target.closest && e.target.closest('[data-nt]'))) e.preventDefault(); }, { passive: false });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') again(); });
     new MutationObserver(() => { if (D.el.hidden) stop(); }).observe(D.el, { attributes: true, attributeFilter: ['hidden'] });
-    window.addEventListener('resize', sizeCan);
+    window.addEventListener('resize', () => { sizeCan(); if (G && G.mode === 'play' && G.dr) drawPlace(); });
   }
   function paintSnd() { const b = $('#rbSnd'); b.innerHTML = SND(!G.mute); b.classList.toggle('off', G.mute); if (master) master.gain.value = G.mute ? 0 : .85; }
   function sizeCan() { if (!box) return; const c = $('#rbCan'); if (!c) return; const r = c.getBoundingClientRect(), d = Math.min(3, window.devicePixelRatio || 1); if (r.width) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); } }
@@ -272,7 +392,7 @@
   function open(o) {
     box = D.el.querySelector('.btlbox'); build();
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
-    G = { level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
+    G = { g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, mute, mode: '', picks: null, seed: 1,
       battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), allow: o.ul && o.ul.v2 ? new Set(o.ul.allow || []) : null, ulKeys: new Set(o.ul && o.ul.keys || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
@@ -282,18 +402,18 @@
     if (o.result) showResult(o.result); else if (G.battle) choose(); else setup();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
-  function stop() { cancelAnimationFrame(raf); raf = 0; if (G) { killBeat(); G.mode = ''; } }
+  function stop() { cancelAnimationFrame(raf); raf = 0; if (G) { killBeat(); G.mode = ''; drawOff(); } }
   function close() { stop(); D.el.hidden = true; }
   function killBeat() { if (G && G.out && ctx) { try { G.out.gain.setTargetAtTime(0, ctx.currentTime, .03); const o = G.out; setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 400); } catch (_) {} } if (G) G.out = null; stopPreview(); }
 
   const again = () => { if (G.battle) choose(); else setup(); };
   // the DJ's track (battle): the player doesn't pick it; a tap on it plays 2 bars
-  const djHtml = () => { const B = beatOf(G.beat); return '<button type="button" class="rbdj" id="rbDj"><i aria-hidden="true">🎧</i><span><small>' + D.T('Трек ставит диджей') + '</small><b>' + B.name + '</b></span><small>' + B.bpm + ' BPM · ×' + B.mult + '</small></button>'; };
+  const djHtml = () => { const B = beatOf(G.beat); return '<button type="button" class="rbdj" id="rbDj"><i aria-hidden="true">🎧</i><span><small>' + D.T('Трек ставит диджей') + '</small><b>' + B.name + '</b></span><small>' + (B.lv > 4 ? '🔥 HARD · ' : '') + B.bpm + ' BPM · ×' + B.mult + '</small></button>'; };
   const djWire = () => { const d = $('#rbDj'); if (!d) return; d.addEventListener('click', () => { if (G.pv) stopPreview(); else { preview(G.beat); d.classList.add('pl'); } }); };
   // ---- 0 (battle): who against whom, which track, and how — by hand or on auto (owner 11.11.2026 «сразу выбрать авто или руками») ----
   function choose() {
     const T = D.T; killBeat();
-    G.mode = 'choose'; G.prev = 'bounce'; G.prevAt = performance.now();
+    G.mode = 'choose'; G.prev = 'bounce'; G.prevAt = performance.now(); drawOff();
     $('#rbPlay').hidden = true; $('#rbEnd').hidden = true; $('#rbSet').hidden = false; $('#rbConf').innerHTML = '';
     $('#rbScore').textContent = '0'; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); $('#rbPhase').textContent = '';
     $('#rbCrowd').classList.remove('hype'); $('#rbF').classList.remove('spin', 'win', 'lose');
@@ -335,7 +455,7 @@
   // ---- 1: build the set ----
   function setup() {
     const T = D.T; killBeat();
-    G.mode = 'setup'; G.seed = Math.floor(Math.random() * 1e9) + 1;
+    G.mode = 'setup'; G.seed = Math.floor(Math.random() * 1e9) + 1; drawOff();
     const rnd = mulberry(G.seed);
     $('#rbPlay').hidden = true; $('#rbEnd').hidden = true; $('#rbSet').hidden = false; $('#rbConf').innerHTML = '';
     $('#rbScore').textContent = '0'; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); $('#rbPhase').textContent = '';
@@ -346,23 +466,24 @@
     const rows = ROWS.map(([title, all]) => {
       const have = all.filter(know), locked = all.filter(m => !know(m));
       const sh = have.map(m => [rnd(), m]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-      const take = sh.filter(m => G.ul.has(m) && (NEED[m] || 1) > G.level).slice(0, 2), byD = d => sh.find(m => DIFF[m] === d && !take.includes(m));
+      const take = sh.filter(m => G.ul.has(m) && (NEED[m] || 1) > G.level).slice(0, 2), byD = d => sh.find(m => tierOf(m) === d && !take.includes(m));
       [1, 2, 3].forEach(d => { const m = take.length < 3 && byD(d); if (m) take.push(m); });
       sh.forEach(m => { if (take.length < 3 && !take.includes(m)) take.push(m); });
-      take.sort((a, b) => DIFF[a] - DIFF[b]);
+      take.sort((a, b) => diffOf(a) - diffOf(b));
       const hinted = locked.find(m => G.ulHint[m]), lock = hinted || (take.length < 3 && locked.length ? locked[0] : null);
       return { title, take, lock };
     });
     G.picks = rows.map(r => r.take[0]); G.prev = G.picks[0]; G.prevAt = performance.now();
-    const dots = d => '<em>' + '●'.repeat(d) + '</em>' + '○'.repeat(3 - d) + ' ×' + MULT[d];
+    const dots = m => V2() ? '<em>' + diffOf(m) + '</em>/10 <u>×' + multOf(m) + '</u>' : '<em>' + '●'.repeat(DIFF[m]) + '</em>' + '○'.repeat(3 - DIFF[m]) + ' ×' + MULT[DIFF[m]];
+    if (!V2() && beatOf(G.beat).g) G.beat = null;
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
-    const bdots = l => '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
-    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + '</p>' +
+    const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
+    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') : '') + '</p>' +
       (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
       (G.battle ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
-      BEATS.map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
+      BEATS.filter(b => V2() || !b.g).map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
       rows.map((r, k) => '<div class="rbrow"><small>' + r.title + '</small><div class="rbcards' + (r.take.length + (r.lock ? 1 : 0) > 3 ? ' b4' : '') + '">' +
-        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && (NEED[m] || 1) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(DIFF[m]) + '</i></button>').join('') +
+        r.take.map((m, i) => '<button type="button" class="rbc' + (i === 0 ? ' on' : '') + (G.ul.has(m) && (NEED[m] || 1) > G.level ? ' fr' : '') + '" data-r="' + k + '" data-m="' + m + '"><b>' + D.names[m] + '</b><i>' + dots(m) + '</i></button>').join('') +
         (r.lock ? (G.ulHint[r.lock] ? '<button type="button" class="rbc lock ul' + (G.ulHint[r.lock].st ? ' st' : '') + '" data-ul="' + r.lock + '" data-r="' + k + '"><b>' + D.names[r.lock] + '</b><i>' + lockLbl(G.ulHint[r.lock]) + '</i></button>'
           : '<button type="button" class="rbc lock" disabled><b>' + D.names[r.lock] + '</b><i>🔒 ' + T('Ур. {n}', { n: NEED[r.lock] }) + '</i></button>') : '') + '</div></div>').join('') +
       '<div class="rbul" id="rbUl" hidden></div>' +
@@ -404,7 +525,8 @@
     try {
       master.gain.value = G.mute ? 0 : .85;
       const bars = 2, d = bars * 4 * 60 / beatOf(id).bpm;
-      G.pv = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars); G.pvId = id;
+      const sd = Math.floor(Math.random() * 1e9) + 1, B = beatOf(id), cues = B.g ? RB2.notes(['indian', 'ccs', 'swipe', 'handstand'], sd, id).filter(n => !n.draw && n.b >= 4 && n.b < 4 + bars * 4).map(n => (n.b - 4) * 60 / B.bpm) : null;
+      G.pv = schedule(ctx.currentTime + .05, sd, id, bars, cues); G.pvId = id;
       const card = $('#rbSet').querySelector('.rbc[data-b="' + id + '"]'); if (card) card.classList.add('pl');
       const pv = G.pv; G.pvT = setTimeout(() => { if (G.pv === pv) stopPreview(); }, d * 1000 + 300);
     } catch (_) {}
@@ -423,17 +545,18 @@
     if (G.auto) G.picks = ROWS.map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
-    G.notes = notesFor(G.picks, G.seed, G.beat);
-    if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (clamp(DIFF[G.picks[n.ph]] + BB.up, 1, 3) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
+    G.notes = notesOf(G.picks, G.seed, G.beat); G.dn = G.notes.find(n => n.draw) || null; G.dr = null;
+    if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (lvOf(G.picks[n.ph], G.beat) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
     $('#rbSkip').hidden = !G.auto; G.brk = [];
     G.score = 0; G.combo = 0; G.best = 0; G.cnt = [0, 0, 0, 0]; G.missAt = -9; G.bigSt = 0; G.lastBeat = -1; G.shown = -1;
     const now = performance.now(); let lat = 0;
     G.audio = audioOn();
-    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed, G.beat); } catch (_) { G.audio = false; } }
+    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed, G.beat, 0, V2() && BB.g ? G.notes.filter(n => !n.draw && !n.big).map(n => n.t) : null); } catch (_) { G.audio = false; } }
     G.lat = lat; G.perf0 = now + 150; // song second 0 is heard at perf0 + lat
     G.mode = 'play';
     $('#rbSet').hidden = true; $('#rbEnd').hidden = true; $('#rbPlay').hidden = false; sizeCan();
+    if (G.dn) drawInit();
     $('#rbPhase').textContent = T('Приготовься');
   }
   const song = p => (p - G.perf0) / 1000 - G.lat;
@@ -443,7 +566,7 @@
   function judge(n, kind, s) {
     n.st = kind; n.jt = s; G.cnt[kind]++;
     if (kind === 3) { G.combo = 0; G.missAt = s; }
-    else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += noteBase(n, G.picks, kind, G.beat) * comboMult(G.combo) * (1 + .01 * G.level); }
+    else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += ptsOf(n, kind, G.combo) * (1 + .01 * G.level); }
     if (n.big) {
       G.bigSt = kind;
       const ar = $('#rbArena');
@@ -457,9 +580,99 @@
     let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp;
     const s = song(p), pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
     let bestN = null, bd = 9;
-    for (const n of G.notes) { if (n.st) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
+    for (const n of G.notes) { if (n.st || n.draw) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
     if (bestN && bd <= W_GOOD) { const kind = bd <= W_PERF ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
+    else if (G.dn && s > G.dn.t - .1 && s < G.dn.end + .15) { /* fingers near the trajectory: not a stray tap */ }
     else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { const nx = G.notes.findIndex(n => !n.st && n.t > s); G.brk.push(nx < 0 ? G.notes.length : nx); G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
+  }
+  // ---- the trajectory (rules v2, owner 13.11.2026 «тапаешь, тапаешь и затем нарисуй траекторию ноги в полёте на флаере») ----
+  // After the bar of taps of the power move the legs' path appears over the dancer; the finger follows it from the yellow dot
+  // before the time bar runs out. How much of the line is covered (in order) and how close the finger stayed give
+  // PERFECT / GOOD / MISS, worth 5 taps. Each power move has its own shape; a harder move = a longer line and a thinner corridor.
+  const TAU = Math.PI * 2;
+  const SHAPES = { // u 0…1 → [x, y] in −1…1 (y down)
+    backspin: u => { const a = Math.PI + u * TAU; return [Math.cos(a) * .85, Math.sin(a) * .45]; },                      // one flat circle on the floor
+    swipe: u => { const a = Math.PI + u * TAU, y = Math.sin(a); return [Math.cos(a) * .9, (y < 0 ? y * .95 : y * .3) + .3]; }, // a high arc over, a low way back
+    windmill: u => { const a = Math.PI + u * 3 * Math.PI, r = 1 - .4 * u; return [Math.cos(a) * r * .95, Math.sin(a) * r * .6]; }, // a circle and a half, winding in
+    headspin: u => { const a = Math.PI + u * 4 * Math.PI; return [Math.cos(a) * (.75 - .3 * u), .8 - 1.6 * u + Math.sin(a) * .22]; }, // a spiral going up
+    flare: u => { const a = Math.PI + u * 3 * Math.PI, r = 1 - .22 * u, c = Math.cos(a); return [c * r, (.5 * Math.sin(a) - .5 * c * c + .25) * r]; }, // the legs' saddle: high at the sides, low in front
+    ninety: u => { const a = Math.PI + u * 5 * Math.PI; return [Math.cos(a) * .55 * (1 - .8 * u), .85 - 1.7 * u + Math.sin(a) * .16 * (1 - .5 * u)]; }, // a narrow spiral closing at the top
+    airflare: u => { if (u < .6) { const v = u / .6; return [-1 + 2 * v, .1 - Math.abs(Math.sin(3 * Math.PI * v)) * .75]; } const a = (u - .6) / .4 * Math.PI; return [Math.cos(a), .1 + Math.sin(a) * .75]; } }; // three jumps hand to hand, and the way back under
+  const drawCan = () => box && box.querySelector('#rbDraw');
+  function drawInit() {
+    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: 30 - (RB2.D[G.picks[2]] || 5), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
+    drawCan().hidden = false; drawPlace();
+  }
+  function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr'); }
+  // the drawing field = from the top of the arena to the bottom of the tap pad; the line is centred on it
+  function drawPlace() {
+    const R = G.dr, c = drawCan(), b = box.getBoundingClientRect(), a = $('#rbArena').getBoundingClientRect(), pd = $('#rbPad').getBoundingClientRect();
+    if (!a.width || !pd.width) return;
+    R.x0 = a.left; R.y0 = a.top; R.W = a.width; R.H = pd.bottom - a.top; R.d = Math.min(3, window.devicePixelRatio || 1);
+    c.style.left = (a.left - b.left) + 'px'; c.style.top = (a.top - b.top) + 'px'; c.style.width = R.W + 'px'; c.style.height = R.H + 'px';
+    c.width = Math.round(R.W * R.d); c.height = Math.round(R.H * R.d);
+    const f = SHAPES[G.picks[2]] || SHAPES.backspin, S = Math.min(R.W * .4, R.H * .4, 135), cx = R.W / 2, cy = R.H * .5, raw = [];
+    for (let k = 0; k <= 400; k++) { const q = f(k / 400); raw.push([cx + q[0] * S, cy + q[1] * S]); }
+    const keep = R.pts.length ? R.idx / (R.pts.length - 1) : 0, pts = [raw[0]], STEP = 7; let acc = 0; // points 7 px apart along the line
+    for (let k = 1; k < raw.length; k++) {
+      let ax = raw[k - 1][0], ay = raw[k - 1][1]; const bx = raw[k][0], by = raw[k][1]; let seg = Math.hypot(bx - ax, by - ay);
+      while (acc + seg >= STEP) { const t = (STEP - acc) / seg; ax += (bx - ax) * t; ay += (by - ay) * t; pts.push([ax, ay]); seg = Math.hypot(bx - ax, by - ay); acc = 0; }
+      acc += seg;
+    }
+    R.pts = pts; R.idx = Math.round(keep * (pts.length - 1));
+  }
+  const stampS = stamp => { let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp; return song(p); };
+  function drawOpen(stamp) { if (!G.dr || G.auto || G.dn.st) return false; const s = stampS(stamp); return s >= G.dn.t - .08 && s <= G.dn.end; }
+  function drawDown(e) { const R = G.dr; R.on = true; R.last = null; drawMove(e); }
+  function drawFeed(x, y) {
+    const R = G.dr, P = R.pts, tol = R.idx === 0 ? R.tol * 1.4 : R.tol; R.total++;
+    for (let j = Math.min(P.length - 1, R.idx + 5); j >= Math.max(0, R.idx - 3); j--) {
+      if (Math.hypot(P[j][0] - x, P[j][1] - y) <= tol) { R.good++; if (j + 1 > R.idx) R.idx = Math.min(P.length - 1, j + 1); return; }
+    }
+  }
+  function drawMove(e) {
+    const R = G.dr; if (!R || G.dn.st) return;
+    const x = e.clientX - R.x0, y = e.clientY - R.y0;
+    if (R.last) { const n = Math.min(40, Math.ceil(Math.hypot(x - R.last[0], y - R.last[1]) / 5)); for (let k = 1; k <= n; k++) drawFeed(R.last[0] + (x - R.last[0]) * k / n, R.last[1] + (y - R.last[1]) * k / n); }
+    else drawFeed(x, y);
+    R.last = [x, y];
+    if (R.idx >= R.pts.length - 1) drawEnd(stampS(e.timeStamp));
+  }
+  // how well it was drawn: the share of the line covered × (how close the finger stayed)
+  const drawKind = R => { const cover = R.idx / Math.max(1, R.pts.length - 1), q = cover * (.6 + .4 * (R.total ? R.good / R.total : 0)); return q >= .85 ? 1 : q >= .5 ? 2 : 3; };
+  function drawEnd(s, kind) {
+    const R = G.dr, n = G.dn; if (!R || n.st) return;
+    kind = kind || drawKind(R); R.on = false; R.doneAt = s; judge(n, kind, s); blip(kind);
+    if (kind !== 3) { stars(); if (navigator.vibrate) try { navigator.vibrate(16); } catch (_) {} }
+  }
+  function drawTick(n, s) {
+    const R = G.dr, pad = $('#rbPad'); if (!R) return;
+    if (!n.st) {
+      if (!R.lab && s >= n.t - BEAT) { R.lab = 1; pad.textContent = D.T('Рисуй!'); pad.classList.add('dr'); }
+      if (G.auto) { const k = clamp((s - n.t) / ((n.end - n.t) * .8), 0, 1); R.idx = Math.floor((R.pts.length - 1) * k * (n.am ? .45 : 1)); if (k >= 1) drawEnd(s, n.am ? 3 : Math.abs(n.aj) <= W_PERF ? 1 : 2); }
+      else if (s > n.end) drawEnd(s);
+    }
+    if (n.st && R.lab === 1) { R.lab = 2; pad.textContent = G.auto ? D.T('Авто') : D.T('Тапай!'); pad.classList.remove('dr'); }
+  }
+  function drawPaint(s) {
+    const R = G.dr, n = G.dn, c = drawCan(), x = c.getContext('2d'), P = R.pts;
+    x.setTransform(R.d, 0, 0, R.d, 0, 0); x.clearRect(0, 0, R.W, R.H);
+    const t0 = n.t - 2 * BEAT; if (s < t0 || !P.length || (R.doneAt && s - R.doneAt > .5) || s > n.end + .6) return;
+    const live = s >= n.t - .08 && !n.st, fade = R.doneAt ? clamp(1 - (s - R.doneAt) / .5, 0, 1) : 1, a = (live || n.st ? 1 : .25 + .45 * clamp((s - t0) / (2 * BEAT), 0, 1)) * fade;
+    const line = (from, to, col, w) => { if (to - from < 1) return; x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(P[from][0], P[from][1]); for (let k = from + 1; k <= to; k++) x.lineTo(P[k][0], P[k][1]); x.stroke(); };
+    const L = P.length - 1;
+    x.globalAlpha = a;
+    line(0, L, 'rgba(11,11,12,.6)', 26); line(0, L, 'rgba(242,239,232,.34)', 15);
+    line(0, R.idx, n.st === 1 ? '#F2CC55' : n.st === 2 ? '#F2EFE8' : n.st === 3 ? '#6A6A72' : '#E2611A', 15);
+    if (!n.st) {
+      x.fillStyle = 'rgba(242,204,85,.9)'; // little arrows: which way to go
+      for (let j = R.idx + 7; j < L - 1; j += 13) { const ang = Math.atan2(P[j + 1][1] - P[j - 1][1], P[j + 1][0] - P[j - 1][0]); x.save(); x.translate(P[j][0], P[j][1]); x.rotate(ang); x.beginPath(); x.moveTo(5, 0); x.lineTo(-4, -4.5); x.lineTo(-4, 4.5); x.closePath(); x.fill(); x.restore(); }
+      const h = P[Math.min(R.idx, L)], ph = ((s / BEAT) % 1 + 1) % 1, r = 13 * (1 + .25 * Math.max(0, 1 - ph * 2.5));
+      x.fillStyle = '#F2CC55'; x.beginPath(); x.arc(h[0], h[1], r, 0, 7); x.fill(); x.strokeStyle = '#0B0B0C'; x.lineWidth = 3; x.stroke();
+      x.strokeStyle = '#F2CC55'; x.lineWidth = 2; x.beginPath(); x.arc(P[L][0], P[L][1], 9, 0, 7); x.stroke(); // where the line ends
+      if (live) { const k = clamp((n.end - s) / (n.end - n.t), 0, 1); x.fillStyle = 'rgba(255,255,255,.14)'; x.fillRect(12, R.H - 7, R.W - 24, 4); x.fillStyle = k < .3 ? '#E2611A' : '#F2CC55'; x.fillRect(12, R.H - 7, (R.W - 24) * k, 4); }
+    }
+    x.globalAlpha = 1;
   }
   function draw(s) {
     const c = $('#rbCan'), x = c.getContext('2d'), W = c.width, H = c.height, d = W / (c.getBoundingClientRect().width || W), hx = W * .2, pps = (W * .8) / TRAVEL, cy = H / 2;
@@ -471,8 +684,15 @@
     x.strokeStyle = '#F2EFE8'; x.lineWidth = 3 * d; x.beginPath(); x.arc(hx, cy, 19 * d * pulse, 0, 7); x.stroke();
     for (const n of G.notes) {
       const dt = n.t - s; if (dt > TRAVEL + .2) break;
+      if (n.draw) { // the trajectory on the track: a long yellow bar
+        const x0 = hx + dt * pps, x1 = hx + (n.end - s) * pps; if (x1 < 0) continue;
+        x.globalAlpha = n.st === 3 ? .2 : n.st ? .35 : .9; x.fillStyle = n.st === 3 ? '#55555C' : '#F2CC55';
+        const h2 = 13 * d; x.beginPath(); if (x.roundRect) x.roundRect(x0, cy - h2, x1 - x0, h2 * 2, h2); else x.rect(x0, cy - h2, x1 - x0, h2 * 2); x.fill();
+        x.fillStyle = '#0B0B0C'; x.font = (12 * d) + 'px Anton, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('DRAW', (Math.max(x0, 0) + Math.min(x1, W)) / 2, cy + d); x.globalAlpha = 1;
+        continue;
+      }
       const px = hx + dt * pps, r = (n.big ? 20 : 13) * d;
-      if (n.st === 1 || n.st === 2) { const k = (s - n.jt) / .25; if (k < 1) { x.globalAlpha = 1 - k; x.strokeStyle = n.st === 1 ? '#F2CC55' : '#F2EFE8'; x.lineWidth = 3 * d; x.beginPath(); x.arc(hx, cy, r * (1 + k * 1.2), 0, 7); x.stroke(); x.globalAlpha = 1; } continue; }
+      if (n.st === 1 || n.st === 2) { const k = Math.max(0, (s - n.jt) / .25); if (k < 1) { x.globalAlpha = 1 - k; x.strokeStyle = n.st === 1 ? '#F2CC55' : '#F2EFE8'; x.lineWidth = 3 * d; x.beginPath(); x.arc(hx, cy, r * (1 + k * 1.2), 0, 7); x.stroke(); x.globalAlpha = 1; } continue; }
       if (px < -r) continue;
       x.globalAlpha = n.st === 3 ? .3 : 1;
       x.fillStyle = n.st === 3 ? '#55555C' : n.big ? '#F2CC55' : '#E2611A';
@@ -517,8 +737,8 @@
     // keep the clock on the sound (the audio clock is the truth; small corrections only)
     if (G.audio && ctx.state === 'running') { const diff = (ctx.currentTime - G.aud0 - G.lat) - song(now); if (Math.abs(diff) > .04) G.perf0 -= diff * 1000 * .15; }
     const s = song(now), T = D.T;
-    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.st && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
-    for (const n of G.notes) { if (!n.st && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
+    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
+    for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
     const beat = Math.floor(s / BEAT);
     if (beat !== G.lastBeat) {
       G.lastBeat = beat;
@@ -527,7 +747,7 @@
       if (ph !== G.shown) { G.shown = ph; if (ph >= 0) $('#rbPhase').textContent = D.names[G.picks[ph]]; $('#rbF').classList.toggle('spin', (ph === 1 || ph === 2) && D.spin.includes(G.picks[ph])); if (ph === 1 || ph === 2) puff(); }
       if (ph < 3) $('#rbCrowd').classList.toggle('hype', G.combo >= 8);
     }
-    draw(s);
+    draw(s); if (G.dr) drawPaint(s);
     let [key, p] = pose(s);
     p = drive(key, p, s);
     const w = 1 - (s - G.missAt) / .35; if (w > 0 && key !== 'fail') p = mix(p, M.shock.f(.5), w * .6); // a miss: the hero stumbles for a moment
@@ -544,17 +764,19 @@
   }
   // ---- 3: the judges ----
   function finish() {
-    const T = D.T, total = G.notes.length, max = maxScore(G.picks, G.seed, G.level, G.beat), hits = G.notes.map(n => n.st).join('');
-    const score = scoreOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
+    const T = D.T, total = G.notes.length, max = maxOf(G.picks, G.seed, G.level, G.beat), hits = G.notes.map(n => n.st).join('');
+    drawOff();
+    const score = totalOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
     const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
       round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
+    if (V2()) { res.round.g = 2; res.draw = G.dn ? G.dn.st : 0; res.full = !G.cnt[3] && !G.brk.length; }
     const viaL = G.picks.filter(m => (NEED[m] || 1) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.res = res;
     $('#rbPlay').hidden = true; $('#rbF').classList.remove('spin'); $('#rbPhase').textContent = '';
     if (G.onEnd) { G.won = res.acc >= .6; sendRound(); return; }
     // the trial: the computer dances for the opponent — its picks and accuracy depend on its level
     const ol = G.oppLevel, pk = ROWS.map(([, all]) => { const have = all.filter(m => (NEED[m] || 1) <= ol); return have[Math.floor(Math.random() * have.length)]; });
-    const opp = Math.round(maxScore(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
+    const opp = Math.round(maxOf(pk, G.seed, ol, G.beat) * clamp(.5 + .04 * ol - .04 * (beatOf(G.beat).lv - 2) + (Math.random() - .5) * .3, .2, .95));
     const pMe = 1 / (1 + Math.exp(-(score - opp) / (.1 * Math.max(score, opp, 1))));
     const votes = [0, 1, 2].map(() => Math.random() < pMe ? 'l' : 'r'), mine = votes.filter(v => v === 'l').length, won = mine >= 2;
     G.won = won;
@@ -562,7 +784,7 @@
     const end = $('#rbEnd');
     end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
       '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + score + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + T('Соперник') + '</small><b>' + opp + '</b></span></div>' +
-      '<p>PERFECT ' + res.perfect + ' · GOOD ' + res.good + ' · MISS ' + res.miss + ' · ' + T('Комбо') + ' ' + res.combo + '</p>' +
+      '<p>PERFECT ' + res.perfect + ' · GOOD ' + res.good + ' · MISS ' + res.miss + ' · ' + T('Комбо') + ' ' + res.combo + (res.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][res.draw] : '') + '</p>' + (res.full ? '<p class="fc">FULL COMBO +10%</p>' : '') +
       '<p class="n">' + T('Это пробная версия игры: соперник здесь — компьютер.') + '</p>' +
       '<div class="rbbt"><button type="button" class="btn btn-ghost" id="rbAgain">' + T('Ещё раз') + '</button></div>';
     end.hidden = false;
@@ -583,7 +805,7 @@
     const T = D.T, r = G.res;
     const head = '<b class="win" style="font-size:30px">' + T('Твой раунд') + '</b>' +
       '<div class="rbvs" style="grid-template-columns:1fr"><span class="me"><small>' + T('Счёт') + '</small><b>' + r.score + '</b></span></div>' +
-      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + '</p>';
+      '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + (r.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][r.draw] : '') + '</p>' + (r.full ? '<p class="fc">FULL COMBO +10%</p>' : '');
     $('#rbCrowd').classList.toggle('hype', r.acc >= .6);
     wait(G.answer ? T('Судьи смотрят батл…') : T('Отправляем раунд…'), head, () => G.onEnd(r));
   }
@@ -616,7 +838,7 @@
     const jd = '<div class="judge"><span class="card"></span></div>', esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
       '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + (my.sc || 0) + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + esc(G.opp ? G.opp.name : T('Соперник')) + '</small><b>' + (th.sc || 0) + '</b></span></div>' +
-      (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + '</p>' : '') +
+      (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + (my.dr ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][my.dr] : '') + '</p>' + (my.g === 2 && my.ms === 0 && my.fc ? '<p class="fc">FULL COMBO +10%</p>' : '') : '') +
       (r.note ? '<p class="n">' + esc(r.note) + '</p>' : '');
     end.hidden = false;
     const cards = end.querySelectorAll('.card'), votes = r.votes || [];
@@ -639,5 +861,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

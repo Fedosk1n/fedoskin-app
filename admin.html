@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 47</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 48</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -2798,7 +2798,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
+    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs && j.rb2); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };

@@ -596,6 +596,78 @@ function btRareSide(seed) {
   x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
   return (x >>> 8) & 1 ? 'b' : 'a';
 }
+// <RB2> rules v2 of the rhythm battle (owner 13.11.2026 «продумай систему батлов, сложность элементов, подсчёт очков, сложные
+// диджейские биты, рисование траектории»). SOURCE = tools/rb2.js; `python3 tools/rb2_sync.py` copies this block into rhythm.js
+// and server/push-worker.js — the phone and the server must count a round exactly the same way. Do not edit the copies.
+const RB2 = (() => {
+  // the DJ's tracks: bpm, `up` (shifts how dense the notes are), score multiplier, hardness 1–7, note family
+  const BEATS = { lofi: [84, -1, .8, 1, 'st'], boom: [100, 0, 1, 2, 'st'], funk: [114, 0, 1.25, 3, 'st'], raw: [128, 1, 1.55, 4, 'st'],
+    cut: [104, 0, 1.75, 5, 'sync'], trip: [96, 0, 1.9, 6, 'trip'], dbl: [140, 0, 2.1, 7, 'dbl'] };
+  // how hard a move is in real breaking, 1–10 (the owner corrects this table): it sets the score multiplier (×1.0 … ×1.9),
+  // how dense the notes are (tier 1–3) and how long the trajectory to draw is
+  const D = { toprock: 1, kickstep: 2, salsa: 2, indian: 3, sixstep: 2, ccs: 3,
+    backspin: 2, swipe: 4, windmill: 5, headspin: 7, flare: 7, ninety: 8, airflare: 10,
+    freeze: 2, headstand: 3, handstand: 4, airchair: 6, hollowback: 8 };
+  const tier = d => d <= 2 ? 1 : d <= 5 ? 2 : 3;
+  const mult = d => Math.round((1 + .1 * (d - 1)) * 100) / 100;
+  const cl = (x, a, b) => Math.max(a, Math.min(b, x));
+  const mul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const th = a => a.map(x => x / 3); // triplets: thirds of a beat
+  // one bar (4 beats) of taps per note family and density level 1–4
+  const P = {
+    st: [null, [[0, 1, 2, 3]],
+      [[0, 1, 1.5, 2, 3], [0, .5, 1, 2, 3], [0, 1, 2, 2.5, 3], [0, 1, 2, 3, 3.5]],
+      [[0, .5, 1, 1.5, 2, 3, 3.5], [0, .5, 1.5, 2, 2.5, 3], [0, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 2, 2.5, 3.5]],
+      [[0, .5, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.5, 2, 2.75, 3, 3.5], [0, .75, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.75, 2, 2.5, 3.25, 3.5]]],
+    // DJ CUTS: the taps sit between the beats (syncopation)
+    sync: [null, [[0, 1.5, 2, 3], [0, 1, 2.5, 3]],
+      [[0, .75, 1.5, 2, 3], [0, 1, 1.75, 2.5, 3], [.5, 1, 2, 2.5, 3.5]],
+      [[0, .75, 1.5, 2, 2.75, 3.5], [0, .5, 1.25, 2, 2.5, 3.25], [0, .75, 1, 1.75, 2.5, 3, 3.5]],
+      [[0, .25, .75, 1.5, 2, 2.25, 2.75, 3.5], [0, .75, 1, 1.5, 1.75, 2.5, 3, 3.25, 3.5], [0, .5, .75, 1.5, 2, 2.5, 2.75, 3.5]]],
+    // TRIPLET FLIP: three taps a beat, and now and then a straight bar
+    trip: [null, [th([0, 3, 6, 9]), th([0, 3, 6, 8, 9])],
+      [th([0, 3, 4, 5, 6, 9]), th([0, 2, 3, 6, 8, 9]), th([0, 3, 6, 7, 8, 9])],
+      [th([0, 2, 3, 5, 6, 8, 9]), th([0, 1, 2, 3, 6, 7, 8, 9]), th([0, 3, 4, 5, 6, 9, 10, 11])],
+      [th([0, 1, 2, 3, 4, 5, 6, 9, 10, 11]), th([0, 2, 3, 4, 5, 6, 8, 9, 10, 11]), th([0, 1, 2, 3, 6, 7, 8, 9, 10, 11])]],
+    // DOUBLE TIME: a fast bar, then a half-time bar
+    dblD: [null, [[0, 1, 2, 3]], [[0, .5, 1, 2, 3], [0, 1, 2, 2.5, 3]],
+      [[0, .5, 1, 1.5, 2, 3, 3.5], [0, 1, 1.5, 2, 2.5, 3, 3.5]],
+      [[0, .5, 1, 1.5, 2, 2.5, 3, 3.5], [0, .5, 1, 1.5, 2, 3, 3.5]]],
+    dblH: [null, [[0, 2]], [[0, 2, 3], [0, 1.5, 2]], [[0, 1.5, 2, 3], [0, 2, 2.5, 3]], [[0, 1.5, 2, 3, 3.5], [0, .5, 2, 2.5, 3]]] };
+  const PF = [null, [0, 1, 2], [0, 1, 1.5, 2], [0, .5, 1, 1.5, 2, 2.5], [0, .5, 1, 1.5, 2, 2.5]];
+  // the round in beats: count-in 4, toprock 8, footwork 8, power 4 of taps + the trajectory, freeze 4 (the big hit on its 4th)
+  const B_TOP = 4, B_FOOT = 12, B_POW = 20, B_DRAW = 24, B_DRAW_END = 27.5, B_FRZ = 28, B_BIG = 31;
+  const W_DRAW = 5, W_BIG = 3; // a drawn trajectory counts as 5 taps, the freeze hit as 3
+  function bar(fam, L, i, rnd) {
+    let set;
+    if (fam === 'trip') set = rnd() < .3 ? P.st[Math.min(L, 3)] : P.trip[L];
+    else if (fam === 'dbl') set = i % 2 ? P.dblH[L] : P.dblD[L];
+    else set = P[fam][L];
+    return set[Math.floor(rnd() * set.length)];
+  }
+  // every note: b = its beat, ph = which move it belongs to (0 toprock … 3 freeze), w = weight; draw ⇒ a trajectory until `end`
+  function notes(picks, seed, beat) {
+    const B = BEATS[beat], fam = B[4], rnd = mul(seed || 1), out = [], L = m => cl(tier(D[m]) + B[1], 1, 4);
+    let i = 0;
+    const bars = (b0, n, ph) => { for (let k = 0; k < n; k++, i++) bar(fam, L(picks[ph]), i, rnd).forEach(x => out.push({ b: b0 + k * 4 + x, ph, w: 1 })); };
+    bars(B_TOP, 2, 0); bars(B_FOOT, 2, 1); bars(B_POW, 1, 2);
+    out.push({ b: B_DRAW, end: B_DRAW_END, ph: 2, w: W_DRAW, draw: true });
+    PF[L(picks[3])].forEach(x => out.push({ b: B_FRZ + x, ph: 3, w: 1 }));
+    out.push({ b: B_BIG, ph: 3, w: W_BIG, big: true });
+    return out;
+  }
+  const base = (n, picks, kind, beat) => (kind === 1 ? 100 : 50) * n.w * mult(D[picks[n.ph]]) * BEATS[beat][2];
+  const combo = c => 1 + Math.min(c, 30) * .02;
+  // the score from one result per note (1 perfect, 2 good, 3 miss) + where a stray tap broke the combo. A clean round
+  // (no miss, no stray tap) = FULL COMBO, +10 %
+  function score(picks, seed, beat, hits, brk, level) {
+    const br = new Set(brk || []); let s = 0, c = 0, clean = !(brk && brk.length);
+    notes(picks, seed, beat).forEach((n, i) => { if (br.has(i)) c = 0; const k = +hits[i]; if (k !== 1 && k !== 2) { c = 0; clean = false; return; } c++; s += base(n, picks, k, beat) * combo(c); });
+    return Math.round(s * (clean ? 1.1 : 1) * (1 + .01 * (level || 1)));
+  }
+  return { BEATS, D, tier, mult, notes, score, base, combo, lv: (m, beat) => cl(tier(D[m]) + BEATS[beat][1], 1, 4), B_DRAW, B_DRAW_END };
+})();
+// </RB2>
 function rbNotes(picks, seed, beat) { // only the phase and «big» of each note, in the same order as rhythm.js
   const up = RB_BEATS[beat][1], lv = m => rbClamp(RB_DIFF[m] + up, 1, 3), rnd = rbMul(seed || 1), out = [];
   const bars = (n, d, ph) => { for (let b = 0; b < n; b++) RB_PAT[d][Math.floor(rnd() * RB_PAT[d].length)].forEach(() => out.push({ ph, big: false })); };
@@ -610,34 +682,45 @@ function rbScore(picks, seed, beat, hits, brk, level) {
   return Math.round(s * (1 + .01 * (level || 1)));
 }
 // the DJ: the same track for both, fixed per pair and half hour (so /bt/ready and /bt/call agree without storing anything)
-async function rbDj(a, b, slot) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('dj:' + a + ':' + b + ':' + slot))); return Object.keys(RB_BEATS)[h[0] % 4]; }
+// rules v2 (13.11.2026): `pool` = how many of the v2 tracks the DJ may put on — the three hardest (DJ CUTS, TRIPLET FLIP, DOUBLE TIME)
+// come in steps: 5 tracks while one of the two is below level 3, all 7 from level 3. pool 0 = an old app: the first four as before.
+async function rbDj(a, b, slot, pool) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('dj:' + a + ':' + b + ':' + slot))); return pool ? Object.keys(RB2.BEATS)[h[0] % pool] : Object.keys(RB_BEATS)[h[0] % 4]; }
+const rbPool = (la, lb) => Math.min(la, lb) >= 3 ? 7 : 5;
+const rbG = x => { try { return (typeof x === 'string' ? JSON.parse(x) : x).g === 2 ? 2 : 1; } catch (_) { return 1; } };
 // a round the server checks: picks the hero knows, the DJ's track, one result per note; returns the stored form or null
 function rbCheck(r, level, beat) {
   if (!r || typeof r !== 'object' || r.b !== beat) return null;
+  const g2 = r.g === 2; if (!(g2 ? RB2.BEATS : RB_BEATS)[beat]) return null; // g = which rules the phone played by
   const p = Array.isArray(r.p) ? r.p.map(String) : [];
   // a move above the hero's level counts when the phone says its lesson was watched (round.u, owner 11.11.2026 «открывать движения
   // в игре через уроки») — watching is counted on the phone, like the rating's minutes
   const u = Array.isArray(r.u) ? r.u.slice(0, 8).map(String) : [];
   if (p.length !== 4 || p.some((m, k) => !RB_ROWS[k].includes(m) || ((RB_NEED[m] || 1) > level && !u.includes(m)))) return null;
   const seed = Math.floor(+r.s || 0); if (!(seed >= 1 && seed < 4294967296)) return null;
-  const h = String(r.h || ''), n = rbNotes(p, seed, beat).length; if (h.length !== n || /[^123]/.test(h)) return null;
+  const h = String(r.h || ''), n = (g2 ? RB2.notes(p, seed, beat) : rbNotes(p, seed, beat)).length; if (h.length !== n || /[^123]/.test(h)) return null;
   const k = (Array.isArray(r.k) ? r.k : []).slice(0, 300).map(x => Math.floor(+x)).filter(x => x >= 0 && x < n);
-  return { p, s: seed, b: beat, h, k, au: r.au ? 1 : 0, sc: rbScore(p, seed, beat, h, k, level) };
+  const o = { p, s: seed, b: beat, h, k, au: r.au ? 1 : 0, sc: g2 ? RB2.score(p, seed, beat, h, k, level) : rbScore(p, seed, beat, h, k, level) };
+  if (g2) o.g = 2;
+  return o;
 }
 // the other dancer: its own last round's picks (if it still knows them) and hit shares, on the DJ's track; else by level
-function rbStand(def, level, beat) {
+function rbStand(def, level, beat, g) {
+  const g2 = g === 2;
   const rnd = rbMul(crypto.getRandomValues(new Uint32Array(1))[0] | 1), seed = (crypto.getRandomValues(new Uint32Array(1))[0] >>> 1) || 1;
   const pk = RB_ROWS.map((all, k) => { const have = all.filter(m => (RB_NEED[m] || 1) <= level), own = def && def.p && def.p[k]; return all.includes(own) ? own : have[Math.floor(rnd() * have.length)]; }); // own picks were checked when saved (lesson-opened moves too)
-  const lv = RB_BEATS[beat][3];
+  const lv = (g2 ? RB2.BEATS : RB_BEATS)[beat][3];
   let mr, pr;
   if (def && def.n) { mr = rbClamp(def.m / def.n + (rnd() - .5) * .06, 0, .9); pr = rbClamp(def.f / Math.max(1, def.n - def.m), 0, 1); }
   else { mr = rbClamp(.25 - .015 * level + .05 * (lv - 2), .06, .4) * (.5 + rnd()); pr = .75; } // a bit weaker than a person who really taps
   // by level (nobody's own style yet): harder moves have denser notes ⇒ more misses, like for a person (rhythm.js auto does the same)
-  const up = RB_BEATS[beat][1], dl = m => rbClamp(RB_DIFF[m] + up, 1, 3) - 1;
-  let h = ''; rbNotes(pk, seed, beat).forEach(nt => { h += rnd() < (def && def.n ? mr : mr + .05 * dl(pk[nt.ph])) ? '3' : rnd() < pr ? '1' : '2'; });
-  return { p: pk, s: seed, b: beat, h, k: [], au: def ? 0 : 1, sc: rbScore(pk, seed, beat, h, [], level), st: 1 };
+  const up = g2 ? 0 : RB_BEATS[beat][1], dl = m => g2 ? RB2.lv(m, beat) - 1 : rbClamp(RB_DIFF[m] + up, 1, 3) - 1;
+  let h = ''; (g2 ? RB2.notes(pk, seed, beat) : rbNotes(pk, seed, beat)).forEach(nt => { h += rnd() < (def && def.n ? mr : mr + .05 * dl(pk[nt.ph])) ? '3' : rnd() < pr ? '1' : '2'; });
+  const o = { p: pk, s: seed, b: beat, h, k: [], au: def ? 0 : 1, sc: g2 ? RB2.score(pk, seed, beat, h, [], level) : rbScore(pk, seed, beat, h, [], level), st: 1 };
+  if (g2) o.g = 2;
+  return o;
 }
-const rbPub = r => r && { p: r.p, b: r.b, sc: r.sc, pf: (r.h.match(/1/g) || []).length, gd: (r.h.match(/2/g) || []).length, ms: (r.h.match(/3/g) || []).length, fz: r.h.slice(-1) !== '3' ? 1 : 0, au: r.au, st: r.st || 0 };
+const rbPub = r => r && { p: r.p, b: r.b, sc: r.sc, pf: (r.h.match(/1/g) || []).length, gd: (r.h.match(/2/g) || []).length, ms: (r.h.match(/3/g) || []).length, fz: r.h.slice(-1) !== '3' ? 1 : 0, au: r.au, st: r.st || 0, g: r.g === 2 ? 2 : 1, fc: r.g === 2 && !/3/.test(r.h) && !(r.k && r.k.length) ? 1 : 0,
+  dr: r.g === 2 ? +r.h[RB2.notes(r.p, r.s, r.b).findIndex(n => n.draw)] || 3 : undefined }; // dr = how the trajectory was drawn (1 / 2 / 3)
 async function heroEq(db, ids) {
   const out = {}; if (!ids.length) return out;
   const rs = await db.prepare('SELECT id, eq FROM hero_eq WHERE id IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all();
@@ -675,11 +758,11 @@ async function btResolve(env, n, rb, late) {
 // no answer within a day ⇒ the other phone's dancer dances for it (its own last round's style, or by level)
 async function btExpire(env, only) {
   const db = env.DB, now = Date.now();
-  const rows = (await db.prepare("SELECT bt_h.n, bt_h.b, bt_h.dj FROM bt_h WHERE st = 'wait' AND exp <= ?" + (only ? ' AND n = ?' : '') + ' LIMIT 20').bind(...(only ? [now, only] : [now])).all()).results || [];
+  const rows = (await db.prepare("SELECT bt_h.n, bt_h.b, bt_h.dj, bt_h.ra FROM bt_h WHERE st = 'wait' AND exp <= ?" + (only ? ' AND n = ?' : '') + ' LIMIT 20').bind(...(only ? [now, only] : [now])).all()).results || [];
   for (const r of rows) {
     const op = await lbRow(db, r.b), dr = await db.prepare('SELECT d FROM bt_def WHERE id = ? AND t > ?').bind(r.b, now - 30 * 864e5).first();
     let def = null; try { def = dr && JSON.parse(dr.d); } catch (_) {}
-    await btResolve(env, r.n, rbStand(def, heroLevel(op ? op.m : 0), r.dj), true);
+    await btResolve(env, r.n, rbStand(def, heroLevel(op ? op.m : 0), r.dj, rbG(r.ra)), true);
   }
 }
 async function battle(req, env, path, json) {
@@ -732,7 +815,7 @@ async function battle(req, env, path, json) {
     const c = await db.prepare('SELECT COUNT(*) AS same FROM bt WHERE a = ? AND b = ? AND t > ?').bind(id, to, now - 864e5).first();
     if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
     const eq = await heroEq(db, [to]);
-    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT)), lvl: heroLevel(me.m), ul: 1 });
+    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT), +b.g >= 2 ? rbPool(heroLevel(me.m), heroLevel(op.m)) : 0), lvl: heroLevel(me.m), ul: 1, g: +b.g >= 2 ? 2 : 1 });
   }
   if (path === '/bt/call') {
     const to = String(b.to || ''), op = await lbRow(db, to);
@@ -746,7 +829,8 @@ async function battle(req, env, path, json) {
     const p = Math.max(.3, Math.min(.7, .5 + .05 * (la - lb)));
     let ra = null;
     if (b.round) { // a round by hand: the DJ's track of this half hour (or the one before — the round takes ~20 s); the battle waits
-      const slot = Math.floor(now / DJ_SLOT), djs = [await rbDj(id, to, slot), await rbDj(id, to, slot - 1)];
+      const slot = Math.floor(now / DJ_SLOT), djs = [];
+      for (const pool of (b.round.g === 2 ? [rbPool(la, lb), 7, 5] : [0])) djs.push(await rbDj(id, to, slot, pool), await rbDj(id, to, slot - 1, pool));
       ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0]);
       if (!ra) return json({ error: 'round' }, 400);
     }
@@ -797,11 +881,13 @@ async function battle(req, env, path, json) {
     if (row.hst === 'wait' && row.exp <= now) await btExpire(env, n);
     if (row.hst !== 'wait' || row.exp <= now) { const r2 = await btGet(db, n); return json({ ok: true, late: 1, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])) }); }
     const lvl = heroLevel(me.m);
-    const rb = b.auto ? rbStand(null, lvl, row.dj) : rbCheck(b.round, lvl, row.dj);
+    // both dance by the challenger's rules (g). An app that doesn't know rules v2 yet answers a v2 challenge ⇒ its dancer dances for it
+    const g = rbG(row.hra), same = !!b.round && (b.round.g === 2 ? 2 : 1) === g, hand = !b.auto && same;
+    const rb = hand ? rbCheck(b.round, lvl, row.dj) : b.auto || g === 2 ? rbStand(null, lvl, row.dj, g) : null;
     if (!rb) return json({ error: 'round' }, 400);
-    if (!b.auto) rb.au = 0;
+    if (hand) rb.au = 0;
     if (!(await btResolve(env, n, rb, false))) { const r2 = await btGet(db, n); return json({ ok: true, late: 1, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])) }); }
-    if (!b.auto) await btDefSave(db, id, rb, now).run();
+    if (hand) await btDefSave(db, id, rb, now).run();
     const r2 = await btGet(db, n), w = await wallet();
     return json({ ok: true, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])), score: w.score, pts: w.pts });
   }
@@ -1004,7 +1090,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, rb2: 1, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

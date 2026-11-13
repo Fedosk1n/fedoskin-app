@@ -1720,7 +1720,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=11"></script>
-<script src="rhythm.js?v=9"></script>
+<script src="rhythm.js?v=10"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5539,17 +5539,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BT.rest > Date.now()) { toast(T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает — следующий батл через {t}' : 'Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt((BT.rest - Date.now()) / 60e3) })); return; }
     if (btn) btn.disabled = true;
     let lvl = statsView().level;
-    let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false;
+    let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false, g = 1;
     try {
-      const res = await btPost('/bt/ready', r ? { to: r.id } : { find: 1 }), j = await res.json().catch(() => ({}));
+      const res = await btPost('/bt/ready', r ? { to: r.id, g: 2 } : { find: 1, g: 2 }), j = await res.json().catch(() => ({}));
       if (res.status === 404 && j.error === 'not found') old = true; // the server code is older than the app
       else if (!j.ok) { toast(btErr(res, j) || T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
-      else { opp = j.opp; dj = j.dj; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // the server's level decides which moves count — the game uses the same
+      else { opp = j.opp; dj = j.dj; g = j.g === 2 ? 2 : 1; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // g: 2 = the server knows rules v2 (difficulty 1–10, hard beats, the trajectory) // the server's level decides which moves count — the game uses the same
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
     // owner 11.11.2026: «Сам» = your round by hand, the other one answers within a day (no cartoon); «Авто» = the old cartoon battle
-    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, ul: ulState2(), onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
+    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, g, ul: ulState2(), onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
   }
   const btFinal = m => { const e = new Error(m); e.final = true; return e; };
   async function btCallPost(opp, body){
@@ -5597,7 +5597,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
       return { result: btRes(j.battle, 'b') };
     };
-    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
+    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, g: bt.ra && bt.ra.g === 2 ? 2 : 1, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };

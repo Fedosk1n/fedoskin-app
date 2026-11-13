@@ -673,6 +673,25 @@
   `fedoskin-rb-mute`. Tested headless (bot taps, real touch, iPhone SE/13, Pixel 7, back button); the beat itself was never
   heard by Claude and iPhone audio latency is untested — ask the owner how it feels.
 - Full product plan and decisions live in the claude.ai Project doc `claude/fedoskin-app-plan.md`.
+- Rhythm battle RULES v2 (owner 13.11.2026 «продумай систему батлов, сложность элементов, подсчёт очков, сложные диджейские биты,
+  рисование траектории… Делай»). ONE source of the rules: `tools/rb2.js` (block `// <RB2> … // </RB2>`), copied by
+  `python3 tools/rb2_sync.py` into rhythm.js and server/push-worker.js — never edit the copies. `RB2.D` = difficulty 1–10 per move
+  (Claude's draft, THE OWNER CORRECTS IT — he knows difficulty): multiplier ×(1 + 0.1·(d−1)), note density tier (≤2 / ≤5 / else),
+  trajectory corridor 30−d px. Score = 100 perfect / 50 good × weight (tap 1, trajectory 5, freeze hit 3) × move × beat × combo
+  (+2 % a note, ≤ +60 %) ; clean round (no miss, no stray tap) = FULL COMBO ×1.1; × (1 + 1 %·hero level).
+  Hard beats (v2 only, `g: 2` in BEATS): DJ CUTS 104 BPM ×1.75 (syncopated taps, the sound is cut for 1.5 beats every 2nd bar,
+  scratches), TRIPLET FLIP 96 ×1.9 (triplets, 30 % straight bars), DOUBLE TIME 140 ×2.1 (fast bar / half-time bar); a wood block
+  plays every tap on them (schedule(…, cues)). DJ pool on the server: 5 tracks while one dancer is below level 3, else all 7.
+  Trajectory: power phase = 1 bar of taps, then note `draw` (beats 24–27.5): canvas `#rbDraw` over arena…pad, shape per power move
+  (`SHAPES`), finger follows from the yellow dot; cover × (0.6 + 0.4·closeness) ≥ .85 PERFECT, ≥ .5 GOOD, else MISS; in the hits
+  string it is one more 1/2/3. Auto mode draws by itself.
+  Versions: app sends `g: 2` to /bt/ready; a new server answers `g: 2` (+ v2 DJ) ⇒ RB.open({g: 2}) ⇒ round.g = 2. Old server ⇒ old
+  rules (v1 code kept: DIFF/MULT/notesFor/scoreOf + rbNotes/rbScore). The answerer plays by the challenger's rules (`bt.ra.g`); an
+  old app answering a v2 challenge ⇒ its stand-in dances (no error). rbPub adds g, dr (trajectory 1/2/3), fc (clean). /visits
+  `rb2: 1` (admin banner; admin «версия 48»). Practice (`fedoskinRhythm()`) is always v2. rhythm.js `?v=10`. Tested 13.11: node —
+  phone = server score on 2 800 random rounds, old rounds pass, old round on a new beat refused, DJ pools; headless phone — full
+  rounds by hand on 5 beats with drawn flare / airflare / headspin / 1990 / windmill (perfect, sloppy ⇒ GOOD, a third ⇒ MISS),
+  v1 battle round unchanged, result screen. NOT tested on a real phone (finger feel, tap windows on 140 BPM).
 - Rating moved to D1 (owner 10.11.2026 «сотни тысяч пользователей… все захотят батлить»; also a friend «много смотрел, а в
   рейтинге нет» — the single KV key was read-modify-written by everyone: lost updates between edge locations + KV free plan's
   1000 writes/day ⇒ people silently missing): D1 table `lb` (id, n, nl lower-case nick, c, cn normalised city, co, a, m, v, s,
