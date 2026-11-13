@@ -855,6 +855,10 @@
   breakdown of the person's video in text with screenshots (owner: «консультация это и есть разбор видео»), «за 1 видео»,
   video requirements, `['go', text, 'online']` body item = tappable link to another service. Service page: «Оплата — после
   того, как обсудим задачу.»; crypto button `.btn-crypto` (green-tinted, no longer looks disabled).
+- Coaching tab order (owner 13.11.2026 «на самый верх вынесем прайм и вниз уберём отзывы и мою фотку с описанием и ссылками»):
+  #review = service cards (premium «Полное ведение» first — renderServices sorts `prem` to the top; tablets: the premium card
+  spans both columns) → consultation hint → «Как это работает» → «Отзывы учеников» → the coach card (photo, facts, links,
+  cheapest-service offer) LAST. The 09.11 «starts with the coach» order is replaced. Tested headless en/ru 390×844, tablet 820.
 - Student reviews (owner 09.11.2026 «куча отзывов… на всех 8 языков, подумай где раздел»): `reviews.js`
   (`window.REVIEWS_DATA`, strict JSON: id, n {ru, lat}, d, s [rv|online|coach|full], t {ru original + 8 translations}) —
   20 reviews from his VK group (screenshots 09.11; Ivan Alekseevich had no text ⇒ skipped). Names = first name + surname
