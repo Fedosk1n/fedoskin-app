@@ -1078,4 +1078,20 @@
   Tested headless 390×844 ru + 375×667 en: day / dusk / night in every corner, tap walk, joystick, dialogs, a round opens from the city,
   save, fog, no tab without the link, 60 fps while walking (desktop Chrome), no errors. NOT on a real phone (smoothness, memory, how
   readable the clothes are on a small screen).
+  Graphics v2 (owner 13.11.2026 21:56 «слишком плоская картинка, добавь объёма… дома разной высоты… граффити на стены… застройку плотнее…
+  добавь красок… уныло… изобилие как в Heroes III»): the world shows the ROOF AND THE SOUTH WALL of everything with height (old strategy-map
+  look); people stay strictly top-down. A building keeps its cells: top = roof, bottom `wh` px = wall. `setMap` finds things as groups of
+  touching cells (`comps`: houses `# b h`, garages G, kiosk K, tent S, court a, cars C — all rectangles); `house(B)` derives wall colour
+  (WALLS), roof (ROOFS flat / tile / metal), height (home 88 px, tall block 136, `h` 36 / 50 / 64), windows, doors, shop fronts, graffiti spots
+  from the place (seed) — new houses = just letters on the map. `piece()` = big graffiti letters (made-up), on walls, garage doors, the far
+  fence. Chunks draw ground → court → shadows (`boxShadow`, to the right) → cell things row by row with the comps whose bottom row it is.
+  New map letters: `h` house / shed / shop, `u` bush, `f` flower bed (walkable), `a` sports court (walkable), `P` playground (swing / slide /
+  carousel / spring horse), `k` crates / barrels / tyres, `M` market stall; BLOCK in city.js = 'F#bGTKSXctDCLBhuPkM'. Yard map is much denser
+  (reachability of every place and b-boy checked by flood fill). Brighter palette, chalk drawings, leaves, zebra, 4 tree colours, lit windows
+  at night (`glow`, new every game day). city-gfx.js `?v=2`, city-data.js `?v=3`, city.js `?v=5`.
+  Same day: b-boys got NICKNAMES instead of names (owner: «Витёк "Шаг" звучит некорректно» — his list: Хромосома, Винт, Ураган, Амёба,
+  Кюрасао, Клик, Коготь, Нож; more in that style may be invented): yard = Клик (1) / Амёба (2) / Ураган (3, boss); ids vitek / lyoha / garik
+  stay (saves). The rest of the list is for the next districts (Project doc). WORDING RULE (owner): toprock and footwork are DANCED
+  («танцуют»), only powermoves are spun («крутят») — never «крутит топрок / футворк».
+  Pull-to-refresh no longer starts from the city map (`#city` in the ptr touchstart guard): a drag down there is the joystick.
   Not done yet: stretch mini-game, guard, other districts, balance by real play (no hand-played win yet), passers-by.

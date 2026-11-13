@@ -1760,9 +1760,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="hero.js?v=13"></script>
 <script src="rhythm.js?v=13"></script>
 <script src="city-balance.js?v=2"></script>
-<script src="city-data.js?v=2"></script>
-<script src="city-gfx.js?v=1"></script>
-<script src="city.js?v=4"></script>
+<script src="city-data.js?v=3"></script>
+<script src="city-gfx.js?v=2"></script>
+<script src="city.js?v=5"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -6189,7 +6189,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const t = e.touches[0]; if (t.clientX < 28) { scr = null; return; } // left edge is the back swipe
       // not from the lesson's video (owner 13.11.2026: a long lesson «перезагрузился и начал сначала» — a drag down on the
       // video could reload the whole app)
-      if (e.target && e.target.closest && e.target.closest('#stage, .stage, #lessonPlayer')) { scr = null; return; }
+      if (e.target && e.target.closest && e.target.closest('#stage, .stage, #lessonPlayer, #city')) { scr = null; return; }   // #city: a drag down on the map is walking (owner 13.11.2026)
       sy = t.clientY; sx = t.clientX; dy = 0; active = true; decided = false;
     }, { passive: true });
     document.addEventListener('touchmove', e => {

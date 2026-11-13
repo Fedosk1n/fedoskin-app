@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
-  const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLB', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
+  const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLBhuPkM', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
   let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   let hdir = 0, hdist = 0, moved = 0, lookKey = '', lookNow = null, npcLook = {}, warmUp = {}, birdAway = {};
@@ -140,7 +140,7 @@
     if (ng > 0) {
       const ki = DIST.places.find(p => p.type === 'kiosk'), L = GFX.lightsNow(ox, oy, W, H, dayN(), !!ki && inH(h, ki.open));
       L.push(me.f.fire ? { px: hx, py: hy, r: 1.6 * TS, a: .8 } : { px: hx, py: hy, r: 1.25 * TS, a: .42 });   // the hero is always readable in the dark
-      GFX.night(cx, W, H, ng, L); GFX.glow(cx, ox, oy, L, ng); cx.imageSmoothingEnabled = false;
+      GFX.night(cx, W, H, ng, L); GFX.glow(cx, ox, oy, L, ng, W, H); cx.imageSmoothingEnabled = false;
     }
     GFX.fog(cx, S.fog[S.d], ox, oy);
     DIST.places.forEach(p => {
