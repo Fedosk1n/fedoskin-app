@@ -8,7 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=1';
+import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=2';
+import { initGame } from './city3d-game.js?v=3';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -654,7 +655,7 @@ async function build(scene) {
 
   // ---- people ----
   const look = myLook();
-  W.hero = person(look); W.hero.root.position.set(1.2, 0, -2.6); W.hero.root.rotation.y = Math.PI; scene.add(W.hero.root);
+  W.hero = mocapPerson(look); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(1.2, 0, -2.6); W.hero.root.rotation.y = Math.PI; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: Math.PI, ph: 0, idle: 0, tgt: null };
   const crewLooks = [[3, ['c:rustyBandana']], [5, ['c:owlPhones', 'knee']], [6, ['girl', 'c:acidBucket']], [7, ['c:goldChain']], [4, ['c:djGloves']]];
   crewLooks.forEach(([lv, acc], i) => {
@@ -666,6 +667,7 @@ async function build(scene) {
   });
   W.turn = { who: +Q.get('set') || 0, start: 0, plan: null };
 }
+function heroLv() { if (Q.get('lv')) return +Q.get('lv'); try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60) || 1; } catch (_) { return 1; } }
 function myLook() {
   const lv = +Q.get('lv') || (() => { try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60); } catch (_) { return 4; } })() || 4;
   let eq = []; try { eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
@@ -739,6 +741,7 @@ function collide(x, z, r) {
 }
 function updateHero(dt, tb) {
   const H = W.hero, s = H.st, p = H.root.position;
+  if (W.lock) return;
   let ix = 0, iz = 0;
   if (ctl.joy) { const dx = ctl.x - ctl.sx, dy = ctl.y - ctl.sy, l = Math.hypot(dx, dy); if (l > 6) { const k = Math.min(1, l / 42); ix = dx / l * k; iz = dy / l * k; } }
   const K = ctl.keys || {}; if (K.ArrowLeft || K.a) ix -= 1; if (K.ArrowRight || K.d) ix += 1; if (K.ArrowUp || K.w) iz -= 1; if (K.ArrowDown || K.s) iz += 1;
@@ -753,11 +756,22 @@ function updateHero(dt, tb) {
   }
   H.root.rotation.y = s.face;
   const k = clamp(sp / SPD, 0, 1);
-  if (k > .08) { s.ph += dt * (4 + 7 * k); s.idle = 0; s.prev = blend(MOVES.bounce(tb), MOVES.walk(s.ph, k), clamp(k * 2, 0, 1)); }
-  else { s.idle += dt; const near = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5;
-    const tp = s.idle > 3 || near ? MOVES.toprock(tb) : MOVES.bounce(tb); const pose = s.prev ? blend(s.prev, tp, clamp(s.idle * 4, 0, 1)) : tp; if (s.idle > .3) s.prev = null; s.prevIdle = pose; apply(H, pose); return; }
-  apply(H, s.prev);
+  // base = motion capture (Ready / toprock near the cypher), walking = leg and arm swings added on top of the base pose
+  const nearC = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5;
+  if (k > .08) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); }
+  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready'; if (H.cur !== want) H.play(want, { fade: .35 }); }
+  H.mixer.update(dt);
+  s.wk = lerp(s.wk || 0, k > .08 ? k : 0, 1 - Math.exp(-dt * 10));
+  if (s.wk > .02) {
+    s.ph += dt * (5 + 6 * k); const sn = S(s.ph), w = s.wk, B = H.B;
+    const rx = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_X, a)), rz = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_Z, a));
+    rx(B.LeftUpLeg, .5 * sn * w); rx(B.RightUpLeg, -.5 * sn * w);
+    rx(B.LeftLeg, -.75 * Math.max(0, -Cc(s.ph)) * w); rx(B.RightLeg, -.75 * Math.max(0, Cc(s.ph)) * w);
+    rz(B.LeftArm, -.35 * sn * w); rz(B.RightArm, -.35 * sn * w);
+    B.Hips.position.y -= .03 * Math.abs(Cc(s.ph)) * w;
+  }
 }
+const _q = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0), _Z = new THREE.Vector3(0, 0, 1);
 
 // ---------- music ----------
 let musicOn = false, musicT0 = 0;
@@ -791,6 +805,7 @@ async function boot() {
 
   await loadMocap();
   await build(scene);
+  const GAME = initGame({ scene, W, circ, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
@@ -819,10 +834,14 @@ async function boot() {
     requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     const tb = ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
-    updateHero(dt, tb); updateCrew(tb, dt);
+    updateHero(dt, tb); updateCrew(tb, dt); GAME.update(dt);
     // camera follows with a little lead in the walking direction
     const s = W.hero.st; look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 + s.vz * .25);
-    camLook.lerp(look, 1 - Math.exp(-dt * 4)); camPos.copy(camLook).add(off); camera.position.copy(camPos); camera.lookAt(camLook);
+    if (W.camT) look.set(W.camT.x, 0, W.camT.z);
+    camLook.lerp(look, 1 - Math.exp(-dt * 4)); W.zoom = lerp(W.zoom || 1, W.camT ? W.camT.zoom : 1, 1 - Math.exp(-dt * 3));
+    camPos.copy(camLook).addScaledVector(off, W.zoom); camera.position.copy(camPos);
+    if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
+    camera.lookAt(camLook);
     moon.position.set(camLook.x - 9, 22, camLook.z - 6); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
@@ -839,6 +858,6 @@ async function boot() {
       fpsN = 0; fpsT = 0; }
   };
   requestAnimationFrame(frame);
-  window.CITY3D = { W, camera, scene, renderer, MOVES, apply, setPose: (i, m, t) => apply(W.crew[i], MOVES[m](t)) };
+  window.CITY3D = { W, camera, scene, renderer, GAME };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });

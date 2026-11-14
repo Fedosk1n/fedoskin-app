@@ -1244,3 +1244,18 @@
   mocap persons; SETS = rounds toprock (stepping in) → to ground → footwork → power → freeze (cut lengths in s), then Bboy_Uprock back; watchers
   loop Ready. `?set=N` starts with round N. Hero still uses the old hand-made rig (no walk clip in Mixamo). Missing in Mixamo: windmill,
   airflare, backspin, 2000 (need video capture service later). Checked headless with side views of every clip (poses correct).
+- City 3D GAME, step 1 (owner 14.11.2026 20:30 «продолжай… интересно: понятная система прогресса, ограниченная энергия, батлы на авто, но
+  красиво — случайные комбинации, случайные исходы, падения; тапание — только во вкладке Батлы с реальными людьми»): `city3d-game.js` (`?v=3`,
+  initGame(ctx) from city3d.js). Save `fedoskin-city3d` {en, day, lsec, rep, wins, beat, own, fights} — SEPARATE from the flat city save for now
+  (street gear won here is NOT yet in the app wardrobe — merge when the 3D city replaces the flat one). BAL: energy max 100, start 60, battle 20,
+  +5 per lesson minute (stats.sec delta, no backlog), new day → at least 40; respect for wins (12 × crew lv + 6 clean) → 6 ranks (Новичок двора …
+  Легенда района) with a bar; HUD chips ⚡ / ★ (tap = explanation sheet + «К урокам»). CREWS: Ржавые 1, Кислотные 2, Ночные совы 3, Золотые
+  зубы 4 — mocap people in their gear, ground ring + name sprite; within 3.1 m a button «⚔️ Батл с … · −20 ⚡» (low energy ⇒ «посмотри урок»).
+  AUTO BATTLE: camera zooms in, both step in with toprock; turns opp → me (×2 rounds for lv ≥ 3); a turn = random toprock → Uprock_To_Ground →
+  footwork → power (by level: swipes 1, headspin 2, flare 3, 1990 4) → freeze (Footwork_To_Freeze from 1.3 s / Crossleg) with outcomes:
+  power fail chance .13 + risk − .06 × (lv − move lv) ⇒ CRASH (procedural fall: rig tilts and drops, slow-mo, camera shake, gets up), +0.5 for
+  the try, no freeze; freeze fail ⇒ soft fall. Points: top 1, footwork 1.5, power 2–4, freeze 2, style .15 × lv + random. 3 judges = score diff +
+  noise; win ⇒ respect, gear (1st win → 1st piece, 3rd → 2nd), crew gone till tomorrow; loss ⇒ «К урокам — стать сильнее». Simulated win rates:
+  equal level 50 %, +1 ≈ 70 %, +2 ≈ 80 %. «Пропустить» counts the rest instantly. Hero = mocap person too: Ready / Bboy_Uprock base +
+  procedural walk swings on the bones (UpLeg/Leg about local X, Arms about local Z — signs found numerically). `?lv=N` overrides the level.
+  Tested headless 390×844: approach → button → battle → falls / clean → judges → reward → save; no errors. NOT on a real phone. Texts Russian only.
