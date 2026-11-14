@@ -1234,3 +1234,13 @@
   People = joint rigs from HERO.topDown looks (hero = my look incl. street gear); the crew of 5 dances in the cypher in turns on the city beat
   (RB.bgm, 🎵 button). Drag = joystick. Auto quality: fps < 40 ⇒ fewer pixels, then no bloom; `?fps` shows fps. Tested headless 390×844
   (swiftshader): renders, walks, no errors. NOT seen on a real phone yet (speed, heat, battery).
+- City 3D dancers on MOTION CAPTURE (owner 14.11.2026: «элементы выглядят неправильно, кроме хедспина»; Fable's note: hand-posed from one
+  angle can't be right; owner asked to copy a PS game's library — refused (copyright), Mixamo chosen instead; owner logged in, Claude
+  downloaded 24 clips via Claude in Chrome — Chrome blocks multiple downloads until mixamo.com is allowed in
+  chrome://settings/content/automaticDownloads). `anim/bboy.json` (~800 KB, 316 KB gzip): 24 clips (uprocks ×5, uprock→ground, footwork 1–3,
+  footwork→freeze, swipes, 1990, flair, headspin start/spin/end, freezes ×6, ready, ending), 22-bone Mixamo rest pose. Converter: tools/mocap.
+  `city3d-mocap.js` (`?v=1`): loadMocap(), mocapPerson(look) = THREE.Bone skeleton + our own low-poly body/clothes per bone (HERO.topDown
+  colours, hats, chain, stripes, cuffs, girl ponytail), AnimationMixer, J.play(name, {fade, speed, once, at}). city3d.js `?v=2`: the crew =
+  mocap persons; SETS = rounds toprock (stepping in) → to ground → footwork → power → freeze (cut lengths in s), then Bboy_Uprock back; watchers
+  loop Ready. `?set=N` starts with round N. Hero still uses the old hand-made rig (no walk clip in Mixamo). Missing in Mixamo: windmill,
+  airflare, backspin, 2000 (need video capture service later). Checked headless with side views of every clip (poses correct).

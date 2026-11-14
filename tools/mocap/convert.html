@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><body>
+<script type="importmap">{"imports":{"three":"./three.module.js","three/addons/":"./lib/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from './lib/loaders/FBXLoader.js';
+window.inspect = async (f) => {
+  const o = await new FBXLoader().loadAsync('../in/' + f);
+  const bones = []; o.traverse(n => { if (n.isBone) bones.push({ n: n.name, p: n.parent && n.parent.isBone ? n.parent.name : null, pos: n.position.toArray().map(v => +v.toFixed(3)), q: n.quaternion.toArray().map(v => +v.toFixed(4)) }); });
+  const c = o.animations[0];
+  return { bones, clips: o.animations.length, dur: c.duration, tracks: c.tracks.map(t => t.name + ':' + (t.times.length)) , scale: o.scale.toArray() };
+};
+
+const KEEP = ['Hips','Spine','Spine1','Spine2','Neck','Head','LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand','LeftUpLeg','LeftLeg','LeftFoot','LeftToeBase','RightUpLeg','RightLeg','RightFoot','RightToeBase'];
+window.convert = async (f) => {
+  const o = await new FBXLoader().loadAsync('../in/' + f);
+  const clip = o.animations.reduce((a, b) => (b.duration > a.duration ? b : a));
+  const rest = {}; const seen = new Set();
+  o.traverse(n => { if (!n.isBone) return; const k = n.name.replace('mixamorig', ''); if (!KEEP.includes(k) || seen.has(k)) return; seen.add(k);
+    let p = n.parent; while (p && !(p.isBone && KEEP.includes(p.name.replace('mixamorig','')) && p.name !== n.name)) p = p.parent;
+    rest[k] = { p: p ? p.name.replace('mixamorig','') : null, pos: n.position.toArray().map(v => +(v / 100).toFixed(4)), q: n.quaternion.toArray().map(v => +v.toFixed(4)) }; });
+  const fps = 30, n = Math.max(2, Math.round(clip.duration * fps) + 1), T = [];
+  const tracks = {};
+  for (const t of clip.tracks) {
+    const [bn, prop] = t.name.split('.'); const k = bn.replace('mixamorig', '');
+    if (!KEEP.includes(k)) continue; if (prop === 'position' && k !== 'Hips') continue; if (prop === 'scale') continue;
+    const it = t.createInterpolant(), out = [];
+    for (let i = 0; i < n; i++) { const v = it.evaluate(Math.min(clip.duration, i / fps)); for (const x of v) out.push(prop === 'position' ? Math.round(x) / 100 : Math.round(x * 1000) / 1000); }
+    tracks[k + (prop === 'position' ? '.p' : '.q')] = out;
+  }
+  return { name: f.replace('.fbx', ''), dur: +clip.duration.toFixed(3), fps, n, clips: o.animations.map(c => c.name + ':' + c.duration.toFixed(2)), rest, tracks };
+};
+window.ready = true;
+</script></body></html>

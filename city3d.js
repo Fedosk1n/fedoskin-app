@@ -8,6 +8,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=1';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -657,13 +658,13 @@ async function build(scene) {
   W.hero.st = { vx: 0, vz: 0, face: Math.PI, ph: 0, idle: 0, tgt: null };
   const crewLooks = [[3, ['c:rustyBandana']], [5, ['c:owlPhones', 'knee']], [6, ['girl', 'c:acidBucket']], [7, ['c:goldChain']], [4, ['c:djGloves']]];
   crewLooks.forEach(([lv, acc], i) => {
-    const J = person(HERO.topDown(lv, acc)), a = -Math.PI / 2 + (i - (crewLooks.length - 1) / 2) * .78 + (i >= 3 ? Math.PI * .55 : 0);
+    const J = mocapPerson(HERO.topDown(lv, acc)), a = -Math.PI / 2 + (i - (crewLooks.length - 1) / 2) * .78 + (i >= 3 ? Math.PI * .55 : 0);
     const slot = { x: cx + Math.cos(a) * 2.75, z: cz + Math.sin(a) * 2.75 };
     J.root.position.set(slot.x, 0, slot.z); scene.add(J.root);
-    J.c = { slot, ph: Math.random(), mood: 'idle', x: slot.x, z: slot.z };
+    J.c = { slot, ph: Math.random(), mood: 'idle', x: slot.x, z: slot.z }; J.play('Breakdance_Ready', { at: Math.random(), speed: .9 + Math.random() * .2 });
     W.crew.push(J); circ(slot.x, slot.z, .32);
   });
-  W.turn = { who: 0, start: 0, plan: null };
+  W.turn = { who: +Q.get('set') || 0, start: 0, plan: null };
 }
 function myLook() {
   const lv = +Q.get('lv') || (() => { try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60); } catch (_) { return 4; } })() || 4;
@@ -673,42 +674,38 @@ function myLook() {
   return HERO.topDown(Math.max(lv, Q.get('lv') ? 1 : 4), eq);
 }
 
-// ---------- the cypher: one dancer at a time goes into the middle ----------
+// ---------- the cypher: one dancer at a time goes into the middle (motion capture) ----------
+// a round = toprock while stepping in → drop to the floor → footwork → power → freeze → toprock back to the place
 const SETS = [
-  [['toprock', 8], ['windmill', 8], ['freeze', 4]],
-  [['kick', 6], ['headspin', 6], ['freeze', 4]],
-  [['toprock', 6], ['flare', 6], ['windmill', 4], ['freeze', 4]],
+  [['Breakdance_Uprock', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_1', 1], ['Breakdance_Swipes', 1], ['Breakdance_Freeze_Var_1', 1, 3.6]],
+  [['Brooklyn_Uprock', 1, 4.2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_2', 1], ['Breakdance_1990', 6], ['Breakdance_Freezes', 1, 4]],
+  [['Breakdance_Uprock_Var_1', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_3', 1], ['Flair', 4], ['Crossleg_Freeze', 1]],
+  [['Bboy_Uprock', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_1', 1], ['Headspin_Start', 1], ['Head_Spinning', 5], ['Headspin_End', 1], ['Breakdance_Freeze_Var_3', 1, 4]],
+  [['Breakdance_Uprock_Var_2', 1, 4], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_To_Freeze', 1]],
 ];
-function planSet(n) { const s = SETS[n % SETS.length], out = []; let t = 0; s.forEach(([m, d]) => { out.push({ m, a: t, b: t + d }); t += d; }); return { list: out, len: t }; }
-function dancerPose(plan, tb) {
-  const L = plan.list; let i = L.findIndex(s => tb < s.b); if (i < 0) i = L.length - 1;
-  const s = L[i], p = MOVES[s.m](tb - s.a), X = .35;
-  if (i > 0 && tb - s.a < X) { const q = L[i - 1], pp = MOVES[q.m](q.b - q.a); pp.yaw = p.yaw; return { pose: blend(pp, p, ease((tb - s.a) / X)), m: s.m }; }
-  return { pose: p, m: s.m };
-}
-function updateCrew(tb, dt) {
-  const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length;
-  if (!T.plan) { T.plan = planSet(T.who); T.start = tb; }
-  const rel = tb - T.start, walk = 2, total = walk + T.plan.len + walk;
+const POWER = /Swipes|1990|Flair|Head_Spinning/, FRZ = /Freeze/;
+function planSet(n) { const s = SETS[n % SETS.length], out = []; let t = 0;
+  s.forEach(([c, rep, cut]) => { const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
+function updateCrew(_tb, dt) {
+  const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
+  if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; }
+  const rel = now - T.start, walk = 2.2, back = 2.2, J = W.crew[T.who % n], c = J.c;
   let freezeNow = false;
-  W.crew.forEach((J, i) => {
-    const c = J.c;
-    if (i === T.who % n) {
-      let x, z, face, pose;
-      if (rel < walk) { const k = ease(rel / walk); x = lerp(c.slot.x, cx, k); z = lerp(c.slot.z, cz, k); face = Math.atan2(cx - c.slot.x, cz - c.slot.z); pose = MOVES.walk(rel * PI * 2, .8); }
-      else if (rel < walk + T.plan.len) { x = cx; z = cz; face = Math.atan2(W.hero.root.position.x - cx, W.hero.root.position.z - cz) * .0 + Math.PI * .1; const d = dancerPose(T.plan, rel - walk); pose = d.pose; freezeNow = d.m === 'freeze'; }
-      else { const k = ease(clamp((rel - walk - T.plan.len) / walk, 0, 1)); x = lerp(cx, c.slot.x, k); z = lerp(cz, c.slot.z, k); face = Math.atan2(c.slot.x - cx, c.slot.z - cz); pose = MOVES.walk(rel * PI * 2, .8); }
-      J.root.position.set(x, 0, z); J.root.rotation.y = face; apply(J, pose);
-    }
+  if (rel < T.plan.len) {
+    const i = T.plan.list.findIndex(s => rel < s.b); const s = T.plan.list[i];
+    if (i !== T.seg) { T.seg = i; J.play(s.c, { fade: i ? .3 : .35 }); }
+    const k = ease(clamp(rel / walk, 0, 1)); J.root.position.set(lerp(c.slot.x, cx, k), 0, lerp(c.slot.z, cz, k));
+    J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z);
+    freezeNow = FRZ.test(s.c) && rel - s.a > .8; W.power = POWER.test(s.c);
+  } else if (rel < T.plan.len + back) {
+    if (!T.out) { T.out = true; J.play('Bboy_Uprock', { fade: .4 }); }
+    const k = ease((rel - T.plan.len) / back); J.root.position.set(lerp(cx, c.slot.x, k), 0, lerp(cz, c.slot.z, k)); W.power = false;
+  } else { J.play('Breakdance_Ready', { fade: .5, speed: .95 }); J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z); T.who++; T.plan = null; }
+  W.crew.forEach((D, i) => {
+    if (D !== J) { const face = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.root.position.set(D.c.slot.x, 0, D.c.slot.z); D.root.rotation.y = face; }
+    D.mixer.update(dt);
   });
-  W.crew.forEach((J, i) => {
-    if (i === T.who % n) return;
-    const c = J.c, face = Math.atan2(cx - c.slot.x, cz - c.slot.z);
-    J.root.position.set(c.slot.x, 0, c.slot.z); J.root.rotation.y = face;
-    const mood = freezeNow ? (i % 2 ? 'cheer' : 'clap') : (i % 3 === 0 ? 'clap' : i % 3 === 1 ? 'bounce' : 'idle');
-    apply(J, MOVES[mood](tb + c.ph * .3, c.ph));
-  });
-  if (rel > total) { T.who++; T.plan = null; }
+  W.freezeNow = freezeNow;
 }
 
 // ---------- controls ----------
@@ -792,6 +789,7 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
+  await loadMocap();
   await build(scene);
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);

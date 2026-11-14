@@ -62,7 +62,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   starter gate for new players, rare/mythic moves, points for fresh lessons, coach bridge.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
 - City 3D (draft, separate page, not linked): see the last section of the full notes. Owner's direction 14.11: top-down 3D like his
-  reference video; next = correct the dance moves from his element videos (frames → key poses), then port mechanics one by one.
+  reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
+  missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Next: hero on mocap, then port mechanics.
 
 ## Testing habits
 - Local server: `python3 -m http.server 8765` in the repo; Playwright headless at 390×844 (iPhone) and 375×667, ru + en.
