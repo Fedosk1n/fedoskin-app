@@ -369,7 +369,7 @@
     const pose = (F, now) => { if (!F.J) return; let M = MV[F.mv] || MV.idle, u = (now - F.t0) / 1000 / M.dur; if (u >= 1 && !F.loop) { F.mv = F.base; F.loop = true; F.t0 = now; M = MV[F.mv] || MV.idle; u = 0; }
       if (F.loop && F.mv === F.base) { const nb = Math.max(1, Math.round(M.dur * 1000 / spb)); u = (((now - b0) / spb / nb) % 1 + 1) % 1; }   // the steps a dancer repeats go in time with the beat
       try { HR.setPose(F.J, M.f(u % 1)); } catch (_) {} };
-    const BEATS = (D.RB.BEATS || []), beat = BEATS.length ? BEATS[Math.min(BEATS.length - 1, Math.floor((o.lvl - 1) / 2))] : null, stopJam = D.RB.jam && beat ? D.RB.jam(beat.id, 32) : null;
+    const BEATS = (D.RB.BEATS || []), beat = BEATS.length ? BEATS[Math.min(BEATS.length - 1, Math.floor((o.lvl - 1) / 2))] : null, stopJam = (D.RB.bgm && D.RB.bgm(false), D.RB.jam && beat ? D.RB.jam(beat.id, 32) : null);
     // in time with the beat (owner 14.11.2026): every arrow jumps out exactly on a beat or half a beat, the dancers and the stage move to it.
     // No sound (muted phone) — the same grid runs silently.
     const spb = stopJam && stopJam.spb ? stopJam.spb : 60000 / ((beat && beat.bpm) || 100), b0 = stopJam && stopJam.t0 ? stopJam.t0 : performance.now() + 60;
@@ -580,16 +580,17 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn(), turfs().filter(mine).length].join('|'); if (k === hudKey) return; hudKey = k;
+    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn(), turfs().filter(mine).length, musOn].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
       '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
       '<button type="button" class="cybag" id="cyBag" aria-label="' + T('Рюкзак') + '">🎒</button>' +
       '<div class="cyrow2"><div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>' +
+      '<button type="button" class="cygl" id="cyMus" aria-label="' + T('Музыка') + '" aria-pressed="' + musOn + '">' + (musOn ? '🎵' : '🔇') + '</button>' +
       '<button type="button" class="cygl' + (gd === 3 ? ' ok' : '') + '" id="cyGoals" aria-label="' + T('Дела на сегодня') + '">📋 ' + gd + ' / 3</button>' +
       (turfs().length && S.tut ? '<div class="cyfl">👑 ' + turfs().filter(mine).length + ' / ' + turfs().length + '</div>' : '') + (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') + (djOn() ? '<div class="cyfl">🎧 ' + T('Бит качает') + '</div>' : '') +
       (S.job ? '<div class="cyjob' + (S.job.left < 6 ? ' hot' : '') + '">🌯 ' + Math.max(0, Math.ceil(S.job.left)) + '</div>' : '') + '</div>';
-    hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg);
+    hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg); hud.querySelector('#cyMus').addEventListener('click', musToggle);
   }
   // buttons: [{ t: text, fn, cls, off }] — a button without fn just closes
   function dlg(title, html, btns) {
@@ -705,6 +706,7 @@
   function openRound(opt, onCity) {
     if (D.gate && D.gate()) return false;   // a new phone: battles are closed until the basic lessons are studied — the app's own sheet leads to them
     const ms = movesState(); if (ms.hole >= 0) { needBase(ms); return false; }
+    if (D.RB.bgm) D.RB.bgm(false);
     pend = opt.pend; save();
     D.RB.open({ level: ms.lvl, eq: D.look(), me: D.me(), opp: opt.opp || null, dj: opt.beat, ul: ms.ul,
       city: { ban: ms.ban, fw: S.own.includes('kicks') ? B.item.kicksMs / 1000 : 0, cor: S.own.includes('hat') ? B.item.hatPx : 0 },
@@ -846,12 +848,23 @@
   }
   function frame(now) {
     raf = 0; timer = 0; if (!shown || document.hidden) return;
+    if (now - musT > 400) { musT = now; music(); }
     const dt = Math.min(.25, (now - last) / 1000 || 0); last = now;
     if (D.rbEl.hidden && duEl.hidden && spEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
     if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else if (S.job || floats.length) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 66);   // ~15 frames a second: residents, the car, coins move
   }
+  // background beat (owner 14.11.2026): only while the city is on screen, not during a dance-off / round / spray, not when folded.
+  // Off switch `fedoskin-city-music` = '0' (HUD button 🎵 / 🔇).
+  let musOn = true; try { musOn = localStorage.getItem('fedoskin-city-music') !== '0'; } catch (_) {}
+  let musT = 0;
+  function music() {
+    if (!D || !D.RB || !D.RB.bgm) return;
+    const want = musOn && shown && !document.hidden && D.rbEl.hidden && duEl.hidden && spEl.hidden;
+    D.RB.bgm(want);
+  }
+  function musToggle() { musOn = !musOn; try { localStorage.setItem('fedoskin-city-music', musOn ? '1' : '0'); } catch (_) {} hudKey = ''; paintHud(); music(); }
   function kick() { if (!shown || document.hidden) return; clearTimeout(timer); timer = 0; if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function halt() { cancelAnimationFrame(raf); clearTimeout(timer); raf = 0; timer = 0; }
 
@@ -908,13 +921,13 @@
     setMap();
     can.addEventListener('pointerdown', down); can.addEventListener('pointermove', move); can.addEventListener('pointerup', up); can.addEventListener('pointercancel', () => { joy = null; });
     window.addEventListener('resize', () => { W = 0; kick(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { halt(); if (shown) save(); } else kick(); });   // pause when the app is folded
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { halt(); if (shown) save(); } else kick(); music(); });   // pause when the app is folded
     window.addEventListener('pagehide', () => { if (shown) save(); });
     // the round was left before its end (back / swipe): the stake and the energy stay spent
     new MutationObserver(() => { if (!D.rbEl.hidden) return; if (pend) { const k = pend.kind; pend = null; if (shown) D.toast(k === 'battle' ? T('Ты ушёл из круга — ставка сгорела') : T('Шоу сорвалось — энергия потрачена')); save(); } hudKey = ''; kick(); })
       .observe(D.rbEl, { attributes: true, attributeFilter: ['hidden'] });
   }
-  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
-  function hide() { if (!shown) return; shown = false; halt(); save(); }
+  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); music(); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
+  function hide() { if (!shown) return; shown = false; halt(); save(); music(); }
   window.CITY = { init, show, hide, _duel: () => duApi, _spray: () => spApi, _walls: () => walls().map(p => ({ id: p.id, at: p.at, mine: mine(p), open: p.type === 'turf' ? openLeft(p) : -1, hold: holdLeft(p), rect: GFX.wallRect(p.id) })), _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

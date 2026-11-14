@@ -577,8 +577,10 @@
     } catch (_) { return null; }
   }
   // the hiss of a spray can while the finger paints (the city's graffiti)
+  // NOTE: must NOT be called hiss — the drum helper hiss(out, t, …) above lives in the same scope, and a second
+  // `function hiss` replaced it: every snare / hat then switched on an endless spray hiss (owner 14.11.2026 «шипение не ушло»).
   let hissN = null;
-  function hiss(on) {
+  function sprayHiss(on) {
     try {
       if (on) {
         if (hissN || !audioOn()) return; let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {} if (mute) return;
@@ -586,6 +588,43 @@
         g.gain.value = 0; g.gain.setTargetAtTime(.12, ctx.currentTime, .03); src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(); hissN = { src, g };
       } else if (hissN) { const h = hissN; hissN = null; h.g.gain.setTargetAtTime(0, ctx.currentTime, .04); setTimeout(() => { try { h.src.stop(); h.g.disconnect(); } catch (_) {} }, 260); }
     } catch (_) { hissN = null; }
+  }
+
+  // background music of the city (owner 14.11.2026 «хип-хоп музыку фоном… цикл бита, с басом»): a 2-bar boom-bap loop at 88 BPM,
+  // kick + snare + swung hats + a bass line + soft keys, scheduled ~0.6 s ahead by a timer. bgm(true) / bgm(false).
+  let bgN = null;
+  function bgm(on) {
+    try {
+      if (on) {
+        if (bgN) return; if (!audioOn()) return;
+        const out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination); out.gain.setTargetAtTime(.34, ctx.currentTime, .4);
+        const spb = 60 / 88, st = spb / 4, bar = st * 16;
+        const K = [[0, 7, 10], [0, 3, 8, 10]], SN = [4, 12], BS = [[[0, 55, 3], [7, 55, 2], [10, 65.41, 4]], [[0, 49, 3], [3, 49, 2], [8, 43.65, 2], [10, 49, 4]]],
+          CH = [[220, [1, 1.189, 1.498]], [174.61, [1, 1.26, 1.498]]];
+        const N = { out, at: ctx.currentTime + .15, i: 0, tm: 0 };
+        const fill = () => {
+          if (!bgN || bgN !== N) return;
+          while (N.at < ctx.currentTime + .6) {
+            const b = N.i % 2, t = N.at;
+            for (let k = 0; k < 16; k++) {
+              const sw = (k % 2) ? st * .16 : 0, tt = t + k * st + sw;   // swing on the off 16ths
+              if (K[b].includes(k)) kick(out, tt, .9);
+              if (SN.includes(k)) snare(out, tt, .55);
+              if (k % 2 === 0) hat(out, tt, k % 4 === 2 ? .16 : .1); else if (k === 15) hat(out, tt, .06);
+            }
+            BS[b].forEach(([k, f, d]) => bass(out, t + k * st, f, d * st, 'triangle', 380, .42));
+            chord(out, t, CH[b][0], CH[b][1], 'triangle', 1100, .035, bar * .9);
+            N.at += bar; N.i++;
+          }
+        };
+        bgN = N; fill(); N.tm = setInterval(fill, 200);
+        if (ctx.state !== 'running') { const go = () => { try { ctx.resume(); } catch (_) {} document.removeEventListener('pointerdown', go, true); }; document.addEventListener('pointerdown', go, true); }
+      } else if (bgN) {
+        const N = bgN; bgN = null; clearInterval(N.tm);
+        try { N.out.gain.cancelScheduledValues(ctx.currentTime); N.out.gain.setTargetAtTime(0, ctx.currentTime, .12); } catch (_) {}
+        setTimeout(() => { try { N.out.disconnect(); } catch (_) {} }, 900);
+      }
+    } catch (_) { bgN = null; }
   }
 
   // ---- 2: the round ----
@@ -976,5 +1015,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, jam, hiss, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, jam, hiss: sprayHiss, bgm, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

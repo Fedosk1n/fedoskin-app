@@ -1168,3 +1168,11 @@
   beat Acid → paint with another word (Cyrillic); too few cans; lazy painting + «Готово»; income next day; wall lost after 3 days; free wall; night;
   reload; an old save with a tag; arrows on the grid; crews / DJ / cypher regression; a full rhythm round still opens. NOT on a real phone: how the
   finger painting feels, the hiss and the beat (never heard by Claude), whether arrows FEEL on the beat with iPhone / Bluetooth audio delay.
+  HISS BUG + BACKGROUND BEAT (owner 14.11.2026 15:10 «шипение после батла с бандой… не ушло»; «хип-хоп музыку фоном… цикл бита, с басом»):
+  rhythm.js had TWO `function hiss` in one scope — the spray one (v5) replaced the drum helper, so every snare / hat of EVERY beat (city
+  jam AND the main rhythm battle) started an endless looping spray hiss. Spray is now `sprayHiss` (exported as RB.hiss); never reuse a
+  helper's name there. City music: `RB.bgm(on)` = 2-bar boom-bap loop 88 BPM (kick, snare, swung hats, triangle bass A–C / G–F, soft keys),
+  timer-scheduled 0.6 s ahead into its own gain → destination (.34). city.js `music()` (on show/hide/visibility + every 400 ms from frame):
+  on only while the city is shown, page visible, and no round / dance-off / spray overlay; duel() and openRound() stop it first. HUD button
+  `#cyMus` 🎵/🔇 = `fedoskin-city-music` ('0' = off). rhythm.js `?v=16`, city.js `?v=9`, i18n key «Музыка». Tested headless: a jam makes 0
+  looping sources; city on ⇒ beat, 🔇 / home tab ⇒ silent, dance-off ⇒ off, after it ⇒ back. Sound itself never heard by Claude.
