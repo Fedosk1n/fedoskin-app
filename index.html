@@ -65,6 +65,11 @@ p{margin:0}
    property, so it adds to buttons that already use transform for their position; quick in, soft back out */
 button,.btn,[role="button"]{transition:scale .16s cubic-bezier(.2,.8,.2,1)}
 :where(button:not(:disabled),.btn,[role="button"]):active{scale:.95;transition-duration:.05s} /* :where = lowest priority, the rules below win */
+/* every tap shows (owner 14.11.2026 «анимацию кнопок всех, чтобы понятно было что нажал»): a short squeeze-and-bounce with a light flash,
+   started from JS on pointerdown, so even a very quick tap on iPhone (where :active barely shows) is seen */
+.tapfx{animation:tapfx .34s cubic-bezier(.3,1.5,.5,1)}
+@keyframes tapfx{0%{scale:.88;filter:brightness(1.45)}45%{scale:1.05;filter:brightness(1.15)}100%{scale:1;filter:none}}
+@media (prefers-reduced-motion:reduce){.tapfx{animation:none}}
 .list-item:active,button.card:active,.svccard:active,.coachcard button:active{scale:.98}
 .fsk:active,.fsghost button:active,.fscorner:active{scale:1} /* these have their own press effect */
 .ph{background:repeating-linear-gradient(135deg,#1A1A1D 0 14px,#141416 14px 28px)}
@@ -1762,7 +1767,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="city-balance.js?v=5"></script>
 <script src="city-data.js?v=6"></script>
 <script src="city-gfx.js?v=5"></script>
-<script src="city.js?v=9"></script>
+<script src="city.js?v=10"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -6815,6 +6820,18 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const cq = qs.get('c'); if (cq && /^[a-z0-9]{2,24}$/.test(cq)) { history.replaceState(history.state, '', location.pathname); setTimeout(() => crsOpen(cq), 300); }
     const ca = qs.get('ca'); if (ca && /^[a-z0-9]{10}$/.test(ca)) { history.replaceState(history.state, '', location.pathname); setTimeout(() => { go(COURSES_ON.length ? 'courses' : 'home'); crsCodeOpen(ca); }, 400); }
   } catch (_) {}
+})();
+</script>
+<script>
+// tap feedback for every button of the app (CSS .tapfx above)
+(function(){
+  const SEL = 'button:not(:disabled),.btn,[role="button"],.cychip,.cysw';
+  document.addEventListener('pointerdown', e => {
+    const b = e.target && e.target.closest ? e.target.closest(SEL) : null; if (!b || b.getAttribute('aria-disabled') === 'true') return;
+    b.classList.remove('tapfx'); void b.offsetWidth; b.classList.add('tapfx');
+    if (navigator.vibrate && e.pointerType === 'touch') { try { navigator.vibrate(8); } catch (_) {} }
+  }, { capture: true, passive: true });
+  document.addEventListener('animationend', e => { if (e.animationName === 'tapfx' && e.target.classList) e.target.classList.remove('tapfx'); }, true);
 })();
 </script>
 </body>

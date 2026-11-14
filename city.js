@@ -152,12 +152,17 @@
   const STYLE = { tag: 'Тег', bubble: 'Бабл', block: 'Блокбастер', wild: 'Вайлдстайл', d3: '3D' }, PALN = ['fire', 'ice', 'candy', 'chrome', 'toxic', 'sunset'];
   const styleFrom = st => turfs().find(t => t.art.style === st);
   const styleOpen = st => { if (st === 'tag') return true; const t = styleFrom(st); return !t || (S.gwon[t.gang] || 0) > 0; };
+  // a wall you can paint right now (owner 14.11.2026 «непонятно, как рисовать и куда подойти»): a crew wall left without guard, or a clean wall
+  const paintable = pl => !!pl.wall && !S.tags[pl.id] && (pl.type === 'wall' || (pl.type === 'turf' && openLeft(pl) > 0));
+  let wallNear = '', tapFx = null;
+  // where to stand to paint a wall: its own cell if you can walk there, else the walkable cell next to it (below first — the wall faces south)
+  const standOf = pl => walk(pl.at[0], pl.at[1]) ? pl.at : ([[pl.at[0], pl.at[1] + 1], [pl.at[0] - 1, pl.at[1]], [pl.at[0] + 1, pl.at[1]], [pl.at[0], pl.at[1] - 1]].find(c => walk(c[0], c[1])) || pl.at);
   const openLeft = pl => { const t = S.gt[pl.gang]; return t == null ? 0 : Math.max(0, B.turf.open * 60 - (S.t - t)); };                                   // game minutes the wall stays without guard
   const holdLeft = pl => { const m = S.tags[pl.id]; return m ? Math.max(0, B.turf.hold * 1440 - (S.t - Math.max(m.t || 0, S.gt[pl.gang] || 0))) : 0; };   // game minutes till the crew takes it back
   const incomeOf = pl => { const g = gangOf(pl); return B.turf.income + B.turf.incomeLvl * (g ? g.lvl : 1); };
   const hrs = m => Math.max(1, Math.ceil(m / 60));
   const wallPic = (pl, a) => { const r = GFX.wallRect(pl.id); a = a || artOf(pl); return r && a ? '<div class="cygr"><img alt="" src="' + GFX.graf(Object.assign({ w: r.w, h: r.h, scale: 2 }, a)).toDataURL() + '" style="aspect-ratio:' + r.w + '/' + r.h + '"></div>' : ''; };
-  function goPlace(pl) { const way = route([pl.at]); if (!way) return; path = way; goal = () => openPlace(pl); if (!way.length) { goal = null; openPlace(pl); } kick(); }
+  function goPlace(pl) { const way = route([pl.wall ? standOf(pl) : pl.at]); if (!way) return; path = way; goal = () => openPlace(pl); if (!way.length) { goal = null; openPlace(pl); } kick(); }
   let turfMin = -1;
   function turfTick() {
     const m = Math.floor(S.t); if (m === turfMin) return; turfMin = m;
@@ -223,9 +228,10 @@
     path = []; goal = null; joy = null;
     const r = GFX.wallRect(pl.id), Q = B.turf, box = el.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
     const cw = Math.floor(Math.min(box.width - 20, 560, Math.max(120, box.height - padB - 250) * r.w / r.h)), ch = Math.round(cw * r.h / r.w), sc = cw / r.w * d;
-    spEl.innerHTML = '<div class="cysp-top"><b>' + esc(T(pl.name)) + '</b><small>' + T('Води пальцем по стене — закрась весь рисунок. Не стой на месте: краска потечёт.') + '</small></div>' +
-      '<div class="cysp-wall"><canvas id="cySpC" style="width:' + cw + 'px;height:' + ch + 'px"></canvas></div>' +
-      '<div class="cysp-row"><span>🎨</span><div class="cysp-bar"><i id="cySpP"></i></div><b id="cySpN">0 %</b></div>' +
+    spEl.innerHTML = '<div class="cysp-top"><b>' + esc(T(pl.name)) + '</b><small>' + T('Води пальцем по бледному рисунку, пока он не проявится целиком. Не задерживай палец на месте — краска потечёт.') + '</small></div>' +
+      '<div class="cysp-wall"><canvas id="cySpC" style="width:' + cw + 'px;height:' + ch + 'px"></canvas><div class="cysp-hint" id="cySpH"><i>👆</i><span>' + T('Води пальцем здесь') + '</span></div></div>' +
+      '<div class="cysp-row"><span class="cysp-l">' + T('Закрашено') + '</span><div class="cysp-bar cov"><i id="cySpC2" style="width:0"></i></div><b id="cySpN">0 %</b></div>' +
+      '<div class="cysp-row"><span class="cysp-l">' + T('Краска') + '</span><div class="cysp-bar"><i id="cySpP"></i></div><b></b></div>' +
       '<div class="cybt"><button type="button" class="btn btn-accent" id="cySpOk" style="visibility:hidden">' + T('Готово') + '</button><button type="button" class="btn btn-ghost" id="cySpNo">' + T('Отмена') + '</button></div>';
     spEl.hidden = false;
     const cv = spEl.querySelector('#cySpC'), c = cv.getContext('2d'); cv.width = Math.round(cw * d); cv.height = Math.round(ch * d);
@@ -244,7 +250,7 @@
       for (let b = y0; b <= y1; b++) for (let a = x0; a <= x1; a++) { const i = b * gw + a; if (need[i] && !got[i] && Math.hypot((a + .5) * GS - x, (b + .5) * GS - y) <= rr) { got[i] = 1; hit++; } }
       dirty = true;
     };
-    const hud2 = () => { spEl.querySelector('#cySpP').style.width = cl(100 - used / budget * 100, 0, 100) + '%'; spEl.querySelector('#cySpN').textContent = Math.min(100, Math.round(cov() * 100 / .97)) + ' %'; spEl.querySelector('#cySpOk').style.visibility = cov() < Q.min || over ? 'hidden' : 'visible'; };   // (keeps its room: the wall must not jump under the finger)
+    const hud2 = () => { spEl.querySelector('#cySpP').style.width = cl(100 - used / budget * 100, 0, 100) + '%'; const pc = Math.min(100, Math.round(cov() * 100 / .97)); spEl.querySelector('#cySpN').textContent = pc + ' %'; spEl.querySelector('#cySpC2').style.width = pc + '%'; spEl.querySelector('#cySpOk').style.visibility = cov() < Q.min || over ? 'hidden' : 'visible'; };   // (keeps its room: the wall must not jump under the finger)
     const close = () => { on = false; if (D.RB.hiss) D.RB.hiss(false); spEl.hidden = true; spEl.innerHTML = ''; spApi = null; paintHud(); kick(); };
     const finish = () => { if (over) return; over = true; on = false; if (D.RB.hiss) D.RB.hiss(false); fin = performance.now(); hud2();
       if (cov() < Q.min) { setTimeout(() => { close(); D.toast('🎨 ' + T('Краска кончилась раньше, чем рисунок. Попробуй ещё раз — баллончики целы.')); }, 500); return; }
@@ -252,7 +258,7 @@
       setTimeout(() => { close(); done(stars); }, 1150); };
     const at = e => { const q = cv.getBoundingClientRect(); return [cl(e.clientX - q.left, 0, cw), cl(e.clientY - q.top, 0, ch)]; };
     const spray = (x, y) => { if (over) return; const dist = Math.hypot(x - lx, y - ly), n = Math.max(1, Math.ceil(dist / (R0 * .3))); for (let i = 1; i <= n; i++) dot(lx + (x - lx) * i / n, ly + (y - ly) * i / n); used += dist; if (dist > 2) still = performance.now(); lx = x; ly = y; hud2(); if (used >= budget || cov() >= .97) finish(); };
-    cv.onpointerdown = e => { if (over) return; e.preventDefault(); on = true; [lx, ly] = at(e); still = performance.now(); dot(lx, ly); used += R0 * .5; if (D.RB.hiss) D.RB.hiss(true); try { cv.setPointerCapture(e.pointerId); } catch (_) {} hud2(); };
+    cv.onpointerdown = e => { if (over) return; e.preventDefault(); const hh = spEl.querySelector('#cySpH'); if (hh) hh.remove(); on = true; [lx, ly] = at(e); still = performance.now(); dot(lx, ly); used += R0 * .5; if (D.RB.hiss) D.RB.hiss(true); try { cv.setPointerCapture(e.pointerId); } catch (_) {} hud2(); };
     cv.onpointermove = e => { if (!on) return; let ev = []; try { ev = e.getCoalescedEvents ? e.getCoalescedEvents() : []; } catch (_) {} if (!ev.length) ev = [e]; ev.forEach(q => { const [x, y] = at(q); spray(x, y); }); };   // every point of the finger's way, not only the last one of a frame
     cv.onpointerup = cv.onpointercancel = () => { on = false; if (D.RB.hiss) D.RB.hiss(false); };
     spEl.querySelector('#cySpNo').addEventListener('click', () => { over = true; close(); });
@@ -502,6 +508,7 @@
     });
     // people: the b-boys sway, warm up now and then (and when you come up to them), and turn to the hero when he is near
     const mv = moved > now - 120, me = heroLook();
+    if (tapFx) { const u = (now - tapFx.t) / 450; if (u >= 1) tapFx = null; else { cx.save(); cx.strokeStyle = 'rgba(255,255,255,' + (.85 * (1 - u)).toFixed(2) + ')'; cx.lineWidth = 3; cx.beginPath(); cx.arc(ox + tapFx.x, oy + tapFx.y, 8 + 22 * u, 0, 7); cx.stroke(); cx.restore(); } }   // where the finger touched the map
     npcsNow().forEach(n => {
       if (!seen(n.at[0], n.at[1]) || !vis(n.at[0], n.at[1], 2 * TS)) return;
       const px = ox + n.at[0] * TS + TS / 2, py = oy + n.at[1] * TS + TS / 2, dx = hero.x - n.at[0], dy = hero.y - n.at[1], near = Math.hypot(dx, dy) < 3.2;
@@ -547,6 +554,16 @@
       if (p.wall) {   // a wall: the mark stands over the piece — whose it is, and whether it can be painted now
         const r = GFX.wallRect(p.id); if (!r) return; const sx = ox + r.x + r.w / 2, sy = oy + r.y - 13;
         if (S.tags[p.id]) { if (p.type === 'turf' && holdLeft(p) < 1440) label(sx, sy + 4, '⚠ ' + T('{h} ч', { h: hrs(holdLeft(p)) }), '#FF8A6A'); return; }
+        if (paintable(p)) {   // the wall glows, and a ring on the ground shows where to stand
+          const st = standOf(p), k = .5 + .5 * Math.sin(now / 260), gx = ox + st[0] * TS + TS / 2, gy = oy + st[1] * TS + TS / 2, here = wallNear === p.id;
+          cx.save(); cx.strokeStyle = 'rgba(59,209,111,' + (.55 + .45 * k).toFixed(2) + ')'; cx.lineWidth = 3; cx.setLineDash([10, 6]); cx.lineDashOffset = -now / 40;
+          cx.beginPath(); cx.roundRect(ox + r.x - 4, oy + r.y - 4, r.w + 8, r.h + 8, 6); cx.stroke(); cx.setLineDash([]);
+          cx.fillStyle = 'rgba(59,209,111,' + (.08 + .1 * k).toFixed(2) + ')'; cx.fillRect(ox + r.x, oy + r.y, r.w, r.h);
+          cx.strokeStyle = 'rgba(59,209,111,.9)'; cx.lineWidth = 2.5; cx.beginPath(); cx.ellipse(gx, gy + 6, 15 + 6 * k, 8 + 3 * k, 0, 0, 7); cx.stroke();
+          cx.fillStyle = 'rgba(59,209,111,.25)'; cx.beginPath(); cx.ellipse(gx, gy + 6, 13, 7, 0, 0, 7); cx.fill();
+          if (!here) { cx.font = '20px system-ui, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('🎨', gx, gy - 14 - 4 * k); label(gx, gy + 26, T('Рисовать здесь'), '#7BE3A0'); }
+          cx.restore();
+        }
         if (p.type === 'turf') { const free = openLeft(p) > 0; GFX.sign(cx, sx, sy - (free ? Math.round(4 * Math.abs(Math.sin(now / 220))) : 0), 'turf', free ? '#3BD16F' : gangOf(p).col); if (free) label(sx, sy + 22, T('Закрась!'), '#7BE3A0'); return; }
         GFX.sign(cx, sx, sy + Math.round(2 * Math.sin(now / 400 + p.at[0])), 'wall'); return;
       }
@@ -580,7 +597,7 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn(), turfs().filter(mine).length, musOn].join('|'); if (k === hudKey) return; hudKey = k;
+    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn(), turfs().filter(mine).length].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
       '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
@@ -811,7 +828,13 @@
     if (!dlgEl.hidden) return;
     const r = can.getBoundingClientRect(), ox = Math.round(W / 2 - cam.x * TS), oy = Math.round((H - padB) / 2 - cam.y * TS);
     const tx = Math.floor((e.clientX - r.left - ox) / TS), ty = Math.floor((e.clientY - r.top - oy) / TS);
-    if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return;
+    tapFx = { x: e.clientX - r.left - ox, y: e.clientY - r.top - oy, t: performance.now() };
+    if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) { kick(); return; }
+    {   // a tap on the wall picture itself (it sits on a building you can't walk on) ⇒ go to the spot in front of it
+      const mx = e.clientX - r.left - ox, my = e.clientY - r.top - oy;
+      const wp = walls().find(q => { const w = GFX.wallRect(q.id); return w && seen(q.at[0], q.at[1]) && mx >= w.x - 8 && mx <= w.x + w.w + 8 && my >= w.y - 8 && my <= w.y + w.h + 8; });
+      if (wp) { const way = route([standOf(wp)]); if (way) { path = way; goal = () => { wallNear = wp.id; openPlace(wp); }; if (!way.length) { goal = null; wallNear = wp.id; openPlace(wp); } kick(); return; } }
+    }
     const n = npcsNow().find(q => seen(q.at[0], q.at[1]) && q.at[0] === tx && (q.at[1] === ty || q.at[1] - 1 === ty)); // the b-boy or the name above him
     const pl = seen(tx, ty) ? placeAt(tx, ty) : null;
     const gg = seen(tx, ty) ? gangsNow().find(G => Math.abs(G.x - tx) <= 1 && Math.abs(G.y - ty) <= 1) : null;
@@ -828,6 +851,8 @@
   }
   function step(dt) {
     S.t += dt * 1440 / (B.dayMin * 60); jobTick(dt); collect(); turfTick();
+    if (wallNear) { const q = DIST.places.find(x => x.id === wallNear); if (!q || Math.hypot(standOf(q)[0] - hero.x, standOf(q)[1] - hero.y) > 1.4) wallNear = ''; }
+    if (dlgEl.hidden && duEl.hidden && spEl.hidden && !path.length) { const q = walls().find(x => paintable(x) && x.id !== wallNear && Math.hypot(standOf(x)[0] - hero.x, standOf(x)[1] - hero.y) < .6); if (q) { wallNear = q.id; joy = null; openPlace(q); } }   // stepped onto the ring ⇒ the paint dialog opens
     if (dlgEl.hidden && duEl.hidden && !S.job && performance.now() > gangCool) { const G = gangsNow().find(q => Math.hypot(q.x - hero.x, q.y - hero.y) < 1.15); if (G) { path = []; goal = null; joy = null; openGang(G); } }
     if (joy && joy.on) {
       const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
@@ -864,7 +889,7 @@
     const want = musOn && shown && !document.hidden && D.rbEl.hidden && duEl.hidden && spEl.hidden;
     D.RB.bgm(want);
   }
-  function musToggle() { musOn = !musOn; try { localStorage.setItem('fedoskin-city-music', musOn ? '1' : '0'); } catch (_) {} hudKey = ''; paintHud(); music(); }
+  function musToggle() { musOn = !musOn; try { localStorage.setItem('fedoskin-city-music', musOn ? '1' : '0'); } catch (_) {} const b = hud.querySelector('#cyMus'); if (b) { b.textContent = musOn ? '🎵' : '🔇'; b.setAttribute('aria-pressed', musOn); } music(); }   // in place: the button keeps its tap animation
   function kick() { if (!shown || document.hidden) return; clearTimeout(timer); timer = 0; if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function halt() { cancelAnimationFrame(raf); clearTimeout(timer); raf = 0; timer = 0; }
 
@@ -908,9 +933,13 @@
     '.cysw{width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.18);padding:0;cursor:pointer}.cysw.on{border-color:#F2EFE8;box-shadow:0 0 0 3px #E2611A}' +
     '.cysp{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(18px + env(safe-area-inset-top,0px)) 10px calc(18px + var(--cyb,0px));background:rgba(8,8,10,.95);color:#F2EFE8;font-family:Inter,system-ui,sans-serif;touch-action:none}' +
     '.cysp-top{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}.cysp-top b{font:400 28px/1 Anton,Inter,sans-serif;letter-spacing:1px;text-transform:uppercase}.cysp-top small{font-size:13px;color:#C9C5BC;max-width:320px}' +
-    '.cysp-wall{border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px #26262B,0 12px 40px rgba(0,0,0,.6)}.cysp-wall canvas{display:block;touch-action:none;cursor:crosshair}' +
+    '.cysp-wall{position:relative;border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px #26262B,0 12px 40px rgba(0,0,0,.6)}.cysp-wall canvas{display:block;touch-action:none;cursor:crosshair}' +
     '.cysp-row{display:flex;align-items:center;gap:10px;width:100%;max-width:340px}.cysp-row b{font:400 22px/1 Anton,Inter,sans-serif;min-width:58px;text-align:right}.cysp-bar{flex:1;height:14px;border-radius:7px;background:#26262B;overflow:hidden}.cysp-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#E2611A,#FFD23F)}' +
     '.cysp .cybt{width:100%;max-width:340px}' +
+    '.cysp-hint{position:absolute;inset:0;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px}.cysp-hint span{font:700 13px/1 Inter,sans-serif;background:rgba(11,11,12,.8);color:#7BE3A0;padding:6px 10px;border-radius:12px}' +
+    '.cysp-hint i{position:absolute;left:8%;top:22%;font-size:34px;font-style:normal;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7));animation:cyswipe 2s ease-in-out infinite}' +
+    '@keyframes cyswipe{0%{left:6%;top:18%}25%{left:40%;top:34%}50%{left:74%;top:16%}75%{left:40%;top:38%}100%{left:6%;top:18%}}' +
+    '.cysp-l{font-size:12px;color:#C9C5BC;min-width:72px}.cysp-bar.cov i{background:linear-gradient(90deg,#2E9E58,#3BD16F)}' +
     '.rbcity{margin-top:10px}.cyres{display:flex;gap:14px;justify-content:center;font:400 26px/1 Anton,Inter,sans-serif;margin:4px 0 8px}.cyres .up{color:#3BD16F}.cyres .dn{color:#E2611A}.cyln{font-size:13px;color:#C9C5BC;margin:0 0 6px;text-align:center}';
 
   function init(deps) {

@@ -1176,3 +1176,14 @@
   on only while the city is shown, page visible, and no round / dance-off / spray overlay; duel() and openRound() stop it first. HUD button
   `#cyMus` 🎵/🔇 = `fedoskin-city-music` ('0' = off). rhythm.js `?v=16`, city.js `?v=9`, i18n key «Музыка». Tested headless: a jam makes 0
   looping sources; city on ⇒ beat, 🔇 / home tab ⇒ silent, dance-off ⇒ off, after it ⇒ back. Sound itself never heard by Claude.
+  WALL CLARITY + TAP FEEDBACK (owner 14.11.2026 15:16 «непонятно, как рисовать и куда точно подойти»; «анимацию кнопок всех, чтобы понятно было
+  что нажал»). city.js: `paintable(pl)` (no own piece and: free wall, or crew wall with openLeft > 0) ⇒ on the map a dashed green moving frame + soft
+  fill over the wall rect and a pulsing green ring + 🎨 + «Рисовать здесь» on the STANDING cell `standOf(pl)` (pl.at if walkable, else the walkable
+  neighbour, below first; goPlace uses it too). A tap ON THE WALL PICTURE (it sits on a building) walks to standOf and opens it. Stepping onto the
+  ring opens the wall dialog by itself (step(): < .6 cell, no path left; `wallNear` = not again until the hero is > 1.4 away). Tap ripple `tapFx`
+  on the map where the finger touched. Spray overlay: clearer text, a moving 👆 «Води пальцем здесь» over the wall until the first touch (`#cySpH`),
+  two labelled bars «Закрашено» (green, %) and «Краска» (paint left). index.html: `.tapfx` squeeze-and-bounce + light flash on EVERY button
+  (`button, .btn, [role=button], .cychip, .cysw`), added from a capture pointerdown listener (iPhone barely shows :active), 8 ms vibration on touch
+  (Android), off with reduced motion. #cyMus toggles in place (no HUD rebuild). 5 i18n keys (1003), city.js `?v=10`. Tested headless 390×844 ru:
+  frame + ring visible, tap on RUST walks to (8,6) and opens the dialog, guarded wall explains, spray hint shows and goes on touch, stepping on the
+  ring opens it, tapfx class on a HUD button. NOTE for tests: CITY._go into a building cell leaves the hero with no route at all.
