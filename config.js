@@ -25,5 +25,5 @@ window.APP_CONFIG = {
  "fullRub": 50000,
  "fullUsd": 1000,
  "consultUsd": 20,
- "cityEnabled": false
+ "cityEnabled": true
 };
