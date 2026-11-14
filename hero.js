@@ -33,6 +33,26 @@
     // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
     { id: 'tee', slot: 'top', price: 0, sub: true, name: 'Футболка Fedoskin team' },
   ];
+  // UNIQUE STREET GEAR (owner 14.11.2026 «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же… в городе можно найти
+  // уникальные или выиграть, которых нет в магазине»): ONE catalog for the city, the wardrobe, battles and the rating. Worn as the token
+  // 'c:<id>' in the same look list as the shop items. Never sold — only won in the city (`src`). slot = the same slots as SHOP (one per slot).
+  // f = outfit overrides (hat / top type, phones, chain, gloves), col = colour overrides (topDown names; svg() reads them too); perk = city only.
+  // Ids are repeated in server/push-worker.js (CGEAR) — keep them equal.
+  const GEAR = {
+    rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5] },
+    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1] },
+    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1] },
+    acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1] },
+    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15] },
+    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8] },
+    goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', src: 'gang:gold', f: { chain: 2 }, perk: ['cash', 15] },
+    goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1] },
+    cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2] },
+    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6] },
+    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1] },
+  };
+  // any look token → { slot, name, … } (shop item or street gear); null for 'girl' / 'lv<N>' / unknown
+  const itemOf = k => { if (typeof k !== 'string') return null; if (k.slice(0, 2) === 'c:') { const g = GEAR[k.slice(2)]; return g ? Object.assign({ id: k, city: true }, g) : null; } return SHOP.find(x => x.id === k) || null; };
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
   const OR = '#E2611A', OR_D = '#B44812', BLK = '#18181B', BLK2 = '#232328', WH = '#F2EFE8', WH_D = '#D6D1C6';
   // ---- the outfit table: ONE source for the profile drawing (svg) and for the city's top-down sprite (topDown) ----
@@ -45,16 +65,22 @@
   function lookOf(level, accArr){
     const arr = Array.isArray(accArr) ? accArr : [], pick = arr.map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
     const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8)), acc = new Set(arr), has = k => acc.has(k);
-    return { L, has, fit: { hat: has('bandana') ? 'bandana' : FIT.hat[L], top: has('tee') ? 'teeTeam' : FIT.top[L], pants: FIT.pants[L], shoe: FIT.shoe[L] } };
+    const fit = { hat: has('bandana') ? 'bandana' : FIT.hat[L], top: has('tee') ? 'teeTeam' : FIT.top[L], pants: FIT.pants[L], shoe: FIT.shoe[L] };
+    // street gear on top: its outfit types (hat / top) and colours win; flags (phones, chain, gloves) are added
+    const co = {}, gf = {};
+    arr.forEach(k => { const g = typeof k === 'string' && k.slice(0, 2) === 'c:' && GEAR[k.slice(2)]; if (!g) return;
+      const f = g.f || {}; if (f.hat) fit.hat = f.hat; if (f.top) fit.top = f.top; if (f.phones) gf.phones = true; if (f.chain) gf.chain = f.chain; if (f.gloves) gf.gloves = true;
+      Object.assign(co, g.col || {}); });
+    return { L, has, fit, co, gf };
   }
   // The same look as plain data for a view from above (city mini-game, 13.11.2026): types + flat colours, no SVG.
   function topDown(level, accArr){
     const k = lookOf(level, accArr), L = k.L, has = k.has, f = k.fit, G = '#E7B23C', t = f.shoe;
     const long = /track|bomber/.test(f.top);
-    return {
+    const out = {
       L, girl: has('girl'), hat: f.hat, top: f.top, pants: f.pants, shoe: f.shoe,
-      phones: L === 4 || L === 5, chain: L >= 7 ? 2 : L >= 5 ? 1 : 0, wrist: L >= 7 ? G : L >= 3 ? OR : null, belt: L >= 8,
-      knee: has('knee'), gloves: has('gloves'), box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
+      phones: L === 4 || L === 5 || !!k.gf.phones, chain: Math.max(L >= 7 ? 2 : L >= 5 ? 1 : 0, k.gf.chain || 0), wrist: L >= 7 ? G : L >= 3 ? OR : null, belt: L >= 8,
+      knee: has('knee'), gloves: has('gloves') || !!k.gf.gloves, box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
       col: {
         skin: SKIN, hair: HAIR, ink: INK, gold: G,
         top: { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[f.top],
@@ -71,6 +97,10 @@
         hat: { cap: [BLK, L >= 3 ? OR : BLK], capBack: [BLK, OR], capGold: [G, BLK], beanie: ['#2A2A2F', OR], bucket: [BLK, OR], bandana: ['#C8102E', WH] }[f.hat] || null,
       },
     };
+    // street gear colours (same names) and the sleeve of a top that became long through gear
+    Object.assign(out.col, k.co);
+    if (/track|bomber/.test(f.top) && !out.col.sleeve) out.col.sleeve = out.col.top;
+    return out;
   }
   function levelFor(mins){ let l = 1; for (let i = 0; i < LEVELS.length; i++) if (mins >= LEVELS[i]) l = i + 1; return l; }
 
@@ -90,7 +120,7 @@
     const rig = !!opt.rig, cap = fn => { const n = o.length; fn(); return o.splice(n).join(''); };
 
     // ---- the outfit of this level ----
-    const fit = LK.fit;
+    const fit = LK.fit, CO = LK.co || {}, GF = LK.gf || {}, HC = CO.hat || [];   // street gear colours / flags
     const W = 200, H = 240;
     const vb = opt.bust ? [50, 16, 100, 100] : [0, 0, W, H]; // bust = head and shoulders (small icons)
     o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb.join(' ') + '"' + (opt.size ? ' width="' + opt.size + '" height="' + Math.round(opt.size * vb[3] / vb[2]) + '"' : '') + '>');
@@ -154,12 +184,13 @@
     // ---- sneakers (profile, toes out) ----
     const shoe = () => {
       const t = fit.shoe, hi = t === 'high' || t === 'highGold';
-      const up = has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t];
-      const ov = has('red') ? (t === 'highGold' ? GOLD : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t];
-      const mid = { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: GOLD }[t];
+      let up = has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t];
+      let ov = has('red') ? (t === 'highGold' ? GOLD : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t];
+      let mid = { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: GOLD }[t];
       const out = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
       let lace = { canvas: WH, leather: WH, runner: WH, high: WH, highGold: '#E7B23C' }[t];
       if (has('neon')) lace = '#B6FF3B';
+      if (CO.shoe) { up = CO.shoe; ov = CO.shoe2 || ov; mid = CO.sole || mid; lace = CO.lace || lace; }
       o.push('<g transform="translate(103 230) scale(1.18)">');
       // outsole + tread
       P('M-1 0 H40 Q46 0 46 -4 V-6 H-1 Z', out, S(2));
@@ -236,14 +267,14 @@
 
     // ---- arms (behind the torso) ----
     const longSleeve = /track|bomber/.test(fit.top);
-    const sleeveCol = { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[fit.top];
-    const cuffCol = { track: BLK, bomber: OR, trackGold: '#E7B23C' }[fit.top];
+    const sleeveCol = CO.sleeve || CO.top || { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[fit.top];
+    const cuffCol = CO.cuff || { track: BLK, bomber: OR, trackGold: '#E7B23C' }[fit.top];
     const arm = (side) => {
       // side 0 = viewer's left (drawn), right is mirrored unless raised
       if (longSleeve) {
         P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', sleeveCol, S());
         P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', 'url(#' + id + 'sh)');
-        if (fit.top === 'track') { P('M71 92 Q61 95 58 108 L65 110 Q67 100 73 98 Z', BLK); LN('M57 112 L54 146', WH, 1.6); }
+        if (fit.top === 'track') { P('M71 92 Q61 95 58 108 L65 110 Q67 100 73 98 Z', CO.yoke || BLK); LN('M57 112 L54 146', CO.trim || WH, 1.6); }
         if (fit.top === 'trackGold') LN('M57 106 L53 146', GOLD, 2.2);
         if (fit.top === 'bomber') { P('M54 122 L64 123 L63 132 L53 131 Z', BLK2, S(1.2)); LN('M55 125 H63', '#9A968E', .9); LN('M60 104 Q63 116 62 126', 'rgba(255,255,255,.1)', 1.4); }
         P('M52 145 L65 146 L65 154 L52 153 Z', cuffCol, S(1.6));
@@ -264,7 +295,7 @@
       // hand
       P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', SKIN, S());
       LN('M54 157 Q57 159 61 158', SKIN_D, 1.2);
-      if (has('gloves')) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', '#141416', S(1.6)); LN('M53 154 H64', OR, 1.2); }
+      if (has('gloves') || GF.gloves) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', '#141416', S(1.6)); LN('M53 154 H64', OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     };
     const AR_L = cap(() => arm(0)), AR_R = rig ? cap(() => MIR(() => arm(1))) : '';
@@ -281,7 +312,7 @@
       }
       P('M137 44 Q135 30 142 27 Q152 25 155 31 Q157 38 152 45 Z', SKIN, S());
       LN('M140 33 Q146 31 152 33 M140 38 Q146 36 152 38', SKIN_D, 1.2);
-      if (has('gloves')) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', '#141416', S(1.6)); LN('M139 40 H153', OR, 1.2); }
+      if (has('gloves') || GF.gloves) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', '#141416', S(1.6)); LN('M139 40 H153', OR, 1.2); }
       o.push('<rect x="139" y="28" width="6" height="3.6" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     } else MIR(() => arm(1));
 
@@ -317,10 +348,10 @@
         P('M123 98 l1.6 3.4 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5Z', WH);
       }
     } else if (top === 'track' || top === 'trackGold') {
-      const gold = top === 'trackGold', col = gold ? BLK : OR, trim = gold ? GOLD : WH;
+      const gold = top === 'trackGold', col = CO.top || (gold ? BLK : OR), trim = CO.trim || (gold ? GOLD : WH);
       const body = 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 148 L71 148 Z';
       P(body, col, S()); P(body, 'url(#' + id + 'sh)');
-      if (!gold) P('M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L130 106 Q100 112 70 106 Z', BLK); // contrast yoke
+      if (!gold) P('M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L130 106 Q100 112 70 106 Z', CO.yoke || BLK); // contrast yoke
       LN('M70 106 Q100 112 130 106', trim, 1.6);
       // stand collar
       P('M85 84 L86 76 Q100 80 114 76 L115 84 Q100 90 85 84 Z', gold ? BLK2 : BLK, S(1.6));
@@ -341,16 +372,16 @@
       }
     } else if (top === 'bomber') {
       const body = 'M68 93 Q73 87 84 85 L116 85 Q127 87 132 93 L131 146 Q100 151 69 146 Z';
-      P(body, BLK, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, CO.top || BLK, S()); P(body, 'url(#' + id + 'sh)');
       // satin shine
       LN('M80 98 Q78 118 82 138', 'rgba(255,255,255,.1)', 3); LN('M122 98 Q124 118 120 138', 'rgba(255,255,255,.06)', 3);
       // striped rib collar
       P('M84 85 Q100 98 116 85 L114 82 Q100 92 86 82 Z', BLK2, S(1.6));
-      LN('M85 84.2 Q100 95 115 84.2', OR, 1.4);
+      LN('M85 84.2 Q100 95 115 84.2', CO.trim || OR, 1.4);
       // zip + rib hem with stripes
       LN('M100 92 V140', '#0A0A0C', 2.4); LN('M100 92 V140', '#9A968E', .9, ' stroke-dasharray="1 1.2"');
       P('M69 139 L131 139 L131 148 Q100 153 69 148 Z', BLK2, S(1.6));
-      LN('M70 142.5 Q100 146.5 130 142.5', OR, 1.4); LN('M70 145.5 Q100 149.5 130 145.5', WH, 1);
+      LN('M70 142.5 Q100 146.5 130 142.5', CO.cuff || OR, 1.4); LN('M70 145.5 Q100 149.5 130 145.5', WH, 1);
       // patches: round star patch, flag-like patch, name tape
       o.push('<circle cx="86" cy="106" r="7" fill="' + OR + '" stroke="' + INK + '" stroke-width="1.4"/><circle cx="86" cy="106" r="5.4" fill="none" stroke="' + WH + '" stroke-width=".8" stroke-dasharray="1 1"/>');
       P('M86 101.5 l1.3 2.8 3 .4 -2.2 2.1 .5 3 -2.6 -1.4 -2.6 1.4 .5 -3 -2.2 -2.1 3 -.4Z', BLK);
@@ -373,15 +404,15 @@
     P('M92 72 L108 72 L108 86 Q100 90 92 86 Z', SKIN_D, S(1.6));
 
     // ---- headphones round the neck (4, 5) ----
-    if (L === 4 || L === 5) {
+    if (L === 4 || L === 5 || GF.phones) {
       LN('M84 90 Q100 106 116 90', '#2A2A2F', 4.5);
       [[78, 84], [114, 84]].forEach(p => { P('M' + p[0] + ' ' + p[1] + ' h8 q3 0 3 3 v10 q0 3 -3 3 h-8 q-3 0 -3 -3 v-10 q0 -3 3 -3 Z', '#26262B', S(1.6)); o.push('<rect x="' + (p[0] + 1.5) + '" y="' + (p[1] + 3) + '" width="5" height="10" rx="2" fill="' + OR + '"/>'); });
       LN('M117 100 Q121 116 112 128', '#2A2A2F', 1.4);
     }
 
     // ---- chain (5+) ----
-    if (L >= 5) {
-      const big = L >= 7, pts = [];
+    if (L >= 5 || GF.chain) {
+      const big = L >= 7 || GF.chain >= 2, pts = [];
       for (let i = 0; i <= 14; i++) { const t = i / 14, x = 88 + 24 * t, y = 88 + (big ? 30 : 22) * Math.sin(Math.PI * t); pts.push([x, y]); }
       pts.forEach((p, i) => o.push('<ellipse cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" rx="' + (big ? 2.2 : 1.6) + '" ry="' + (big ? 1.5 : 1.1) + '" transform="rotate(' + (i % 2 ? 40 : -40) + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ')" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".5"/>'));
       if (big) {
@@ -426,10 +457,10 @@
     // ---- hats ----
     const hat = fit.hat;
     if (hat === 'bandana') {
-      P('M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z', '#C8102E', S());
-      [[86, 30], [100, 26], [114, 30], [92, 40], [108, 40], [80, 40], [120, 40]].forEach(p => P('M' + p[0] + ' ' + p[1] + ' q3 -3 5 0 q-1 4 -5 3 q-2 -1 0 -3Z', WH, ' opacity=".85"'));
+      P('M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z', HC[0] || '#C8102E', S());
+      [[86, 30], [100, 26], [114, 30], [92, 40], [108, 40], [80, 40], [120, 40]].forEach(p => P('M' + p[0] + ' ' + p[1] + ' q3 -3 5 0 q-1 4 -5 3 q-2 -1 0 -3Z', HC[1] || WH, ' opacity=".85"'));
       LN('M78 46 Q100 40 122 46', WH, 1.2, ' stroke-dasharray="2 2"');
-      P('M122 40 Q132 40 136 46 Q130 46 126 44 Q130 52 128 58 Q122 50 121 44 Z', '#C8102E', S(1.6));
+      P('M122 40 Q132 40 136 46 Q130 46 126 44 Q130 52 128 58 Q122 50 121 44 Z', HC[0] || '#C8102E', S(1.6));
     }
     if (hat === 'cap' || hat === 'capGold' || hat === 'capBack') {
       const crown = hat === 'capGold' ? GOLD : hat === 'capBack' ? BLK : (L >= 3 ? BLK : BLK);
@@ -464,11 +495,11 @@
       for (let x = 78; x <= 122; x += 4) LN('M' + x + ' ' + (41 - Math.abs(100 - x) * -0.05) + ' v9', OR_D, 1.2);
       P('M105 42 h9 v6 h-9 Z', BLK, S(.8)); LN('M107 45 h5', WH, .8);
     } else if (hat === 'bucket') {
-      P('M80 46 Q79 22 100 21 Q121 22 120 46 Z', BLK, S());
-      LN('M80 40 Q100 36 120 40', OR, 1.2, ' stroke-dasharray="1.6 1.4"');
+      P('M80 46 Q79 22 100 21 Q121 22 120 46 Z', HC[0] || BLK, S());
+      LN('M80 40 Q100 36 120 40', HC[1] || OR, 1.2, ' stroke-dasharray="1.6 1.4"');
       LN('M100 22 V44', 'rgba(255,255,255,.12)', 1);
-      P('M80 45 Q100 41 120 45 L134 58 Q100 50 66 58 Z', BLK, S(1.8));
-      LN('M74 52 Q100 45 126 52 M70 55.5 Q100 48 130 55.5', OR, 1, ' stroke-dasharray="1.6 1.4"');
+      P('M80 45 Q100 41 120 45 L134 58 Q100 50 66 58 Z', HC[0] || BLK, S(1.8));
+      LN('M74 52 Q100 45 126 52 M70 55.5 Q100 48 130 55.5', HC[1] || OR, 1, ' stroke-dasharray="1.6 1.4"');
       o.push('<circle cx="86" cy="34" r="1" fill="#9A968E"/><circle cx="114" cy="34" r="1" fill="#9A968E"/>');
     }
     // ---- face ----
@@ -714,5 +745,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();

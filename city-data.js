@@ -22,20 +22,7 @@ window.CITY_DATA = {
     can: { name: 'Баллончик с краской', info: 'Краска для граффити на стенах', ico: '🎨', use: true, city: true },
     patchYard: { name: 'Нашивка «Двор»', info: 'Трофей: ты хозяин двора', ico: '🏅', city: true }
   },
-  // уникальные шмотки: выпадают только в городе. slot — куда надевается; rar — редкость 0…3; f / col — как выглядит на герое; perk — [вид, число]
-  gear: {
-    rustyBandana: { name: 'Бандана Ржавых', slot: 'hat', rar: 0, ico: '🧣', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5] },
-    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1] },
-    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1] },
-    acidBucket: { name: 'Кислотная панама', slot: 'hat', rar: 1, ico: '🎩', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1] },
-    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', f: { phones: true }, perk: ['show', 15] },
-    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8] },
-    goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', f: { chain: 2 }, perk: ['cash', 15] },
-    goldCap: { name: 'Золотая кепка', slot: 'hat', rar: 3, ico: '🧢', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1] },
-    cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2] },
-    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', f: { gloves: true }, perk: ['time', 6] },
-    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1] }
-  },
+  // уникальные шмотки города — общий каталог в hero.js (HERO.GEAR): одни и те же вещи в городе, в гардеробе, в батлах и в рейтинге
   districts: {
     yard: {
       name: 'Двор', start: [6, 6],

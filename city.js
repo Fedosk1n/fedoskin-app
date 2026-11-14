@@ -311,13 +311,17 @@
 
   // ---- crews on the streets (owner 13.11.2026 «как крипы, но без убийств: победил в танце — банда исчезает и тебе что-то достаётся») ----
   // gear: unique clothes that only drop in the city; each has a look (seen on the hero) and one small perk
-  const GEAR = DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F'];
+  const GEAR = (window.HERO && window.HERO.GEAR) || DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F'];
   const PERK = { time: '+{n} % времени в стычках', life: '+{n} жизнь в стычках', cash: '+{n} % кэша со стычек', rep: '+{n} респекта за разогнанную банду', show: '+{n} % в шляпу на шоу', en: 'Стычка стоит на {n} энергии меньше', coin: 'Монеты на земле: +{n}', can: 'Граффити стоит на {n} баллончик меньше' };
-  const gearOn = () => Object.keys(S.gear.on).map(k => GEAR[S.gear.on[k]]).filter(Boolean);
+  // ONE wardrobe with the app (owner 14.11.2026): what is worn lives in the app's look list as 'c:<id>' — the same hero in the city,
+  // in battles and in the rating; the app also shows these pieces in «Гардероб». Owned pieces stay in the city save (S.gear.own).
+  const worn = () => (D.eq ? D.eq() : []).filter(k => typeof k === 'string' && k.slice(0, 2) === 'c:').map(k => k.slice(2));
+  const isOn = id => worn().includes(id);
+  const gearOn = () => worn().map(id => GEAR[id]).filter(Boolean);
   const perk = k => gearOn().reduce((a, g) => a + (g.perk && g.perk[0] === k ? g.perk[1] : 0), 0);
   const perkTxt = g => g.perk ? T(PERK[g.perk[0]], { n: g.perk[1] }) : '';
-  const gearCard = id => { const g = GEAR[id]; return '<div class="cygear" style="--rc:' + RARC[g.rar] + '"><b>' + g.ico + ' ' + T(g.name) + '</b><small>' + T(RAR[g.rar]) + ' · ' + perkTxt(g) + '</small></div>'; };
-  const wear = id => { const g = GEAR[id]; if (S.gear.on[g.slot] === id) delete S.gear.on[g.slot]; else S.gear.on[g.slot] = id; lookKey = ''; };
+  const gearCard = id => { const g = GEAR[id]; return '<div class="cygear" style="--rc:' + RARC[g.rar] + '"><b>' + g.ico + ' ' + T(g.name) + '</b><small>' + T(RAR[g.rar]) + ' · ' + perkTxt(g) + ' · 👕 ' + T('видна на тебе и в батлах') + '</small></div>'; };
+  const wear = id => { if (D.wear) D.wear('c:' + id, !isOn(id)); lookKey = ''; };
   const djOn = () => S.buff.dj === dayN();
   // which crews are out now: every game day they come back, at one of their spots; they grow as you win
   function gangsNow() {
@@ -467,14 +471,13 @@
   const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(x, y, w, h); };
   // the hero's clothes come from hero.js (level look + wardrobe + shop accessories) plus the things bought or found in the city
   function heroLook() {
-    const lv = D.level(), eq = D.look() || [], k = lv + '|' + eq.join(',') + '|' + ['hat', 'kicks', 'pads'].map(i => +S.own.includes(i)).join('') + (S.card > 0 ? 'c' : '') + '|' + Object.keys(S.gear.on).map(s => S.gear.on[s]).join(',');
+    const lv = D.level(), eq = D.look() || [], k = lv + '|' + eq.join(',') + '|' + ['hat', 'kicks', 'pads'].map(i => +S.own.includes(i)).join('') + (S.card > 0 ? 'c' : '');
     if (k === lookKey) return lookNow;
     const f = window.HERO.topDown(lv, eq); f.col = Object.assign({}, f.col);
     if (S.own.includes('hat')) { f.hat = 'spin'; f.col.hat = ['#2A6FA8', '#E2611A']; }
     if (S.own.includes('kicks')) { f.col.shoe = '#19B5A5'; f.col.shoe2 = '#F2EFE8'; f.col.sole = '#F2EFE8'; }
     if (S.own.includes('pads')) f.knee = true;
     if (S.card > 0) f.carry = true;
-    gearOn().forEach(g => { Object.assign(f, g.f || {}); Object.assign(f.col, g.col || {}); });   // unique clothes from the streets
     lookKey = k; return (lookNow = { key: 'me:' + k, f });
   }
   function lookOf(n) {
@@ -635,7 +638,7 @@
       (rows.length ? '<ul class="cyls">' + rows.join('') + '</ul>' : p(T('Пока пусто. Вещи можно купить в палатке или найти в городе.'))) +
       warmTip() + p('<small>' + T('Уровень героя и новые движения дают только настоящие уроки. Город даёт кэш, респект и вещи.') + '</small>'), [
       !warm() && D.home && { t: T('К урокам'), cls: 'btn-accent', fn: () => D.home() },
-      ...S.gear.own.map(id => ({ t: (S.gear.on[GEAR[id].slot] === id ? '✓ ' + T('Снять') : T('Надеть')) + ': ' + GEAR[id].ico + ' ' + T(GEAR[id].name), fn: () => { wear(id); bag(); } })),
+      ...S.gear.own.filter(id => GEAR[id]).map(id => ({ t: (isOn(id) ? '✓ ' + T('Снять') : T('Надеть')) + ': ' + GEAR[id].ico + ' ' + T(GEAR[id].name), fn: () => { wear(id); bag(); } })),
       S.inv.thermos > 0 && { t: T('Выпить чай из термоса') + ' (+' + B.food.thermos + ' ⚡)', fn: () => { S.inv.thermos--; S.en = Math.min(emax(), S.en + B.food.thermos); } },
       S.inv.tape > 0 && S.card > 0 && { t: T('Починить картон изолентой') + ' (+' + B.item.tapeUses + ')', fn: () => { S.inv.tape--; S.card += B.item.tapeUses; } },
       { t: T('Как играть'), fn: intro }
@@ -946,6 +949,8 @@
 
   function init(deps) {
     D = deps; el = D.el; S = load();
+    // pieces worn in the city before the shared wardrobe (S.gear.on) move into the app's look once
+    if (S.gear && S.gear.on && Object.keys(S.gear.on).length) { const on = Object.values(S.gear.on); S.gear.on = {}; if (D.wear) on.forEach(id => { if (GEAR[id] && !isOn(id)) D.wear('c:' + id, true); }); save(); }
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div><div class="cydu" id="cyDu" hidden></div><div class="cysp" id="cySp" hidden></div>';
     can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg'); duEl = $('#cyDu'); spEl = $('#cySp');
@@ -960,5 +965,5 @@
   }
   function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); music(); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); music(); }
-  window.CITY = { init, show, hide, _duel: () => duApi, _spray: () => spApi, _walls: () => walls().map(p => ({ id: p.id, at: p.at, mine: mine(p), open: p.type === 'turf' ? openLeft(p) : -1, hold: holdLeft(p), rect: GFX.wallRect(p.id) })), _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, owned: () => (S && S.gear ? S.gear.own.slice() : null), _duel: () => duApi, _spray: () => spApi, _walls: () => walls().map(p => ({ id: p.id, at: p.at, mine: mine(p), open: p.type === 'turf' ? openLeft(p) : -1, hold: holdLeft(p), rect: GFX.wallRect(p.id) })), _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

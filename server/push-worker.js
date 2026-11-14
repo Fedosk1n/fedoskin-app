@@ -550,6 +550,9 @@ const HERO_LEVELS = [0, 60, 240, 600, 1200, 2100, 3600, 6000];
 const BT_REST = 15 * 60e3; // owner 11.11.2026: 30 → 15 minutes
 const DJ_SLOT = 30 * 60e3; // the DJ keeps a pair's track for half an hour
 // must match HERO.SHOP in hero.js: id → [slot, price]
+// street gear won in the app's «Город» (14.11.2026): worn as 'c:<id>', never sold, earned offline on the phone ⇒ not checked for
+// ownership; one per slot together with SHOP. Ids/slots = hero.js GEAR — keep them equal.
+const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', acidBucket: 'head', owlPhones: 'ears', owlHoodie: 'top', goldChain: 'neck', goldCap: 'head', cypherBomber: 'top', djGloves: 'hands', writerKicks: 'kicks' };
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0] }; // tee = not sold: given for push notifications (owner 11.11.2026)
 const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3, PTS_GOLD = 5, PTS_RED = 10; // + bonus for pulling out a rare move (owner 11.11.2026)
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
@@ -932,7 +935,7 @@ async function battle(req, env, path, json) {
   }
   if (path === '/hero/eq') {
     const w = await wallet(), slots = {};
-    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; }); // one per slot
+    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; else if (k.slice(0, 2) === 'c:' && CGEAR[k.slice(2)]) slots[CGEAR[k.slice(2)]] = k; }); // one per slot
     const eq = Object.values(slots);
     if ((Array.isArray(b.eq) ? b.eq : []).includes('girl')) eq.push('girl'); // b-girl look (11.11.2026) — not an item, rides along with the items
     const lv = (Array.isArray(b.eq) ? b.eq : []).map(String).find(k => /^lv[1-7]$/.test(k)); // an older level look chosen in the wardrobe (11.11.2026) — drawing never goes above the real level
@@ -1111,7 +1114,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, rb2: RB2.R, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, cg: 1, rb2: RB2.R, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

@@ -1191,3 +1191,21 @@
   coin = two bright bell notes, can = rattle of the mixing ball, apple/snack = soft crunch; quiet, off with `fedoskin-rb-mute`, not tied to the
   city music switch) + navigator.vibrate (coin 15 ms, others 12-40-12; Android only, iPhone web pages can't vibrate). rhythm.js `?v=17`,
   city.js `?v=11`. Tested headless: coin / can / snack each fire their sound and buzz once. Sounds never heard by Claude.
+  ONE WARDROBE (owner 14.11.2026 15:51 «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же… в городе можно найти уникальные или
+  выиграть, которых нет в магазине… должно быть пересечение»). The 11 street pieces moved from city-data.js to hero.js `HERO.GEAR` (slot names =
+  SHOP slots: head / top / kicks / ears / neck / hands; `src` gang:<id> | mc | dj | walls; f / col / perk as before) + `HERO.itemOf(token)`.
+  Worn as the token `c:<id>` in the SAME list as shop items (`myEq`, `fedoskin-eq`, server hero_eq) ⇒ the same hero in the city, battles (cartoon
+  + rhythm), rating, story, wardrobe. hero.js lookOf: gear f.hat / f.top win, flags gf (phones, chain, gloves), colour overrides co (topDown names);
+  topDown merges them; svg() reads CO / GF / HC at shoes, sleeves, cuffs, track yoke/trim, bomber body/trim/hem, bandana / bucket, phones, chain,
+  gloves. Without c: tokens svg + topDown are BYTE-IDENTICAL to before (compared 120 combos). One item per slot across both (`slotOf`, `eqWith`).
+  Owned street pieces stay in the city save (`S.gear.own`; app reads `CITY.owned()` or localStorage `fedoskin-city`). City: worn = D.eq() c: tokens,
+  wear(id) ⇒ D.wear('c:'+id, on) = app `wearCity` ⇒ shopWear; old `S.gear.on` migrated once into myEq at init; perks (city only) from worn c: items;
+  gear cards say «видна на тебе и в батлах». App wardrobe: «Мои вещи» lists owned street pieces (blue `.cityit`, «🏙️ Из города») next to shop
+  items; «Магазин» has a block `#cityShop` «Только в городе» with all 11 (owned ⇒ Надеть/Снять, locked = dark + where from + «В город →» which
+  opens the city tab; no city flag ⇒ «Только в городе», disabled). shopWear: street-gear-only changes work offline / without a wallet; the server
+  answer's eq is merged with local c: tokens (an old server drops them). btWallet keeps local c: tokens over the server's and lookSyncs once
+  (`BT.cTried`). Server push-worker.js: `CGEAR` (ids → slot, keep equal to hero.js) — /hero/eq accepts c: tokens WITHOUT an ownership check (won
+  offline on the phone), one per slot with SHOP; /visits `cg: 1` (admin banner until the owner updates the server code; admin «версия 51»). Until
+  then other players don't see street pieces on him (he does). 9 i18n keys (1011). hero.js `?v=14`, city.js `?v=12`, city-data.js `?v=7`.
+  Tested headless ru 390×844 with a mocked OLD server: migration city→wardrobe, wardrobe cards, wear acid kicks, shop bandana replaces the
+  street bandana (same slot), «Только в городе» block, «В город →» opens the city, city backpack shows ✓ Снять, server got the c: tokens.

@@ -402,6 +402,12 @@ body.chatmode .tabs{display:none}
 .shopit button.subbtn{background:#3BD16F;color:#0B0B0C;height:auto;min-height:34px;padding:6px 6px;line-height:1.2}
 .shopit button.own{background:#26262B;color:var(--fg)} .shopit button.worn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
 .shopit button[disabled]{background:#26262B;color:var(--muted);cursor:default}
+/* street gear from «Город» in the wardrobe (14.11.2026): not sold, won in the city */
+.shopit.cityit{border-color:rgba(124,224,255,.4);background:linear-gradient(180deg,rgba(124,224,255,.09),#1A1A1D 60%)}
+.shopit.cityit.on{border-color:var(--accent)}
+.shopit .citycap{font-size:11px;line-height:1.3;color:#7CE0FF;font-weight:700;margin-top:-2px}
+.shopit.cityit.lock svg{filter:brightness(.35) grayscale(.6)}
+.shopit button.citybtn{background:transparent;border:1px solid rgba(124,224,255,.55);color:#7CE0FF;height:auto;min-height:34px;padding:6px;line-height:1.2}
 /* wardrobe «Мои вещи» (11.11.2026) */
 .wdseg{margin:12px 0 0}
 .wdseg button{height:40px}
@@ -1670,6 +1676,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в авто-батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
       <small>Поражение очков не даёт. Очки нельзя купить за деньги. Аксессуары — только для красоты, на батлы не влияют.</small></div>
     <div class="shopgrid" id="shopGrid"></div>
+    <div id="cityShop" hidden>
+      <h3 class="mh">Только в городе</h3>
+      <p class="mp">Эти вещи не продаются. Их выбивают с уличных банд и получают за дела в «Городе». Надетые — видны на тебе везде: в городе, в батлах и в рейтинге.</p>
+      <div class="shopgrid" id="cityGrid"></div>
+    </div>
     </div>
   </div>
 </div>
@@ -1762,12 +1773,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=13"></script>
+<script src="hero.js?v=14"></script>
 <script src="rhythm.js?v=17"></script>
 <script src="city-balance.js?v=5"></script>
-<script src="city-data.js?v=6"></script>
+<script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=5"></script>
-<script src="city.js?v=11"></script>
+<script src="city.js?v=12"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5295,6 +5306,25 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const withLook = eq => eq.concat(prof.g === 'f' ? ['girl'] : [], lookLv() ? ['lv' + lookLv()] : []);
   const myLook = () => withLook(myEq);
   const notItem = k => k === 'girl' || /^lv\d$/.test(k);
+  // street gear won in «Город» (14.11.2026, owner «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же»): worn as 'c:<id>'
+  // in the same list as shop items; the city save keeps what is owned. One item per slot across both.
+  const isCityK = k => typeof k === 'string' && k.slice(0, 2) === 'c:';
+  function cityOwned(){
+    try { if (window.CITY && CITY.owned) { const o = CITY.owned(); if (o) return o; } } catch (_) {}
+    try { const c = JSON.parse(localStorage.getItem('fedoskin-city') || 'null'); return (c && c.gear && c.gear.own) || []; } catch (_) { return []; }
+  }
+  const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
+  const eqWith = (eq, k) => eq.filter(x => x !== k && slotOf(x) !== slotOf(k)).concat(k);   // put on k, take off what was in its slot
+  function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} return id; }
+  function citySrc(g){
+    const s = g.src || '';
+    if (s.slice(0, 5) === 'gang:') return T('Выбей с банды «{x}» в городе', { x: cityGang(s.slice(5)) });
+    if (s === 'mc') return T('Награда MC Рупора за сайфер в городе');
+    if (s === 'dj') return T('Награда диджея Винта в городе');
+    if (s === 'walls') return T('За весь двор в твоих граффити');
+    return T('Только в городе');
+  }
+  function wearCity(k, on){ return shopWear(on ? eqWith(myEq, k) : myEq.filter(x => x !== k)); }
   function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => !notItem(k)); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = ''; if (heroShown()) renderStats(); }
   function setLook(l){
     myLv = l >= statsView().level ? 0 : l; try { localStorage.setItem('fedoskin-look', String(myLv)); } catch (_) {}
@@ -5607,7 +5637,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!w || typeof w.pts !== 'number') return;
     BT.wallet = Object.assign(BT.wallet || {}, w);
     $('#shopRow').hidden = false; $('#ptsN').textContent = nfmt(w.pts);
-    if (Array.isArray(w.eq)) { const it = w.eq.filter(k => k !== 'girl'); if (JSON.stringify(it) !== JSON.stringify(myEq)) setMyEq(it);
+    if (Array.isArray(w.eq)) { const loc = myEq.filter(isCityK), srvC = w.eq.filter(isCityK), it = w.eq.filter(k => k !== 'girl' && !isCityK(k) && !loc.some(c => slotOf(c) === slotOf(k))).concat(loc); // street gear is local (the city save) — the phone's choice wins
+      if (JSON.stringify(it.filter(k => !notItem(k))) !== JSON.stringify(myEq)) setMyEq(it);
+      if (JSON.stringify(srvC.slice().sort()) !== JSON.stringify(loc.slice().sort()) && !BT.cTried) { BT.cTried = 1; lookSync(); } // tell the server what is worn (an old server drops 'c:' ⇒ tried once)
       const slv = (w.eq.find(k => /^lv\d$/.test(k)) || '');
       if (w.eq.includes('girl') !== (prof.g === 'f') || (slv !== (lookLv() ? 'lv' + lookLv() : '') && !BT.lvTried)) { BT.lvTried = 1; lookSync(); } } // the server still has the old look (an old server drops 'lv' ⇒ tried once)
     if (!$('#shopSheet').hidden) wdPaint();
@@ -5615,13 +5647,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // one item card (shop and «Мои вещи» share it)
   function itemCard(it, pre){
     const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level;
-      const own = (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
-      const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '');
-      const keep = myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; });
+      const city = !!it.city, own = city ? cityOwned().includes(it.id.slice(2)) : (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
+      const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '') + (city ? ' cityit' + (own ? '' : ' lock') : '');
+      const keep = myEq.filter(k => k !== it.id && slotOf(k) && slotOf(k) !== it.slot);
       d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) }) + '<b></b><button type="button"></button>';
       d.querySelector('b').textContent = T(it.name);
       const btn = d.querySelector('button');
+      if (city) { const c = document.createElement('small'); c.className = 'citycap'; c.textContent = '🏙️ ' + (own ? T('Из города') : citySrc(it)); d.insertBefore(c, btn); }
       if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
+      else if (city && !own) { btn.className = 'citybtn'; btn.textContent = CITY_ON && window.CITY ? T('В город') + ' →' : T('Только в городе');
+        if (CITY_ON && window.CITY) btn.onclick = () => { $('#shopSheet').hidden = true; setTimeout(() => go('city'), 250); }; else btn.disabled = true; }
       else if (own) { btn.className = 'own'; btn.textContent = T('Надеть'); btn.onclick = () => shopWear(keep.concat(it.id)); }
       else if (it.sub) { // not sold: for turning on notifications
         d.classList.add('subit'); const c = document.createElement('small'); c.className = 'subcap'; c.textContent = '🔔 ' + T('За подписку на уведомления'); d.insertBefore(c, btn);
@@ -5644,6 +5679,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#shopPts').textContent = nfmt(w.pts);
     box.innerHTML = '';
     HERO.SHOP.slice().sort((a, b) => (b.sub ? 1 : 0) - (a.sub ? 1 : 0)).forEach(it => box.appendChild(itemCard(it)));
+    const cg = $('#cityGrid'), G = HERO.GEAR || {}, ids = Object.keys(G); cg.innerHTML = '';
+    $('#cityShop').hidden = !ids.length;
+    ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg')));
   }
   // ===== wardrobe = «Мои вещи» + «Магазин» in one sheet (owner 11.11.2026 «то есть инвентаря не предусмотрено?» → «делай») =====
   let wdTab = 'mine';
@@ -5651,7 +5689,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const v = statsView(), cur = lookLv() || v.level, w = BT.wallet;
     $('#mHero').innerHTML = HERO.svg(v.level, { uid: 'mh', acc: myLook() });
     $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
-    const on = myEq.map(k => HERO.SHOP.find(x => x.id === k)).filter(Boolean).map(x => T(x.name));
+    const on = myEq.map(k => HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(x => x.id === k)).filter(Boolean).map(x => T(x.name));
     $('#mOn').textContent = on.length ? on.join(' · ') : T('Без аксессуаров');
     const looks = $('#mLooks'); looks.innerHTML = '';
     HERO.LEVELS.forEach((need, i) => {
@@ -5665,7 +5703,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (!worn) d.addEventListener('click', () => setLook(l));
       looks.appendChild(d);
     });
-    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id));
+    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id))
+      .concat(cityOwned().filter(id => HERO.GEAR && HERO.GEAR[id]).map(id => HERO.itemOf('c:' + id)));
     const box = $('#mItems'); box.innerHTML = '';
     owned.forEach(it => box.appendChild(itemCard(it, 'mi')));
     $('#mAcc').hidden = !w && !owned.length;
@@ -5692,7 +5731,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     btn.disabled = true;
     try {
       const r = await btPost('/hero/buy', { item: it.id }), j = await r.json().catch(() => ({}));
-      if (j.ok) { btWallet(j); toast(T('Куплено: {name}', { name: T(it.name) })); await shopWear(myEq.filter(k => { const x = HERO.SHOP.find(s => s.id === k); return x && x.slot !== it.slot; }).concat(it.id)); }
+      if (j.ok) { btWallet(j); toast(T('Куплено: {name}', { name: T(it.name) })); await shopWear(eqWith(myEq, it.id)); }
       else if (r.status === 402) { btWallet({ pts: j.pts }); toast(T('Не хватает очков')); }
       else toast(T('Не получилось. Проверь интернет.'));
     } catch (_) { toast(T('Не получилось. Проверь интернет.')); }
@@ -5700,8 +5739,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   async function shopWear(eq){
     const before = myEq; setMyEq(eq); wdPaint();
-    try { const r = await btPost('/hero/eq', { eq: withLook(eq) }), j = await r.json().catch(() => ({})); if (j.ok) setMyEq(j.eq); else throw 0; }
-    catch (_) { setMyEq(before); toast(T('Не получилось. Проверь интернет.')); }
+    const shopSame = JSON.stringify(before.filter(k => !isCityK(k))) === JSON.stringify(eq.filter(k => !isCityK(k)));   // only street gear changed ⇒ no server needed
+    try {
+      if (!LB_URL || (!BT.wallet && shopSame)) throw 'local';
+      const r = await btPost('/hero/eq', { eq: withLook(eq) }), j = await r.json().catch(() => ({}));
+      if (j.ok) setMyEq(j.eq.filter(k => !isCityK(k) && !eq.filter(isCityK).some(c => slotOf(c) === slotOf(k))).concat(eq.filter(isCityK))); else throw 0;
+    }
+    catch (e) { if (!shopSame) { setMyEq(before); toast(T('Не получилось. Проверь интернет.')); } }
     wdPaint(); if (lbData) renderLeaders();
   }
   $('#shopRow').addEventListener('click', () => openWd('shop'));
@@ -6104,7 +6148,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   } });
   $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
   // the city mini-game (city.js): street battles and shows run on the same rhythm game, offline
-  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate, todaySec: () => stats.dk === todayKey() ? (stats.ds || 0) : 0, day: todayKey, home: () => go('home'),
+  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, eq: () => myEq, wear: wearCity, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate, todaySec: () => stats.dk === todayKey() ? (stats.ds || 0) : 0, day: todayKey, home: () => go('home'),
     openLesson: h => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
