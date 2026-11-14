@@ -590,6 +590,19 @@
     } catch (_) { hissN = null; }
   }
 
+  // short sounds when the city hero picks something up (owner 14.11.2026 «при поднятии предметов сделай звук или вибрацию»):
+  // coin = two bright bell notes, spray can = a rattle of the mixing ball, apple = a soft crunch. Quiet; off with the battle mute.
+  function sfx(kind) {
+    try {
+      let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {} if (mute || !audioOn()) return;
+      const o = ctx.createGain(); o.gain.value = .5; o.connect(ctx.destination); const t = ctx.currentTime + .01;
+      if (kind === 'coin') { tone(o, t, 'square', 1318, 0, .11, .08); tone(o, t + .07, 'square', 1976, 0, .11, .22); tone(o, t + .07, 'sine', 3952, 0, .05, .18); }
+      else if (kind === 'can') { for (let i = 0; i < 4; i++) { tone(o, t + i * .07, 'triangle', 2400 + i * 140, 1800, .16, .045); hiss(o, t + i * .07, 'bandpass', 4200, 3, .1, .03); } }
+      else { hiss(o, t, 'bandpass', 1400, 1.5, .35, .06); hiss(o, t + .05, 'bandpass', 900, 1.5, .25, .07); tone(o, t + .1, 'sine', 660, 990, .08, .12); }
+      setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 800);
+    } catch (_) {}
+  }
+
   // background music of the city (owner 14.11.2026 «хип-хоп музыку фоном… цикл бита, с басом»): a 2-bar boom-bap loop at 88 BPM,
   // kick + snare + swung hats + a bass line + soft keys, scheduled ~0.6 s ahead by a timer. bgm(true) / bgm(false).
   let bgN = null;
@@ -1015,5 +1028,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, jam, hiss: sprayHiss, bgm, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, jam, hiss: sprayHiss, bgm, sfx, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

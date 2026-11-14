@@ -109,6 +109,8 @@
       if (k.kind === 'coin') { const v = k.val + perk('coin'); S.cash += v; pop('+' + v + ' 💵'); bump('coins'); }
       else if (k.kind === 'can') { give('can'); pop('+1 🎨', '#7CE0FF'); }
       else { S.en = Math.min(emax(), S.en + B.pick.snack); pop('+' + B.pick.snack + ' ⚡', '#7BE3A0'); }
+      if (D.RB.sfx) D.RB.sfx(k.kind);   // sound + a short buzz (Android; iPhone has no vibration for web pages)
+      if (navigator.vibrate) try { navigator.vibrate(k.kind === 'coin' ? 15 : [12, 40, 12]); } catch (_) {}
       hudKey = '';
     });
   }

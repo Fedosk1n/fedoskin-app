@@ -1187,3 +1187,7 @@
   (Android), off with reduced motion. #cyMus toggles in place (no HUD rebuild). 5 i18n keys (1003), city.js `?v=10`. Tested headless 390×844 ru:
   frame + ring visible, tap on RUST walks to (8,6) and opens the dialog, guarded wall explains, spray hint shows and goes on touch, stepping on the
   ring opens it, tapfx class on a HUD button. NOTE for tests: CITY._go into a building cell leaves the hero with no route at all.
+  PICKUP FEEDBACK (owner 14.11.2026 15:48 «при поднятии предметов сделай звук или вибрацию»): collect() calls `RB.sfx(kind)` (rhythm.js, synth:
+  coin = two bright bell notes, can = rattle of the mixing ball, apple/snack = soft crunch; quiet, off with `fedoskin-rb-mute`, not tied to the
+  city music switch) + navigator.vibrate (coin 15 ms, others 12-40-12; Android only, iPhone web pages can't vibrate). rhythm.js `?v=17`,
+  city.js `?v=11`. Tested headless: coin / can / snack each fire their sound and buzz once. Sounds never heard by Claude.
