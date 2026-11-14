@@ -6,7 +6,7 @@
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
   const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLBhuPkM', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
-  let gLook = {}, gangCool = 0, duEl = null, duApi = null, npLook = {};
+  let gLook = {}, gangCool = 0, duEl = null, duApi = null, npLook = {}, spEl = null, spApi = null;
   let FREE = [], pkDay = -1, pkList = [], floats = [], walkLook = [];
   let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   let hdir = 0, hdist = 0, moved = 0, lookKey = '', lookNow = null, npcLook = {}, warmUp = {}, birdAway = {};
@@ -20,7 +20,7 @@
   function fresh() {
     const d = DATA.districts.yard;
     return { v: B.save, d: 'yard', x: d.start[0], y: d.start[1], t: B.startHour * 60, en: B.energy.max, cash: B.start.cash, rep: B.start.rep, card: 0, own: [], inv: {},
-      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0, tags: {}, pk: { day: -1, got: [] }, goals: { day: -1, list: [] }, dl: { day: -1, n: 0 }, job: null, gear: { own: [], on: {} }, gang: { day: -1, beat: [] }, gw: 0, gwon: {}, buff: {}, tut: 0 };
+      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0, tags: {}, pk: { day: -1, got: [] }, goals: { day: -1, list: [] }, dl: { day: -1, n: 0 }, job: null, gear: { own: [], on: {} }, gang: { day: -1, beat: [] }, gw: 0, gwon: {}, buff: {}, tut: 0, word: '', gt: {}, tcap: {}, tall: 0, inc: -1, lastSt: '', lastPal: '' };
   }
   function load() {
     try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === B.save && DATA.districts[s.d]) return Object.assign(fresh(), s); } catch (_) {}   // older saves get the new fields
@@ -113,11 +113,10 @@
     });
   }
   // three things to do for every game day: a small prize for each, a better one for all three
-  const GOALS = { coins: 'Собери монеты', win: 'Выиграй батл', show: 'Выступи с шоу', deliver: 'Доставь заказ из ларька', stretch: 'Разомнись на площадке', tag: 'Нарисуй тег на стене', gang: 'Разгони банды' };
-  const wallsLeft = () => DIST.places.filter(p => p.type === 'wall' && !S.tags[p.id]).length;
+  const GOALS = { coins: 'Собери монеты', win: 'Выиграй батл', show: 'Выступи с шоу', deliver: 'Доставь заказ из ларька', stretch: 'Разомнись на площадке', tag: 'Нарисуй граффити', gang: 'Разгони банды' };
   function goals() {
     const d = dayN(); if (S.goals.day === d) return S.goals;
-    const pool = ['coins', 'win', 'show', 'deliver', 'stretch'].concat(wallsLeft() ? ['tag'] : []), list = [{ k: 'gang', a: 0, n: B.goals.gang, done: 0 }];   // one of the three is always about the crews
+    const pool = ['coins', 'win', 'show', 'deliver', 'stretch'].concat(wallsLeft() || turfs().some(t => !mine(t)) ? ['tag'] : []), list = [{ k: 'gang', a: 0, n: B.goals.gang, done: 0 }];   // one of the three is always about the crews
     for (let i = 0; i < 2; i++) { const k = pool.splice(Math.floor(hash(d * 17 + i, i * 29 + 5) * pool.length), 1)[0]; list.push({ k, a: 0, n: B.goals[k] || 1, done: 0 }); }
     return (S.goals = { day: d, list, all: 0 });
   }
@@ -134,15 +133,147 @@
     dlg(T('Дела на сегодня'), '<ul class="cyls">' + G.list.map(g => '<li>' + (g.done ? '✅ ' : '⬜ ') + '<b>' + T(GOALS[g.k]) + (g.n > 1 ? ' · ' + Math.min(g.a, g.n) + ' / ' + g.n : '') + '</b></li>').join('') + '</ul>' +
       p('<small>' + T('За каждое дело — {n} кэша, за все три — {r} респекта и находка. Завтра будут новые.', { n: B.goals.cash, r: B.goals.rep }) + '</small>'), []);
   }
-  // a tag on a clean wall: costs spray cans (they lie around the yard), stays on the wall for good
+  // ---- graffiti and the crews' walls (owner 14.11.2026 «граффити по районам… большие классные граффити в разных стилях»; «территории») ----
+  // Every crew holds a wall with its own big piece. Beat the crew — the wall stands without guard for a while: paint your piece over theirs
+  // (with your own finger) and the point is yours: it brings cash every game day. The crew comes back; not beaten for too long — it takes the wall back.
+  // A crew's style opens for the player with the first win over that crew. Small free walls: any open style, respect only.
+  const walls = () => DIST.places.filter(p => p.wall), turfs = () => DIST.places.filter(p => p.type === 'turf');
+  const gangOf = pl => (DIST.gangs || []).find(g => g.id === pl.gang);
+  const mine = pl => !!S.tags[pl.id];
+  const wallsLeft = () => DIST.places.filter(p => p.type === 'wall' && !S.tags[p.id]).length;
+  const myWord = () => S.word || (D.me() === T('Ты') ? '' : GFX.grafWord(D.me(), 8)) || 'FT';
+  const seedOf = pl => pl.at[0] * 7 + pl.at[1] * 13 + 1;
+  // what is on the wall now: my piece, the crew's piece, or nothing
+  function artOf(pl) {
+    const m = S.tags[pl.id];
+    if (m) return { word: myWord(), style: m.s || 'tag', pal: m.p || 'fire', extra: 'crown', seed: seedOf(pl) };
+    return pl.art ? Object.assign({ seed: seedOf(pl) }, pl.art) : null;
+  }
+  const STYLE = { tag: 'Тег', bubble: 'Бабл', block: 'Блокбастер', wild: 'Вайлдстайл', d3: '3D' }, PALN = ['fire', 'ice', 'candy', 'chrome', 'toxic', 'sunset'];
+  const styleFrom = st => turfs().find(t => t.art.style === st);
+  const styleOpen = st => { if (st === 'tag') return true; const t = styleFrom(st); return !t || (S.gwon[t.gang] || 0) > 0; };
+  const openLeft = pl => { const t = S.gt[pl.gang]; return t == null ? 0 : Math.max(0, B.turf.open * 60 - (S.t - t)); };                                   // game minutes the wall stays without guard
+  const holdLeft = pl => { const m = S.tags[pl.id]; return m ? Math.max(0, B.turf.hold * 1440 - (S.t - Math.max(m.t || 0, S.gt[pl.gang] || 0))) : 0; };   // game minutes till the crew takes it back
+  const incomeOf = pl => { const g = gangOf(pl); return B.turf.income + B.turf.incomeLvl * (g ? g.lvl : 1); };
+  const hrs = m => Math.max(1, Math.ceil(m / 60));
+  const wallPic = (pl, a) => { const r = GFX.wallRect(pl.id); a = a || artOf(pl); return r && a ? '<div class="cygr"><img alt="" src="' + GFX.graf(Object.assign({ w: r.w, h: r.h, scale: 2 }, a)).toDataURL() + '" style="aspect-ratio:' + r.w + '/' + r.h + '"></div>' : ''; };
+  function goPlace(pl) { const way = route([pl.at]); if (!way) return; path = way; goal = () => openPlace(pl); if (!way.length) { goal = null; openPlace(pl); } kick(); }
+  let turfMin = -1;
+  function turfTick() {
+    const m = Math.floor(S.t); if (m === turfMin) return; turfMin = m;
+    turfs().forEach(pl => { if (!mine(pl) || holdLeft(pl) > 0) return; delete S.tags[pl.id]; hudKey = ''; D.toast('🏴 ' + T('Банда «{x}» закрасила твоё граффити: {w}. Разгони её и верни точку.', { x: T(gangOf(pl).name), w: T(pl.name) })); save(); });
+    const d = dayN(); if (S.inc == null || S.inc < 0) S.inc = d;
+    if (d > S.inc) { S.inc = d; const sum = turfs().filter(mine).reduce((a, pl) => a + incomeOf(pl), 0); if (sum) { S.cash += sum; hudKey = ''; pop('+' + sum + ' 💵'); D.toast('👑 ' + T('Твои точки принесли кэш') + ': +' + sum + ' 💵'); save(); } }
+  }
   function wallSpot(pl) {
-    if (S.tags[pl.id]) return dlg(T(pl.name), p('👑 ' + T('Твой тег на стене. Двор его видит.')), []);
-    const have = S.inv.can || 0, need = B.tag.cans;
-    dlg(T(pl.name), p(T('Баллончиков на тег: {n}. У тебя: {a}. Они лежат по двору — ищи.', { n: need, a: have })), [
-      { t: '🎨 ' + T('Нарисовать тег') + ' (+' + B.tag.rep + ' ★)', cls: 'btn-accent', off: have < need, fn: () => {
-        S.inv.can -= need; S.tags[pl.id] = 1; S.rep += B.tag.rep; pop('+' + B.tag.rep + ' ★', '#FF9A4F'); bump('tag');
-        if (!wallsLeft()) { S.rep += B.tag.all; D.toast('👑 ' + T('Весь двор в твоих тегах!') + ' +' + B.tag.all + ' ★'); }
-      } }]);
+    const turf = pl.type === 'turf', g = turf ? gangOf(pl) : null, m = S.tags[pl.id];
+    if (turf && !m) {
+      const left = openLeft(pl);
+      if (!left) return dlg(T(pl.name), wallPic(pl) + p(T('Это точка банды «{x}». Пока банда на районе, стену не тронуть.', { x: T(g.name) })) +
+        p('<small>' + T('Разгони банду в танце — и закрась их граффити своим. Точка станет твоей и будет приносить {n} кэша в день.', { n: incomeOf(pl) }) + '</small>'), []);
+      return paintDlg(pl, '🔥 ' + T('Банда разогнана — стена без охраны ещё {h} ч. Закрась их граффити своим!', { h: hrs(left) }));
+    }
+    if (turf) return dlg(T(pl.name), wallPic(pl) + p('👑 ' + T('Твоя точка: приносит {n} кэша в день.', { n: incomeOf(pl) })) +
+      p((holdLeft(pl) < 1440 ? '⚠️ ' : '') + T('Банда «{x}» вернёт стену через {h} ч, если её не разогнать.', { x: T(g.name), h: hrs(holdLeft(pl)) })), [{ t: '🎨 ' + T('Перекрасить'), fn: () => paintDlg(pl) }]);
+    if (m) return dlg(T(pl.name), wallPic(pl) + p('👑 ' + T('Твоё граффити. Двор его видит.')), [{ t: '🎨 ' + T('Перекрасить'), fn: () => paintDlg(pl) }]);
+    paintDlg(pl);
+  }
+  // choose what to paint: the word, the style (a crew's style opens when the crew is beaten), the colours — and see it before painting
+  function paintDlg(pl, note) {
+    path = []; goal = null;
+    const r = GFX.wallRect(pl.id), m = S.tags[pl.id], turf = pl.type === 'turf';
+    const need = Math.max(1, (m ? B.turf.again : turf ? B.turf.cans : B.tag.cans) - perk('can')), have = S.inv.can || 0, open = GFX.GRAF_STYLES.filter(styleOpen);
+    let st = (m && m.s) || S.lastSt || open[open.length - 1]; if (!styleOpen(st)) st = open[open.length - 1]; let pal = (m && m.p) || S.lastPal || 'fire';
+    const art = () => ({ word: myWord(), style: st, pal, extra: 'crown', seed: seedOf(pl) });
+    const pic = () => GFX.graf(Object.assign({ w: r.w, h: r.h, scale: 2 }, art())).toDataURL();
+    const paint = () => {
+      dlgEl.innerHTML = '<div class="cyd"><h3>' + esc(T(pl.name)) + '</h3><div class="cydb">' + (note ? p(note) : '') +
+        '<div class="cygr"><img alt="" id="cyGrP" src="' + pic() + '" style="aspect-ratio:' + r.w + '/' + r.h + '"></div>' +
+        '<label class="cywd"><span>' + T('Что пишем') + '</span><input id="cyWord" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" value="' + esc(myWord()) + '"></label>' +
+        '<div class="cych">' + GFX.GRAF_STYLES.map(k => '<button type="button" class="cychip' + (k === st ? ' on' : '') + (styleOpen(k) ? '' : ' lock') + '" data-st="' + k + '">' + (styleOpen(k) ? '' : '🔒 ') + T(STYLE[k]) + '</button>').join('') + '</div>' +
+        '<div class="cych">' + PALN.map(k => { const P = GFX.GRAF_PALS[k]; return '<button type="button" class="cysw' + (k === pal ? ' on' : '') + '" data-pal="' + k + '" aria-label="' + k + '" style="background:linear-gradient(135deg,' + P.b + ' 0 34%,' + P.a + ' 34% 67%,' + P.bg + ' 67%)"></button>'; }).join('') + '</div>' +
+        '<p class="cyln" id="cyStN">' + (have < need ? T('Баллончики лежат по двору, падают с банд и продаются в палатке.') : '&nbsp;') + '</p></div><div class="cybt">' +
+        '<button type="button" class="btn btn-accent" id="cyPaint"' + (have < need ? ' disabled' : '') + '>🎨 ' + T('Рисовать') + ' · ' + T('баллончиков: {n}, у тебя {a}', { n: need, a: have }) + '</button>' +
+        '<button type="button" class="btn btn-ghost" id="cyPClose">' + T('Закрыть') + '</button></div></div>';
+      dlgEl.hidden = false;
+      const inp = dlgEl.querySelector('#cyWord');
+      inp.addEventListener('input', () => { S.word = GFX.grafWord(inp.value, 8); dlgEl.querySelector('#cyGrP').src = pic(); });
+      inp.addEventListener('change', () => { inp.value = myWord(); save(); });
+      dlgEl.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.st;
+        if (!styleOpen(k)) { dlgEl.querySelector('#cyStN').textContent = '🔒 ' + T('Стиль «{s}» откроется, когда разгонишь банду «{x}».', { s: T(STYLE[k]), x: T(gangOf(styleFrom(k)).name) }); return; } st = k; paint(); }));
+      dlgEl.querySelectorAll('[data-pal]').forEach(b => b.addEventListener('click', () => { pal = b.dataset.pal; paint(); }));
+      dlgEl.querySelector('#cyPClose').addEventListener('click', () => { dlgEl.hidden = true; paintHud(); save(); });
+      dlgEl.querySelector('#cyPaint').addEventListener('click', () => { dlgEl.hidden = true; S.lastSt = st; S.lastPal = pal; save(); sprayGame(pl, art(), stars => painted(pl, st, pal, need, stars)); });
+    };
+    paint();
+  }
+  function painted(pl, st, pal, need, stars) {
+    const turf = pl.type === 'turf', g = turf ? gangOf(pl) : null, m = S.tags[pl.id], first = !m, lines = []; let rep = 0, drop = null;
+    S.inv.can = Math.max(0, (S.inv.can || 0) - need); S.tags[pl.id] = { s: st, p: pal, t: m && m.t ? m.t : S.t }; bump('tag');
+    if (turf && first) { rep = S.tcap[pl.id] ? B.turf.repAgain : B.turf.rep + B.turf.repLvl * g.lvl; S.tcap[pl.id] = 1;
+      lines.push('👑 ' + T('Точка твоя: приносит {n} кэша в день.', { n: incomeOf(pl) })); lines.push(T('Банда «{x}» вернёт стену через {h} ч, если её не разогнать.', { x: T(g.name), h: hrs(holdLeft(pl)) })); }
+    else if (first) { rep = B.tag.rep; if (!wallsLeft()) { rep += B.tag.all; lines.push('👑 ' + T('Все чистые стены двора — твои!')); } }
+    if (stars === 3) { rep += B.turf.clean; lines.unshift('✨ ' + T('Чистая работа: ровно и без потёков')); }
+    if (turf && !S.tall && turfs().every(mine)) { S.tall = 1; rep += B.turf.all; lines.push('🏆 ' + T('Весь двор в твоих граффити!')); if (GEAR.writerKicks && !S.gear.own.includes('writerKicks')) { drop = 'writerKicks'; S.gear.own.push(drop); } }
+    S.rep += rep; hudKey = ''; save();
+    dlg(T('Граффити готово!'), wallPic(pl) + res(0, rep, lines) + (drop ? p('🎁 ' + T('Новая шмотка!')) + gearCard(drop) : ''), drop ? [{ t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }] : []);
+  }
+  // painting with your own finger: the piece shows up where you spray; fill it all. Standing still makes the paint run.
+  function sprayGame(pl, art, done) {
+    path = []; goal = null; joy = null;
+    const r = GFX.wallRect(pl.id), Q = B.turf, box = el.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
+    const cw = Math.floor(Math.min(box.width - 20, 560, Math.max(120, box.height - padB - 250) * r.w / r.h)), ch = Math.round(cw * r.h / r.w), sc = cw / r.w * d;
+    spEl.innerHTML = '<div class="cysp-top"><b>' + esc(T(pl.name)) + '</b><small>' + T('Води пальцем по стене — закрась весь рисунок. Не стой на месте: краска потечёт.') + '</small></div>' +
+      '<div class="cysp-wall"><canvas id="cySpC" style="width:' + cw + 'px;height:' + ch + 'px"></canvas></div>' +
+      '<div class="cysp-row"><span>🎨</span><div class="cysp-bar"><i id="cySpP"></i></div><b id="cySpN">0 %</b></div>' +
+      '<div class="cybt"><button type="button" class="btn btn-accent" id="cySpOk" style="visibility:hidden">' + T('Готово') + '</button><button type="button" class="btn btn-ghost" id="cySpNo">' + T('Отмена') + '</button></div>';
+    spEl.hidden = false;
+    const cv = spEl.querySelector('#cySpC'), c = cv.getContext('2d'); cv.width = Math.round(cw * d); cv.height = Math.round(ch * d);
+    const big = a => GFX.graf(Object.assign({}, a, { w: r.w, h: r.h, scale: sc })), P = big(art), old = artOf(pl), O = old ? big(old) : null, PAL = GFX.GRAF_PALS[art.pal] || GFX.GRAF_PALS.fire;
+    const M = document.createElement('canvas'), TM = document.createElement('canvas'); M.width = TM.width = cv.width; M.height = TM.height = cv.height; const mc = M.getContext('2d'), tc = TM.getContext('2d');
+    // which parts of the wall the piece covers — a coarse grid; the brush marks the cells it has passed
+    const GS = 5, gw = Math.ceil(cw / GS), gh = Math.ceil(ch / GS), sm = document.createElement('canvas'); sm.width = gw; sm.height = gh; const sq = sm.getContext('2d'); sq.drawImage(P, 0, 0, gw, gh);
+    const al = sq.getImageData(0, 0, gw, gh).data, need = new Uint8Array(gw * gh), got = new Uint8Array(gw * gh); let total = 0, hit = 0;
+    for (let i = 0; i < gw * gh; i++) if (al[i * 4 + 3] > 60) { need[i] = 1; total++; }
+    const R0 = Math.max(15, Math.min(30, ch * .17)), budget = cw * ch / (R0 * 1.6) * Q.paint, runs = [];   // paint: Q.paint times what one neat pass over the whole wall takes
+    let used = 0, on = false, lx = 0, ly = 0, still = 0, over = false, fin = 0, dirty = true, t0 = performance.now();
+    const cov = () => total ? hit / total : 1;
+    const dot = (x, y) => {
+      const g = mc.createRadialGradient(x * d, y * d, 0, x * d, y * d, R0 * d); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.62, 'rgba(255,255,255,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)'); mc.fillStyle = g; mc.beginPath(); mc.arc(x * d, y * d, R0 * d, 0, 7); mc.fill();
+      const rr = R0 * .8, x0 = Math.max(0, Math.floor((x - rr) / GS)), x1 = Math.min(gw - 1, Math.floor((x + rr) / GS)), y0 = Math.max(0, Math.floor((y - rr) / GS)), y1 = Math.min(gh - 1, Math.floor((y + rr) / GS));
+      for (let b = y0; b <= y1; b++) for (let a = x0; a <= x1; a++) { const i = b * gw + a; if (need[i] && !got[i] && Math.hypot((a + .5) * GS - x, (b + .5) * GS - y) <= rr) { got[i] = 1; hit++; } }
+      dirty = true;
+    };
+    const hud2 = () => { spEl.querySelector('#cySpP').style.width = cl(100 - used / budget * 100, 0, 100) + '%'; spEl.querySelector('#cySpN').textContent = Math.min(100, Math.round(cov() * 100 / .97)) + ' %'; spEl.querySelector('#cySpOk').style.visibility = cov() < Q.min || over ? 'hidden' : 'visible'; };   // (keeps its room: the wall must not jump under the finger)
+    const close = () => { on = false; if (D.RB.hiss) D.RB.hiss(false); spEl.hidden = true; spEl.innerHTML = ''; spApi = null; paintHud(); kick(); };
+    const finish = () => { if (over) return; over = true; on = false; if (D.RB.hiss) D.RB.hiss(false); fin = performance.now(); hud2();
+      if (cov() < Q.min) { setTimeout(() => { close(); D.toast('🎨 ' + T('Краска кончилась раньше, чем рисунок. Попробуй ещё раз — баллончики целы.')); }, 500); return; }
+      const stars = cov() >= Q.full && runs.length <= Q.drips ? 3 : cov() >= .8 ? 2 : 1; if (navigator.vibrate) try { navigator.vibrate(30); } catch (_) {}
+      setTimeout(() => { close(); done(stars); }, 1150); };
+    const at = e => { const q = cv.getBoundingClientRect(); return [cl(e.clientX - q.left, 0, cw), cl(e.clientY - q.top, 0, ch)]; };
+    const spray = (x, y) => { if (over) return; const dist = Math.hypot(x - lx, y - ly), n = Math.max(1, Math.ceil(dist / (R0 * .3))); for (let i = 1; i <= n; i++) dot(lx + (x - lx) * i / n, ly + (y - ly) * i / n); used += dist; if (dist > 2) still = performance.now(); lx = x; ly = y; hud2(); if (used >= budget || cov() >= .97) finish(); };
+    cv.onpointerdown = e => { if (over) return; e.preventDefault(); on = true; [lx, ly] = at(e); still = performance.now(); dot(lx, ly); used += R0 * .5; if (D.RB.hiss) D.RB.hiss(true); try { cv.setPointerCapture(e.pointerId); } catch (_) {} hud2(); };
+    cv.onpointermove = e => { if (!on) return; let ev = []; try { ev = e.getCoalescedEvents ? e.getCoalescedEvents() : []; } catch (_) {} if (!ev.length) ev = [e]; ev.forEach(q => { const [x, y] = at(q); spray(x, y); }); };   // every point of the finger's way, not only the last one of a frame
+    cv.onpointerup = cv.onpointercancel = () => { on = false; if (D.RB.hiss) D.RB.hiss(false); };
+    spEl.querySelector('#cySpNo').addEventListener('click', () => { over = true; close(); });
+    spEl.querySelector('#cySpOk').addEventListener('click', finish);
+    const loop = now => {
+      if (spEl.hidden || !cv.isConnected) return;
+      if (on && !over && now - still > 600) { runs.push({ x: lx, y: ly, len: 26 + Math.random() * 40, t: now }); still = now + 500; used += budget * .03; hud2(); if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {} if (used >= budget) finish(); }   // stood still: the paint runs
+      if (dirty || on || over || runs.some(q => now - q.t < 900)) {
+        dirty = false; c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#8F8E8A'; c.fillRect(0, 0, cv.width, cv.height);
+        c.fillStyle = 'rgba(0,0,0,.1)'; for (let y = 7 * d; y < cv.height; y += 7 * d) c.fillRect(0, y, cv.width, d); for (let y = 0, j = 0; y < cv.height; y += 7 * d, j++) for (let x = (j % 2) * 9 * d; x < cv.width; x += 18 * d) c.fillRect(x, y, d, 7 * d);
+        if (O) { c.globalAlpha = .8; c.drawImage(O, 0, 0); c.globalAlpha = 1; }
+        c.globalAlpha = .2 + .06 * Math.sin((now - t0) / 300); c.drawImage(P, 0, 0); c.globalAlpha = 1;                                                              // a faint sketch: where to paint
+        tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, TM.width, TM.height); tc.drawImage(M, 0, 0); tc.globalCompositeOperation = 'source-in'; tc.drawImage(P, 0, 0); c.drawImage(TM, 0, 0);
+        runs.forEach(q => { const u = Math.min(1, (now - q.t) / 900); c.strokeStyle = PAL.a; c.lineCap = 'round'; c.lineWidth = 4 * d; c.beginPath(); c.moveTo(q.x * d, q.y * d); c.lineTo(q.x * d, (q.y + q.len * u) * d); c.stroke(); c.fillStyle = PAL.a; c.beginPath(); c.arc(q.x * d, (q.y + q.len * u) * d, 3.2 * d, 0, 7); c.fill(); });
+        if (over && cov() >= Q.min) { const u = Math.min(1, (now - fin) / 450); c.fillStyle = '#8F8E8A'; c.globalAlpha = u; c.fillRect(0, 0, cv.width, cv.height); c.drawImage(P, 0, 0); c.globalAlpha = Math.max(0, .7 * (1 - (now - fin) / 380)); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.globalAlpha = 1; }
+        else if (on) { c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1.5 * d; c.beginPath(); c.arc(lx * d, ly * d, R0 * .8 * d, 0, 7); c.stroke(); for (let i = 0; i < 6; i++) { const a = Math.random() * 7, q = R0 * (.8 + Math.random() * .5); c.fillStyle = PAL.a; c.fillRect((lx + Math.cos(a) * q) * d, (ly + Math.sin(a) * q) * d, 1.6 * d, 1.6 * d); } }
+      }
+      requestAnimationFrame(loop);
+    };
+    spApi = { rect: () => { const q = cv.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height }; }, cov, used: () => used / budget, runs: () => runs.length, miss: () => { const o = []; for (let i = 0; i < gw * gh; i++) if (need[i] && !got[i]) o.push([i % gw, Math.floor(i / gw)]); return { gw, gh, cw, ch, R0, o }; } };
+    hud2(); requestAnimationFrame(loop);
   }
   // a delivery from the kiosk: run to the door before the food gets cold (the timer runs in real seconds)
   function jobsLeft() { if (S.dl.day !== dayN()) S.dl = { day: dayN(), n: 0 }; return B.job.perDay - S.dl.n; }
@@ -173,7 +304,7 @@
   // ---- crews on the streets (owner 13.11.2026 «как крипы, но без убийств: победил в танце — банда исчезает и тебе что-то достаётся») ----
   // gear: unique clothes that only drop in the city; each has a look (seen on the hero) and one small perk
   const GEAR = DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F'];
-  const PERK = { time: '+{n} % времени в стычках', life: '+{n} жизнь в стычках', cash: '+{n} % кэша со стычек', rep: '+{n} респекта за разогнанную банду', show: '+{n} % в шляпу на шоу', en: 'Стычка стоит на {n} энергии меньше', coin: 'Монеты на земле: +{n}' };
+  const PERK = { time: '+{n} % времени в стычках', life: '+{n} жизнь в стычках', cash: '+{n} % кэша со стычек', rep: '+{n} респекта за разогнанную банду', show: '+{n} % в шляпу на шоу', en: 'Стычка стоит на {n} энергии меньше', coin: 'Монеты на земле: +{n}', can: 'Граффити стоит на {n} баллончик меньше' };
   const gearOn = () => Object.keys(S.gear.on).map(k => GEAR[S.gear.on[k]]).filter(Boolean);
   const perk = k => gearOn().reduce((a, g) => a + (g.perk && g.perk[0] === k ? g.perk[1] : 0), 0);
   const perkTxt = g => g.perk ? T(PERK[g.perk[0]], { n: g.perk[1] }) : '';
@@ -207,13 +338,17 @@
       gangCool = performance.now() + 5000;
       if (!won) { dlg(T(G.g.name), p('😤 ' + T('Банда устояла. Попробуй ещё раз.')) + p('<small>' + T('Чем выше уровень героя из уроков, тем больше времени на каждое движение.') + '</small>'), [{ t: '🔥 ' + T('В круг!'), cls: 'btn-accent', off: S.en < cost, fn: () => fight(G, cost) }, D.home && { t: T('К урокам'), fn: () => D.home() }].filter(Boolean)); return; }
       const Q = B.duel, q = perf / total, cash = Math.round((Q.cash + Q.cashLvl * G.lvl) * (1 + q * .5) * (1 + perk('cash') / 100)), rep = Q.rep + Math.floor(G.lvl / 2) + perk('rep'), lines = [];
-      S.tut = 1; S.cash += cash; S.rep += rep; S.gang.beat.push(G.g.id); S.gw++; pop('💨', '#F2EFE8');
+      const tw = turfs().find(t => t.gang === G.g.id), newSt = tw && !S.gwon[G.g.id] ? tw.art.style : '';
+      S.tut = 1; S.cash += cash; S.rep += rep; S.gang.beat.push(G.g.id); S.gw++; S.gt[G.g.id] = S.t; pop('💨', '#F2EFE8');
       const left = (G.g.gear || []).filter(id => !S.gear.own.includes(id)), drop = left.length && (!S.gwon[G.g.id] || Math.random() < Q.drop) ? left[0] : null;
       S.gwon[G.g.id] = (S.gwon[G.g.id] || 0) + 1; if (drop) S.gear.own.push(drop);
       if (Math.random() < Q.can) { give('can'); lines.push(found('can')); }
       if (q >= .8) lines.unshift('✨ ' + T('Чистая работа: бонус к кэшу'));
+      if (tut) { for (let i = 0; i < B.turf.start; i++) give('can'); lines.push('🎨 ' + T('Банда бросила баллончики') + ': +' + B.turf.start); }
+      if (newSt) { S.lastSt = newSt; lines.push('🎨 ' + T('Новый стиль граффити: {x}', { x: T(STYLE[newSt]) })); }   // the new style is the one offered first at the wall
+      if (tw) lines.push(mine(tw) ? '👑 ' + T('Точка «{w}» остаётся твоей.', { w: T(tw.name) }) : '🔥 ' + T('Их стена теперь без охраны — закрась её своим граффити.'));
       bump('gang'); save();
-      dlg(T('Банда «{x}» разогнана!', { x: T(G.g.name) }), res(cash, rep, lines) + (drop ? p('🎁 ' + T('Новая шмотка!')) + gearCard(drop) : ''), drop ? [{ t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }] : []);
+      dlg(T('Банда «{x}» разогнана!', { x: T(G.g.name) }), res(cash, rep, lines) + (drop ? p('🎁 ' + T('Новая шмотка!')) + gearCard(drop) : ''), [drop && { t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }, tw && !mine(tw) && { t: '🎨 ' + T('К стене банды'), cls: drop ? '' : 'btn-accent', fn: () => goPlace(tw) }].filter(Boolean));
     } });
   }
   // the quick dance-off: swipe where the arrow points before the ring closes; the last move is a freeze — press and hold
@@ -231,25 +366,36 @@
     const fig = (sel, base) => { const el = duEl.querySelector(sel + ' svg'); let J = null; try { J = el && HR.rigJoints(el); } catch (_) {} return { J, mv: base, base, t0: performance.now(), loop: true }; };
     const FA = fig('.cydu-f.me', 'bounce'), FB = fig('.cydu-f.op', 'toprock');
     const mv = (F, name, loop) => { if (!MV[name]) name = F.base; F.mv = name; F.loop = !!loop; F.t0 = performance.now(); };
-    const pose = (F, now) => { if (!F.J) return; let M = MV[F.mv] || MV.idle, u = (now - F.t0) / 1000 / M.dur; if (u >= 1 && !F.loop) { F.mv = F.base; F.loop = true; F.t0 = now; M = MV[F.mv] || MV.idle; u = 0; } try { HR.setPose(F.J, M.f(u % 1)); } catch (_) {} };
-    const BEATS = (D.RB.BEATS || []), stopJam = D.RB.jam && BEATS.length ? D.RB.jam(BEATS[Math.min(BEATS.length - 1, Math.floor((o.lvl - 1) / 2))].id, 24) : null;
+    const pose = (F, now) => { if (!F.J) return; let M = MV[F.mv] || MV.idle, u = (now - F.t0) / 1000 / M.dur; if (u >= 1 && !F.loop) { F.mv = F.base; F.loop = true; F.t0 = now; M = MV[F.mv] || MV.idle; u = 0; }
+      if (F.loop && F.mv === F.base) { const nb = Math.max(1, Math.round(M.dur * 1000 / spb)); u = (((now - b0) / spb / nb) % 1 + 1) % 1; }   // the steps a dancer repeats go in time with the beat
+      try { HR.setPose(F.J, M.f(u % 1)); } catch (_) {} };
+    const BEATS = (D.RB.BEATS || []), beat = BEATS.length ? BEATS[Math.min(BEATS.length - 1, Math.floor((o.lvl - 1) / 2))] : null, stopJam = D.RB.jam && beat ? D.RB.jam(beat.id, 32) : null;
+    // in time with the beat (owner 14.11.2026): every arrow jumps out exactly on a beat or half a beat, the dancers and the stage move to it.
+    // No sound (muted phone) — the same grid runs silently.
+    const spb = stopJam && stopJam.spb ? stopJam.spb : 60000 / ((beat && beat.bpm) || 100), b0 = stopJam && stopJam.t0 ? stopJam.t0 : performance.now() + 60;
+    const onGrid = t => b0 + Math.ceil((t - b0) / (spb / 2) - 1e-6) * spb / 2;
+    let wait = 0;
     const $d = q => duEl.querySelector(q), ring = $d('#cyDuR'), inn = $d('#cyDuI'), arr = $d('#cyDuA'), msg = $d('#cyDuM'), SH = ['YEAH!', 'OOOH!', 'FIRE!', 'CLEAN!', 'FRESH!'];
     const paint = () => { const m = i < 0 ? 0 : seq[Math.min(i, seq.length - 1)].m; $d('#cyDuP').textContent = '✓'.repeat(m) + '🕺'.repeat(o.size - m); $d('#cyDuL').textContent = '🔥'.repeat(Math.max(0, lives)); $d('#cyDuC').textContent = combo > 1 ? 'COMBO ×' + combo : ''; };
     const end = won => { over = true; duApi = null; window.removeEventListener('keydown', key); mv(FA, won ? 'win' : 'lose', true); mv(FB, won ? 'lose' : 'win', true); const t9 = performance.now(), fin = now => { pose(FA, now); pose(FB, now); if (now - t9 < 1100 && !duEl.hidden) requestAnimationFrame(fin); }; requestAnimationFrame(fin); if (stopJam) setTimeout(stopJam, 700); setTimeout(() => { duEl.hidden = true; duEl.innerHTML = ''; paintHud(); o.onEnd(won, perf, seq.length); kick(); }, won ? 1150 : 900); };
     const next = () => { if (over) return; i++; if (i >= seq.length) { msg.textContent = 'FREEZE!'; msg.className = 'cydu-msg ok big'; return end(true); }
       const n = seq[i]; arr.textContent = { u: '↑', r: '→', d: '↓', l: '←', h: '✊' }[n.d]; arr.className = 'd' + n.d; inn.style.setProperty('--h', 0); ring.style.setProperty('--u', 0);
-      $d('#cyDuH').textContent = n.d === 'h' ? T('Нажми и держи — фриз!') : (o.tut || i < 2 ? T('Свайпай в сторону стрелки, пока кольцо не сомкнулось') : ''); t0 = performance.now(); live = true; hold = 0; paint(); };
+      $d('#cyDuH').textContent = n.d === 'h' ? T('Нажми и держи — фриз!') : (o.tut || i < 2 ? T('Свайпай в сторону стрелки, пока кольцо не сомкнулось') : ''); hold = 0; paint();
+      t0 = onGrid(performance.now() + 40); wait = t0; arr.style.opacity = 0; };   // the arrow waits for the beat
     const hit = ok => { if (!live || over) return; live = false; const n = seq[i];
       if (ok) { const fast = performance.now() - t0 < per * .55; combo++; if (fast || n.d === 'h') perf++; msg.textContent = n.d === 'h' ? 'FREEZE!' : fast ? (combo > 2 ? SH[Math.floor(Math.random() * SH.length)] : 'PERFECT') : 'GOOD'; msg.className = 'cydu-msg ok' + (fast ? ' big' : ''); arr.className += ' hit'; mv(FA, { u: 'toprock', d: 'sixstep', l: 'windmill', r: 'swipe', h: 'freeze' }[n.d], n.d === 'h'); if (seq[i + 1] && seq[i + 1].m !== n.m) { mv(FB, 'lose'); setTimeout(() => { if (!over) mv(FB, ['toprock', 'kickstep', 'salsa', 'indian'][seq[i + 1].m % 4], true); FB.base = FB.mv; }, 560); } }
       else { lives--; combo = 0; msg.textContent = 'MISS'; msg.className = 'cydu-msg bad'; mv(FA, 'shock'); mv(FB, 'burn'); duEl.classList.remove('shake'); void duEl.offsetWidth; duEl.classList.add('shake'); if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {} if (lives <= 0) { paint(); return end(false); } }
-      paint(); setTimeout(next, seq[i + 1] && seq[i + 1].m !== n.m ? 560 : 190); };
-    const tick = now => { if (over) return; pose(FA, now); pose(FB, now); if (live) { const n = seq[i], u = (now - t0) / (n.d === 'h' ? per * 1.7 : per); ring.style.setProperty('--u', Math.min(1, u)); if (n.d === 'h' && hold) { const hu = (now - hold) / Q.holdMs; inn.style.setProperty('--h', Math.min(1, hu)); if (hu >= 1) hit(true); } if (live && u >= 1) hit(false); } requestAnimationFrame(tick); };
+      paint(); setTimeout(next, seq[i + 1] && seq[i + 1].m !== n.m ? 480 : 110); };
+    const tick = now => { if (over) return; pose(FA, now); pose(FB, now); { const ph = (((now - b0) / spb) % 1 + 1) % 1; duEl.style.setProperty('--bp', ((1 - ph) * (1 - ph)).toFixed(3)); }
+      if (wait && now >= wait) { wait = 0; live = true; arr.style.opacity = 1; arr.classList.remove('pop'); void arr.offsetWidth; arr.classList.add('pop'); }
+      if (live) { const n = seq[i], u = (now - t0) / (n.d === 'h' ? per * 1.7 : per); ring.style.setProperty('--u', Math.min(1, u)); if (n.d === 'h' && hold) { const hu = (now - hold) / Q.holdMs; inn.style.setProperty('--h', Math.min(1, hu)); if (hu >= 1) hit(true); } if (live && u >= 1) hit(false); } requestAnimationFrame(tick); };
     const key = e => { const d = { ArrowUp: 'u', ArrowRight: 'r', ArrowDown: 'd', ArrowLeft: 'l' }[e.key]; if (d && live && seq[i].d !== 'h') hit(d === seq[i].d); if (e.key === ' ' && live && seq[i].d === 'h' && !hold) hold = performance.now(); };
+    duEl.style.setProperty('--bp', 0);
     duEl.onpointerdown = e => { sx = e.clientX; sy = e.clientY; used = false; if (live && seq[i].d === 'h') { hold = performance.now(); mv(FA, 'freeze', true); } try { duEl.setPointerCapture(e.pointerId); } catch (_) {} };
     duEl.onpointermove = e => { if (used || !live || seq[i].d === 'h') return; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.hypot(dx, dy) < 26) return; used = true; hit((Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : (dy > 0 ? 'd' : 'u')) === seq[i].d); };
     duEl.onpointerup = duEl.onpointercancel = () => { if (live && seq[i] && seq[i].d === 'h') { hold = 0; inn.style.setProperty('--h', 0); mv(FA, FA.base, true); } };
     window.addEventListener('keydown', key);
-    duApi = { need: () => live ? seq[i].d : '', hit: d => hit(d === seq[i].d), left: () => seq.length - i };
+    duApi = { need: () => live ? seq[i].d : '', hit: d => hit(d === seq[i].d), left: () => seq.length - i, grid: () => ({ spb, b0, t0 }) };
     paint(); setTimeout(next, 500); requestAnimationFrame(tick);
   }
   // the MC runs the cypher: crews come out one after another, no rest; the prize is his
@@ -345,7 +491,8 @@
     const vis = (x, y, m) => { const px = ox + x * TS, py = oy + y * TS; return px > -m && py > -m && px < W + m && py < H + m; };
     GFX.drawMap(cx, ox, oy, W, H);
     DIST.places.forEach(p => { if (p.type === 'stash' && !S.got[p.id] && seen(p.at[0], p.at[1]) && vis(p.at[0], p.at[1], TS)) GFX.crate(cx, ox + p.at[0] * TS, oy + p.at[1] * TS); });
-    DIST.places.forEach(p => { if (p.type === 'wall' && S.tags[p.id] && vis(p.at[0], p.at[1], 2 * TS)) GFX.mytag(cx, ox + p.at[0] * TS + 3, oy + p.at[1] * TS + (p.ty || -27)); });
+    walls().forEach(pl => { const r = GFX.wallRect(pl.id), a = r && artOf(pl); if (!a) return; const px = ox + r.x, py = oy + r.y; if (px > W || py > H || px + r.w < 0 || py + r.h < 0) return;
+      cx.imageSmoothingEnabled = true; cx.drawImage(GFX.graf(Object.assign({ w: r.w, h: r.h }, a)), px, py, r.w, r.h); cx.imageSmoothingEnabled = false; });
     picks().forEach(k => { if (!S.pk.got.includes(k.i) && seen(k.x, k.y) && vis(k.x, k.y, TS)) GFX.pickup(cx, ox + k.x * TS + TS / 2, oy + k.y * TS + TS / 2, k.kind, now, k.i * 3 + k.x); });
     if (path.length) { const g = path[path.length - 1]; cx.strokeStyle = '#E2611A'; cx.lineWidth = 2; cx.beginPath(); cx.arc(ox + g[0] * TS + TS / 2, oy + g[1] * TS + TS / 2, 10 + 2 * Math.sin(now / 150), 0, 7); cx.stroke(); }
     (DIST.birds || []).forEach((b, i) => {
@@ -396,7 +543,13 @@
     }
     GFX.fog(cx, S.fog[S.d], ox, oy);
     DIST.places.forEach(p => {
-      if (!seen(p.at[0], p.at[1]) || !vis(p.at[0], p.at[1], TS)) return; if (p.type === 'stash' && S.got[p.id]) return; if (p.type === 'wall' && S.tags[p.id]) return;
+      if (!seen(p.at[0], p.at[1]) || !vis(p.at[0], p.at[1], 4 * TS)) return; if (p.type === 'stash' && S.got[p.id]) return;
+      if (p.wall) {   // a wall: the mark stands over the piece — whose it is, and whether it can be painted now
+        const r = GFX.wallRect(p.id); if (!r) return; const sx = ox + r.x + r.w / 2, sy = oy + r.y - 13;
+        if (S.tags[p.id]) { if (p.type === 'turf' && holdLeft(p) < 1440) label(sx, sy + 4, '⚠ ' + T('{h} ч', { h: hrs(holdLeft(p)) }), '#FF8A6A'); return; }
+        if (p.type === 'turf') { const free = openLeft(p) > 0; GFX.sign(cx, sx, sy - (free ? Math.round(4 * Math.abs(Math.sin(now / 220))) : 0), 'turf', free ? '#3BD16F' : gangOf(p).col); if (free) label(sx, sy + 22, T('Закрась!'), '#7BE3A0'); return; }
+        GFX.sign(cx, sx, sy + Math.round(2 * Math.sin(now / 400 + p.at[0])), 'wall'); return;
+      }
       const near = Math.hypot(p.at[0] - hero.x, p.at[1] - .7 - hero.y) < .9;   // do not cover the hero with the sign
       cx.globalAlpha = near ? .3 : 1; GFX.sign(cx, ox + p.at[0] * TS + TS / 2, oy + p.at[1] * TS - 10 + Math.round(2 * Math.sin(now / 400 + p.at[0])), p.type, !!p.open && !inH(h, p.open)); cx.globalAlpha = 1;
     });
@@ -427,14 +580,14 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn()].join('|'); if (k === hudKey) return; hudKey = k;
+    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn(), turfs().filter(mine).length].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
       '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
       '<button type="button" class="cybag" id="cyBag" aria-label="' + T('Рюкзак') + '">🎒</button>' +
       '<div class="cyrow2"><div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>' +
       '<button type="button" class="cygl' + (gd === 3 ? ' ok' : '') + '" id="cyGoals" aria-label="' + T('Дела на сегодня') + '">📋 ' + gd + ' / 3</button>' +
-      (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') + (djOn() ? '<div class="cyfl">🎧 ' + T('Бит качает') + '</div>' : '') +
+      (turfs().length && S.tut ? '<div class="cyfl">👑 ' + turfs().filter(mine).length + ' / ' + turfs().length + '</div>' : '') + (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') + (djOn() ? '<div class="cyfl">🎧 ' + T('Бит качает') + '</div>' : '') +
       (S.job ? '<div class="cyjob' + (S.job.left < 6 ? ' hot' : '') + '">🌯 ' + Math.max(0, Math.ceil(S.job.left)) + '</div>' : '') + '</div>';
     hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg);
   }
@@ -475,7 +628,8 @@
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
       p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
       p('🔥 ' + T('По двору ходят банды: победи в танце — банда уйдёт и что-нибудь оставит. Шмотки надеваются в рюкзаке.')) +
-      p('📋 ' + T('Собирай монеты и баллончики, бери заказы в ларьке, разминайся на площадке, рисуй теги — дела дня открываются кнопкой 📋.')) +
+      p('🎨 ' + T('У каждой банды своя стена с граффити. Разогнал банду — закрась их рисунок своим: точка твоя и приносит кэш каждый день. Банда вернётся — держи точку.')) +
+      p('📋 ' + T('Собирай монеты и баллончики, бери заказы в ларьке, разминайся на площадке — дела дня открываются кнопкой 📋.')) +
       p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>') + warmTip(), []);
   }
 
@@ -521,7 +675,7 @@
       return dlg(T(pl.name), p(T('Двор твой! Центр скоро откроется — район уже строится.')), []);
     }
     if (pl.type === 'show') return showSpot(pl);
-    if (pl.type === 'wall') return wallSpot(pl);
+    if (pl.wall) return wallSpot(pl);
     if (pl.type === 'gym') return stretch(pl);
     if (pl.type === 'mc') return mcSpot(pl);
     if (pl.type === 'dj') return djSpot(pl);
@@ -671,7 +825,7 @@
     kick();
   }
   function step(dt) {
-    S.t += dt * 1440 / (B.dayMin * 60); jobTick(dt); collect();
+    S.t += dt * 1440 / (B.dayMin * 60); jobTick(dt); collect(); turfTick();
     if (dlgEl.hidden && duEl.hidden && !S.job && performance.now() > gangCool) { const G = gangsNow().find(q => Math.hypot(q.x - hero.x, q.y - hero.y) < 1.15); if (G) { path = []; goal = null; joy = null; openGang(G); } }
     if (joy && joy.on) {
       const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
@@ -693,7 +847,7 @@
   function frame(now) {
     raf = 0; timer = 0; if (!shown || document.hidden) return;
     const dt = Math.min(.25, (now - last) / 1000 || 0); last = now;
-    if (D.rbEl.hidden && duEl.hidden) step(dt);            // the clock stands still during a round
+    if (D.rbEl.hidden && duEl.hidden && spEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
     if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else if (S.job || floats.length) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 66);   // ~15 frames a second: residents, the car, coins move
@@ -726,6 +880,7 @@
     '.cydu-top{display:flex;flex-direction:column;align-items:center;gap:6px}.cydu-top b{font:400 30px/1 Anton,Inter,sans-serif;letter-spacing:1px;text-transform:uppercase;text-shadow:0 2px 0 #000}.cydu-top span{font-size:20px;letter-spacing:4px}' +
     '.cydu-mid{display:flex;flex-direction:column;align-items:center;gap:8px}' +
     '.cydu-st{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:150px;width:100%;max-width:360px;border-bottom:3px solid color-mix(in srgb,var(--gc) 60%,transparent);background:radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--gc) 22%,transparent),transparent 70%)}' +
+    '.cydu{--bp:0}.cydu-st{position:relative}.cydu-st::after{content:"";position:absolute;left:8%;right:8%;bottom:-3px;height:5px;border-radius:3px;background:var(--gc);opacity:calc(.15 + .85*var(--bp));box-shadow:0 0 calc(6px + 22px*var(--bp)) var(--gc)}.cydu-ring{transform:scale(calc(1 + .04*var(--bp)))}.cydu-in span.pop{animation:cyPop .16s ease-out}@keyframes cyPop{0%{transform:scale(.4)}70%{transform:scale(1.18)}100%{transform:scale(1)}}' +
     '.cydu-f{width:132px;height:150px;flex:none}.cydu-f svg{width:100%;height:100%;overflow:visible;display:block}.cydu-f.op{transform:scaleX(-1);filter:drop-shadow(0 0 9px var(--gc))}.cydu-vs{font:400 22px/1 Anton,Inter,sans-serif;color:#F2EFE8;opacity:.5;align-self:center}' +
     '@media (max-height:720px){.cydu-st{height:118px}.cydu-f{width:104px;height:118px}.cydu-top b{font-size:24px!important}}' +
     '.cydu-ring{--u:0;width:168px;height:168px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--gc) calc((1 - var(--u))*360deg),rgba(255,255,255,.09) 0);box-shadow:0 0 44px color-mix(in srgb,var(--gc) 45%,transparent)}' +
@@ -734,13 +889,22 @@
     '.cydu-msg{font:400 34px/1 Anton,Inter,sans-serif;letter-spacing:1px;min-height:36px}.cydu-msg.ok{color:#3BD16F}.cydu-msg.big{color:#FFD23F;font-size:42px}.cydu-msg.bad{color:#FF5A4A}' +
     '.cydu-hint{font-size:13px;color:#C9C5BC;text-align:center;min-height:34px;max-width:280px}' +
     '.cydu-bot{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:56px}.cydu-bot span:first-child{font-size:24px;letter-spacing:3px}.cydu-bot span:last-child{font:400 20px/1 Anton,Inter,sans-serif;color:#E2611A;letter-spacing:1px}' +
+    '.cygr{background:#8F8E8A linear-gradient(rgba(0,0,0,.12) 1px,transparent 1px) 0 0/100% 7px;border-radius:10px;padding:8px;margin:0 0 10px;border:1px solid rgba(255,255,255,.1)}.cygr img{display:block;width:100%;height:auto}' +
+    '.cywd{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13px;color:#C9C5BC}.cywd input{flex:1;min-width:0;background:#0B0B0C;border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px 12px;color:#F2EFE8;font:400 20px/1 Anton,Inter,sans-serif;letter-spacing:2px;text-transform:uppercase}' +
+    '.cych{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.cychip{background:#26262B;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:8px 12px;color:#F2EFE8;font:600 13px/1 Inter,sans-serif;cursor:pointer}.cychip.on{background:#E2611A;border-color:#E2611A;color:#0B0B0C}.cychip.lock{opacity:.55}' +
+    '.cysw{width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.18);padding:0;cursor:pointer}.cysw.on{border-color:#F2EFE8;box-shadow:0 0 0 3px #E2611A}' +
+    '.cysp{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(18px + env(safe-area-inset-top,0px)) 10px calc(18px + var(--cyb,0px));background:rgba(8,8,10,.95);color:#F2EFE8;font-family:Inter,system-ui,sans-serif;touch-action:none}' +
+    '.cysp-top{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}.cysp-top b{font:400 28px/1 Anton,Inter,sans-serif;letter-spacing:1px;text-transform:uppercase}.cysp-top small{font-size:13px;color:#C9C5BC;max-width:320px}' +
+    '.cysp-wall{border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px #26262B,0 12px 40px rgba(0,0,0,.6)}.cysp-wall canvas{display:block;touch-action:none;cursor:crosshair}' +
+    '.cysp-row{display:flex;align-items:center;gap:10px;width:100%;max-width:340px}.cysp-row b{font:400 22px/1 Anton,Inter,sans-serif;min-width:58px;text-align:right}.cysp-bar{flex:1;height:14px;border-radius:7px;background:#26262B;overflow:hidden}.cysp-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#E2611A,#FFD23F)}' +
+    '.cysp .cybt{width:100%;max-width:340px}' +
     '.rbcity{margin-top:10px}.cyres{display:flex;gap:14px;justify-content:center;font:400 26px/1 Anton,Inter,sans-serif;margin:4px 0 8px}.cyres .up{color:#3BD16F}.cyres .dn{color:#E2611A}.cyln{font-size:13px;color:#C9C5BC;margin:0 0 6px;text-align:center}';
 
   function init(deps) {
     D = deps; el = D.el; S = load();
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div><div class="cydu" id="cyDu" hidden></div>';
-    can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg'); duEl = $('#cyDu');
+    el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div><div class="cydu" id="cyDu" hidden></div><div class="cysp" id="cySp" hidden></div>';
+    can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg'); duEl = $('#cyDu'); spEl = $('#cySp');
     setMap();
     can.addEventListener('pointerdown', down); can.addEventListener('pointermove', move); can.addEventListener('pointerup', up); can.addEventListener('pointercancel', () => { joy = null; });
     window.addEventListener('resize', () => { W = 0; kick(); });
@@ -752,5 +916,5 @@
   }
   function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
-  window.CITY = { init, show, hide, _duel: () => duApi, _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, _duel: () => duApi, _spray: () => spApi, _walls: () => walls().map(p => ({ id: p.id, at: p.at, mine: mine(p), open: p.type === 'turf' ? openLeft(p) : -1, hold: holdLeft(p), rect: GFX.wallRect(p.id) })), _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

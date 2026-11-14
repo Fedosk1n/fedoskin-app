@@ -570,8 +570,22 @@
       let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
       master.gain.value = mute ? 0 : .85;
       const o = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars, null);
-      return () => { try { o.gain.setTargetAtTime(0, ctx.currentTime, .05); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 500); };
+      const stop = () => { try { o.gain.setTargetAtTime(0, ctx.currentTime, .05); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 500); };
+      // when the first beat is HEARD (page clock, ms) and how long a beat is: the city's dance-off puts its arrows on this grid
+      stop.t0 = performance.now() + 50 + clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25) * 1000; stop.spb = 60000 / beatOf(id).bpm;
+      return stop;
     } catch (_) { return null; }
+  }
+  // the hiss of a spray can while the finger paints (the city's graffiti)
+  let hissN = null;
+  function hiss(on) {
+    try {
+      if (on) {
+        if (hissN || !audioOn()) return; let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {} if (mute) return;
+        const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); src.buffer = noise; src.loop = true; f.type = 'bandpass'; f.frequency.value = 5200; f.Q.value = .6;
+        g.gain.value = 0; g.gain.setTargetAtTime(.12, ctx.currentTime, .03); src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(); hissN = { src, g };
+      } else if (hissN) { const h = hissN; hissN = null; h.g.gain.setTargetAtTime(0, ctx.currentTime, .04); setTimeout(() => { try { h.src.stop(); h.g.disconnect(); } catch (_) {} }, 260); }
+    } catch (_) { hissN = null; }
   }
 
   // ---- 2: the round ----
@@ -962,5 +976,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, jam, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, jam, hiss, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

@@ -1137,3 +1137,34 @@
   purpose (energy −5, nothing else) and a win; backpack; DJ 4 of 4; cypher 25 moves; owls only at night; next day the crews are back;
   reload keeps gear. NOT on a real phone: swipe feel, time per move, the beat's sound (never heard by Claude), iPhone audio start.
   Not done yet: guard, other districts, balance by real play (no hand-played win yet), passers-by.
+  GRAFFITI + TURF, v5 (owner 14.11.2026 «граффити точно сделай по районам… в разных стилях, а не простенький тег. Нужны большие классные граффити»;
+  «сделай как будет лучше» about turf + arrows on the beat). Numbers: city-balance.js `turf` (+ `tag`, `price.can`).
+  (1) THE PIECES — `GFX.graf({ word, style, pal, w, h, seed, extra, scale })` in city-gfx.js → a cached canvas. Our OWN letters: `GLY` = every letter
+  (Latin, Cyrillic, digits, ! - .) as a few strokes on a 4 × 6 grid; `grafWord()` keeps only what can be written (≤ 8). The style decides how fat /
+  round / tilted the strokes are and what is around: `tag` (slanted hand, underline with an arrow), `bubble` (throw-up: cloud, puffy letters leaning
+  on each other, shine, bubbles, drips), `block` (blockbuster: rolled-on band, two-tone straight letters, hard shadow), `wild` (burst, leaning letters,
+  light edge, arrows), `d3` (no outline, depth to a vanishing point). `GRAF_PALS` (6 for the player: fire / ice / candy / chrome / toxic / sunset; 4 crews),
+  `GRAF_EXTRA` = signs beside the word: cog (Rusty), slime (Acid), owl (Owls), tooth (Gold), small crown on the player's first letter. No fonts, nothing copied.
+  (2) WALLS — places with `wall: { x0, x1, row, hmax }`: GFX.setMap keeps that part of a house wall / garage doors / fence clean (no windows, doors,
+  random scribbles; garages got taller doors, 64 px) and gives `GFX.wallRect(id)`; city.js draws the piece on top of the map every frame. Yard: type
+  `turf` (with `gang` + `art`) = t_home (Rusty, RUST block, 188×67 on the player's own house), t_gar (Acid, ACID bubble, garages), t_tower (Owls, OWLS
+  wild, 196×104 on the tall block), t_big (Gold, GOLD 3D, same block); type `wall` = 3 small free walls (2 fence, 1 garage). Crew spots moved next to
+  their walls. A new district = its own walls and crew styles, data only.
+  (3) RULES — beat a crew ⇒ `S.gt[gang] = S.t` ⇒ its wall is «open» for `turf.open` (24) game hours: sign turns green «Закрась!», the win dialog has
+  «К стене банды» (`goPlace`). `paintDlg`: preview, the word (`S.word`, default = nick, else FT), style chips (a crew's style opens with the FIRST win
+  over that crew — `styleOpen`; locked chip says which crew), 6 colour sets; cost 3 cans (small wall 2, repaint 1; «Кеды райтера» −1). `sprayGame`
+  (overlay `#cySp`): the old piece on the wall, a faint sketch of the new one, the finger sprays it in (mask canvas + source-in), coarse grid counts
+  coverage; ≥ 60 % ⇒ «Готово», 97 % ⇒ finishes itself; standing still 0.6 s ⇒ a drip (and paint lost); ≥ 93 % with ≤ 2 drips ⇒ «чисто» +2 ★; paint
+  = 4 neat passes of the wall, out of paint below 60 % ⇒ nothing lost, try again. THE «Готово» BUTTON KEEPS ITS PLACE (visibility) — when it appeared
+  with `hidden`, the wall jumped 28 px under the finger. Pointer moves use getCoalescedEvents. Spray hiss = `RB.hiss(on)` (rhythm.js `?v=15`).
+  `painted()`: `S.tags[id] = { s, p, t }` (old saves `1` = tag); first capture +5 + 2 × crew level ★ (again +2); the point pays 6 + 3 × crew level cash
+  every game day (`turfTick`, toast); not beating that crew for `hold` (3) game days ⇒ it paints the wall back (toast, ⚠ label with hours in the last
+  day). All four ⇒ +15 ★ and gear «Кеды райтера» (perk `can`). Tutorial win gives 3 cans. Cans are sold in the tent (12). HUD chip «👑 n / 4».
+  Goal «Нарисуй граффити». `CITY._walls()`, `CITY._spray()` for checks.
+  (4) DANCE-OFF ON THE BEAT — `RB.jam()` returns stop with `t0` (when beat 0 is heard) and `spb`; duel(): every arrow appears exactly on a beat /
+  half-beat (`onGrid`), looped dancer moves run in beat time, stage line + ring pulse (`--bp`), arrow pops. Time per move unchanged (level rule kept).
+  No sound ⇒ the same grid silently. 42 new i18n keys (997). city.js `?v=8`, city-gfx.js `?v=5`, city-data.js `?v=6`, city-balance.js `?v=5`.
+  Tested headless ru 390×844 + en 375×667 with real touch: tutorial → cans + style → walk to the wall → paint over RUST → point mine; guarded wall;
+  beat Acid → paint with another word (Cyrillic); too few cans; lazy painting + «Готово»; income next day; wall lost after 3 days; free wall; night;
+  reload; an old save with a tag; arrows on the grid; crews / DJ / cypher regression; a full rhythm round still opens. NOT on a real phone: how the
+  finger painting feels, the hiss and the beat (never heard by Claude), whether arrows FEEL on the beat with iPhone / Bluetooth audio delay.

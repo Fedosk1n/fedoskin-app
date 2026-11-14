@@ -7,7 +7,7 @@
   'use strict';
   const TS = 52, CH = 6, SP = 100, KEEP = 12;
   const OR = '#E2611A', WH = '#F2EFE8', INK = '#0E0E10';
-  let MAP, MW, MH, dpr = 1, chunks = new Map(), sprites = new Map(), fogCan = null, fogKey = '', darkCan = null, trees = [], lightsStatic = [], comps = [], use = 0, dayNow = 0;
+  let MAP, MW, MH, dpr = 1, chunks = new Map(), sprites = new Map(), fogCan = null, fogKey = '', darkCan = null, trees = [], lightsStatic = [], comps = [], use = 0, dayNow = 0, wallRects = {}, blanks = [], fenceBlank = new Set();
   const hash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   const tile = (x, y) => x < 0 || y < 0 || x >= MW || y >= MH ? 'F' : MAP[y][x];
   // v2 (owner 13.11.2026 «слишком плоская картинка… добавь объёма… дома разной высоты… граффити на стены… плотнее… добавь красок»):
@@ -35,6 +35,10 @@
   const DOORS = ['#6E4A2C', '#2F6B45', '#2B5C8E', '#8E2B2B', '#3A3D45'];
   function setMap(dist, ratio) {
     MAP = dist.map; MH = MAP.length; MW = MAP[0].length; dpr = ratio || 1; chunks.clear(); sprites.clear(); fogKey = ''; trees = []; lightsStatic = []; comps = [];
+    // walls for the big graffiti (places with `wall: { x0, x1, row, hmax }`): windows, doors and the random scribbles keep away from them;
+    // the piece itself is drawn by the game on top of the map (it changes hands). wallRects[id] = where it goes, in map pixels
+    wallRects = {}; fenceBlank = new Set(); blanks = (dist.places || []).filter(p => p.wall).map(p => ({ id: p.id, x0: p.wall.x0, x1: p.wall.x1, row: p.wall.row, hmax: p.wall.hmax || 0 }));
+    blanks.forEach(b => { if (MAP[b.row][b.x0] !== 'F') return; for (let x = b.x0; x <= b.x1; x++) fenceBlank.add(b.row * MW + x); wallRects[b.id] = { x: b.x0 * TS + 3, y: (b.row + 1) * TS - 28, w: (b.x1 - b.x0 + 1) * TS - 6, h: 26 }; });
     const done = new Set();
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
       const t = MAP[y][x];
@@ -47,7 +51,9 @@
       for (let i = 0; i < q.length; i++) { const [a, b] = q[i]; x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b);
         [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const u = a + dx, v = b + dy; if (u < 0 || v < 0 || u >= MW || v >= MH || done.has(v * MW + u) || cls(MAP[v][u]) !== k) return; if (k === 'C' && dy) return; done.add(v * MW + u); q.push([u, v]); }); }
       const B = { t: k, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, seed: x0 * 7 + y0 * 13 + 1 };
+      B.blank = blanks.filter(b => b.row >= y0 && b.row <= y1 && b.x0 >= x0 && b.x0 <= x1);
       if ('#bh'.includes(k)) house(B);
+      if (k === 'G') B.blank.forEach(b => { const H = B.h * TS, wh = Math.min(64, H - 30); wallRects[b.id] = { x: b.x0 * TS + 8, y: y0 * TS + H - wh + 9, w: (b.x1 - b.x0 + 1) * TS - 16, h: wh - 12 }; });
       if (k === 'K') lightsStatic.push({ x: x0 + 1, y: y0 + 2.1, r: 2.1, a: .9, kiosk: 1, kx: x0, ky: y0 });
       comps.push(B);
     }
@@ -62,14 +68,19 @@
     B.wh = Math.min(B.wh, H - 40); B.floors = Math.max(1, Math.round((B.wh - 10) / 26));
     B.doors = []; for (let x = B.x0; x < B.x0 + B.w; x++) if (MAP[B.y0 + B.h - 1][x] === 'D') B.doors.push({ x: X + (x - B.x0 + .5) * TS, home: 1 });
     if (!B.doors.length) { B.doors.push({ x: X + 16 + Math.floor(hash(s, 11) * (W - 32)), col: DOORS[Math.floor(hash(s, 13) * 5)] }); if (B.w > 6) B.doors.push({ x: X + W - 30 - Math.floor(hash(s, 15) * 60), col: DOORS[Math.floor(hash(s, 17) * 5)] }); }
-    B.shop = B.floors === 1 && hash(s, 19) < .6;
+    B.blank.forEach(b => { const hh = Math.min(b.hmax || 1e3, B.wh - 21); b.rect = wallRects[b.id] = { x: b.x0 * TS + 6, y: Y + H - 11 - hh, w: (b.x1 - b.x0 + 1) * TS - 12 - (b.x1 === B.x0 + B.w - 1 ? 8 : 0), h: hh }; });
+    const inBlank = (a, b2, yb) => B.blank.some(b => b2 > b.rect.x - 3 && a < b.rect.x + b.rect.w + 3 && (yb === undefined || yb > b.rect.y - 2));
+    if (B.blank.length) { B.doors = B.doors.filter(d => d.home || !inBlank(d.x - 13, d.x + 13)); if (!B.doors.length) for (let i = 0; i < B.w; i++) { const dx = X + (i + .5) * TS; if (!inBlank(dx - 13, dx + 13)) { B.doors.push({ x: dx, col: DOORS[Math.floor(hash(s, 13) * 5)] }); break; } } }
+    B.shop = B.floors === 1 && hash(s, 19) < .6 && !B.blank.length;
     // graffiti at street level: the ground-floor windows give way to the big pieces
     B.graf = []; const gsc = B.floors > 1 ? .8 : Math.min(1.25, (B.wh - 18) / 15);
     for (let i = 0, n = Math.max(1, Math.round(B.w / 2.2)); i < n; i++) { const big = hash(s + i, 53) < .75, k = 2 + Math.floor(hash(s + i, 55) * 2), gx = X + 8 + (i + hash(s + i, 51) * .6) * (W - 60) / n; B.graf.push({ x: gx, big, k, w: (k * 17 + 2) * (big ? gsc : .7), sc: gsc, seed: s * 3 + i * 11 }); }
+    B.graf = B.graf.filter(g => !inBlank(g.x, g.x + g.w));
     B.wins = []; const fp = (B.wh - 16) / B.floors, wh = Math.min(15, fp - 9), n = Math.max(1, Math.floor((W - 12) / 25)), gap = (W - 12 - n * 11) / n, top = Y + H - B.wh + 9;
     for (let f = 0; f < B.floors; f++) for (let i = 0; i < n; i++) {
       const wx = X + 6 + gap / 2 + i * (11 + gap), wy = top + f * fp + (fp - wh) / 2 - 2, gr = f === B.floors - 1;
       if (gr && (B.shop || B.doors.some(d => Math.abs(d.x - wx - 5.5) < 17) || B.graf.some(g => wx + 13 > g.x && wx - 2 < g.x + g.w))) continue;
+      if (inBlank(wx - 2, wx + 13, wy + wh)) continue;
       B.wins.push({ x: Math.round(wx), y: Math.round(wy), w: 11, h: Math.round(wh), i, f, gr });
     }
     for (let x = B.x0; x < B.x0 + B.w; x += 2) lightsStatic.push({ x: x + .9, y: B.y0 + B.h + .25, r: 1.15, a: .5, win: 1, sx: x, sy: B.y0 });
@@ -252,7 +263,7 @@
   }
   const GAR = [['#8E4B3A', '#D9622B'], ['#3F6E7A', '#3FB8C4'], ['#8A7434', '#F2B31F'], ['#5C5F69', '#3F8FD8'], ['#6B4A6E', '#C96FD0'], ['#4A6E4F', '#3BB86A']];
   function drawGarages(c, B) {
-    const X = B.x0 * TS, Y = B.y0 * TS, W = B.w * TS, H = B.h * TS, wh = Math.min(50, H - 30), ry = H - wh, R = (a, b, w, hh, col) => { c.fillStyle = col; c.fillRect(a, b, w, hh); }, E = (a, b, rx, r2, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(a, b, rx, r2, 0, 0, 7); c.fill(); };
+    const X = B.x0 * TS, Y = B.y0 * TS, W = B.w * TS, H = B.h * TS, wh = Math.min(64, H - 30), ry = H - wh, R = (a, b, w, hh, col) => { c.fillStyle = col; c.fillRect(a, b, w, hh); }, E = (a, b, rx, r2, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(a, b, rx, r2, 0, 0, 7); c.fill(); };
     R(X, Y + ry, W, wh, '#7A7B84'); for (let b = 6; b < wh; b += 6) R(X, Y + ry + b, W, 1, 'rgba(0,0,0,.1)');
     for (let u = 0; u * 2 < B.w; u++) {
       const a = X + u * 2 * TS, uw = Math.min(2, B.w - u * 2) * TS, g = GAR[Math.floor(hash(u + B.x0, B.y0) * 6)];
@@ -262,7 +273,7 @@
       // the door you see from the yard: faded paint, a piece of graffiti across it, a number plate
       R(a + 5, Y + ry + 6, uw - 10, wh - 7, '#26262A'); R(a + 7, Y + ry + 8, uw - 14, wh - 9, g[1]); for (let b = 0; b < wh - 12; b += 6) R(a + 7, Y + ry + 12 + b, uw - 14, 1.2, 'rgba(0,0,0,.25)'); R(a + 7, Y + ry + 8, uw - 14, 3, 'rgba(255,255,255,.2)'); R(a + uw / 2 - .75, Y + ry + 8, 1.5, wh - 9, 'rgba(0,0,0,.35)');
       for (let i = 0; i < 3; i++) E(a + 14 + hash(u + i, 9) * (uw - 28), Y + ry + 14 + hash(u, i + 11) * (wh - 22), 8, 5, 'rgba(120,70,40,.28)');
-      if (uw > TS) { if (hash(u, B.x0 + 3) < .8) piece(c, a + 14, Y + ry + 14, u * 7 + B.x0 + 2, 1.35, 3); else tag(c, a + 20, Y + ry + 18, u * 7 + B.x0, 1.2, 3.4); }
+      if (uw > TS && !(B.blank || []).some(b => b.x0 <= B.x0 + u * 2 + 1 && b.x1 >= B.x0 + u * 2)) { if (hash(u, B.x0 + 3) < .8) piece(c, a + 14, Y + ry + 14, u * 7 + B.x0 + 2, 1.35, 3); else tag(c, a + 20, Y + ry + 18, u * 7 + B.x0, 1.2, 3.4); }
       R(a + uw / 2 - 8, Y + ry + 1, 16, 7, '#F2EFE8'); R(a + uw / 2 - 5, Y + ry + 3, 10, 3, '#26262A'); R(a + uw / 2 + 3, Y + H - 16, 5, 4, '#F2CC55');
     }
     { const g = c.createLinearGradient(0, Y + ry, 0, Y + ry + 9); g.addColorStop(0, 'rgba(0,0,0,.4)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(X, Y + ry, W, 9); }
@@ -307,7 +318,7 @@
       // concrete slabs: you look at the wall's south side, so the far wall shows its face to the yard (the place for graffiti)
       if (edgeIn(0, 1)) {
         R(px, py + s - 40, s, 10, '#B9B6AE'); R(px, py + s - 40, s, 2, '#DAD7CE'); R(px, py + s - 30, s, 30, '#8D8C88'); R(px, py + s - 30, s, 4, 'rgba(0,0,0,.2)'); R(px, py + s - 5, s, 5, '#6B6A67'); R(px + s - 1.5, py + s - 40, 1.5, 40, 'rgba(0,0,0,.3)'); for (let i = 0; i < 3; i++) c.strokeStyle = 'rgba(0,0,0,.14)', c.lineWidth = 1, c.strokeRect(px + 5.5, py + s - 25.5, s - 12, 16);
-        if (h < .42) piece(c, px + 3, py + s - 25, x * 3 + y + 40, 1.02, 2 + (h < .2 ? 1 : 0)); else if (h < .6) tag(c, px + 4, py + s - 23, x * 3 + y, .9, 2.6);
+        if (fenceBlank.has(y * MW + x)) { /* kept clean for the player's piece */ } else if (h < .42) piece(c, px + 3, py + s - 25, x * 3 + y + 40, 1.02, 2 + (h < .2 ? 1 : 0)); else if (h < .6) tag(c, px + 4, py + s - 23, x * 3 + y, .9, 2.6);
         else if (h < .72) { R(px + 12, py + s - 27, 13, 17, '#F2EFE8'); R(px + 14, py + s - 25, 9, 6, SPRAY[Math.floor(h * 80) % 8]); R(px + 14, py + s - 17, 9, 1.4, '#3A3D45'); R(px + 14, py + s - 14, 6, 1.4, '#3A3D45'); R(px + 28, py + s - 25, 12, 15, '#FFD93B'); R(px + 30, py + s - 22, 8, 2, '#16161A'); R(px + 30, py + s - 18, 8, 2, '#16161A'); }   // posters
         contact(c, px, py + s, s);
       }
@@ -501,17 +512,194 @@
     else { E(px, y, 8, 8, INK); E(px, y, 6.8, 6.8, '#E2483A'); E(px - 2.4, y - 2.4, 2.2, 1.8, 'rgba(255,255,255,.55)'); R(px - .8, y - 10.5, 1.8, 4.4, '#5A3B25'); E(px + 3.4, y - 8.6, 3.4, 1.8, '#3FA845'); }
     const tw = (now / 900 + seed * .37) % 1; if (tw < .35) { const a = Math.sin(tw / .35 * Math.PI), sx = px + 7, sy = y - 8; c.strokeStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sx - 4 * a, sy); c.lineTo(sx + 4 * a, sy); c.moveTo(sx, sy - 4 * a); c.lineTo(sx, sy + 4 * a); c.stroke(); }
   }
-  // the player's tag on a wall: an orange crown over fat letters — the same on every wall, so the yard learns it
-  function mytag(c, x, y) {
-    c.save(); c.translate(x, y); c.lineCap = 'round'; c.lineJoin = 'round';
-    c.globalAlpha = .9; c.fillStyle = WH; c.beginPath(); c.ellipse(22, 11, 27, 13, 0, 0, 7); c.fill(); c.globalAlpha = 1;
-    const crown = () => { c.beginPath(); c.moveTo(11, 6); c.lineTo(9, -4); c.lineTo(16, 1); c.lineTo(22, -6); c.lineTo(28, 1); c.lineTo(35, -4); c.lineTo(33, 6); c.closePath(); };
-    crown(); c.fillStyle = INK; c.lineWidth = 3; c.strokeStyle = INK; c.stroke(); crown(); c.fillStyle = '#FFD93B'; c.fill();
-    [[INK, 6.6], [OR, 4], ['rgba(255,255,255,.65)', 1]].forEach(([k, w], ps) => { c.strokeStyle = k; c.lineWidth = w; const o = ps === 2 ? -1 : 0; c.beginPath();
-      c.moveTo(12 + o, 10 + o); c.lineTo(4 + o, 10 + o); c.lineTo(4 + o, 22 + o); c.moveTo(4 + o, 16 + o); c.lineTo(10 + o, 16 + o);          // F
-      c.moveTo(16 + o, 10 + o); c.lineTo(28 + o, 10 + o); c.moveTo(22 + o, 10 + o); c.lineTo(22 + o, 22 + o);                              // T
-      c.moveTo(33 + o, 10 + o); c.lineTo(41 + o, 22 + o); c.moveTo(41 + o, 10 + o); c.lineTo(33 + o, 22 + o); c.stroke(); });            // a cross: the b-boy's mark
-    c.restore();
+  // ================= graffiti: big pieces in different styles (owner 14.11.2026 «большие классные граффити в разных стилях») =================
+  // Our own letters: every letter is a few strokes on a 4 × 6 grid; the style decides how fat, how round, how tilted they are,
+  // what is behind them and what grows out of them. Nothing is copied — no fonts, no pictures.
+  // A stroke that starts with 'c' is closed.
+  const GLY = (() => {
+    const O = ['c', [1, 0], [3, 0], [4, 1], [4, 5], [3, 6], [1, 6], [0, 5], [0, 1]], P = [[0, 6], [0, 0], [3, 0], [4, 1], [4, 2.5], [3, 3.5], [0, 3.5]], E = [[4, 0], [0, 0], [0, 6], [4, 6]], SH = [[0, 0], [0, 6], [4, 6], [4, 0]];
+    const G = {
+      A: [[[0, 6], [0, 2], [2, 0], [4, 2], [4, 6]], [[0, 4], [4, 4]]], B: [[[0, 3], [3, 3], [4, 4], [4, 5], [3, 6], [0, 6], [0, 0], [3, 0], [4, 1], [4, 2], [3, 3]]],
+      C: [[[4, 1], [3, 0], [1, 0], [0, 1], [0, 5], [1, 6], [3, 6], [4, 5]]], D: [['c', [0, 0], [2.6, 0], [4, 1.5], [4, 4.5], [2.6, 6], [0, 6]]],
+      E: [E, [[0, 3], [3, 3]]], F: [[[4, 0], [0, 0], [0, 6]], [[0, 3], [3, 3]]], G: [[[4, 1], [3, 0], [1, 0], [0, 1], [0, 5], [1, 6], [3, 6], [4, 5], [4, 3.2], [2.2, 3.2]]],
+      H: [[[0, 0], [0, 6]], [[4, 0], [4, 6]], [[0, 3], [4, 3]]], I: [[[2, 0], [2, 6]], [[.8, 0], [3.2, 0]], [[.8, 6], [3.2, 6]]], J: [[[1.4, 0], [4, 0], [4, 5], [3, 6], [1, 6], [0, 5], [0, 4]]],
+      K: [[[0, 0], [0, 6]], [[4, 0], [0, 3.2], [4, 6]]], L: [[[0, 0], [0, 6], [4, 6]]], M: [[[0, 6], [0, 0], [2, 3], [4, 0], [4, 6]]], N: [[[0, 6], [0, 0], [4, 6], [4, 0]]],
+      O: [O], P: [P], Q: [O, [[2.4, 4.2], [4.4, 6.4]]], R: [P, [[2, 3.5], [4, 6]]], S: [[[4, 1], [3, 0], [1, 0], [0, 1], [0, 2], [1, 3], [3, 3], [4, 4], [4, 5], [3, 6], [1, 6], [0, 5]]],
+      T: [[[0, 0], [4, 0]], [[2, 0], [2, 6]]], U: [[[0, 0], [0, 5], [1, 6], [3, 6], [4, 5], [4, 0]]], V: [[[0, 0], [2, 6], [4, 0]]], W: [[[0, 0], [.8, 6], [2, 2.4], [3.2, 6], [4, 0]]],
+      X: [[[0, 0], [4, 6]], [[4, 0], [0, 6]]], Y: [[[0, 0], [2, 3], [4, 0]], [[2, 3], [2, 6]]], Z: [[[0, 0], [4, 0], [0, 6], [4, 6]]],
+      0: [O, [[1.4, 4.2], [2.6, 1.8]]], 1: [[[.8, 1.4], [2.2, 0], [2.2, 6]], [[.8, 6], [3.6, 6]]], 2: [[[0, 1], [1, 0], [3, 0], [4, 1], [4, 2.2], [0, 6], [4, 6]]],
+      3: [[[0, 0], [4, 0], [2, 2.6], [3, 2.6], [4, 3.6], [4, 5], [3, 6], [1, 6], [0, 5]]], 4: [[[3, 6], [3, 0], [0, 4], [4, 4]]], 5: [[[4, 0], [0, 0], [0, 2.6], [3, 2.6], [4, 3.6], [4, 5], [3, 6], [1, 6], [0, 5]]],
+      6: [[[4, 1], [3, 0], [1, 0], [0, 1], [0, 5], [1, 6], [3, 6], [4, 5], [4, 3.8], [3, 2.8], [0, 2.8]]], 7: [[[0, 0], [4, 0], [1.5, 6]]],
+      8: [['c', [1, 0], [3, 0], [4, 1], [4, 2], [3, 3], [1, 3], [0, 2], [0, 1]], ['c', [1, 3], [3, 3], [4, 4], [4, 5], [3, 6], [1, 6], [0, 5], [0, 4]]], 9: [[[0, 5], [1, 6], [3, 6], [4, 5], [4, 1], [3, 0], [1, 0], [0, 1], [0, 2.2], [1, 3.2], [4, 3.2]]],
+      '!': [[[2, 0], [2, 3.8]], [[2, 5.7], [2, 6]]], '-': [[[.6, 3], [3.4, 3]]], '.': [[[2, 5.7], [2, 6]]],
+      // кириллица
+      'Б': [[[4, 0], [0, 0], [0, 6], [3, 6], [4, 5], [4, 3.8], [3, 2.8], [0, 2.8]]], 'Г': [[[4, 0], [0, 0], [0, 6]]], 'Д': [[[0, 6.7], [0, 5.3], [4, 5.3], [4, 6.7]], [[.8, 5.3], [1.6, 0], [3.4, 0], [3.4, 5.3]]],
+      'Ж': [[[2, 0], [2, 6]], [[0, 0], [2, 3], [0, 6]], [[4, 0], [2, 3], [4, 6]]], 'З': [[[0, 1], [1, 0], [3, 0], [4, 1], [4, 2], [3, 3], [1.6, 3]], [[3, 3], [4, 4], [4, 5], [3, 6], [1, 6], [0, 5]]],
+      'И': [[[0, 0], [0, 6], [4, 0], [4, 6]]], 'Й': [[[0, 0], [0, 6], [4, 0], [4, 6]], [[1.2, -1.3], [2.8, -1.3]]], 'Л': [[[0, 6], [1, 5.3], [1.6, 0], [4, 0], [4, 6]]], 'П': [[[0, 6], [0, 0], [4, 0], [4, 6]]],
+      'У': [[[0, 0], [2.2, 3.6]], [[4, 0], [1.4, 6], [.2, 6]]], 'Ф': [[[2, 0], [2, 6]], ['c', [1, 1], [3, 1], [4, 2], [4, 3.2], [3, 4.2], [1, 4.2], [0, 3.2], [0, 2]]],
+      'Ц': [[[0, 0], [0, 5.3], [3.6, 5.3], [3.6, 0]], [[3.6, 5.3], [4.4, 5.3], [4.4, 6.7]]], 'Ч': [[[0, 0], [0, 2.2], [1, 3.2], [4, 3.2]], [[4, 0], [4, 6]]], 'Ш': [SH, [[2, 0], [2, 6]]],
+      'Щ': [[[0, 0], [0, 5.3], [3.7, 5.3], [3.7, 0]], [[1.85, 0], [1.85, 5.3]], [[3.7, 5.3], [4.5, 5.3], [4.5, 6.7]]], 'Ъ': [[[0, 0], [1, 0], [1, 6], [3.2, 6], [4, 5], [4, 3.8], [3.2, 2.8], [1, 2.8]]],
+      'Ы': [[[0, 0], [0, 6], [1.8, 6], [2.6, 5], [2.6, 3.8], [1.8, 2.8], [0, 2.8]], [[4, 0], [4, 6]]], 'Ь': [[[0, 0], [0, 6], [3, 6], [4, 5], [4, 3.8], [3, 2.8], [0, 2.8]]],
+      'Э': [[[0, 1], [1, 0], [3, 0], [4, 1], [4, 5], [3, 6], [1, 6], [0, 5]], [[1.6, 3], [4, 3]]], 'Ю': [[[0, 0], [0, 6]], [[0, 3], [1.4, 3]], ['c', [2.2, 0], [3.3, 0], [4, 1], [4, 5], [3.3, 6], [2.2, 6], [1.4, 5], [1.4, 1]]],
+      'Я': [[[4, 6], [4, 0], [1, 0], [0, 1], [0, 2.5], [1, 3.5], [4, 3.5]], [[2, 3.5], [0, 6]]]
+    };
+    const same = { 'А': 'A', 'В': 'B', 'Е': 'E', 'Ё': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X' }; Object.keys(same).forEach(k => { G[k] = G[same[k]]; });
+    return G;
+  })();
+  // what can be written: capitals of the two alphabets and digits; accents are dropped, everything else is skipped
+  const grafWord = (s, max) => { let o = ''; try { s = String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) { s = String(s || ''); } for (const ch of s.toUpperCase()) { if (o.length >= (max || 8)) break; if (GLY[ch] || (ch === ' ' && o && o[o.length - 1] !== ' ')) o += ch; } return o.trim(); };
+  // colours of a piece: a main · b light · c deep · o outline · k depth / shadow · bg what is behind · hi shine
+  const GRAF_PALS = {
+    fire: { a: '#FF7A1F', b: '#FFD23F', c: '#E2261A', o: '#141416', k: '#5A1E08', bg: '#2B3A8F', hi: '#FFF6D8' },
+    ice: { a: '#4FC0FF', b: '#E8FBFF', c: '#2B5BD8', o: '#0E1430', k: '#14306B', bg: '#FF4F9A', hi: '#FFFFFF' },
+    candy: { a: '#FF4F9A', b: '#FFD0E6', c: '#B03BFF', o: '#1A0A1E', k: '#5A1466', bg: '#3BE0D0', hi: '#FFFFFF' },
+    chrome: { a: '#D9DEE6', b: '#FFFFFF', c: '#8C95A6', o: '#0B0B0C', k: '#2A2F3A', bg: '#3F8FD8', hi: '#FFFFFF' },
+    toxic: { a: '#B8FF3B', b: '#F4FFB0', c: '#3BB86A', o: '#10140A', k: '#24451A', bg: '#7B2FD0', hi: '#FFFFFF' },
+    sunset: { a: '#FF5A4A', b: '#FFD23F', c: '#B03BFF', o: '#180A1E', k: '#4A1466', bg: '#1FB8C4', hi: '#FFF6D8' },
+    // банды
+    rusty: { a: '#D9682E', b: '#F6B45C', c: '#8A3414', o: '#1A0E08', k: '#3E1A0C', bg: '#2F6F6C', hi: '#FFE9C4' },
+    acid: { a: '#7CFF4F', b: '#EAFF6A', c: '#1FB84A', o: '#12051F', k: '#4A1A78', bg: '#A53BF0', hi: '#FFFFFF' },
+    owls: { a: '#A77BD6', b: '#FFD23F', c: '#5A36A0', o: '#0D0A1E', k: '#251848', bg: '#1B2A6B', hi: '#FFF4B8' },
+    gold: { a: '#FFC82E', b: '#FFF3B0', c: '#E08A1C', o: '#1A1206', k: '#7A4A0C', bg: '#8E1B2B', hi: '#FFFFFF' }
+  };
+  const GRAF_STYLES = ['tag', 'bubble', 'block', 'wild', 'd3'];
+  const grafCache = new Map();
+  function grafRnd(seed) { let a = (seed | 0) + 0x6D2B79F5; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // the strokes of one letter go into the current path; r — how round the corners are (in grid units)
+  function glyph(c, ch, x, y, sx, sy, r) {
+    (GLY[ch] || []).forEach(s => {
+      const closed = s[0] === 'c', P = (closed ? s.slice(1) : s).map(p => [x + p[0] * sx, y + p[1] * sy]), n = P.length, R = r * Math.min(sx, sy);
+      if (!R || n < 3) { P.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); if (closed) c.closePath(); return; }
+      const cut = (a, b, d) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, k = Math.min(d, l / 2) / l; return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; };
+      if (closed) { const s0 = cut(P[0], P[1], R); c.moveTo(s0[0], s0[1]); for (let i = 1; i <= n; i++) { const v = P[i % n], a = cut(v, P[(i - 1) % n], R), b = cut(v, P[(i + 1) % n], R); c.lineTo(a[0], a[1]); c.quadraticCurveTo(v[0], v[1], b[0], b[1]); } c.closePath(); }
+      else { c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < n - 1; i++) { const a = cut(P[i], P[i - 1], R), b = cut(P[i], P[i + 1], R); c.lineTo(a[0], a[1]); c.quadraticCurveTo(P[i][0], P[i][1], b[0], b[1]); } c.lineTo(P[n - 1][0], P[n - 1][1]); }
+    });
+  }
+  const mixCol = (a, b, t) => { const p = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)], x = p(a), y = p(b); return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',') + ')'; };
+  // ---- what stands next to the letters: every crew has its own sign ----
+  const GRAF_EXTRA = {
+    crown(c, x, y, s, P) { const pts = [[-.5, .3], [-.58, -.3], [-.26, 0], [0, -.42], [.26, 0], [.58, -.3], [.5, .3]]; c.lineJoin = 'round'; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(x + p[0] * s, y + p[1] * s) : c.moveTo(x + p[0] * s, y + p[1] * s)); c.closePath(); c.lineWidth = s * .16; c.strokeStyle = P.o; c.stroke(); c.fillStyle = P.b; c.fill();
+      [[-.58, -.3], [0, -.42], [.58, -.3]].forEach(p => { c.beginPath(); c.arc(x + p[0] * s, y + p[1] * s, s * .08, 0, 7); c.fillStyle = P.hi; c.fill(); c.lineWidth = s * .04; c.stroke(); }); c.fillStyle = P.c; c.fillRect(x - s * .4, y + s * .12, s * .8, s * .1); },
+    // ржавая шестерня со злыми глазами
+    cog(c, x, y, s, P) { c.lineJoin = 'round'; const tooth = () => { c.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + .2, r = s * (i % 2 ? .5 : .36); c.lineTo(x + Math.cos(a - .1) * r, y + Math.sin(a - .1) * r); c.lineTo(x + Math.cos(a + .1) * r, y + Math.sin(a + .1) * r); } c.closePath(); };
+      tooth(); c.lineWidth = s * .12; c.strokeStyle = P.o; c.stroke(); const g = c.createLinearGradient(0, y - s * .5, 0, y + s * .5); g.addColorStop(0, P.b); g.addColorStop(.5, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+      for (let i = 0; i < 9; i++) { c.fillStyle = i % 2 ? 'rgba(90,30,10,.45)' : 'rgba(255,220,160,.35)'; c.beginPath(); c.arc(x + Math.cos(i * 2.4) * s * .27, y + Math.sin(i * 1.7) * s * .27, s * (.03 + (i % 3) * .015), 0, 7); c.fill(); }
+      c.fillStyle = P.o; c.beginPath(); c.arc(x, y + s * .02, s * .25, 0, 7); c.fill();
+      [-1, 1].forEach(d => { c.fillStyle = P.hi; c.beginPath(); c.ellipse(x + d * s * .1, y, s * .075, s * .09, 0, 0, 7); c.fill(); c.fillStyle = P.o; c.beginPath(); c.arc(x + d * s * .09, y + s * .02, s * .035, 0, 7); c.fill();
+        c.strokeStyle = P.a; c.lineWidth = s * .05; c.lineCap = 'round'; c.beginPath(); c.moveTo(x + d * s * .19, y - s * .15); c.lineTo(x + d * s * .03, y - s * .07); c.stroke(); });
+      c.strokeStyle = P.hi; c.lineWidth = s * .035; c.beginPath(); c.moveTo(x - s * .09, y + s * .16); c.lineTo(x - s * .03, y + s * .12); c.lineTo(x + s * .03, y + s * .16); c.lineTo(x + s * .09, y + s * .12); c.stroke(); },
+    // кислотная клякса с одним глазом
+    slime(c, x, y, s, P) { c.lineJoin = 'round'; c.lineCap = 'round'; const body = () => { c.beginPath(); c.moveTo(x - s * .42, y + s * .1); c.bezierCurveTo(x - s * .5, y - s * .5, x + s * .5, y - s * .5, x + s * .42, y + s * .1);
+        c.lineTo(x + s * .42, y + s * .34); c.quadraticCurveTo(x + s * .34, y + s * .5, x + s * .26, y + s * .3); c.lineTo(x + s * .2, y + s * .2); c.quadraticCurveTo(x + s * .1, y + s * .62, x, y + s * .26); c.lineTo(x - s * .1, y + s * .2); c.quadraticCurveTo(x - s * .22, y + s * .48, x - s * .3, y + s * .22); c.closePath(); };
+      body(); c.lineWidth = s * .12; c.strokeStyle = P.o; c.stroke(); const g = c.createLinearGradient(0, y - s * .4, 0, y + s * .5); g.addColorStop(0, P.b); g.addColorStop(.6, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+      c.fillStyle = P.hi; c.beginPath(); c.arc(x, y - s * .06, s * .19, 0, 7); c.fill(); c.lineWidth = s * .05; c.stroke(); c.fillStyle = P.bg; c.beginPath(); c.arc(x + s * .03, y - s * .04, s * .1, 0, 7); c.fill(); c.fillStyle = P.o; c.beginPath(); c.arc(x + s * .04, y - s * .03, s * .05, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x - s * .03, y - s * .11, s * .03, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.ellipse(x - s * .24, y - s * .2, s * .05, s * .09, .5, 0, 7); c.fill();
+      c.strokeStyle = P.o; c.lineWidth = s * .04; c.beginPath(); c.arc(x, y + s * .14, s * .1, .2, Math.PI - .2); c.stroke();
+      [[-.36, .5, .05], [.34, .56, .04]].forEach(d => { c.fillStyle = P.a; c.strokeStyle = P.o; c.lineWidth = s * .035; c.beginPath(); c.arc(x + d[0] * s, y + d[1] * s, d[2] * s, 0, 7); c.fill(); c.stroke(); }); },
+    // сова на фоне луны
+    owl(c, x, y, s, P) { c.lineJoin = 'round'; c.fillStyle = P.b; c.globalAlpha = .9; c.beginPath(); c.arc(x + s * .12, y - s * .1, s * .46, 0, 7); c.fill(); c.globalAlpha = 1; c.fillStyle = 'rgba(0,0,0,.08)'; [[.3, -.22, .07], [.06, -.36, .05], [.36, .06, .04]].forEach(d => { c.beginPath(); c.arc(x + d[0] * s, y + d[1] * s, d[2] * s, 0, 7); c.fill(); });
+      const body = () => { c.beginPath(); c.moveTo(x - s * .3, y - s * .34); c.lineTo(x - s * .16, y - s * .22); c.quadraticCurveTo(x, y - s * .3, x + s * .16, y - s * .22); c.lineTo(x + s * .3, y - s * .34); c.quadraticCurveTo(x + s * .4, y + s * .1, x + s * .26, y + s * .36); c.quadraticCurveTo(x, y + s * .5, x - s * .26, y + s * .36); c.quadraticCurveTo(x - s * .4, y + s * .1, x - s * .3, y - s * .34); c.closePath(); };
+      body(); c.lineWidth = s * .12; c.strokeStyle = P.o; c.stroke(); const g = c.createLinearGradient(0, y - s * .3, 0, y + s * .45); g.addColorStop(0, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+      c.strokeStyle = P.k; c.lineWidth = s * .03; for (let i = 0; i < 3; i++) for (let j = -1; j <= 1; j++) { c.beginPath(); c.arc(x + j * s * .11 + (i % 2) * s * .055, y + s * .14 + i * s * .09, s * .05, .2, Math.PI - .2); c.stroke(); }
+      [-1, 1].forEach(d => { c.fillStyle = P.o; c.beginPath(); c.arc(x + d * s * .13, y - s * .06, s * .15, 0, 7); c.fill(); c.fillStyle = P.b; c.beginPath(); c.arc(x + d * s * .13, y - s * .06, s * .12, 0, 7); c.fill(); c.fillStyle = P.o; c.beginPath(); c.arc(x + d * s * .12, y - s * .05, s * .06, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x + d * s * .12 - s * .025, y - s * .08, s * .022, 0, 7); c.fill(); });
+      c.fillStyle = '#FF8A2A'; c.strokeStyle = P.o; c.lineWidth = s * .03; c.beginPath(); c.moveTo(x - s * .05, y + s * .04); c.lineTo(x + s * .05, y + s * .04); c.lineTo(x, y + s * .14); c.closePath(); c.fill(); c.stroke(); },
+    // золотой зуб с короной
+    tooth(c, x, y, s, P) { c.lineJoin = 'round'; const body = () => { c.beginPath(); c.moveTo(x - s * .3, y - s * .2); c.quadraticCurveTo(x - s * .16, y - s * .34, x, y - s * .22); c.quadraticCurveTo(x + s * .16, y - s * .34, x + s * .3, y - s * .2); c.quadraticCurveTo(x + s * .38, y + s * .06, x + s * .24, y + s * .44); c.quadraticCurveTo(x + s * .16, y + s * .5, x + s * .1, y + s * .2); c.quadraticCurveTo(x, y + s * .08, x - s * .1, y + s * .2); c.quadraticCurveTo(x - s * .16, y + s * .5, x - s * .24, y + s * .44); c.quadraticCurveTo(x - s * .38, y + s * .06, x - s * .3, y - s * .2); c.closePath(); };
+      body(); c.lineWidth = s * .12; c.strokeStyle = P.o; c.stroke(); const g = c.createLinearGradient(x - s * .3, 0, x + s * .3, 0); g.addColorStop(0, P.b); g.addColorStop(.45, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+      c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.ellipse(x - s * .17, y - s * .08, s * .045, s * .11, .25, 0, 7); c.fill();
+      GRAF_EXTRA.crown(c, x, y - s * .42, s * .5, { o: P.o, b: P.hi, hi: P.a, c: P.c });
+      [[.36, -.3, .09], [-.4, .2, .06], [.34, .36, .05]].forEach(d => { const X = x + d[0] * s, Y = y + d[1] * s, r = d[2] * s; c.fillStyle = P.hi; c.beginPath(); c.moveTo(X, Y - r * 2); c.quadraticCurveTo(X, Y, X + r * 2, Y); c.quadraticCurveTo(X, Y, X, Y + r * 2); c.quadraticCurveTo(X, Y, X - r * 2, Y); c.quadraticCurveTo(X, Y, X, Y - r * 2); c.fill(); }); }
+  };
+  const star4 = (c, X, Y, r, col) => { c.fillStyle = col; c.beginPath(); c.moveTo(X, Y - r); c.quadraticCurveTo(X, Y, X + r, Y); c.quadraticCurveTo(X, Y, X, Y + r); c.quadraticCurveTo(X, Y, X - r, Y); c.quadraticCurveTo(X, Y, X, Y - r); c.fill(); };
+  // spec: { word, style, pal, w, h, seed, extra } — draws into c inside the box 0…w × 0…h
+  function grafDraw(c, S) {
+    const P = typeof S.pal === 'string' ? (GRAF_PALS[S.pal] || GRAF_PALS.fire) : S.pal, st = S.style, w = S.w, h = S.h, rnd = grafRnd((S.seed || 1) * 97 + 13);
+    const word = grafWord(S.word, 8) || 'FT', chars = [...word], n = chars.length, ex = S.extra && S.extra !== 'crown' && GRAF_EXTRA[S.extra] && st !== 'tag' ? S.extra : null;
+    const exW = ex ? Math.min(h * .95, w * .26) : 0, lx0 = ex && S.exLeft ? exW : 0, lw = w - exW;
+    // how the style holds the letters
+    // wt — how fat (in grid units of height), f — but never fatter than this share of the letter's width; r — round corners; gap — between letters
+    // (below zero = they lean on each other); ol — outline; hgt — how much of the wall's height the letters take; wide — how far a letter may stretch
+    const K = { tag: { wt: .62, f: .16, r: 1.1, gap: .1, ol: .3, skew: -.3, rot: .03, hgt: .5, wide: 1 }, bubble: { wt: 2.25, f: .6, r: 1.5, gap: -.4, ol: .3, skew: 0, rot: .08, hgt: .56, wide: 1.1 }, block: { wt: 1.75, f: .47, r: 0, gap: .2, ol: .28, skew: 0, rot: 0, hgt: .66, wide: 1.5 },
+      wild: { wt: 1.45, f: .4, r: .3, gap: -.3, ol: .28, skew: .26, rot: .11, hgt: .56, wide: 1.1 }, d3: { wt: 1.7, f: .44, r: .5, gap: .12, ol: 0, skew: -.12, rot: 0, hgt: .56, wide: 1.4 } }[st] || {};
+    // the size: the height of the wall decides how tall the letters are; a long word makes them narrower (and thinner), a short one — wider
+    let sy = h * K.hgt / (6 + K.wt), sx, wt;
+    const room = lw * (st === 'wild' ? .8 : .9), q = 4 * n + 4 * K.f * ((n - 1) * (1 + K.gap) + 1);
+    sx = Math.min(sy * K.wide, room / q); if (sx < sy * .36) { const k = Math.max(.6, sx / (sy * .36)); sy *= k; }
+    wt = Math.min(sy * K.wt, 4 * sx * K.f);
+    const ol = Math.max(1.2, wt * K.ol), tot = n * 4 * sx + (n - 1) * (wt * (1 + K.gap)) + wt, x0 = lx0 + (lw - tot) / 2 + wt / 2, y0 = (h - 6 * sy) / 2 + (st === 'block' ? 0 : -h * .02), adv = 4 * sx + wt * (1 + K.gap);
+    const L = chars.map((ch, i) => ({ ch, cx: x0 + i * adv + 2 * sx, cy: y0 + 3 * sy + (st === 'bubble' || st === 'wild' ? (i % 2 ? 1 : -1) * h * .035 * (.5 + rnd()) : 0), rot: K.rot ? (rnd() - .5) * 2 * K.rot : 0, skew: st === 'wild' ? (i % 2 ? -1 : 1) * K.skew * (.6 + rnd() * .5) : K.skew, k: st === 'wild' ? .92 + rnd() * .2 : 1 }));
+    const path = (l, dx, dy) => { c.save(); c.translate(l.cx + (dx || 0), l.cy + (dy || 0)); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.scale(l.k, l.k); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); };
+    const stroke = (l, col, lwd, dx, dy) => { if (l.ch === ' ') return; path(l, dx, dy); c.strokeStyle = col; c.lineWidth = lwd; c.stroke(); c.restore(); };
+    const all = (col, lwd, dx, dy) => L.forEach(l => stroke(l, col, lwd, dx, dy));
+    const round = st !== 'block'; c.lineCap = round ? 'round' : 'square'; c.lineJoin = round ? 'round' : 'miter'; c.miterLimit = 3;
+    const top = y0 - wt / 2, bot = y0 + 6 * sy + wt / 2, left = x0 - wt / 2, right = left + tot, mx = (left + right) / 2, my = (top + bot) / 2;
+    const vgrad = (c1, c2, c3) => { const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, c1); g.addColorStop(.5, c2); g.addColorStop(1, c3); return g; };
+    const drips = (col, k, edge) => { for (let i = 0; i < k; i++) { const X = left + wt * .4 + rnd() * (tot - wt * .8), len = h * (.06 + rnd() * .16), dw = Math.max(1.6, wt * (.1 + rnd() * .08)); if (edge) { c.strokeStyle = P.o; c.lineWidth = dw + ol * 1.2; c.beginPath(); c.moveTo(X, bot - wt * .4); c.lineTo(X, bot + len); c.stroke(); } c.strokeStyle = col; c.lineWidth = dw; c.beginPath(); c.moveTo(X, bot - wt * .5); c.lineTo(X, bot + len); c.stroke(); } };
+    const shine = (lwd, a) => { c.save(); c.globalAlpha = a; c.setLineDash([sy * 2.4, sy * 60]); c.lineCap = 'round'; L.forEach(l => stroke(l, P.hi, lwd, -wt * .2, -wt * .22)); c.restore(); c.lineCap = round ? 'round' : 'square'; };
+    const stars = k => { for (let i = 0; i < k; i++) star4(c, left - wt * .2 + rnd() * (tot + wt * .4), top - h * .04 + rnd() * (bot - top) * .5, h * (.03 + rnd() * .04), P.hi); };
+
+    if (st === 'tag') {
+      // a quick one-line tag: slanted hand, an underline that ends in an arrow, a crown over it
+      const under = lwd => { c.lineWidth = lwd; c.beginPath(); c.moveTo(left - wt, bot + sy * 1.1); c.quadraticCurveTo(mx, bot + sy * 2.4, right + wt * 1.2, bot + sy * .5); c.stroke();
+        c.beginPath(); c.moveTo(right + wt * 1.2 - sy * 1.2, bot + sy * .1); c.lineTo(right + wt * 1.2, bot + sy * .5); c.lineTo(right + wt * 1.2 - sy * .7, bot + sy * 1.5); c.stroke(); };
+      all(P.o, wt + ol * 2); c.strokeStyle = P.o; under(wt * .8 + ol * 2); all(P.b, wt); c.strokeStyle = P.a; under(wt * .8);
+      drips(P.b, 2); GRAF_EXTRA.crown(c, left + sx * 1.2, top - sy * 1.5, sy * 2.6, P);
+      star4(c, right + wt, top - sy * .6, sy * 1.1, P.hi); return;
+    }
+    if (st === 'bubble') {
+      // throw-up: a soft cloud, puffy letters that lean on each other, shine, bubbles
+      const cloud = (col, grow) => { c.fillStyle = col; c.beginPath(); const m = Math.max(5, Math.round(tot / (h * .22))); for (let i = 0; i <= m; i++) { const X = left + tot * i / m; c.moveTo(X, top); c.arc(X, top + h * .02, h * .15 + grow, 0, 7); c.moveTo(X, bot); c.arc(X, bot - h * .02, h * .15 + grow, 0, 7); } c.rect(left - h * .08 - grow, top, tot + h * .16 + grow * 2, bot - top); c.fill(); };
+      cloud(P.o, ol * .9); cloud(P.bg, 0); c.fillStyle = 'rgba(255,255,255,.16)'; for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(left + rnd() * tot, top - h * .06 + rnd() * h * .12, h * (.02 + rnd() * .03), 0, 7); c.fill(); }
+      all(P.k, wt + ol * 2, ol * 1.5, ol * 1.7);
+      L.forEach(l => { stroke(l, P.o, wt + ol * 2); stroke(l, vgrad(P.b, P.a, P.c), wt); });
+      shine(wt * .16, .95); L.forEach(l => { if (l.ch === ' ') return; c.fillStyle = P.hi; c.beginPath(); c.ellipse(l.cx - sx * 1.5, l.cy - sy * 2.6, wt * .12, wt * .2, -.6, 0, 7); c.fill(); });
+      for (let i = 0; i < 6; i++) { const X = left - h * .1 + rnd() * (tot + h * .2), Y = rnd() < .5 ? top - h * (.1 + rnd() * .08) : bot + h * (.06 + rnd() * .08), r = h * (.025 + rnd() * .035); c.strokeStyle = P.o; c.lineWidth = Math.max(1, ol * .5); c.fillStyle = P.a; c.beginPath(); c.arc(X, Y, r, 0, 7); c.fill(); c.stroke(); c.fillStyle = P.hi; c.beginPath(); c.arc(X - r * .3, Y - r * .3, r * .3, 0, 7); c.fill(); }
+      drips(P.a, 3, true);
+    } else if (st === 'block') {
+      // blockbuster: a rolled-on band of paint, huge straight letters in two tones, a hard shadow
+      const bx = left - h * .1, bw = tot + h * .2, by = top - h * .09, bh = bot - top + h * .18;
+      c.fillStyle = P.bg; c.beginPath(); c.moveTo(bx, by + 3); for (let i = 0; i <= 12; i++) c.lineTo(bx + bw * i / 12, by + (rnd() - .5) * h * .035); for (let i = 12; i >= 0; i--) c.lineTo(bx + bw * i / 12, by + bh + (rnd() - .5) * h * .035); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.1)'; c.fillRect(bx, by + bh * .08, bw, bh * .1); c.fillStyle = 'rgba(0,0,0,.14)'; c.fillRect(bx, by + bh * .8, bw, bh * .12);
+      for (let i = 0; i < 4; i++) { const X = bx + bw * (.06 + rnd() * .88); c.strokeStyle = P.bg; c.lineWidth = Math.max(2, h * .018); c.lineCap = 'round'; c.beginPath(); c.moveTo(X, by + bh - 2); c.lineTo(X, by + bh + h * (.05 + rnd() * .1)); c.stroke(); } c.lineCap = 'square';
+      const dp = Math.max(3, wt * .5); for (let i = Math.ceil(dp); i >= 1; i--) all(i === Math.ceil(dp) ? P.o : P.k, wt + ol * 2, i, i);
+      all(P.o, wt + ol * 2);
+      const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, P.b); g.addColorStop(.47, P.b); g.addColorStop(.47, P.o); g.addColorStop(.5, P.o); g.addColorStop(.5, P.a); g.addColorStop(.84, P.a); g.addColorStop(.84, P.c); g.addColorStop(1, P.c); all(g, wt);
+      c.fillStyle = P.hi; L.forEach(l => { if (l.ch === ' ') return; c.fillRect(l.cx - 2 * sx - wt * .32, l.cy - 3 * sy - wt * .32, wt * .2, sy * 1.6); c.fillRect(l.cx - 2 * sx - wt * .32, l.cy - 3 * sy - wt * .32, sx * 1.1, wt * .16); });
+      for (let i = 0; i < 26; i++) { c.fillStyle = i % 2 ? 'rgba(0,0,0,.2)' : 'rgba(255,255,255,.2)'; c.fillRect(left + rnd() * tot, top + rnd() * (bot - top), 1.2 + rnd() * 2, 1.2 + rnd() * 2); }
+      stars(2);
+    } else if (st === 'wild') {
+      // wildstyle: a burst behind, letters that lean and lock into each other, a light edge round everything, arrows
+      c.fillStyle = P.bg; c.beginPath(); const m = 22; for (let i = 0; i < m; i++) { const a = i / m * Math.PI * 2, r = (i % 2 ? 1.02 : .8) + rnd() * .1; c.lineTo(mx + Math.cos(a) * (tot / 2 + h * .2) * r, my + Math.sin(a) * (bot - top) * .64 * r); } c.closePath(); c.fill();
+      c.strokeStyle = P.o; c.lineWidth = Math.max(1.5, ol * .7); c.lineJoin = 'miter'; c.stroke(); c.lineJoin = 'round';
+      for (let i = 0; i < 12; i++) { c.fillStyle = i % 3 ? P.hi : P.b; c.globalAlpha = .8; c.beginPath(); c.arc(left + rnd() * tot, (i % 2 ? top - h * .04 : bot + h * .04) + (rnd() - .5) * h * .1, h * (.008 + rnd() * .014), 0, 7); c.fill(); } c.globalAlpha = 1;
+      // arrows grow out of the first and the last letter and from under the word
+      const arrows = [[[left + sx, bot - sy], [left - h * .1, bot + h * .02], [left - h * .2, bot - h * .12]], [[right - sx, top + sy], [right + h * .1, top - h * .02], [right + h * .22, top + h * .1]], [[mx - sx, top + sy * .5], [mx, top - h * .1], [mx + h * .14, top - h * .15]]];
+      const arrow = (pts, col, lwd, headK) => { c.strokeStyle = col; c.fillStyle = col; c.lineWidth = lwd; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke(); const a = pts[pts.length - 2], b = pts[pts.length - 1], an = Math.atan2(b[1] - a[1], b[0] - a[0]), hs = wt * headK; c.beginPath(); c.moveTo(b[0] + Math.cos(an) * hs, b[1] + Math.sin(an) * hs); c.lineTo(b[0] + Math.cos(an + 2.2) * hs, b[1] + Math.sin(an + 2.2) * hs); c.lineTo(b[0] + Math.cos(an - 2.2) * hs, b[1] + Math.sin(an - 2.2) * hs); c.closePath(); c.fill(); c.stroke(); };
+      const bar = [[left - h * .04, bot + h * .05], [right + h * .06, bot + h * .01]];
+      all(P.hi, wt + ol * 2 + ol * 1.6); arrows.forEach(a => arrow(a, P.hi, wt * .5 + ol * 2 + ol * 1.6, .9));
+      all(P.k, wt + ol * 2, ol * 1.4, ol * 1.6);
+      arrows.forEach(a => { arrow(a, P.o, wt * .5 + ol * 2, .9); arrow(a, P.c, wt * .5, .78); });
+      c.lineCap = 'butt'; c.strokeStyle = P.o; c.lineWidth = wt * .34 + ol * 2; c.beginPath(); c.moveTo(bar[0][0], bar[0][1]); c.lineTo(bar[1][0], bar[1][1]); c.stroke(); c.strokeStyle = P.b; c.lineWidth = wt * .34; c.stroke(); c.lineCap = 'round';
+      L.forEach(l => { stroke(l, P.o, wt + ol * 2); stroke(l, vgrad(P.b, P.a, P.c), wt); });
+      // a thin dark line inside the letters and cuts across them: the «wild» look
+      c.save(); c.globalAlpha = .4; L.forEach(l => stroke(l, P.o, wt * .1, wt * .18, wt * .22)); c.restore(); shine(wt * .13, .95); stars(4);
+    } else if (st === 'd3') {
+      // 3D: no outline — the letters stand out of the wall, the depth runs down to one point
+      const g0 = c.createRadialGradient(mx, my, 0, mx, my, tot * .62); g0.addColorStop(0, P.bg); g0.addColorStop(.7, P.bg); g0.addColorStop(1, 'rgba(0,0,0,0)'); c.globalAlpha = .8; c.fillStyle = g0; c.beginPath(); c.ellipse(mx, my + h * .04, tot * .62, (bot - top) * .78, 0, 0, 7); c.fill(); c.globalAlpha = 1;
+      const vx = mx, vy = bot + h * .9, N = Math.max(10, Math.round(wt * 1.1));
+      for (let i = N; i >= 1; i--) { const t = i / N * .2, col = mixCol(P.k, P.c, 1 - i / N); L.forEach(l => { if (l.ch === ' ') return; c.save(); c.translate(vx, vy); c.scale(1 - t, 1 - t); c.translate(-vx, -vy); c.translate(l.cx, l.cy); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); c.strokeStyle = col; c.lineWidth = wt; c.stroke(); c.restore(); }); }
+      all(vgrad(P.hi, P.b, P.a), wt); c.save(); c.globalAlpha = .5; all(P.c, wt * .1, wt * .2, wt * .24); c.restore(); shine(wt * .18, 1); stars(5);
+    }
+    if (ex) GRAF_EXTRA[ex](c, S.exLeft ? exW * .5 : w - exW * .52, h * .5, exW * .92, P);
+    if (S.extra === 'crown') { const l = L[0], s = Math.min(h * .26, sx * 5 + wt); c.save(); c.translate(l.cx - sx * .6, top - s * .16); c.rotate(-.22); GRAF_EXTRA.crown(c, 0, 0, s, P); c.restore(); }
+  }
+  // a finished piece as a picture (kept: the same piece is drawn every frame)
+  function graf(S) {
+    const sc = S.scale || dpr || 1, key = [S.word, S.style, typeof S.pal === 'string' ? S.pal : JSON.stringify(S.pal), S.w, S.h, S.seed, S.extra, S.exLeft ? 1 : 0, sc].join('|');
+    let cv = grafCache.get(key); if (cv) return cv;
+    cv = document.createElement('canvas'); cv.width = Math.round(S.w * sc); cv.height = Math.round(S.h * sc); const c = cv.getContext('2d'); c.scale(sc, sc);
+    try { grafDraw(c, S); } catch (_) {}
+    if (grafCache.size > 40) grafCache.delete(grafCache.keys().next().value); grafCache.set(key, cv); return cv;
   }
   function smoke(c, px, py, now) { for (let i = 0; i < 4; i++) { const u = ((now / 2600) + i / 4) % 1; c.fillStyle = 'rgba(240,240,244,' + (.34 * (1 - u)).toFixed(3) + ')'; c.beginPath(); c.ellipse(px - u * 16 + Math.sin(u * 6 + i) * 3, py - u * 34, 4 + u * 9, 3 + u * 7, 0, 0, 7); c.fill(); } }
   // the DJ's table: two decks (they spin; faster and with a glow while his beat is on) and a mixer
@@ -527,7 +715,7 @@
 
   // ================= signs instead of emoji =================
   function sign(c, x, y, type, dim) {
-    const col = dim ? '#6C6F78' : WH, ac = dim ? '#6C6F78' : OR;
+    const grey = dim === true, col = grey ? '#6C6F78' : WH, ac = grey ? '#6C6F78' : (typeof dim === 'string' ? dim : OR);   // dim: true = closed (grey); a colour = the ring's colour (a crew's wall)
     c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.arc(x + 1.5, y + 2.5, 13, 0, 7); c.fill();
     c.fillStyle = '#151517'; c.beginPath(); c.arc(x, y, 13, 0, 7); c.fill(); c.strokeStyle = ac; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, 12.2, 0, 7); c.stroke();
     c.fillStyle = col; c.strokeStyle = col; c.lineWidth = 1.6; c.lineJoin = 'round'; c.lineCap = 'round';
@@ -537,7 +725,7 @@
     else if (type === 'shop') { c.fillRect(x - 6, y - 2, 12, 9); c.beginPath(); c.arc(x, y - 2, 3.6, Math.PI, 0); c.stroke(); c.fillStyle = ac; c.fillRect(x - 6, y + 1, 12, 2); }
     else if (type === 'show') { c.beginPath(); c.ellipse(x, y - 3, 8, 2.6, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(x - 5, y - 2.4); c.lineTo(x - 4, y + 6); c.lineTo(x + 4, y + 6); c.lineTo(x + 5, y - 2.4); c.fill(); c.fillStyle = '#C9B458'; c.beginPath(); c.arc(x - 1, y - 7.4, 1.8, 0, 7); c.arc(x + 3.4, y - 8.6, 1.5, 0, 7); c.fill(); }
     else if (type === 'gate') { c.beginPath(); c.moveTo(x - 7, y - 2); c.lineTo(x + 1, y - 2); c.lineTo(x + 1, y - 6); c.lineTo(x + 8, y); c.lineTo(x + 1, y + 6); c.lineTo(x + 1, y + 2); c.lineTo(x - 7, y + 2); c.fill(); }
-    else if (type === 'wall') { c.fillRect(x - 3.5, y - 3, 7, 10); c.fillStyle = ac; c.fillRect(x - 3.5, y + 1, 7, 3); c.fillStyle = col; c.fillRect(x - 2.5, y - 6, 5, 3); c.fillStyle = ac; c.beginPath(); c.arc(x + 6, y - 6, 1.4, 0, 7); c.arc(x + 8.4, y - 3, 1.1, 0, 7); c.arc(x + 8, y - 8.6, 1, 0, 7); c.fill(); }
+    else if (type === 'wall' || type === 'turf') { c.fillRect(x - 3.5, y - 3, 7, 10); c.fillStyle = ac; c.fillRect(x - 3.5, y + 1, 7, 3); c.fillStyle = col; c.fillRect(x - 2.5, y - 6, 5, 3); c.fillStyle = ac; c.beginPath(); c.arc(x + 6, y - 6, 1.4, 0, 7); c.arc(x + 8.4, y - 3, 1.1, 0, 7); c.arc(x + 8, y - 8.6, 1, 0, 7); c.fill(); }
     else if (type === 'gym') { c.fillRect(x - 6, y - 1.2, 12, 2.4); c.fillRect(x - 8.6, y - 5, 3, 10); c.fillRect(x + 5.6, y - 5, 3, 10); c.fillStyle = ac; c.fillRect(x - 10.4, y - 3, 2, 6); c.fillRect(x + 8.4, y - 3, 2, 6); }
     else if (type === 'mc') { c.beginPath(); c.roundRect(x - 3.4, y - 8, 6.8, 10, 3.4); c.fill(); c.strokeStyle = col; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, 6, .15, Math.PI - .15); c.stroke(); c.fillRect(x - .8, y + 5.6, 1.6, 3); c.fillStyle = ac; c.fillRect(x - 3.4, y - 3, 6.8, 1.6); }
     else if (type === 'dj') { c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill(); c.fillStyle = '#151517'; c.beginPath(); c.arc(x, y, 5.4, 0, 7); c.fill(); c.fillStyle = ac; c.beginPath(); c.arc(x, y, 2.6, 0, 7); c.fill(); }
@@ -598,5 +786,5 @@
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(fogCan, ox, oy, MW * TS, MH * TS); c.imageSmoothingEnabled = false;
   }
 
-  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, pickup, mytag, smoke, carAt, deck, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
+  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, pickup, graf, grafWord, GRAF_STYLES, GRAF_PALS, wallRect: id => wallRects[id], smoke, carAt, deck, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
 })();

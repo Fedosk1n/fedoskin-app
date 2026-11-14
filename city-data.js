@@ -19,7 +19,7 @@ window.CITY_DATA = {
     chalk: { name: 'Мел би-боя', info: 'Раз в день толпа на шоу не устаёт', ico: '✏️', city: true },
     cassette: { name: 'Кассета «Золотой брейк»', info: 'В шляпу падает на 15 % больше', ico: '📼', city: true },
     lace: { name: 'Счастливый шнурок', info: 'При почти равном счёте один судья за тебя', ico: '🍀', city: true },
-    can: { name: 'Баллончик с краской', info: 'Нужен, чтобы нарисовать тег на стене', ico: '🎨', use: true, city: true },
+    can: { name: 'Баллончик с краской', info: 'Краска для граффити на стенах', ico: '🎨', use: true, city: true },
     patchYard: { name: 'Нашивка «Двор»', info: 'Трофей: ты хозяин двора', ico: '🏅', city: true }
   },
   // уникальные шмотки: выпадают только в городе. slot — куда надевается; rar — редкость 0…3; f / col — как выглядит на герое; perk — [вид, число]
@@ -33,7 +33,8 @@ window.CITY_DATA = {
     goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', f: { chain: 2 }, perk: ['cash', 15] },
     goldCap: { name: 'Золотая кепка', slot: 'hat', rar: 3, ico: '🧢', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1] },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2] },
-    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', f: { gloves: true }, perk: ['time', 6] }
+    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', f: { gloves: true }, perk: ['time', 6] },
+    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1] }
   },
   districts: {
     yard: {
@@ -43,9 +44,9 @@ window.CITY_DATA = {
       // gear — их шмотки (первая победа даёт первую); hours — когда выходят; tut — с неё начинается игра
       gangs: [
         { id: 'rusty', name: 'Ржавые', lvl: 1, col: '#C8603A', tut: true, spots: [[7, 10], [9, 13]], gear: ['rustyBandana', 'rustyTrack'], taunt: 'Это наш подъезд. Танцуй или уходи.' },
-        { id: 'acid', name: 'Кислотные', lvl: 2, col: '#7CFF4F', spots: [[17, 16], [15, 17]], gear: ['acidKicks', 'acidBucket'], taunt: 'У нас кислотный стиль. Не обожгись.' },
-        { id: 'owls', name: 'Ночные совы', lvl: 3, col: '#9A6FC0', hours: [20, 6], spots: [[6, 20], [15, 2]], gear: ['owlPhones', 'owlHoodie'], taunt: 'Ночью двор наш. Покажи, что не спишь.' },
-        { id: 'gold', name: 'Золотые зубы', lvl: 4, col: '#E7B23C', spots: [[25, 11], [25, 19]], gear: ['goldChain', 'goldCap'], taunt: 'Золото берёт тот, кто чище танцует.' }
+        { id: 'acid', name: 'Кислотные', lvl: 2, col: '#7CFF4F', spots: [[6, 20], [11, 19]], gear: ['acidKicks', 'acidBucket'], taunt: 'У нас кислотный стиль. Не обожгись.' },
+        { id: 'owls', name: 'Ночные совы', lvl: 3, col: '#9A6FC0', hours: [20, 6], spots: [[19, 7], [14, 3]], gear: ['owlPhones', 'owlHoodie'], taunt: 'Ночью двор наш. Покажи, что не спишь.' },
+        { id: 'gold', name: 'Золотые зубы', lvl: 4, col: '#E7B23C', spots: [[23, 7], [25, 11]], gear: ['goldChain', 'goldCap'], taunt: 'Золото берёт тот, кто чище танцует.' }
       ],
       // куда носят заказы из ларька (клетки у дверей)
       drops: [[2, 10], [2, 14], [6, 6], [20, 6], [8, 13], [18, 20], [26, 17], [13, 3], [26, 20], [5, 19]],
@@ -88,15 +89,22 @@ window.CITY_DATA = {
         { id: 'home', type: 'home', at: [6, 5], name: 'Дом' },
         { id: 'trash', type: 'trash', at: [25, 7], name: 'Мусорка' },
         { id: 'kiosk', type: 'kiosk', at: [24, 13], name: 'Ларёк «Шаурма»', open: [8, 23] },
-        { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['pads', 'kicks', 'hat'] },
+        { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['can', 'pads', 'kicks', 'hat'] },
         { id: 'spot1', type: 'show', at: [8, 8], name: 'Пятачок у подъезда' },
         { id: 'gate', type: 'gate', at: [29, 10], name: 'Дорога в Центр', to: 'center' },
         { id: 'mc', type: 'mc', at: [11, 15], name: 'MC Рупор', gear: ['cypherBomber'], look: { base: 6, col: { top: '#FFD23F', hat: ['#18181B', '#FFD23F'] } } },
         { id: 'dj', type: 'dj', at: [18, 15], name: 'Диджей Винт', gear: ['djGloves'], look: { base: 4, col: { top: '#3F8FD8', sleeve: '#3F8FD8' } } },
         { id: 'gym', type: 'gym', at: [12, 15], name: 'Разминка' },
-        { id: 'wall1', type: 'wall', at: [5, 1], name: 'Чистая стена', ty: -27 },       // ty: где на картинке стена относительно клетки (px)
-        { id: 'wall2', type: 'wall', at: [20, 1], name: 'Чистая стена', ty: -27 },
-        { id: 'wall3', type: 'wall', at: [8, 19], name: 'Чистая стена', ty: -42 },
+        // стены для граффити. wall: какие клетки стены занимает рисунок (x0…x1 в ряду row; hmax — выше не рисуем), картинку и окна под него убирает city-gfx.js.
+        // type 'turf' — точка банды gang: на стене её граффити (art: слово, стиль, цвета, знак). Разогнал банду — можно закрасить своим: точка твоя и приносит кэш.
+        // Стиль банды после первой победы над ней открывается игроку. type 'wall' — ничья маленькая стена.
+        { id: 't_home', type: 'turf', at: [8, 6], name: 'Стена у подъезда', gang: 'rusty', wall: { x0: 7, x1: 10, row: 5 }, art: { word: 'RUST', style: 'block', pal: 'rusty', extra: 'cog' } },
+        { id: 't_gar', type: 'turf', at: [3, 19], name: 'Гаражи', gang: 'acid', wall: { x0: 2, x1: 5, row: 18 }, art: { word: 'ACID', style: 'bubble', pal: 'acid', extra: 'slime' } },
+        { id: 't_tower', type: 'turf', at: [18, 6], name: 'Стена высотки', gang: 'owls', wall: { x0: 17, x1: 20, row: 5, hmax: 104 }, art: { word: 'OWLS', style: 'wild', pal: 'owls', extra: 'owl' } },
+        { id: 't_big', type: 'turf', at: [24, 6], name: 'Большая стена', gang: 'gold', wall: { x0: 22, x1: 25, row: 5, hmax: 104 }, art: { word: 'GOLD', style: 'd3', pal: 'gold', extra: 'tooth' } },
+        { id: 'wall1', type: 'wall', at: [5, 1], name: 'Чистая стена', wall: { x0: 4, x1: 6, row: 0 } },
+        { id: 'wall2', type: 'wall', at: [20, 1], name: 'Чистая стена', wall: { x0: 19, x1: 21, row: 0 } },
+        { id: 'wall3', type: 'wall', at: [8, 19], name: 'Чистая стена', wall: { x0: 8, x1: 9, row: 18 } },
         { id: 'st1', type: 'stash', at: [1, 20], name: 'Тайник за гаражами', item: 'cassette' },
         { id: 'st2', type: 'stash', at: [27, 1], name: 'Тайник за домом', item: 'chalk' }
       ],
