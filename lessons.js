@@ -245,6 +245,20 @@ window.LESSONS_DATA = [
   "r2": "fr-turtle-freeze-variations-qwmri071.mp4"
  },
  {
+  "id": "fr-one-hand-planche",
+  "sec": "Freezes",
+  "name": "One hand Planche",
+  "dur": 33,
+  "ru": "",
+  "added": "2026-11-14",
+  "at": 1794644460148,
+  "pv": true,
+  "vertical": true,
+  "r2": "fr-one-hand-planche-4yxgn5vl.mp4",
+  "pvAt": 2,
+  "cv": 1
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
