@@ -39,18 +39,29 @@
   // f = outfit overrides (hat / top type, phones, chain, gloves), col = colour overrides (topDown names; svg() reads them too); perk = city only.
   // Ids are repeated in server/push-worker.js (CGEAR) — keep them equal.
   const GEAR = {
-    rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5] },
-    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1] },
-    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1] },
-    acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1] },
-    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15] },
-    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8] },
-    goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', src: 'gang:gold', f: { chain: 2 }, perk: ['cash', 15] },
-    goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1] },
-    cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2] },
-    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6] },
-    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1] },
+    rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5], bt: { win: 10 } },
+    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1], bt: { win: 10 } },
+    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1], bt: { win: 15 } },
+    acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1], bt: { cor: 4 } },
+    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15], bt: { win: 15 } },
+    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8], bt: { cor: 6 } },
+    goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', src: 'gang:gold', f: { chain: 2 }, perk: ['cash', 15], bt: { hold: 1 } },
+    goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1], bt: { save: 1 } },
+    cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
+    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
+    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
   };
+  // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
+  // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
+  // cor = wider trajectory corridor (px, cap 12), hold = the freeze is easier to hold, save = one miss of the round is forgiven (becomes GOOD).
+  const BOOST_CAP = { win: 30, cor: 12, hold: 1, save: 1 };
+  function gearBoost(arr){
+    const b = { win: 0, cor: 0, hold: 0, save: 0 };
+    (Array.isArray(arr) ? arr : []).forEach(k => { const g = typeof k === 'string' && k.slice(0, 2) === 'c:' && GEAR[k.slice(2)]; if (g && g.bt) for (const x in g.bt) b[x] = (b[x] || 0) + g.bt[x]; });
+    for (const x in BOOST_CAP) b[x] = Math.min(BOOST_CAP[x], b[x] || 0);
+    b.any = !!(b.win || b.cor || b.hold || b.save);
+    return b;
+  }
   // any look token → { slot, name, … } (shop item or street gear); null for 'girl' / 'lv<N>' / unknown
   const itemOf = k => { if (typeof k !== 'string') return null; if (k.slice(0, 2) === 'c:') { const g = GEAR[k.slice(2)]; return g ? Object.assign({ id: k, city: true }, g) : null; } return SHOP.find(x => x.id === k) || null; };
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
@@ -745,5 +756,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, gearBoost, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();

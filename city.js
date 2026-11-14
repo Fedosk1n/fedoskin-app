@@ -36,6 +36,22 @@
   // warmed up by a real lesson today: more energy and respect (the game leads to the lessons every day)
   const warm = () => !!D.todaySec && D.todaySec() >= B.warm.sec;
   const emax = () => B.energy.max + (warm() ? B.warm.energy : 0);
+  // energy comes from LESSONS (owner 14.11.2026 «все пути ведут к видео»): every real minute played in lessons = perMin ⚡, credited when
+  // the city opens (S.lsec = the lesson-seconds counter already paid out; a new save starts from now — no backlog)
+  function lessonEnergy() {
+    if (!D.lessonSec) return; const now = D.lessonSec() | 0;
+    if (S.lsec == null || S.lsec > now) { S.lsec = now; save(); return; }
+    const mins = Math.floor((now - S.lsec) / 60); if (mins < 1) return;
+    S.lsec += mins * 60; const add = Math.min(mins * B.energy.perMin, Math.max(0, emax() - S.en)); S.en += add; hudKey = ''; save();
+    D.toast('🎬 ' + T('Ты занимался по урокам {m} мин — +{e} ⚡ в городе', { m: mins, e: Math.round(add) }) + (add < mins * B.energy.perMin ? ' (' + T('энергия полная') + ')' : ''));
+  }
+  const lowEn = () => ({ t: '🎬 ' + T('Мало энергии — посмотри урок: 1 мин = +{e} ⚡', { e: B.energy.perMin }), fn: () => D.home && D.home() });
+  function enDlg() {
+    dlg('⚡ ' + T('Энергия'), p(T('Энергия нужна на стычки, батлы, шоу и заказы.')) +
+      p('🎬 <b>' + T('Главный способ её восстановить — уроки: каждая минута урока = +{e} ⚡. Энергия начисляется, когда возвращаешься в город.', { e: B.energy.perMin }) + '</b>') +
+      p('<small>' + T('Ещё немного дают сон (до {s} ⚡), еда в ларьке и разминка.', { s: B.energy.sleep }) + '</small>'),
+      [D.home && { t: T('К урокам'), cls: 'btn-accent', fn: () => D.home() }].filter(Boolean));
+  }
   const warmTxt = () => '🔥 ' + T('Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня', { e: B.warm.energy, r: Math.round(B.warm.rep * 100) });
   function warmCheck() { if (!warm() || S.warmDay === D.day()) return; S.warmDay = D.day(); S.en = Math.min(emax(), S.en + B.warm.energy); hudKey = ''; D.toast(warmTxt()); save(); }
   const warmTip = () => '<p>' + (warm() ? warmTxt() : '🔥 ' + T('Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.', { m: Math.round(B.warm.sec / 60), e: B.warm.energy, r: Math.round(B.warm.rep * 100) })) + '</p>';
@@ -320,7 +336,8 @@
   const gearOn = () => worn().map(id => GEAR[id]).filter(Boolean);
   const perk = k => gearOn().reduce((a, g) => a + (g.perk && g.perk[0] === k ? g.perk[1] : 0), 0);
   const perkTxt = g => g.perk ? T(PERK[g.perk[0]], { n: g.perk[1] }) : '';
-  const gearCard = id => { const g = GEAR[id]; return '<div class="cygear" style="--rc:' + RARC[g.rar] + '"><b>' + g.ico + ' ' + T(g.name) + '</b><small>' + T(RAR[g.rar]) + ' · ' + perkTxt(g) + ' · 👕 ' + T('видна на тебе и в батлах') + '</small></div>'; };
+  const btTxt = b => [b.win && T('+{n} мс к попаданию', { n: b.win }), b.cor && T('шире траектория'), b.hold && T('фриз держать легче'), b.save && T('1 промах прощается')].filter(Boolean).join(', ');
+  const gearCard = id => { const g = GEAR[id]; return '<div class="cygear" style="--rc:' + RARC[g.rar] + '"><b>' + g.ico + ' ' + T(g.name) + '</b><small>' + T(RAR[g.rar]) + ' · ' + perkTxt(g) + (g.bt ? ' · ⚔️ ' + T('в батлах') + ': ' + btTxt(g.bt) : '') + '</small></div>'; };
   const wear = id => { if (D.wear) D.wear('c:' + id, !isOn(id)); lookKey = ''; };
   const djOn = () => S.buff.dj === dayN();
   // which crews are out now: every game day they come back, at one of their spots; they grow as you win
@@ -342,7 +359,7 @@
     dlg(T(G.g.name), say(T(G.g.name), G.g.taunt) + p('<small>' + T('Уровень {n}', { n: G.lvl }) + ' · ' + '🕺'.repeat(G.size) + ' · ' + T('батл −{n} ⚡', { n: cost }) + '</small>') +
       p('<small>' + T('Чем выше уровень героя из уроков, тем больше времени на каждое движение.') + '</small>'), [
       { t: '🔥 ' + T('В круг!'), cls: 'btn-accent', off: S.en < cost, fn: () => fight(G, cost) },
-      S.en < cost ? { t: T('Мало энергии — поешь или выспись'), off: true } : null].filter(Boolean));
+      S.en < cost ? lowEn() : null].filter(Boolean));
   }
   function fight(G, cost) {
     const tut = !S.tut && !!G.g.tut; S.en = Math.max(0, S.en - cost);
@@ -612,7 +629,7 @@
       '<button type="button" class="cygl' + (gd === 3 ? ' ok' : '') + '" id="cyGoals" aria-label="' + T('Дела на сегодня') + '">📋 ' + gd + ' / 3</button>' +
       (turfs().length && S.tut ? '<div class="cyfl">👑 ' + turfs().filter(mine).length + ' / ' + turfs().length + '</div>' : '') + (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') + (djOn() ? '<div class="cyfl">🎧 ' + T('Бит качает') + '</div>' : '') +
       (S.job ? '<div class="cyjob' + (S.job.left < 6 ? ' hot' : '') + '">🌯 ' + Math.max(0, Math.ceil(S.job.left)) + '</div>' : '') + '</div>';
-    hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg); hud.querySelector('#cyMus').addEventListener('click', musToggle);
+    hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('.cyen').addEventListener('click', enDlg); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg); hud.querySelector('#cyMus').addEventListener('click', musToggle);
   }
   // buttons: [{ t: text, fn, cls, off }] — a button without fn just closes
   function dlg(title, html, btns) {
@@ -647,7 +664,7 @@
   function intro() {
     S.intro = 1;
     dlg(T('Город'), p(T('Тапни по карте — герой пойдёт туда сам. Заходи в места, знакомься с би-боями, зарабатывай кэш и респект.')) +
-      p(T('Батл стоит 20 энергии, шоу — 10. Энергию возвращают сон дома и еда.')) +
+      p(T('Батл стоит 20 энергии, шоу — 10. Энергию дают уроки: каждая минута урока = +{e} ⚡. Немного добавляют сон и еда.', { e: B.energy.perMin })) +
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
       p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
       p('🔥 ' + T('По двору ходят банды: победи в танце — банда уйдёт и что-нибудь оставит. Шмотки надеваются в рюкзаке.')) +
@@ -663,7 +680,7 @@
     if (pl.type === 'home') {
       const late = h >= 21 || h < 6;
       return dlg(T('Дом'), p(T('Здесь можно выспаться. Игра сохраняется сама.')) + (S.bruise ? p('🤕 ' + T('Сон вылечит ушиб.')) : ''), [
-        { t: late ? T('Спать до утра') : T('Спать до утра') + ' — ' + T('ещё не вечер (после 21:00)'), cls: 'btn-accent', off: !late, fn: () => { S.t = (Math.floor((S.t - 6 * 60) / 1440) + 1) * 1440 + B.startHour * 60; S.en = emax(); S.bruise = 0; D.toast(T('Доброе утро! Энергия восстановлена')); } },
+        { t: late ? T('Спать до утра') : T('Спать до утра') + ' — ' + T('ещё не вечер (после 21:00)'), cls: 'btn-accent', off: !late, fn: () => { S.t = (Math.floor((S.t - 6 * 60) / 1440) + 1) * 1440 + B.startHour * 60; S.en = Math.max(S.en, Math.min(emax(), B.energy.sleep)); S.bruise = 0; D.toast(T('Доброе утро! Сон даёт до {e} ⚡. Полностью энергию восстанавливают уроки.', { e: B.energy.sleep })); } },
         { t: T('Вздремнуть часок') + ' (+' + B.energy.stretch + ' ⚡)', off: daily('nap') || S.en >= emax(), fn: () => { mark('nap'); S.t += 60; S.en = Math.min(emax(), S.en + B.energy.stretch); } }
       ]);
     }
@@ -783,7 +800,7 @@
     html += p(T('Пол') + ': <b>' + floorName() + '</b> · ' + T('батл −{n} ⚡', { n: B.energy.battle })) + (st.last ? p('<small>' + T('Он помнит твою прошлую связку — повторишь, и судьи срежут очки.') + '</small>') : '');
     const stakes = [n.stake[0], Math.round((n.stake[0] + n.stake[1]) / 2 / 5) * 5, n.stake[1]].filter((v, i, a) => a.indexOf(v) === i);
     dlg(nm(n), html, stakes.map((v, i) => ({ t: T('Ставка') + ' 💵 ' + v, cls: i ? 'btn-line' : 'btn-accent', off: S.cash < v || S.en < B.energy.battle, fn: () => battle(n, st, v) }))
-      .concat(S.en < B.energy.battle ? [{ t: T('Мало энергии — поешь или выспись'), off: true }] : S.cash < stakes[0] ? [{ t: T('Не хватает кэша на ставку — выступи на улице'), off: true }] : []));
+      .concat(S.en < B.energy.battle ? [lowEn()] : S.cash < stakes[0] ? [{ t: T('Не хватает кэша на ставку — выступи на улице'), off: true }] : []));
   }
   function battle(n, st, stake) {
     const fl = floorId(), pool = B.beats.find(b => n.lvl <= b[0])[1], beat = pool[Math.floor(Math.random() * pool.length)];
@@ -903,7 +920,7 @@
     '.cyhud{position:absolute;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top,0px));display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 8px;align-items:center;pointer-events:none;font-family:Inter,system-ui,sans-serif;color:#F2EFE8}' +
     '.cyhud>*{background:rgba(11,11,12,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:6px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}' +
     '.cyh1 b{font:400 20px/1 Anton,Inter,sans-serif;letter-spacing:.5px;display:block}.cyh1 small{font-size:10px;color:#9A968E;white-space:nowrap}' +
-    '.cyen{position:relative;height:34px;padding:0;overflow:hidden}.cyen i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#B84A10,#E2611A)}.cyen span{position:relative;display:block;text-align:center;font:700 13px/34px Inter,sans-serif}' +
+    '.cyen{pointer-events:auto;cursor:pointer;position:relative;height:34px;padding:0;overflow:hidden}.cyen i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#B84A10,#E2611A)}.cyen span{position:relative;display:block;text-align:center;font:700 13px/34px Inter,sans-serif}' +
     '.cyst{display:flex;flex-direction:column;font:700 12px/1.25 Inter,sans-serif;white-space:nowrap}' +
     '.cybag{pointer-events:auto;font-size:18px;width:44px;height:44px;padding:0;color:inherit;cursor:pointer}' +
     '.cyhud>.cyrow2{grid-column:1/-1;background:none;border:0;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center}' +
@@ -963,7 +980,7 @@
     new MutationObserver(() => { if (!D.rbEl.hidden) return; if (pend) { const k = pend.kind; pend = null; if (shown) D.toast(k === 'battle' ? T('Ты ушёл из круга — ставка сгорела') : T('Шоу сорвалось — энергия потрачена')); save(); } hudKey = ''; kick(); })
       .observe(D.rbEl, { attributes: true, attributeFilter: ['hidden'] });
   }
-  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); music(); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
+  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); lessonEnergy(); S.en = Math.min(S.en, emax()); music(); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); music(); }
   window.CITY = { init, show, hide, owned: () => (S && S.gear ? S.gear.own.slice() : null), _duel: () => duApi, _spray: () => spApi, _walls: () => walls().map(p => ({ id: p.id, at: p.at, mine: mine(p), open: p.type === 'turf' ? openLeft(p) : -1, hold: holdLeft(p), rect: GFX.wallRect(p.id) })), _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

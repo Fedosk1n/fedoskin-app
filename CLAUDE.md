@@ -1199,7 +1199,7 @@
   topDown merges them; svg() reads CO / GF / HC at shoes, sleeves, cuffs, track yoke/trim, bomber body/trim/hem, bandana / bucket, phones, chain,
   gloves. Without c: tokens svg + topDown are BYTE-IDENTICAL to before (compared 120 combos). One item per slot across both (`slotOf`, `eqWith`).
   Owned street pieces stay in the city save (`S.gear.own`; app reads `CITY.owned()` or localStorage `fedoskin-city`). City: worn = D.eq() c: tokens,
-  wear(id) ⇒ D.wear('c:'+id, on) = app `wearCity` ⇒ shopWear; old `S.gear.on` migrated once into myEq at init; perks (city only) from worn c: items;
+  wear(id) ⇒ D.wear('c:'+id, on) = app `wearCity` ⇒ shopWear; old `S.gear.on` migrated once into myEq at init; perks from worn c: items (city) + battle boosts (see below);
   gear cards say «видна на тебе и в батлах». App wardrobe: «Мои вещи» lists owned street pieces (blue `.cityit`, «🏙️ Из города») next to shop
   items; «Магазин» has a block `#cityShop` «Только в городе» with all 11 (owned ⇒ Надеть/Снять, locked = dark + where from + «В город →» which
   opens the city tab; no city flag ⇒ «Только в городе», disabled). shopWear: street-gear-only changes work offline / without a wallet; the server
@@ -1209,3 +1209,18 @@
   then other players don't see street pieces on him (he does). 9 i18n keys (1011). hero.js `?v=14`, city.js `?v=12`, city-data.js `?v=7`.
   Tested headless ru 390×844 with a mocked OLD server: migration city→wardrobe, wardrobe cards, wear acid kicks, shop bandana replaces the
   street bandana (same slot), «Только в городе» block, «В город →» opens the city, city backpack shows ✓ Снять, server got the c: tokens.
+  CITY ⇄ BATTLES ⇄ LESSONS (owner 14.11.2026 16:01 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в городе, а чтобы
+  восстановить энергию для города нужно смотреть видео. Все пути ведут к видео»). (1) Street gear helps in RHYTHM battles (players, answers,
+  practice, city rounds): HERO.GEAR[id].bt = { win ms | cor px | hold | save } (bandana/track +10 ms, acid kicks / owl phones / writer kicks +15,
+  cypher bomber +20, acid bucket cor 4, owl hoodie cor 6, DJ gloves cor 8, gold chain hold, gold cap save) → `HERO.gearBoost(eq)` sums with caps
+  win 30 / cor 12 / hold 1 / save 1. rhythm.js start(): `G.gb` from G.eq (= myLook()), `G.save`; tap windows + the miss sweep get +win;
+  trajectory corridor +cor; hold: 72 px instead of 48 and grade kept from 82 % (else ≥ 40 % GOOD); save: the first MISS of the round becomes GOOD
+  («SAVED 👕»). Only hitting is easier — scoring rules unchanged ⇒ the server's recount (from the hits string) still matches; auto play untouched.
+  Setup screen line `.rbgear` «👕 Шмотки из города: …». Wardrobe cards + city gear cards show «⚔️ В батлах: …». Shop ⭐ items stay cosmetic.
+  (2) City energy from LESSONS: city-balance `energy.perMin` 5 ⚡ per real minute of lesson playback (`stats.sec` via dep `lessonSec`), credited
+  on CITY.show (`lessonEnergy()`, cursor S.lsec; a new save starts from now, no backlog; capped at emax, toast «🎬 Ты занимался по урокам N мин
+  — +E ⚡»); sleep only lifts energy to `energy.sleep` 40 (toast says lessons refill the rest); low-energy buttons are now «🎬 Мало энергии —
+  посмотри урок: 1 мин = +5 ⚡» → D.home(); the energy bar opens `enDlg()` (how energy works + «К урокам»); «Как играть» text updated. Food, nap,
+  warm-up and «Разогрет уроком» unchanged. 15 i18n keys (1026). hero.js `?v=15`, rhythm.js `?v=18`, city.js `?v=13`, city-balance.js `?v=6`.
+  Tested headless: gearBoost caps, setup note, a played round with the gold cap (1 miss forgiven) and synthetic taps 85 ms late (PERFECT with
+  +20 ms; no-gear behaviour same as the previous version), 7 lesson minutes ⇒ +35 ⚡, energy dialog, sleep ⇒ 40. NOT on a real phone.

@@ -326,6 +326,7 @@
 .rbc.fr:after{content:"🎬";position:absolute;top:3px;right:5px;font-size:10px}
 .rbcards.b4 .rbc{padding:9px 2px 7px} .rbcards.b4 .rbc b{font-size:11.5px;letter-spacing:0} .rbcards.b4 .rbc i{letter-spacing:.3px}
 .rbul{margin-top:9px;padding:10px 12px;border-radius:12px;border:1px dashed #5A4A2A;background:rgba(242,204,85,.07);font-size:12.5px;line-height:1.4;color:var(--soft)}
+.rbgear{margin-top:6px;font-size:12.5px;color:#7CE0FF;line-height:1.35}
 .rbulnote{margin-top:6px;font-size:12.5px;color:#F2CC55;line-height:1.35}
 .rbtip{position:relative;margin-top:10px;scroll-margin-bottom:150px;padding:10px 12px;border-radius:12px;background:#F2CC55;color:#17171A;font-size:13px;line-height:1.35;font-weight:600;display:flex;gap:10px;align-items:center;animation:rbtipin .3s ease-out}
 .rbtip:before{content:"";position:absolute;top:-7px;left:var(--ax,85%);margin-left:-7px;border:7px solid transparent;border-top:0;border-bottom-color:#F2CC55}
@@ -404,7 +405,7 @@
       e.preventDefault();
       if (drawOpen(e.timeStamp)) { try { box.setPointerCapture(e.pointerId); } catch (_) {} drawDown(e); } else tap(e.timeStamp, e);
     });
-    box.addEventListener('pointermove', e => { if (!G || G.mode !== 'play') return; if (G.hold && !G.hold.auto && e.pointerId === G.hold.id && Math.hypot(e.clientX - G.hold.x, e.clientY - G.hold.y) > 48) holdEnd(stampS(e.timeStamp)); if (G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
+    box.addEventListener('pointermove', e => { if (!G || G.mode !== 'play') return; if (G.hold && !G.hold.auto && e.pointerId === G.hold.id && Math.hypot(e.clientX - G.hold.x, e.clientY - G.hold.y) > (G.gb && G.gb.hold ? 72 : 48)) holdEnd(stampS(e.timeStamp)); if (G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
     ['pointerup', 'pointercancel'].forEach(ev => box.addEventListener(ev, e => { if (G && G.mode === 'play' && G.hold && !G.hold.auto && e.pointerId === G.hold.id) holdEnd(stampS(e.timeStamp)); if (G && G.dr) { G.dr.on = false; G.dr.last = null; } }));
     box.addEventListener('touchstart', e => { if (G && G.mode === 'play' && !(e.target.closest && e.target.closest('[data-nt]'))) e.preventDefault(); }, { passive: false });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') again(); });
@@ -478,6 +479,12 @@
   }
 
   // ---- 1: build the set ----
+  // what the worn street gear does in this round — said on the setup screen so the player sees why the city matters
+  function gearNote() {
+    const b = window.HERO && HERO.gearBoost ? HERO.gearBoost(G.eq) : null, T = D.T; if (!b || !b.any) return '';
+    const l = []; if (b.win) l.push(T('+{n} мс к попаданию', { n: b.win })); if (b.cor) l.push(T('шире траектория')); if (b.hold) l.push(T('фриз держать легче')); if (b.save) l.push(T('1 промах прощается'));
+    return '<p class="rbgear">👕 ' + T('Шмотки из города') + ': ' + l.join(' · ') + '</p>';
+  }
   function setup() {
     const T = D.T; killBeat();
     G.mode = 'setup'; G.seed = Math.floor(Math.random() * 1e9) + 1; drawOff();
@@ -505,6 +512,7 @@
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
     $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') + ' ' + T('На фризе попади в бит и держи палец, пока не заполнится круг.') + (G.prevPk ? ' ' + T('Новая связка: +2 % за каждый элемент, которого не было в твоём прошлом раунде.') : '') : '') + '</p>' +
+      gearNote() +
       (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
       (G.battle || G.city ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
       BEATS.filter(b => V2() || !b.g).map(b => '<button type="button" class="rbc bt' + (b.id === G.beat ? ' on' : '') + '" data-b="' + b.id + '"><b>' + b.name + '</b><i>' + bdots(b.lv) + ' ×' + b.mult + '</i><small>' + b.bpm + ' BPM</small></button>').join('') + '</div></div>') +
@@ -648,6 +656,7 @@
     if (G.auto) G.picks = rowsOf().map((_, k) => { const cs = $('#rbSet').querySelectorAll('.rbc[data-r="' + k + '"][data-m]'); return cs[Math.floor(Math.random() * cs.length)].dataset.m; });
     stopPreview();
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
+    G.gb = window.HERO && HERO.gearBoost ? HERO.gearBoost(G.eq) : { win: 0, cor: 0, hold: 0, save: 0 }; G.save = G.gb.save; // street gear from «Город» helps to hit
     G.notes = notesOf(G.picks, G.seed, G.beat); G.dns = G.notes.filter(n => n.draw); G.dn = G.dns[0] || null; G.dr = null; G.hold = null; G.bigAt = 0;
     if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (lvOf(G.picks[n.ph], G.beat) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
@@ -667,6 +676,7 @@
   function puff() { const fx = $('#rbFx'); for (let k = 0; k < 4; k++) { const d = document.createElement('i'); d.className = 'puff'; d.style.left = (50 + (k - 1.5) * 6) + '%'; d.style.animationDelay = (k * .03) + 's'; fx.appendChild(d); setTimeout(() => d.remove(), 900); } }
   function stars() { const fx = $('#rbFx'); for (let k = 0; k < 8; k++) { const d = document.createElement('i'), a = k / 8 * Math.PI * 2; d.className = 'star'; d.style.left = '50%'; d.style.setProperty('--dx', (Math.cos(a) * 70).toFixed(0) + 'px'); d.style.setProperty('--dy', (Math.sin(a) * 70 - 20).toFixed(0) + 'px'); fx.appendChild(d); setTimeout(() => d.remove(), 800); } }
   function judge(n, kind, s) {
+    if (kind === 3 && G.save > 0 && !G.auto) { G.save--; kind = 2; const j = $('#rbJ'); setTimeout(() => { j.textContent = 'SAVED 👕'; }, 0); } // a street piece forgives one miss
     n.st = kind; n.jt = s; G.cnt[kind]++;
     if (kind === 3) { G.combo = 0; G.missAt = s; }
     else { G.combo++; G.best = Math.max(G.best, G.combo); G.score += ptsOf(n, kind, G.combo) * (1 + .01 * G.level); }
@@ -683,8 +693,9 @@
     let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp;
     const s = song(p), pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
     let bestN = null, bd = 9;
-    for (const n of G.notes) { if (n.st || n.draw || n.hs) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD) break; }
-    const xw = G.city && G.city.fw && bestN && bestN.ph === 1 ? G.city.fw : 0; // city: sneakers widen the footwork windows a little
+    const gw = G.gb ? G.gb.win / 1000 : 0; // street gear: wider windows
+    for (const n of G.notes) { if (n.st || n.draw || n.hs) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD + gw) break; }
+    const xw = (G.city && G.city.fw && bestN && bestN.ph === 1 ? G.city.fw : 0) + gw; // city: sneakers widen the footwork windows a little
     if (bestN && bd <= W_GOOD + xw && bestN.hold) holdStart(bestN, bd <= W_PERF + xw ? 1 : 2, s, e);
     else if (bestN && bd <= W_GOOD + xw) { const kind = bd <= W_PERF + xw ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
     else if (G.hold) { /* a second finger while holding the freeze */ }
@@ -708,7 +719,7 @@
     airflare: u => { if (u < .6) { const v = u / .6; return [-1 + 2 * v, .1 - Math.abs(Math.sin(3 * Math.PI * v)) * .75]; } const a = (u - .6) / .4 * Math.PI; return [Math.cos(a), .1 + Math.sin(a) * .75]; } }; // three jumps hand to hand, and the way back under
   const drawCan = () => box && box.querySelector('#rbDraw');
   function drawInit() {
-    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30) + (G.city && G.city.cor && G.picks[2] === 'headspin' ? G.city.cor : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
+    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30) + (G.city && G.city.cor && G.picks[2] === 'headspin' ? G.city.cor : 0) + (G.gb ? G.gb.cor : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
     drawCan().hidden = false; drawPlace();
   }
   function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr'); }
@@ -825,7 +836,7 @@
   }
   function holdEnd(s) {
     const H = G.hold; if (!H || H.n.st) return; G.hold = null;
-    const n = H.n, k = clamp((s - n.t) / (n.end - n.t), 0, 1), kind = k >= .92 ? H.kind : k >= .5 ? 2 : 3;
+    const n = H.n, k = clamp((s - n.t) / (n.end - n.t), 0, 1), easy = G.gb && G.gb.hold, kind = k >= (easy ? .82 : .92) ? H.kind : k >= (easy ? .4 : .5) ? 2 : 3;
     judge(n, kind, s); if (kind === 3) blip(3);
     const pad = $('#rbPad'); pad.classList.remove('dr'); pad.textContent = G.auto ? D.T('Авто') : D.T('Тапай!');
   }
@@ -880,7 +891,7 @@
     if (G.audio && ctx.state === 'running') { const diff = (ctx.currentTime - G.aud0 - G.lat) - song(now); if (Math.abs(diff) > .04) G.perf0 -= diff * 1000 * .15; }
     const s = song(now), T = D.T;
     if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.hs && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; if (n.hold) { holdStart(n, kind, s); continue; } judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
-    for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && !n.hs && s - n.t > W_GOOD) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
+    for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && !n.hs && s - n.t > W_GOOD + (G.gb && !G.auto ? G.gb.win / 1000 : 0)) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
     const beat = Math.floor(s / BEAT);
     if (beat !== G.lastBeat) {
       G.lastBeat = beat;

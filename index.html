@@ -405,6 +405,7 @@ body.chatmode .tabs{display:none}
 /* street gear from «Город» in the wardrobe (14.11.2026): not sold, won in the city */
 .shopit.cityit{border-color:rgba(124,224,255,.4);background:linear-gradient(180deg,rgba(124,224,255,.09),#1A1A1D 60%)}
 .shopit.cityit.on{border-color:var(--accent)}
+.shopit .citybt{font-size:11px;line-height:1.3;color:#F2CC55;font-weight:700;margin-top:-4px}
 .shopit .citycap{font-size:11px;line-height:1.3;color:#7CE0FF;font-weight:700;margin-top:-2px}
 .shopit.cityit.lock svg{filter:brightness(.35) grayscale(.6)}
 .shopit button.citybtn{background:transparent;border:1px solid rgba(124,224,255,.55);color:#7CE0FF;height:auto;min-height:34px;padding:6px;line-height:1.2}
@@ -1678,7 +1679,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="shopgrid" id="shopGrid"></div>
     <div id="cityShop" hidden>
       <h3 class="mh">Только в городе</h3>
-      <p class="mp">Эти вещи не продаются. Их выбивают с уличных банд и получают за дела в «Городе». Надетые — видны на тебе везде: в городе, в батлах и в рейтинге.</p>
+      <p class="mp">Эти вещи не продаются. Их выбивают с уличных банд и получают за дела в «Городе». Надетые — видны на тебе везде и помогают в батлах: шире окно попадания, легче траектория и фриз.</p>
       <div class="shopgrid" id="cityGrid"></div>
     </div>
     </div>
@@ -1773,12 +1774,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=14"></script>
-<script src="rhythm.js?v=17"></script>
-<script src="city-balance.js?v=5"></script>
+<script src="hero.js?v=15"></script>
+<script src="rhythm.js?v=18"></script>
+<script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=5"></script>
-<script src="city.js?v=12"></script>
+<script src="city.js?v=13"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5653,7 +5654,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) }) + '<b></b><button type="button"></button>';
       d.querySelector('b').textContent = T(it.name);
       const btn = d.querySelector('button');
-      if (city) { const c = document.createElement('small'); c.className = 'citycap'; c.textContent = '🏙️ ' + (own ? T('Из города') : citySrc(it)); d.insertBefore(c, btn); }
+      if (city) { const c = document.createElement('small'); c.className = 'citycap'; c.textContent = '🏙️ ' + (own ? T('Из города') : citySrc(it)); d.insertBefore(c, btn);
+        if (it.bt) { const e = document.createElement('small'); e.className = 'citybt'; e.textContent = '⚔️ ' + T('В батлах') + ': ' + [it.bt.win && T('+{n} мс к попаданию', { n: it.bt.win }), it.bt.cor && T('шире траектория'), it.bt.hold && T('фриз держать легче'), it.bt.save && T('1 промах прощается')].filter(Boolean).join(', '); d.insertBefore(e, btn); } }
       if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
       else if (city && !own) { btn.className = 'citybtn'; btn.textContent = CITY_ON && window.CITY ? T('В город') + ' →' : T('Только в городе');
         if (CITY_ON && window.CITY) btn.onclick = () => { $('#shopSheet').hidden = true; setTimeout(() => go('city'), 250); }; else btn.disabled = true; }
@@ -6148,7 +6150,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   } });
   $('#btCoachGo').addEventListener('click', () => toCoaching('battle'));
   // the city mini-game (city.js): street battles and shows run on the same rhythm game, offline
-  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, eq: () => myEq, wear: wearCity, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate, todaySec: () => stats.dk === todayKey() ? (stats.ds || 0) : 0, day: todayKey, home: () => go('home'),
+  if (CITY_ON && window.CITY) CITY.init({ el: $('#city'), rbEl: $('#rbGame'), T, RB, toast, level: () => statsView().level, look: myLook, eq: () => myEq, wear: wearCity, lessonSec: () => stats.sec, me: () => prof.nick || T('Ты'), ul: ulState2, gate: stGate, todaySec: () => stats.dk === todayKey() ? (stats.ds || 0) : 0, day: todayKey, home: () => go('home'),
     openLesson: h => { if (h.id && BY_ID[h.id]) openLesson(h.id); else if (h.sec) openSection(h.sec); } });
   window.fedoskinRhythm = (lvl, opp) => RB.open({ level: lvl || statsView().level, eq: myLook(), oppLevel: opp || Math.min(8, (lvl || statsView().level) + 1) });
   // a demo with a rare move (kind 1–6: 1–3 legendary, 4–6 mythic; 0 = any): finds a seed that gives it, the winner = its dancer
