@@ -8,8 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=3';
-import { initGame } from './city3d-game.js?v=4';
+import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=4';
+import { initGame } from './city3d-game.js?v=5';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -762,28 +762,44 @@ function updateHero(dt, tb) {
   }
   H.root.rotation.y = s.face;
   const k = clamp(sp / SPD, 0, 1);
-  // base = motion capture (Ready / toprock near the cypher), walking = leg and arm swings added on top of the base pose
-  const nearC = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5;
-  if (k > .08) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); }
-  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready'; if (H.cur !== want) H.play(want, { fade: .35 }); }
+  // base = motion capture (Ready / toprock near the cypher); walking = a gait added on top of a still frame of Ready.
+  // The step is driven by the distance actually covered (stride length grows with speed), so the feet don't skate.
+  const nearC = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .06;
+  if (moving) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
+  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready';
+    if (H.cur !== want) H.play(want, { fade: .35 }); else if (H.act && H.act.timeScale === 0) H.act.timeScale = 1; }
   H.tick(dt);
-  s.wk = lerp(s.wk || 0, k > .08 ? k : 0, 1 - Math.exp(-dt * 10));
-  if (s.wk > .02) {
-    s.ph += dt * (5 + 6 * k); const sn = S(s.ph), w = s.wk, B = H.B;
+  s.wk = lerp(s.wk || 0, moving ? k : 0, 1 - Math.exp(-dt * (moving ? 8 : 6)));
+  if (s.wk > .01) {
+    const w = s.wk, run = clamp((w - .45) / .4, 0, 1), stride = 1.25 + .9 * run;          // metres per full cycle (two steps)
+    s.ph += sp * dt / stride * Math.PI * 2; if (!moving) s.ph += dt * 4 * w;            // finish the step when stopping
+    const sn = S(s.ph), cs = Cc(s.ph), B = H.B;
     const rx = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_X, a)), rz = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_Z, a));
-    rx(B.LeftUpLeg, .5 * sn * w); rx(B.RightUpLeg, -.5 * sn * w);
-    rx(B.LeftLeg, -.75 * Math.max(0, -Cc(s.ph)) * w); rx(B.RightLeg, -.75 * Math.max(0, Cc(s.ph)) * w);
-    rz(B.LeftArm, -.35 * sn * w); rz(B.RightArm, -.35 * sn * w);
-    B.Hips.position.y -= .03 * Math.abs(Cc(s.ph)) * w;
+    const legA = (.32 + .38 * run) * w, kneeA = (.45 + .85 * run) * w;
+    // thighs swing; the knee bends while that leg swings forward (cos > 0 for the left), a little give on the standing leg
+    rx(B.LeftUpLeg, legA * sn); rx(B.RightUpLeg, -legA * sn);
+    rx(B.LeftLeg, -(kneeA * Math.max(0, cs) + .12 * w)); rx(B.RightLeg, -(kneeA * Math.max(0, -cs) + .12 * w));
+    // feet roll: toes up as the leg reaches forward
+    rx(B.LeftFoot, -.25 * w * Math.max(0, sn)); rx(B.RightFoot, -.25 * w * Math.max(0, -sn));
+    // arms opposite to legs, elbows bent more when running
+    const armA = (.28 + .35 * run) * w, elb = (.25 + .9 * run) * w;
+    rz(B.LeftArm, -armA * sn); rz(B.RightArm, -armA * sn);
+    rz(B.LeftForeArm, elb + .25 * run * w * Math.max(0, -sn)); rz(B.RightForeArm, -(elb + .25 * run * w * Math.max(0, sn)));
+    // lean into the run, a little twist of the chest, and the body bobs twice per cycle
+    rx(B.Spine, (.06 + .14 * run) * w); B.Spine1.quaternion.multiply(_q.setFromAxisAngle(_Yv, .12 * sn * w));
+    B.Hips.position.y -= (.025 + .045 * run) * Math.abs(cs) * w;
   }
 }
+const _Yv = new THREE.Vector3(0, 1, 0);
 const _q = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0), _Z = new THREE.Vector3(0, 0, 1);
 
 // ---------- music ----------
 let musicOn = false, musicT0 = 0;
-function startMusic() { if (musicOn || localStorage.getItem('fedoskin-city-music') === '0') return; try { if (window.RB && RB.bgm) { RB.bgm(true); musicOn = true; musicT0 = performance.now() + 150; paintMus(); } } catch (_) {} }
+function startMusic() { try { window.RB && RB.unlock && RB.unlock(); } catch (_) {} if (musicOn || localStorage.getItem('fedoskin-city-music') === '0') return; try { if (window.RB && RB.bgm) { RB.bgm(true); musicOn = true; musicT0 = performance.now() + 150; paintMus(); } } catch (_) {} }
 function paintMus() { $('#mus').textContent = musicOn ? '🎵' : '🔇'; }
 $('#mus').addEventListener('click', e => { e.stopPropagation(); if (musicOn) { RB.bgm(false); musicOn = false; localStorage.setItem('fedoskin-city-music', '0'); } else { localStorage.removeItem('fedoskin-city-music'); startMusic(); } paintMus(); });
+['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => startMusic(), { capture: true, passive: true }));
+setTimeout(startMusic, 600);   // desktop browsers often allow it straight away
 document.addEventListener('visibilitychange', () => { if (!window.RB) return; if (document.hidden && musicOn) RB.bgm(false); else if (!document.hidden && musicOn) RB.bgm(true); });
 
 // ---------- boot ----------

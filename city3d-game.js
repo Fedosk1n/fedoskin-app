@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen } from './city3d-mocap.js?v=3';
+import { mocapPerson, clipLen } from './city3d-mocap.js?v=4';
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
@@ -224,14 +224,15 @@ export function initGame(ctx) {
     const e = $('#g3mv'); e.innerHTML = (s.nm || '') + (res ? `<small class="${res[0]}">${res[1]}</small>` : '');
     e.classList.add('pop'); setTimeout(() => e.classList.remove('pop'), 180);
   }
-  function fallStart(J) { J.fall = { t: 0, side: Math.random() < .5 ? -1 : 1 }; if (J.act) J.act.timeScale = .15; ctx.shake && ctx.shake(.6); }
+  // a fall: the pose freezes in slow motion, the body tips over sideways and lies ON the ground (city3d-mocap J.rest), then gets up
+  function fallStart(J) { J.fall = { t: 0, side: Math.random() < .5 ? -1 : 1 }; J.rest = true; if (J.act) J.act.timeScale = .15; ctx.shake && ctx.shake(.6); }
   function fallTick(J, dt, soft) {
     const f = J.fall; if (!f) return; f.t += dt;
     const k = ease(clamp(f.t / .35, 0, 1)), up = ease(clamp((f.t - (soft ? .7 : 1.1)) / .5, 0, 1));
-    J.rig.rotation.z = f.side * (soft ? .7 : 1.35) * k * (1 - up); J.rig.position.y = -(soft ? .05 : .25) * k * (1 - up);
+    J.rig.rotation.z = f.side * (soft ? .7 : 1.35) * k * (1 - up); if (up > .6) J.rest = false;
     if (f.t > (soft ? .7 : 1.1) && !f.up) { f.up = true; J.play('Breakdance_Ready', { fade: .5 }); }
   }
-  function fallEnd(J) { J.fall = null; J.rig.rotation.z = 0; J.rig.position.y = 0; }
+  function fallEnd(J) { J.fall = null; J.rest = false; J.rig.rotation.z = 0; }
 
   function battleTick(dt) {
     const H = W.hero, now = performance.now() / 1000;

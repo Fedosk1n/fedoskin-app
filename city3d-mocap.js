@@ -39,6 +39,7 @@ function rmAt(r, t, loop, out) {
   if (loop) { const u = t / r.dur; out[0] -= r.end[0] * u; out[1] -= r.end[1] * u; }
   return out;
 }
+const _v = new THREE.Vector3(), lerpTo = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-dt * k));
 const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending/;
 
 const mats = new Map();
@@ -99,6 +100,12 @@ export function mocapPerson(look, opt = {}) {
     const so = new THREE.Mesh(new THREE.BoxGeometry(.115, toe.length() + .12, .02), sole); so.quaternion.copy(sh.quaternion); so.position.copy(sh.position); so.translateZ(-.055); B[s + 'Foot'].add(so);
   }
   root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
+  const PTS = [];
+  root.traverse(m => { if (!m.isMesh || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
+    if (g.type === 'CapsuleGeometry') { const h = P.height / 2; PTS.push({ m, p: new THREE.Vector3(0, h, 0), r: P.radius * sc }, { m, p: new THREE.Vector3(0, -h, 0), r: P.radius * sc }); }
+    else if (g.type === 'SphereGeometry' && P.thetaLength > 3) PTS.push({ m, p: new THREE.Vector3(), r: P.radius * sc });
+    else { g.computeBoundingBox(); const b = g.boundingBox; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) PTS.push({ m, p: new THREE.Vector3(x, y, z), r: 0 }); } });
   const mixer = new THREE.AnimationMixer(rig);
   const J = { root, rig, B, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95 };
   // advance the animation and move the dancer by the clip's own travel
@@ -115,6 +122,15 @@ export function mocapPerson(look, opt = {}) {
     const k = Math.exp(-dt * J.pull); J.dx *= k; J.dz *= k;
     const d = Math.hypot(J.dx, J.dz); if (d > J.maxR) { J.dx *= J.maxR / d; J.dz *= J.maxR / d; }
     rig.position.x = J.dx; rig.position.z = J.dz;
+    // GROUND: nothing of the body may go under the asphalt (owner 14.11 «при падении… не проваливался под землю»).
+    // The lowest point of head / hands / elbows / knees / feet / hips / chest is measured each frame; the body is lifted onto the
+    // ground, and while lying after a fall (J.rest) it is laid exactly on it.
+    rig.position.y = 0; root.updateMatrixWorld(true);
+    let low = Infinity; for (const q of PTS) { _v.copy(q.p).applyMatrix4(q.m.matrixWorld); const y = _v.y - q.r; if (y < low) low = y; }
+    low -= root.position.y;
+    const want = J.rest ? -low : Math.max(0, -low);
+    J.lift = want >= (J.lift || 0) ? want : lerpTo(J.lift || 0, want, dt, J.rest ? 14 : 10);   // up at once, down softly
+    rig.position.y = J.lift;
   };
   J.home0 = () => { J.dx = J.dz = 0; rig.position.x = rig.position.z = 0; };
   J.play = (name, o = {}) => {

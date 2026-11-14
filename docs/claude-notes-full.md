@@ -1267,3 +1267,12 @@
   Ending) use the real travel; `play(name, {travel})` overrides. Checked frame by frame in node (60 fps): max step 3.6 cm per frame, never
   further than 0.95 m from the spot. Battle crossfades .3–.45 s. Light: exposure 1.62, hemisphere 1.55, lamps ×3.2 power, 3 new lamps
   (rusty / owls corners, yard middle) + warm/tinted PointLights over the cypher and each crew (no shadows — phone cost).
+- City 3D, 14.11.2026 21:39 (owner «фоновую музыку как было; проработай передвижение человечка; при падении не проваливался под землю»):
+  MUSIC: RB.unlock() (= audioOn, new export, rhythm.js `?v=19` in index.html + city3d.html); city3d startMusic on ANY pointerdown / touchend /
+  click / keydown anywhere (capture) + a try 0.6 s after load; music keeps playing through battles. GAIT: hero walks on a still frame of Ready
+  (timeScale 0) + gait on bones: phase advanced by distance covered / stride (1.25 m walk … 2.15 m run) ⇒ no skating; thighs (UpLeg X),
+  knee bend on the swinging leg (Leg −X), toes roll (Foot −X), arms opposite (Arm Z: left +fwd? both −armA·sin), elbows (Left ForeArm +Z,
+  Right −Z), forward lean (Spine +X), chest twist (Spine1 Y), hips bob ×2 per cycle. GROUND: J.tick measures the lowest real surface point
+  each frame (capsule ends + radius, sphere centre + radius, box corners of other meshes) and lifts the rig at once (lowers softly);
+  J.rest = lie exactly on the ground (falls). Falls no longer move rig y. Measured in node on real vertices: falls during headspin /
+  1990 / flare / swipes 0 cm (were −48…−109 cm), normal dancing never below 0.
