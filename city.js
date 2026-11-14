@@ -6,6 +6,7 @@
   const B = window.CITY_BAL, DATA = window.CITY_DATA, KEY = 'fedoskin-city';
   const GFX = window.CITY_GFX, BLOCK = 'F#bGTKSXctDCLBhuPkM', TS = GFX.TS, SPEED = 5.5, SEE = 4.6;
   let D, S, el, can, cx, hud, dlgEl, W = 0, H = 0, dpr = 1, shown = false, timer = 0, raf = 0, last = 0, path = [], goal = null, pend = null;
+  let gLook = {}, gangCool = 0, duEl = null, duApi = null, npLook = {};
   let FREE = [], pkDay = -1, pkList = [], floats = [], walkLook = [];
   let joy = null, padB = 0, MAP, MW, MH, DIST, hero = { x: 0, y: 0 }, cam = { x: 0, y: 0 }, hudKey = '';
   let hdir = 0, hdist = 0, moved = 0, lookKey = '', lookNow = null, npcLook = {}, warmUp = {}, birdAway = {};
@@ -19,7 +20,7 @@
   function fresh() {
     const d = DATA.districts.yard;
     return { v: B.save, d: 'yard', x: d.start[0], y: d.start[1], t: B.startHour * 60, en: B.energy.max, cash: B.start.cash, rep: B.start.rep, card: 0, own: [], inv: {},
-      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0, tags: {}, pk: { day: -1, got: [] }, goals: { day: -1, list: [] }, dl: { day: -1, n: 0 }, job: null };
+      bruise: 0, fog: {}, npc: {}, spot: {}, got: {}, marks: [], day: {}, intro: 0, tags: {}, pk: { day: -1, got: [] }, goals: { day: -1, list: [] }, dl: { day: -1, n: 0 }, job: null, gear: { own: [], on: {} }, gang: { day: -1, beat: [] }, gw: 0, gwon: {}, buff: {}, tut: 0 };
   }
   function load() {
     try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === B.save && DATA.districts[s.d]) return Object.assign(fresh(), s); } catch (_) {}   // older saves get the new fields
@@ -45,7 +46,7 @@
   function setMap() {
     DIST = DATA.districts[S.d]; MAP = DIST.map; MH = MAP.length; MW = MAP[0].length;
     if (!S.fog[S.d] || S.fog[S.d].length !== MW * MH) S.fog[S.d] = '0'.repeat(MW * MH);
-    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; npcLook = {}; GFX.setMap(DIST, dpr); freeCells(); pkDay = -1; walkLook = []; reveal();
+    hero.x = S.x; hero.y = S.y; cam.x = hero.x; cam.y = hero.y; path = []; npcLook = {}; GFX.setMap(DIST, dpr); freeCells(); pkDay = -1; walkLook = []; gLook = {}; npLook = {}; reveal();
   }
   const tile = (x, y) => x < 0 || y < 0 || x >= MW || y >= MH ? 'F' : MAP[y][x];
   const walk = (x, y) => !BLOCK.includes(tile(x, y));
@@ -83,7 +84,7 @@
   // free ground cells the hero can reach: the daily finds lie there
   function freeCells() {
     const st = DIST.start, key = (x, y) => y * MW + x, seenC = new Set([key(st[0], st[1])]), q = [st], busyC = new Set();
-    DIST.places.forEach(p => busyC.add(key(p.at[0], p.at[1]))); DIST.npcs.forEach(n => busyC.add(key(n.at[0], n.at[1]))); (DIST.drops || []).forEach(p => busyC.add(key(p[0], p[1])));
+    DIST.places.forEach(p => busyC.add(key(p.at[0], p.at[1]))); DIST.npcs.forEach(n => busyC.add(key(n.at[0], n.at[1]))); (DIST.drops || []).forEach(p => busyC.add(key(p[0], p[1]))); (DIST.gangs || []).forEach(g => g.spots.forEach(p => busyC.add(key(p[0], p[1]))));
     FREE = [];
     for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; if ('.='.includes(tile(x, y)) && !busyC.has(key(x, y)) && Math.hypot(x - st[0], y - st[1]) > 2) FREE.push([x, y]);
       [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const k = key(x + dx, y + dy); if (!seenC.has(k) && walk(x + dx, y + dy)) { seenC.add(k); q.push([x + dx, y + dy]); } }); }
@@ -105,19 +106,19 @@
     picks().forEach(k => {
       if (S.pk.got.includes(k.i) || Math.hypot(k.x - hero.x, k.y - hero.y) > .62) return;
       S.pk.got.push(k.i);
-      if (k.kind === 'coin') { S.cash += k.val; pop('+' + k.val + ' 💵'); bump('coins'); }
+      if (k.kind === 'coin') { const v = k.val + perk('coin'); S.cash += v; pop('+' + v + ' 💵'); bump('coins'); }
       else if (k.kind === 'can') { give('can'); pop('+1 🎨', '#7CE0FF'); }
       else { S.en = Math.min(emax(), S.en + B.pick.snack); pop('+' + B.pick.snack + ' ⚡', '#7BE3A0'); }
       hudKey = '';
     });
   }
   // three things to do for every game day: a small prize for each, a better one for all three
-  const GOALS = { coins: 'Собери монеты', win: 'Выиграй батл', show: 'Выступи с шоу', deliver: 'Доставь заказ из ларька', stretch: 'Разомнись на площадке', tag: 'Нарисуй тег на стене' };
+  const GOALS = { coins: 'Собери монеты', win: 'Выиграй батл', show: 'Выступи с шоу', deliver: 'Доставь заказ из ларька', stretch: 'Разомнись на площадке', tag: 'Нарисуй тег на стене', gang: 'Разгони банды' };
   const wallsLeft = () => DIST.places.filter(p => p.type === 'wall' && !S.tags[p.id]).length;
   function goals() {
     const d = dayN(); if (S.goals.day === d) return S.goals;
-    const pool = ['coins', 'win', 'show', 'deliver', 'stretch'].concat(wallsLeft() ? ['tag'] : []), list = [];
-    for (let i = 0; i < 3; i++) { const k = pool.splice(Math.floor(hash(d * 17 + i, i * 29 + 5) * pool.length), 1)[0]; list.push({ k, a: 0, n: B.goals[k] || 1, done: 0 }); }
+    const pool = ['coins', 'win', 'show', 'deliver', 'stretch'].concat(wallsLeft() ? ['tag'] : []), list = [{ k: 'gang', a: 0, n: B.goals.gang, done: 0 }];   // one of the three is always about the crews
+    for (let i = 0; i < 2; i++) { const k = pool.splice(Math.floor(hash(d * 17 + i, i * 29 + 5) * pool.length), 1)[0]; list.push({ k, a: 0, n: B.goals[k] || 1, done: 0 }); }
     return (S.goals = { day: d, list, all: 0 });
   }
   function bump(k) {
@@ -161,33 +162,146 @@
     if (!dlgEl.hidden) return;   // the timer waits while a window is open
     j.left -= dt; if (j.left <= 0) { S.job = null; hudKey = ''; D.toast('🥶 ' + T('Заказ остыл — клиент не заплатил')); save(); }
   }
-  // the warm-up at the court: catch the runner in the green zone
-  function stretch(pl) {
-    if (daily('gym')) return dlg(T(pl.name), p(T('Сегодня ты уже разминался. Приходи завтра.')), []);
-    dlg(T(pl.name), p(T('Жми «Тянись», когда бегунок в зелёной зоне. Четыре попытки — чем точнее, тем больше энергии.')), [{ t: T('Размяться'), cls: 'btn-accent', fn: () => {
-      path = []; goal = null; const N = B.stretch.tries; let n = 0, hits = 0, z = .5, t0 = performance.now(), on = true;
-      dlgEl.innerHTML = '<div class="cyd"><h3>' + esc(T(pl.name)) + '</h3><div class="cybar"><i></i><b></b></div><p class="cyln" id="cySt">&nbsp;</p><div class="cybt"><button type="button" class="btn btn-accent" id="cyGo">' + T('Тянись!') + '</button></div></div>';
-      dlgEl.hidden = false; const zone = dlgEl.querySelector('.cybar i'), mk = dlgEl.querySelector('.cybar b'), st = dlgEl.querySelector('#cySt');
-      const posAt = now => { const u = ((now - t0) / (1050 - n * 110)) % 2; return u < 1 ? u : 2 - u; };
-      const place = () => { z = .18 + Math.random() * .64; zone.style.left = (z - .11) * 100 + '%'; };
-      const loop = now => { if (!on || dlgEl.hidden || !mk.isConnected) return; mk.style.left = posAt(now) * 100 + '%'; requestAnimationFrame(loop); };
-      place(); requestAnimationFrame(loop);
-      dlgEl.querySelector('#cyGo').addEventListener('click', () => {
-        const ok = Math.abs(posAt(performance.now()) - z) <= .11; if (ok) hits++; n++; t0 = performance.now() - Math.random() * 600;
-        st.textContent = (ok ? '✓ ' : '✗ ') + T('Попаданий: {a} из {n}', { a: hits, n: N }); zone.style.background = ok ? '#3BD16F' : '#E2483A'; setTimeout(() => { zone.style.background = ''; }, 160);
-        if (n < N) return place();
-        on = false; mark('gym'); const gain = hits * B.stretch.per; S.en = Math.min(emax(), S.en + gain); let extra = '';
-        if (hits === N && S.bruise) { S.bruise = 0; extra = p('💪 ' + T('Чисто размялся — ушиб прошёл.')); }
-        bump('stretch'); dlg(T(pl.name), p(T('Попаданий: {a} из {n}', { a: hits, n: N }) + ' · +' + gain + ' ⚡') + extra, []); paintHud(); save();
-      });
-    } }]);
-  }
   // residents walk along the pavements there and back (only a picture)
   function walkerAt(w, now) {
     const P = w.path; let len = 0; const segs = []; for (let i = 1; i < P.length; i++) { const l = Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); segs.push(l); len += l; }
     let u = (now / 1000 * w.speed + w.path[0][0] * 3) % (2 * len); const back = u > len; if (back) u = 2 * len - u;
     for (let i = 0; i < segs.length; i++) { if (u <= segs[i] || i === segs.length - 1) { const k = Math.min(1, u / segs[i]), a = P[i], b = P[i + 1], dx = (b[0] - a[0]) * (back ? -1 : 1), dy = (b[1] - a[1]) * (back ? -1 : 1);
       return { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, dir: dirOf(dx, dy), d: now / 1000 * w.speed }; } u -= segs[i]; }
+  }
+
+  // ---- crews on the streets (owner 13.11.2026 «как крипы, но без убийств: победил в танце — банда исчезает и тебе что-то достаётся») ----
+  // gear: unique clothes that only drop in the city; each has a look (seen on the hero) and one small perk
+  const GEAR = DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F'];
+  const PERK = { time: '+{n} % времени в стычках', life: '+{n} жизнь в стычках', cash: '+{n} % кэша со стычек', rep: '+{n} респекта за разогнанную банду', show: '+{n} % в шляпу на шоу', en: 'Стычка стоит на {n} энергии меньше', coin: 'Монеты на земле: +{n}' };
+  const gearOn = () => Object.keys(S.gear.on).map(k => GEAR[S.gear.on[k]]).filter(Boolean);
+  const perk = k => gearOn().reduce((a, g) => a + (g.perk && g.perk[0] === k ? g.perk[1] : 0), 0);
+  const perkTxt = g => g.perk ? T(PERK[g.perk[0]], { n: g.perk[1] }) : '';
+  const gearCard = id => { const g = GEAR[id]; return '<div class="cygear" style="--rc:' + RARC[g.rar] + '"><b>' + g.ico + ' ' + T(g.name) + '</b><small>' + T(RAR[g.rar]) + ' · ' + perkTxt(g) + '</small></div>'; };
+  const wear = id => { const g = GEAR[id]; if (S.gear.on[g.slot] === id) delete S.gear.on[g.slot]; else S.gear.on[g.slot] = id; lookKey = ''; };
+  const djOn = () => S.buff.dj === dayN();
+  // which crews are out now: every game day they come back, at one of their spots; they grow as you win
+  function gangsNow() {
+    const d = dayN(), h = hour(); if (S.gang.day !== d) S.gang = { day: d, beat: [] };
+    return (DIST.gangs || []).filter(g => !S.gang.beat.includes(g.id) && inH(h, g.hours)).map(g => {
+      const sp = !S.tut && g.tut ? g.spots[0] : g.spots[Math.floor(hash(d * 7 + g.lvl, g.lvl * 13 + 1) * g.spots.length)];
+      return { g, x: sp[0], y: sp[1], lvl: Math.min(10, g.lvl + Math.floor(S.gw / B.duel.grow)), size: Math.min(5, 2 + Math.floor(g.lvl / 2) + Math.floor(S.gw / (B.duel.grow * 2))) };
+    });
+  }
+  function gangLook(g, k) {
+    const key = g.id + k; if (gLook[key]) return gLook[key];
+    const f = window.HERO.topDown(1 + (k + g.lvl) % 5, k % 3 === 1 ? ['girl'] : []); f.col = Object.assign({}, f.col, { top: g.col, sleeve: k % 2 ? g.col : null, hat: [g.col2 || '#18181B', g.col], shoe: g.col, shoe2: '#F2EFE8' }); if (!f.hat) f.hat = k % 2 ? 'cap' : 'beanie';
+    return (gLook[key] = { key: 'g:' + key, f, big: .96 });
+  }
+  function openGang(G) {
+    gangCool = performance.now() + 7000;
+    const cost = Math.max(1, B.duel.energy - perk('en'));
+    dlg(T(G.g.name), say(T(G.g.name), G.g.taunt) + p('<small>' + T('Уровень {n}', { n: G.lvl }) + ' · ' + '🕺'.repeat(G.size) + ' · ' + T('батл −{n} ⚡', { n: cost }) + '</small>') +
+      p('<small>' + T('Чем выше уровень героя из уроков, тем больше времени на каждое движение.') + '</small>'), [
+      { t: '🔥 ' + T('В круг!'), cls: 'btn-accent', off: S.en < cost, fn: () => fight(G, cost) },
+      S.en < cost ? { t: T('Мало энергии — поешь или выспись'), off: true } : null].filter(Boolean));
+  }
+  function fight(G, cost) {
+    const tut = !S.tut && !!G.g.tut; S.en = Math.max(0, S.en - cost);
+    duel({ name: T(G.g.name), col: G.g.col, lvl: G.lvl, size: tut ? 2 : G.size, tut, onEnd: (won, perf, total) => {
+      gangCool = performance.now() + 5000;
+      if (!won) { dlg(T(G.g.name), p('😤 ' + T('Банда устояла. Попробуй ещё раз.')) + p('<small>' + T('Чем выше уровень героя из уроков, тем больше времени на каждое движение.') + '</small>'), [{ t: '🔥 ' + T('В круг!'), cls: 'btn-accent', off: S.en < cost, fn: () => fight(G, cost) }, D.home && { t: T('К урокам'), fn: () => D.home() }].filter(Boolean)); return; }
+      const Q = B.duel, q = perf / total, cash = Math.round((Q.cash + Q.cashLvl * G.lvl) * (1 + q * .5) * (1 + perk('cash') / 100)), rep = Q.rep + Math.floor(G.lvl / 2) + perk('rep'), lines = [];
+      S.tut = 1; S.cash += cash; S.rep += rep; S.gang.beat.push(G.g.id); S.gw++; pop('💨', '#F2EFE8');
+      const left = (G.g.gear || []).filter(id => !S.gear.own.includes(id)), drop = left.length && (!S.gwon[G.g.id] || Math.random() < Q.drop) ? left[0] : null;
+      S.gwon[G.g.id] = (S.gwon[G.g.id] || 0) + 1; if (drop) S.gear.own.push(drop);
+      if (Math.random() < Q.can) { give('can'); lines.push(found('can')); }
+      if (q >= .8) lines.unshift('✨ ' + T('Чистая работа: бонус к кэшу'));
+      bump('gang'); save();
+      dlg(T('Банда «{x}» разогнана!', { x: T(G.g.name) }), res(cash, rep, lines) + (drop ? p('🎁 ' + T('Новая шмотка!')) + gearCard(drop) : ''), drop ? [{ t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }] : []);
+    } });
+  }
+  // the quick dance-off: swipe where the arrow points before the ring closes; the last move is a freeze — press and hold
+  function duel(o) {
+    path = []; goal = null; joy = null;
+    const Q = B.duel, hl = D.level(), per = o.tut ? Q.tutMs : Math.max(Q.msMin, Q.ms - Q.msLvl * (o.lvl - 1)) * cl(1 + Q.lvlK * (hl - o.lvl), .8, 1.4) * (1 + perk('time') / 100) * (djOn() ? 1 + Q.dj : 1);
+    const nPer = o.tut ? 3 : Math.min(6, 3 + Math.floor(o.lvl / 2)), seq = [];
+    for (let m = 0; m < o.size; m++) for (let i = 0; i < nPer; i++) { let d = 'urdl'[Math.floor(Math.random() * 4)]; if (seq.length && seq[seq.length - 1].d === d) d = 'urdl'['urdl'.indexOf(d) + 1 & 3]; seq.push({ m, d: m === o.size - 1 && i === nPer - 1 ? 'h' : d }); }
+    let i = -1, lives = (o.tut ? 5 : Q.lives) + perk('life'), combo = 0, perf = 0, t0 = 0, live = false, hold = 0, sx = 0, sy = 0, used = false, over = false;
+    const HR = window.HERO, MV = HR.MOVES, opL = cl(o.lvl + 1, 1, 8);
+    duEl.innerHTML = '<div class="cydu-top"><b style="color:' + o.col + '">' + esc(o.name) + '</b><span id="cyDuP"></span></div>' +
+      '<div class="cydu-st"><div class="cydu-f me">' + HR.svg(cl(hl, 1, 8), { rig: true, acc: D.look(), uid: 'cdA', size: 150 }) + '</div><div class="cydu-vs">VS</div><div class="cydu-f op">' + HR.svg(opL, { rig: true, acc: o.lvl > 2 ? ['bandana'] : [], uid: 'cdB', size: 150 }) + '</div></div><div class="cydu-mid"><div class="cydu-ring" id="cyDuR"><div class="cydu-in" id="cyDuI"><span id="cyDuA"></span></div></div><div class="cydu-msg" id="cyDuM">&nbsp;</div><div class="cydu-hint" id="cyDuH"></div></div><div class="cydu-bot"><span id="cyDuL"></span><span id="cyDuC"></span></div>';
+    duEl.hidden = false; duEl.style.setProperty('--gc', o.col);
+    // the two dancers on the stage: mine does a move for every swipe, theirs taunts, loses, the next one steps in
+    const fig = (sel, base) => { const el = duEl.querySelector(sel + ' svg'); let J = null; try { J = el && HR.rigJoints(el); } catch (_) {} return { J, mv: base, base, t0: performance.now(), loop: true }; };
+    const FA = fig('.cydu-f.me', 'bounce'), FB = fig('.cydu-f.op', 'toprock');
+    const mv = (F, name, loop) => { if (!MV[name]) name = F.base; F.mv = name; F.loop = !!loop; F.t0 = performance.now(); };
+    const pose = (F, now) => { if (!F.J) return; let M = MV[F.mv] || MV.idle, u = (now - F.t0) / 1000 / M.dur; if (u >= 1 && !F.loop) { F.mv = F.base; F.loop = true; F.t0 = now; M = MV[F.mv] || MV.idle; u = 0; } try { HR.setPose(F.J, M.f(u % 1)); } catch (_) {} };
+    const BEATS = (D.RB.BEATS || []), stopJam = D.RB.jam && BEATS.length ? D.RB.jam(BEATS[Math.min(BEATS.length - 1, Math.floor((o.lvl - 1) / 2))].id, 24) : null;
+    const $d = q => duEl.querySelector(q), ring = $d('#cyDuR'), inn = $d('#cyDuI'), arr = $d('#cyDuA'), msg = $d('#cyDuM'), SH = ['YEAH!', 'OOOH!', 'FIRE!', 'CLEAN!', 'FRESH!'];
+    const paint = () => { const m = i < 0 ? 0 : seq[Math.min(i, seq.length - 1)].m; $d('#cyDuP').textContent = '✓'.repeat(m) + '🕺'.repeat(o.size - m); $d('#cyDuL').textContent = '🔥'.repeat(Math.max(0, lives)); $d('#cyDuC').textContent = combo > 1 ? 'COMBO ×' + combo : ''; };
+    const end = won => { over = true; duApi = null; window.removeEventListener('keydown', key); mv(FA, won ? 'win' : 'lose', true); mv(FB, won ? 'lose' : 'win', true); const t9 = performance.now(), fin = now => { pose(FA, now); pose(FB, now); if (now - t9 < 1100 && !duEl.hidden) requestAnimationFrame(fin); }; requestAnimationFrame(fin); if (stopJam) setTimeout(stopJam, 700); setTimeout(() => { duEl.hidden = true; duEl.innerHTML = ''; paintHud(); o.onEnd(won, perf, seq.length); kick(); }, won ? 1150 : 900); };
+    const next = () => { if (over) return; i++; if (i >= seq.length) { msg.textContent = 'FREEZE!'; msg.className = 'cydu-msg ok big'; return end(true); }
+      const n = seq[i]; arr.textContent = { u: '↑', r: '→', d: '↓', l: '←', h: '✊' }[n.d]; arr.className = 'd' + n.d; inn.style.setProperty('--h', 0); ring.style.setProperty('--u', 0);
+      $d('#cyDuH').textContent = n.d === 'h' ? T('Нажми и держи — фриз!') : (o.tut || i < 2 ? T('Свайпай в сторону стрелки, пока кольцо не сомкнулось') : ''); t0 = performance.now(); live = true; hold = 0; paint(); };
+    const hit = ok => { if (!live || over) return; live = false; const n = seq[i];
+      if (ok) { const fast = performance.now() - t0 < per * .55; combo++; if (fast || n.d === 'h') perf++; msg.textContent = n.d === 'h' ? 'FREEZE!' : fast ? (combo > 2 ? SH[Math.floor(Math.random() * SH.length)] : 'PERFECT') : 'GOOD'; msg.className = 'cydu-msg ok' + (fast ? ' big' : ''); arr.className += ' hit'; mv(FA, { u: 'toprock', d: 'sixstep', l: 'windmill', r: 'swipe', h: 'freeze' }[n.d], n.d === 'h'); if (seq[i + 1] && seq[i + 1].m !== n.m) { mv(FB, 'lose'); setTimeout(() => { if (!over) mv(FB, ['toprock', 'kickstep', 'salsa', 'indian'][seq[i + 1].m % 4], true); FB.base = FB.mv; }, 560); } }
+      else { lives--; combo = 0; msg.textContent = 'MISS'; msg.className = 'cydu-msg bad'; mv(FA, 'shock'); mv(FB, 'burn'); duEl.classList.remove('shake'); void duEl.offsetWidth; duEl.classList.add('shake'); if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {} if (lives <= 0) { paint(); return end(false); } }
+      paint(); setTimeout(next, seq[i + 1] && seq[i + 1].m !== n.m ? 560 : 190); };
+    const tick = now => { if (over) return; pose(FA, now); pose(FB, now); if (live) { const n = seq[i], u = (now - t0) / (n.d === 'h' ? per * 1.7 : per); ring.style.setProperty('--u', Math.min(1, u)); if (n.d === 'h' && hold) { const hu = (now - hold) / Q.holdMs; inn.style.setProperty('--h', Math.min(1, hu)); if (hu >= 1) hit(true); } if (live && u >= 1) hit(false); } requestAnimationFrame(tick); };
+    const key = e => { const d = { ArrowUp: 'u', ArrowRight: 'r', ArrowDown: 'd', ArrowLeft: 'l' }[e.key]; if (d && live && seq[i].d !== 'h') hit(d === seq[i].d); if (e.key === ' ' && live && seq[i].d === 'h' && !hold) hold = performance.now(); };
+    duEl.onpointerdown = e => { sx = e.clientX; sy = e.clientY; used = false; if (live && seq[i].d === 'h') { hold = performance.now(); mv(FA, 'freeze', true); } try { duEl.setPointerCapture(e.pointerId); } catch (_) {} };
+    duEl.onpointermove = e => { if (used || !live || seq[i].d === 'h') return; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.hypot(dx, dy) < 26) return; used = true; hit((Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : (dy > 0 ? 'd' : 'u')) === seq[i].d); };
+    duEl.onpointerup = duEl.onpointercancel = () => { if (live && seq[i] && seq[i].d === 'h') { hold = 0; inn.style.setProperty('--h', 0); mv(FA, FA.base, true); } };
+    window.addEventListener('keydown', key);
+    duApi = { need: () => live ? seq[i].d : '', hit: d => hit(d === seq[i].d), left: () => seq.length - i };
+    paint(); setTimeout(next, 500); requestAnimationFrame(tick);
+  }
+  // the MC runs the cypher: crews come out one after another, no rest; the prize is his
+  function mcSpot(pl) {
+    if (daily('mc')) return dlg(T(pl.name), p(T('Сегодня сайфер уже был. Приходи завтра.')), []);
+    const cost = B.duel.cypher.energy, lvl = Math.max(1, ...gangsNow().map(G => G.lvl), 1 + Math.floor(S.gw / B.duel.grow));
+    dlg(T(pl.name), say(T(pl.name), 'Сайфер! Банды выходят одна за другой, без передышки. Выстоишь — приз твой.') + p('<small>' + T('Уровень {n}', { n: lvl }) + ' · ' + '🕺'.repeat(5) + ' · ' + T('батл −{n} ⚡', { n: cost }) + '</small>'), [
+      { t: '🎤 ' + T('Войти в сайфер'), cls: 'btn-accent', off: S.en < cost, fn: () => { S.en -= cost; mark('mc');
+        duel({ name: T(pl.name), col: '#FFD23F', lvl, size: 5, onEnd: (won, perf, total) => {
+          if (!won) return dlg(T(pl.name), p('😤 ' + T('Банда устояла. Попробуй ещё раз.')), []);
+          const C = B.duel.cypher, cash = Math.round((C.cash + C.cashLvl * lvl) * (1 + perk('cash') / 100)); S.cash += cash; S.rep += C.rep;
+          const left = (pl.gear || []).filter(id => !S.gear.own.includes(id)), drop = left[0] || null; if (drop) S.gear.own.push(drop); save();
+          dlg('🎤 ' + T('Сайфер пройден!'), res(cash, C.rep, []) + (drop ? gearCard(drop) : ''), drop ? [{ t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }] : []);
+        } }); } }]);
+  }
+  // a runner on a bar: press when it is in the green zone, N tries, faster each time (the warm-up and the DJ's mix use it)
+  function barGame(title, btn, done) {
+    path = []; goal = null; const N = B.stretch.tries; let n = 0, hits = 0, z = .5, t0 = performance.now(), on = true;
+    dlgEl.innerHTML = '<div class="cyd"><h3>' + esc(title) + '</h3><div class="cybar"><i></i><b></b></div><p class="cyln" id="cySt">&nbsp;</p><div class="cybt"><button type="button" class="btn btn-accent" id="cyGo">' + btn + '</button></div></div>';
+    dlgEl.hidden = false; const zone = dlgEl.querySelector('.cybar i'), mk = dlgEl.querySelector('.cybar b'), st = dlgEl.querySelector('#cySt');
+    const posAt = now => { const u = ((now - t0) / (1050 - n * 110)) % 2; return u < 1 ? u : 2 - u; };
+    const place = () => { z = .18 + Math.random() * .64; zone.style.left = (z - .11) * 100 + '%'; };
+    const loop = now => { if (!on || dlgEl.hidden || !mk.isConnected) return; mk.style.left = posAt(now) * 100 + '%'; requestAnimationFrame(loop); };
+    place(); requestAnimationFrame(loop);
+    dlgEl.querySelector('#cyGo').addEventListener('click', () => {
+      const ok = Math.abs(posAt(performance.now()) - z) <= .11; if (ok) hits++; n++; t0 = performance.now() - Math.random() * 600;
+      st.textContent = (ok ? '✓ ' : '✗ ') + T('Попаданий: {a} из {n}', { a: hits, n: N }); zone.style.background = ok ? '#3BD16F' : '#E2483A'; setTimeout(() => { zone.style.background = ''; }, 160);
+      if (n < N) return place(); on = false; done(hits, N); paintHud(); save();
+    });
+  }
+  function stretch(pl) {
+    if (daily('gym')) return dlg(T(pl.name), p(T('Сегодня ты уже разминался. Приходи завтра.')), []);
+    dlg(T(pl.name), p(T('Жми «Тянись», когда бегунок в зелёной зоне. Четыре попытки — чем точнее, тем больше энергии.')), [{ t: T('Размяться'), cls: 'btn-accent', fn: () => barGame(T(pl.name), T('Тянись!'), (hits, N) => {
+      mark('gym'); const gain = hits * B.stretch.per; S.en = Math.min(emax(), S.en + gain); let extra = '';
+      if (hits === N && S.bruise) { S.bruise = 0; extra = p('💪 ' + T('Чисто размялся — ушиб прошёл.')); }
+      bump('stretch'); dlg(T(pl.name), p(T('Попаданий: {a} из {n}', { a: hits, n: N }) + ' · +' + gain + ' ⚡') + extra, []);
+    }) }]);
+  }
+  // the DJ: mix two beats — and the whole yard moves to your beat till the end of the day
+  function djSpot(pl) {
+    if (djOn()) return dlg(T(pl.name), p('🎧 ' + T('Бит качает до конца дня: больше времени в стычках и больше денег в шляпе.')), []);
+    if (daily('dj')) return dlg(T(pl.name), p(T('Биты разъехались. Попробуй завтра.')), []);
+    dlg(T(pl.name), say(T(pl.name), 'Сведи два бита: жми, когда бегунок в зелёной зоне. Получится — качну весь двор.'), [{ t: '🎧 ' + T('Свести биты') + ' · 💵 ' + B.dj.price, cls: 'btn-accent', off: S.cash < B.dj.price, fn: () => { S.cash -= B.dj.price; barGame(T(pl.name), T('Сводим!'), (hits, N) => {
+      mark('dj'); if (hits < B.dj.need) return dlg(T(pl.name), p(T('Попаданий: {a} из {n}', { a: hits, n: N })) + p(T('Биты разъехались. Попробуй завтра.')), []);
+      S.buff.dj = dayN(); const left = hits === N ? (pl.gear || []).filter(id => !S.gear.own.includes(id)) : [], drop = left[0] || null; if (drop) S.gear.own.push(drop);
+      dlg(T(pl.name), p('🎧 ' + T('Бит качает до конца дня: больше времени в стычках и больше денег в шляпе.')) + (drop ? gearCard(drop) : ''), drop ? [{ t: T('Надеть'), cls: 'btn-accent', fn: () => wear(drop) }] : []);
+    }); } }]);
+  }
+  // the very first seconds: no reading — a crew dances at your door
+  function hook() {
+    S.intro = 1; const G = gangsNow().find(q => q.g.tut); if (!G) return intro();
+    dlg(T('Твой двор заняли'), p(T('Банда «Ржавые» танцует у твоего подъезда. Покажи, чей это двор!')), [{ t: '🔥 ' + T('В круг!'), cls: 'btn-accent', fn: () => fight(G, 0) }]);
   }
 
   // ---- drawing: the picture itself lives in city-gfx.js (cached map pieces and sprites); here — only what goes where ----
@@ -199,13 +313,14 @@
   const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(x, y, w, h); };
   // the hero's clothes come from hero.js (level look + wardrobe + shop accessories) plus the things bought or found in the city
   function heroLook() {
-    const lv = D.level(), eq = D.look() || [], k = lv + '|' + eq.join(',') + '|' + ['hat', 'kicks', 'pads'].map(i => +S.own.includes(i)).join('') + (S.card > 0 ? 'c' : '');
+    const lv = D.level(), eq = D.look() || [], k = lv + '|' + eq.join(',') + '|' + ['hat', 'kicks', 'pads'].map(i => +S.own.includes(i)).join('') + (S.card > 0 ? 'c' : '') + '|' + Object.keys(S.gear.on).map(s => S.gear.on[s]).join(',');
     if (k === lookKey) return lookNow;
     const f = window.HERO.topDown(lv, eq); f.col = Object.assign({}, f.col);
     if (S.own.includes('hat')) { f.hat = 'spin'; f.col.hat = ['#2A6FA8', '#E2611A']; }
     if (S.own.includes('kicks')) { f.col.shoe = '#19B5A5'; f.col.shoe2 = '#F2EFE8'; f.col.sole = '#F2EFE8'; }
     if (S.own.includes('pads')) f.knee = true;
     if (S.card > 0) f.carry = true;
+    gearOn().forEach(g => { Object.assign(f, g.f || {}); Object.assign(f.col, g.col || {}); });   // unique clothes from the streets
     lookKey = k; return (lookNow = { key: 'me:' + k, f });
   }
   function lookOf(n) {
@@ -246,6 +361,17 @@
       const hot = warmUp[n.id] > now || (!daily('b:' + n.id) && (now + n.lvl * 2300) % 9000 < 1600);
       GFX.person(cx, px, py, lookOf(n), near ? dirOf(dx, dy) : 0, hot ? 't' + Math.floor(now / 200) % 4 : 'i' + Math.floor(now / 700 + n.lvl) % 2);
     });
+    DIST.places.forEach(pl => { if (!pl.look || !seen(pl.at[0], pl.at[1]) || !vis(pl.at[0], pl.at[1], 2 * TS)) return;
+      if (!npLook[pl.id]) { const f = window.HERO.topDown(pl.look.base || 3, []); f.col = Object.assign({}, f.col, pl.look.col || {}); if (pl.type === 'dj') f.phones = true; npLook[pl.id] = { key: 'p:' + pl.id, f, big: 1.05 }; }
+      const px = ox + pl.at[0] * TS + TS / 2, py = oy + pl.at[1] * TS + TS / 2;
+      if (pl.type === 'dj') GFX.deck(cx, px, py + 30, now, djOn());
+      GFX.person(cx, px, py, npLook[pl.id], 0, pl.type === 'mc' ? 't' + Math.floor(now / 230) % 4 : 'i' + Math.floor(now / 500) % 2); });
+    gangsNow().forEach(G => { if (!seen(G.x, G.y) || !vis(G.x, G.y, 3 * TS)) return;
+      const gx = ox + G.x * TS + TS / 2, gy = oy + G.y * TS + TS / 2, near = Math.hypot(G.x - hero.x, G.y - hero.y) < 2.6;
+      cx.strokeStyle = G.g.col; cx.globalAlpha = .5; cx.lineWidth = 2; cx.setLineDash([5, 6]); cx.beginPath(); cx.ellipse(gx, gy, 40, 32, 0, 0, 7); cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1;
+      for (let k = 0; k < G.size; k++) { const a = k / G.size * Math.PI * 2 + now / 5200, ax = Math.cos(a), ay = Math.sin(a); GFX.person(cx, gx + ax * 27, gy + ay * 21, gangLook(G.g, k), dirOf(-ax, -ay), 't' + Math.floor(now / 190 + k * 2) % 4); }
+      label(gx, gy - 52, T(G.g.name) + ' · ' + G.lvl, G.g.col);
+      if (near) { cx.font = '900 20px Inter, sans-serif'; cx.textAlign = 'center'; cx.lineWidth = 4; cx.strokeStyle = '#0B0B0C'; cx.strokeText('!', gx, gy - 70 - 3 * Math.abs(Math.sin(now / 160))); cx.fillStyle = '#FFD23F'; cx.fillText('!', gx, gy - 70 - 3 * Math.abs(Math.sin(now / 160))); } });
     if (h >= 7 && h < 22) (DIST.walkers || []).forEach((w, i) => {
       const q = walkerAt(w, now); if (!q || !seen(Math.round(q.x), Math.round(q.y)) || !vis(q.x, q.y, 2 * TS)) return;
       if (!walkLook[i]) { const L = w.look || {}, f = window.HERO.topDown(L.base || 1, L.girl ? ['girl'] : []); f.col = Object.assign({}, f.col, L.col || {}); walkLook[i] = { key: 'w:' + i, f, big: .94 }; }
@@ -301,14 +427,14 @@
   const floorName = () => S.card > 0 ? T('Картон') + ' ×' + S.card : S.own.includes('lino') ? T('Линолеум') : T('Асфальт');
   const floorId = () => S.own.includes('lino') ? 'lino' : S.card > 0 ? 'card' : 'asphalt';
   function paintHud() {
-    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0].join('|'); if (k === hudKey) return; hudKey = k;
+    const G = goals(), gd = G.list.filter(g => g.done).length, k = [clock(), dayN(), Math.round(S.en), S.cash, S.rep, S.card, S.bruise, S.own.length, warm(), gd, G.list.map(g => g.a).join(), S.job ? Math.ceil(S.job.left) : '', S.inv.can || 0, djOn()].join('|'); if (k === hudKey) return; hudKey = k;
     hud.innerHTML = '<div class="cyh1"><b>' + clock() + '</b><small>' + T('День {n}', { n: dayN() + 1 }) + ' · ' + T(DIST.name) + '</small></div>' +
       '<div class="cyen" title="' + T('Энергия') + '"><i style="width:' + cl(S.en / emax() * 100, 0, 100) + '%"></i><span>⚡ ' + Math.round(S.en) + '</span></div>' +
       '<div class="cyst"><span>💵 ' + S.cash + '</span><span>★ ' + S.rep + '</span></div>' +
       '<button type="button" class="cybag" id="cyBag" aria-label="' + T('Рюкзак') + '">🎒</button>' +
       '<div class="cyrow2"><div class="cyfl">' + T('Пол') + ': ' + floorName() + (S.bruise ? ' · 🤕 ' + T('Ушиб') : '') + (warm() ? ' · 🔥 ' + T('Разогрет') : '') + '</div>' +
       '<button type="button" class="cygl' + (gd === 3 ? ' ok' : '') + '" id="cyGoals" aria-label="' + T('Дела на сегодня') + '">📋 ' + gd + ' / 3</button>' +
-      (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') +
+      (S.inv.can ? '<div class="cyfl">🎨 ' + S.inv.can + '</div>' : '') + (djOn() ? '<div class="cyfl">🎧 ' + T('Бит качает') + '</div>' : '') +
       (S.job ? '<div class="cyjob' + (S.job.left < 6 ? ' hot' : '') + '">🌯 ' + Math.max(0, Math.ceil(S.job.left)) + '</div>' : '') + '</div>';
     hud.querySelector('#cyBag').addEventListener('click', bag); hud.querySelector('#cyGoals').addEventListener('click', goalsDlg);
   }
@@ -332,9 +458,11 @@
     const rows = S.own.map(id => '<li>' + item(id).ico + ' <b>' + T(item(id).name) + '</b><small>' + T(item(id).info) + '</small></li>')
       .concat(Object.keys(S.inv).filter(id => S.inv[id] > 0).map(id => '<li>' + item(id).ico + ' <b>' + T(item(id).name) + ' ×' + S.inv[id] + '</b><small>' + T(item(id).info) + '</small></li>'));
     dlg(T('Рюкзак'), p(T('Пол') + ': <b>' + floorName() + '</b>' + (S.bruise ? '<br>🤕 ' + T('Ушиб: из пауэра доступен только backspin, пока не выспишься.') : '')) +
+      (S.gear.own.length ? '<p><b>' + T('Шмотки') + '</b></p>' + S.gear.own.map(gearCard).join('') : '') +
       (rows.length ? '<ul class="cyls">' + rows.join('') + '</ul>' : p(T('Пока пусто. Вещи можно купить в палатке или найти в городе.'))) +
       warmTip() + p('<small>' + T('Уровень героя и новые движения дают только настоящие уроки. Город даёт кэш, респект и вещи.') + '</small>'), [
       !warm() && D.home && { t: T('К урокам'), cls: 'btn-accent', fn: () => D.home() },
+      ...S.gear.own.map(id => ({ t: (S.gear.on[GEAR[id].slot] === id ? '✓ ' + T('Снять') : T('Надеть')) + ': ' + GEAR[id].ico + ' ' + T(GEAR[id].name), fn: () => { wear(id); bag(); } })),
       S.inv.thermos > 0 && { t: T('Выпить чай из термоса') + ' (+' + B.food.thermos + ' ⚡)', fn: () => { S.inv.thermos--; S.en = Math.min(emax(), S.en + B.food.thermos); } },
       S.inv.tape > 0 && S.card > 0 && { t: T('Починить картон изолентой') + ' (+' + B.item.tapeUses + ')', fn: () => { S.inv.tape--; S.card += B.item.tapeUses; } },
       { t: T('Как играть'), fn: intro }
@@ -346,6 +474,7 @@
       p(T('Батл стоит 20 энергии, шоу — 10. Энергию возвращают сон дома и еда.')) +
       p(T('На асфальте пауэрмув бьёт по очкам и телу — найди картон у мусорки.')) +
       p(T('Можно и джойстиком: поставь палец на карту и веди — герой идёт, пока держишь.')) +
+      p('🔥 ' + T('По двору ходят банды: победи в танце — банда уйдёт и что-нибудь оставит. Шмотки надеваются в рюкзаке.')) +
       p('📋 ' + T('Собирай монеты и баллончики, бери заказы в ларьке, разминайся на площадке, рисуй теги — дела дня открываются кнопкой 📋.')) +
       p('<b>' + T('Сила — только из уроков: новые движения и уровень героя город не даёт.') + '</b>') + warmTip(), []);
   }
@@ -394,6 +523,8 @@
     if (pl.type === 'show') return showSpot(pl);
     if (pl.type === 'wall') return wallSpot(pl);
     if (pl.type === 'gym') return stretch(pl);
+    if (pl.type === 'mc') return mcSpot(pl);
+    if (pl.type === 'dj') return djSpot(pl);
   }
 
   // ---- moves: only what the lessons opened (the same rule as in the battles) ----
@@ -441,6 +572,7 @@
           const F = B.floor[fl], lines = [], hard = D.RB.RB2.mult(r.picks[2]) >= B.powerFrom;
           let k = F.mult * tired; if (F.pen && hard) { k *= 1 - F.pen; lines.push('⚠️ ' + T('Асфальт: −{n} % за пауэрмув', { n: Math.round(F.pen * 100) })); }
           if (S.own.includes('cassette')) k *= B.show.cassette;
+          k *= 1 + perk('show') / 100; if (djOn()) { k *= 1 + B.dj.show; lines.push('🎧 ' + T('Бит качает') + ': +' + Math.round(B.dj.show * 100) + ' %'); }
           const cash = Math.min(B.show.cap, Math.max(2, Math.round((B.show.min + B.show.span * r.acc) * k)));
           S.cash += cash; S.t += 30;
           if (S.own.includes('chalk') && !daily('chalk')) { mark('chalk'); lines.push('✏️ ' + T('Меловой круг: толпа не устала.')); } else sp.n++;
@@ -506,7 +638,7 @@
 
   // ---- input + loop ----
   // joystick (optional): put the finger down and drag — the hero walks that way while the finger is held; a short touch = a tap
-  function down(e) { if (!dlgEl.hidden) return; joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, on: false }; try { can.setPointerCapture(e.pointerId); } catch (_) {} }
+  function down(e) { if (!dlgEl.hidden || !duEl.hidden) return; joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, on: false }; try { can.setPointerCapture(e.pointerId); } catch (_) {} }
   function move(e) {
     if (!joy || e.pointerId !== joy.id) return;
     const dx = e.clientX - joy.x0, dy = e.clientY - joy.y0, d = Math.hypot(dx, dy);
@@ -526,9 +658,11 @@
     if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return;
     const n = npcsNow().find(q => seen(q.at[0], q.at[1]) && q.at[0] === tx && (q.at[1] === ty || q.at[1] - 1 === ty)); // the b-boy or the name above him
     const pl = seen(tx, ty) ? placeAt(tx, ty) : null;
+    const gg = seen(tx, ty) ? gangsNow().find(G => Math.abs(G.x - tx) <= 1 && Math.abs(G.y - ty) <= 1) : null;
     let goals, then = null;
-    if (n) { goals = around(n.at[0], n.at[1]); then = () => openNpc(n); }
-    else if (pl) { goals = walk(pl.at[0], pl.at[1]) ? [pl.at] : around(tx, ty).concat(around(pl.at[0], pl.at[1])); then = () => openPlace(pl); }
+    if (gg) { goals = around(gg.x, gg.y).concat(walk(gg.x, gg.y) ? [[gg.x, gg.y]] : []); then = () => { if (dlgEl.hidden) openGang(gg); }; }
+    else if (n) { goals = around(n.at[0], n.at[1]); then = () => openNpc(n); }
+    else if (pl) { goals = walk(pl.at[0], pl.at[1]) && !pl.look ? [pl.at] : around(tx, ty).concat(around(pl.at[0], pl.at[1])); then = () => openPlace(pl); }
     else if (walk(tx, ty)) goals = [[tx, ty]];
     else goals = around(tx, ty);
     if (!goals.length) return;
@@ -538,6 +672,7 @@
   }
   function step(dt) {
     S.t += dt * 1440 / (B.dayMin * 60); jobTick(dt); collect();
+    if (dlgEl.hidden && duEl.hidden && !S.job && performance.now() > gangCool) { const G = gangsNow().find(q => Math.hypot(q.x - hero.x, q.y - hero.y) < 1.15); if (G) { path = []; goal = null; joy = null; openGang(G); } }
     if (joy && joy.on) {
       const nx = hero.x + joy.dx * SPEED * dt, ny = hero.y + joy.dy * SPEED * dt, m = .32;
       const bx = hero.x, by = hero.y;
@@ -558,7 +693,7 @@
   function frame(now) {
     raf = 0; timer = 0; if (!shown || document.hidden) return;
     const dt = Math.min(.25, (now - last) / 1000 || 0); last = now;
-    if (D.rbEl.hidden) step(dt);            // the clock stands still during a round
+    if (D.rbEl.hidden && duEl.hidden) step(dt);            // the clock stands still during a round
     draw(now); paintHud();
     // battery: 60 fps only while the hero walks; otherwise a slow tick (the clock, small idle motion)
     if (path.length || (joy && joy.on)) raf = requestAnimationFrame(frame); else if (S.job || floats.length) raf = requestAnimationFrame(frame); else timer = setTimeout(() => { raf = requestAnimationFrame(frame); }, 66);   // ~15 frames a second: residents, the car, coins move
@@ -585,13 +720,27 @@
     '.cysay{background:rgba(226,97,26,.1);border-left:3px solid #E2611A;border-radius:8px;padding:8px 10px}.cygot{background:rgba(59,209,111,.08);border:1px solid rgba(59,209,111,.3);border-radius:10px;padding:8px 10px;color:#7BE3A0!important}' +
     '.cyls{list-style:none;margin:0 0 8px;padding:0}.cyls li{padding:7px 0;border-top:1px solid rgba(255,255,255,.07);font-size:14px}.cyls small,.cygot small{display:block;color:#9A968E;font-size:12px}' +
     '.cybt{display:flex;flex-direction:column;gap:8px;margin-top:10px}.cybt .btn{width:100%}.cybt .btn[disabled]{opacity:.4}' +
+    '.cygear{border:1px solid var(--rc);border-left-width:4px;border-radius:10px;padding:8px 10px;margin:0 0 8px;background:rgba(255,255,255,.04)}.cygear b{display:block;font-size:14px;color:var(--rc)}.cygear small{font-size:12px;color:#C9C5BC}' +
+    '.cydu{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(26px + var(--cyb,0px));background:radial-gradient(circle at 50% 46%,rgba(20,20,24,.72),rgba(8,8,10,.94));color:#F2EFE8;font-family:Inter,system-ui,sans-serif;touch-action:none}' +
+    '.cydu.shake{animation:cyShake .28s}@keyframes cyShake{20%{transform:translateX(-9px)}50%{transform:translateX(8px)}80%{transform:translateX(-4px)}}' +
+    '.cydu-top{display:flex;flex-direction:column;align-items:center;gap:6px}.cydu-top b{font:400 30px/1 Anton,Inter,sans-serif;letter-spacing:1px;text-transform:uppercase;text-shadow:0 2px 0 #000}.cydu-top span{font-size:20px;letter-spacing:4px}' +
+    '.cydu-mid{display:flex;flex-direction:column;align-items:center;gap:8px}' +
+    '.cydu-st{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:150px;width:100%;max-width:360px;border-bottom:3px solid color-mix(in srgb,var(--gc) 60%,transparent);background:radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--gc) 22%,transparent),transparent 70%)}' +
+    '.cydu-f{width:132px;height:150px;flex:none}.cydu-f svg{width:100%;height:100%;overflow:visible;display:block}.cydu-f.op{transform:scaleX(-1);filter:drop-shadow(0 0 9px var(--gc))}.cydu-vs{font:400 22px/1 Anton,Inter,sans-serif;color:#F2EFE8;opacity:.5;align-self:center}' +
+    '@media (max-height:720px){.cydu-st{height:118px}.cydu-f{width:104px;height:118px}.cydu-top b{font-size:24px!important}}' +
+    '.cydu-ring{--u:0;width:168px;height:168px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--gc) calc((1 - var(--u))*360deg),rgba(255,255,255,.09) 0);box-shadow:0 0 44px color-mix(in srgb,var(--gc) 45%,transparent)}' +
+    '.cydu-in{--h:0;width:140px;height:140px;border-radius:50%;background:#131316;display:grid;place-items:center;box-shadow:inset 0 0 0 calc(var(--h)*70px) #3BD16F}' +
+    '.cydu-in span{font:900 84px/1 Inter,system-ui,sans-serif;display:block;transition:transform .12s}.cydu-in span.du{color:#FFD23F}.cydu-in span.dr{color:#4FC0FF}.cydu-in span.dd{color:#FF4F9A}.cydu-in span.dl{color:#7CFF4F}.cydu-in span.dh{font-size:66px}.cydu-in span.hit{transform:scale(1.35)}' +
+    '.cydu-msg{font:400 34px/1 Anton,Inter,sans-serif;letter-spacing:1px;min-height:36px}.cydu-msg.ok{color:#3BD16F}.cydu-msg.big{color:#FFD23F;font-size:42px}.cydu-msg.bad{color:#FF5A4A}' +
+    '.cydu-hint{font-size:13px;color:#C9C5BC;text-align:center;min-height:34px;max-width:280px}' +
+    '.cydu-bot{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:56px}.cydu-bot span:first-child{font-size:24px;letter-spacing:3px}.cydu-bot span:last-child{font:400 20px/1 Anton,Inter,sans-serif;color:#E2611A;letter-spacing:1px}' +
     '.rbcity{margin-top:10px}.cyres{display:flex;gap:14px;justify-content:center;font:400 26px/1 Anton,Inter,sans-serif;margin:4px 0 8px}.cyres .up{color:#3BD16F}.cyres .dn{color:#E2611A}.cyln{font-size:13px;color:#C9C5BC;margin:0 0 6px;text-align:center}';
 
   function init(deps) {
     D = deps; el = D.el; S = load();
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div>';
-    can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg');
+    el.innerHTML = '<canvas id="cyCan"></canvas><div class="cyhud" id="cyHud"></div><div class="cydlg" id="cyDlg" hidden></div><div class="cydu" id="cyDu" hidden></div>';
+    can = $('#cyCan'); cx = can.getContext('2d'); if (!cx.roundRect) cx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; hud = $('#cyHud'); dlgEl = $('#cyDlg'); duEl = $('#cyDu');
     setMap();
     can.addEventListener('pointerdown', down); can.addEventListener('pointermove', move); can.addEventListener('pointerup', up); can.addEventListener('pointercancel', () => { joy = null; });
     window.addEventListener('resize', () => { W = 0; kick(); });
@@ -601,7 +750,7 @@
     new MutationObserver(() => { if (!D.rbEl.hidden) return; if (pend) { const k = pend.kind; pend = null; if (shown) D.toast(k === 'battle' ? T('Ты ушёл из круга — ставка сгорела') : T('Шоу сорвалось — энергия потрачена')); save(); } hudKey = ''; kick(); })
       .observe(D.rbEl, { attributes: true, attributeFilter: ['hidden'] });
   }
-  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) intro(); }, 400); }
+  function show() { if (!el) return; shown = true; W = 0; const tb = document.getElementById('tabs'); el.style.setProperty('--cyb', (tb ? tb.offsetHeight : 0) + 'px'); padB = tb ? tb.offsetHeight : 0; hudKey = ''; warmCheck(); S.en = Math.min(S.en, emax()); kick(); if (!S.intro) setTimeout(() => { if (shown && dlgEl.hidden) hook(); }, 400); }
   function hide() { if (!shown) return; shown = false; halt(); save(); }
-  window.CITY = { init, show, hide, _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
+  window.CITY = { init, show, hide, _duel: () => duApi, _gangs: () => gangsNow().map(G => ({ id: G.g.id, x: G.x, y: G.y, lvl: G.lvl, size: G.size })), _picks: () => picks().map(k => ({ x: k.x, y: k.y, kind: k.kind })), _pos: () => [+hero.x.toFixed(2), +hero.y.toFixed(2)], _cam: () => ({ ox: Math.round(W / 2 - cam.x * TS), oy: Math.round((H - padB) / 2 - cam.y * TS) }), _s: () => S, _reset: () => { S = fresh(); setMap(); save(); hudKey = ''; kick(); }, _go: (x, y) => { hero.x = x; hero.y = y; reveal(); kick(); }, _t: h => { S.t = Math.floor(S.t / 1440) * 1440 + h * 60; kick(); } };
 })();

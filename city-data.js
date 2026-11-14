@@ -22,10 +22,31 @@ window.CITY_DATA = {
     can: { name: 'Баллончик с краской', info: 'Нужен, чтобы нарисовать тег на стене', ico: '🎨', use: true, city: true },
     patchYard: { name: 'Нашивка «Двор»', info: 'Трофей: ты хозяин двора', ico: '🏅', city: true }
   },
+  // уникальные шмотки: выпадают только в городе. slot — куда надевается; rar — редкость 0…3; f / col — как выглядит на герое; perk — [вид, число]
+  gear: {
+    rustyBandana: { name: 'Бандана Ржавых', slot: 'hat', rar: 0, ico: '🧣', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5] },
+    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1] },
+    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1] },
+    acidBucket: { name: 'Кислотная панама', slot: 'hat', rar: 1, ico: '🎩', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1] },
+    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', f: { phones: true }, perk: ['show', 15] },
+    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8] },
+    goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', f: { chain: 2 }, perk: ['cash', 15] },
+    goldCap: { name: 'Золотая кепка', slot: 'hat', rar: 3, ico: '🧢', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1] },
+    cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2] },
+    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', f: { gloves: true }, perk: ['time', 6] }
+  },
   districts: {
     yard: {
       name: 'Двор', start: [6, 6],
       birds: [[13.4, 13.6], [14.1, 13.2], [13.0, 12.9], [24.5, 18.3], [25.2, 18.8], [17.6, 1.5]],   // голуби: улетают, если подойти
+      // банды: танцуют на своих точках, каждый игровой день возвращаются (на одной из spots). Победил в стычке — банда уходит и оставляет добычу.
+      // gear — их шмотки (первая победа даёт первую); hours — когда выходят; tut — с неё начинается игра
+      gangs: [
+        { id: 'rusty', name: 'Ржавые', lvl: 1, col: '#C8603A', tut: true, spots: [[7, 10], [9, 13]], gear: ['rustyBandana', 'rustyTrack'], taunt: 'Это наш подъезд. Танцуй или уходи.' },
+        { id: 'acid', name: 'Кислотные', lvl: 2, col: '#7CFF4F', spots: [[17, 16], [15, 17]], gear: ['acidKicks', 'acidBucket'], taunt: 'У нас кислотный стиль. Не обожгись.' },
+        { id: 'owls', name: 'Ночные совы', lvl: 3, col: '#9A6FC0', hours: [20, 6], spots: [[6, 20], [15, 2]], gear: ['owlPhones', 'owlHoodie'], taunt: 'Ночью двор наш. Покажи, что не спишь.' },
+        { id: 'gold', name: 'Золотые зубы', lvl: 4, col: '#E7B23C', spots: [[25, 11], [25, 19]], gear: ['goldChain', 'goldCap'], taunt: 'Золото берёт тот, кто чище танцует.' }
+      ],
       // куда носят заказы из ларька (клетки у дверей)
       drops: [[2, 10], [2, 14], [6, 6], [20, 6], [8, 13], [18, 20], [26, 17], [13, 3], [26, 20], [5, 19]],
       // жители: ходят по тротуарам туда-обратно (только картинка, 7:00–22:00)
@@ -70,6 +91,8 @@ window.CITY_DATA = {
         { id: 'tent', type: 'shop', at: [16, 15], name: 'Палатка «Всё для танца»', open: [10, 19], sell: ['pads', 'kicks', 'hat'] },
         { id: 'spot1', type: 'show', at: [8, 8], name: 'Пятачок у подъезда' },
         { id: 'gate', type: 'gate', at: [29, 10], name: 'Дорога в Центр', to: 'center' },
+        { id: 'mc', type: 'mc', at: [11, 15], name: 'MC Рупор', gear: ['cypherBomber'], look: { base: 6, col: { top: '#FFD23F', hat: ['#18181B', '#FFD23F'] } } },
+        { id: 'dj', type: 'dj', at: [18, 15], name: 'Диджей Винт', gear: ['djGloves'], look: { base: 4, col: { top: '#3F8FD8', sleeve: '#3F8FD8' } } },
         { id: 'gym', type: 'gym', at: [12, 15], name: 'Разминка' },
         { id: 'wall1', type: 'wall', at: [5, 1], name: 'Чистая стена', ty: -27 },       // ty: где на картинке стена относительно клетки (px)
         { id: 'wall2', type: 'wall', at: [20, 1], name: 'Чистая стена', ty: -27 },

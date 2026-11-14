@@ -1112,4 +1112,28 @@
   city-gfx.js `?v=3`, city-data.js `?v=4`, city-balance.js `?v=3`. `CITY._picks()` for checks. Tested headless ru 390×844 + en 375×667 from
   an OLD save: finds, to-do sheet, tag, delivery in time / late, warm-up 4 of 4, reload keeps everything, day / sunset / night pictures,
   no errors. NOT on a real phone (battery at 15 fps, how tight the delivery timer feels with a finger).
+  CREWS, v4 (owner 13–14.11.2026 «как крипы, но без убийств: победил в танце — банда исчезает и тебе что-то достаётся… затягивающий с
+  первых секунд… уникальные шмотки… диджеинг, граффити, MC… хип-хоп проект»). Numbers: city-balance.js `duel`, `dj`, `goals.gang`.
+  (1) `gangs` in city-data.js (yard: Ржавые 1, Кислотные 2, Ночные совы 3 — only 20–6 h, Золотые зубы 4): `gangsNow()` — every game day
+  each crew dances in a slowly turning circle at one of its `spots`; a beaten one is gone till the next day; level +1 per `grow` (5) wins,
+  size 2–5. Walking within 1.15 cells opens the challenge by itself (`gangCool` 5–7 s between), a tap works too. (2) THE DANCE-OFF
+  `duel(o)` = layer `#cyDu` over the map: arrows ↑→↓← to SWIPE before the ring closes (arrow keys on a desktop), the last move of the last
+  dancer = FREEZE (press and hold `holdMs`); 3 lives (+gear), combo, PERFECT when faster than 55 % of the time; time per move = ms − msLvl ×
+  (crew level − 1), × (1 + lvlK × (hero level − crew level)) — the hero level comes ONLY from lessons (said in the dialogs, loss ⇒ button
+  «К урокам»), × gear, × DJ. On the stage two rigged figures from hero.js (`HERO.svg(…, {rig})`, `setPose`, MOVES): mine does toprock /
+  sixstep / windmill / swipe / freeze per swipe, shock on a miss; theirs taunts (burn), loses, the next one steps in. Beat = `RB.jam(id,
+  bars)` (new export of rhythm.js, `?v=14`; respects `fedoskin-rb-mute`). `CITY._duel()` {need, hit, left}, `CITY._gangs()` for checks.
+  (3) LOOT: cash 8 + 5 × level (up to +50 % for clean play), respect, sometimes a spray can, and GEAR — `DATA.gear`, 10 unique pieces
+  (slot hat / top / kicks / ears / neck / hands, rarity 0–3, look `f` / `col` applied in `heroLook()` on top of the profile look, one perk:
+  time / life / cash / rep / show / en / coin). A crew's first defeat always drops its first piece, later `drop` 35 %. Worn / taken off in
+  the backpack (`S.gear {own, on}`), `perk(kind)` sums what is worn. (4) FIRST SECONDS: a new player gets no text — `hook()`: «Твой двор
+  заняли» → «В круг!» → an easy tutorial dance-off with the Rusty crew (`tut`, 2 dancers × 3 moves, 1.7 s each, 5 lives, free) → the first
+  piece. «Как играть» is still in the backpack. (5) MC Рупор (place `mc` on the court): the CYPHER — 5 dancers in a row at the top crew
+  level, once a game day, −10 energy ⇒ cash + 6 respect + the legendary «Бомбер Сайфера» the first time. DJ Винт (place `dj` by the tent,
+  drawn deck `GFX.deck`): mix mini-game = `barGame()` (shared with the warm-up), 5 cash, ≥ 3 of 4 ⇒ «Бит качает» till the end of the game
+  day (+15 % time in dance-offs, +20 % hat at shows), 4 of 4 the first time ⇒ «Перчатки диджея». To-do list: one of the three is always
+  «Разгони банды» (2). 54 new i18n keys (955). city.js `?v=7`, city-gfx.js `?v=4`, city-data.js `?v=5`, city-balance.js `?v=4`.
+  Tested headless ru 390×844 + en 375×667 with REAL touch swipes: hook → tutorial → loot → worn on the hero; walking into a crew; a loss on
+  purpose (energy −5, nothing else) and a win; backpack; DJ 4 of 4; cypher 25 moves; owls only at night; next day the crews are back;
+  reload keeps gear. NOT on a real phone: swipe feel, time per move, the beat's sound (never heard by Claude), iPhone audio start.
   Not done yet: guard, other districts, balance by real play (no hand-played win yet), passers-by.

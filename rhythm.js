@@ -563,6 +563,17 @@
     G.pv = null; if (box) box.querySelectorAll('.rbc.pl, .rbdj.pl').forEach(x => x.classList.remove('pl'));
   }
 
+  // the city's quick dance-offs play a beat too: `bars` bars of beat `id`, returns a function that stops it (owner 14.11.2026: more hip-hop)
+  function jam(id, bars) {
+    if (!audioOn()) return null;
+    try {
+      let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
+      master.gain.value = mute ? 0 : .85;
+      const o = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars, null);
+      return () => { try { o.gain.setTargetAtTime(0, ctx.currentTime, .05); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 500); };
+    } catch (_) { return null; }
+  }
+
   // ---- 2: the round ----
   // auto = «на рандом» (owner 11.11.2026): random cards, the hero taps by himself — how clean depends on luck and his level
   function start(auto) {
@@ -951,5 +962,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, open, close, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { init: d => { D = d; }, open, close, jam, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

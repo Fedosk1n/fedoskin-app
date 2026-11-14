@@ -514,6 +514,15 @@
     c.restore();
   }
   function smoke(c, px, py, now) { for (let i = 0; i < 4; i++) { const u = ((now / 2600) + i / 4) % 1; c.fillStyle = 'rgba(240,240,244,' + (.34 * (1 - u)).toFixed(3) + ')'; c.beginPath(); c.ellipse(px - u * 16 + Math.sin(u * 6 + i) * 3, py - u * 34, 4 + u * 9, 3 + u * 7, 0, 0, 7); c.fill(); } }
+  // the DJ's table: two decks (they spin; faster and with a glow while his beat is on) and a mixer
+  function deck(c, px, py, now, on) {
+    const R = (a, b, w, h, col) => { c.fillStyle = col; c.fillRect(a, b, w, h); };
+    R(px - 30, py - 4, 66, 30, 'rgba(8,10,24,.3)'); R(px - 34, py - 12, 68, 30, '#16161A'); R(px - 32, py - 10, 64, 20, '#3A3D45'); R(px - 32, py + 10, 64, 6, '#26262B');
+    [-19, 19].forEach((dx, i) => { c.fillStyle = '#0E0E10'; c.beginPath(); c.ellipse(px + dx, py, 10.5, 8.4, 0, 0, 7); c.fill(); c.strokeStyle = '#3A3D45'; c.lineWidth = 1; c.beginPath(); c.ellipse(px + dx, py, 7, 5.6, 0, 0, 7); c.stroke();
+      const a = now / (on ? 190 : 520) + i * 2; c.fillStyle = i ? '#4FC0FF' : OR; c.beginPath(); c.ellipse(px + dx, py, 3.6, 2.9, 0, 0, 7); c.fill(); c.strokeStyle = WH; c.lineWidth = 1.2; c.beginPath(); c.moveTo(px + dx, py); c.lineTo(px + dx + Math.cos(a) * 9.5, py + Math.sin(a) * 7.6); c.stroke(); });
+    R(px - 5, py - 7, 10, 14, '#16161A'); R(px - 3, py - 5, 2, 10, '#7CFF4F'); R(px + 1, py - 5 + (Math.floor(now / 160) % 3) * 2, 2, 6, '#FF4F9A');
+    if (on) for (let i = 0; i < 3; i++) { const u = ((now / 900) + i / 3) % 1; c.strokeStyle = 'rgba(79,192,255,' + (.5 * (1 - u)).toFixed(2) + ')'; c.lineWidth = 2; c.beginPath(); c.ellipse(px, py, 36 + u * 26, 20 + u * 16, 0, 0, 7); c.stroke(); }
+  }
   function carAt(c, px, py, i, lights) { car(c, px, py, CARS[i % CARS.length]); if (lights) { const g = c.createLinearGradient(px - 44, 0, px - 120, 0); g.addColorStop(0, 'rgba(255,243,184,.5)'); g.addColorStop(1, 'rgba(255,243,184,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(px - 44, py - 14); c.lineTo(px - 120, py - 30); c.lineTo(px - 120, py + 26); c.lineTo(px - 44, py + 10); c.fill(); } }
 
   // ================= signs instead of emoji =================
@@ -530,6 +539,8 @@
     else if (type === 'gate') { c.beginPath(); c.moveTo(x - 7, y - 2); c.lineTo(x + 1, y - 2); c.lineTo(x + 1, y - 6); c.lineTo(x + 8, y); c.lineTo(x + 1, y + 6); c.lineTo(x + 1, y + 2); c.lineTo(x - 7, y + 2); c.fill(); }
     else if (type === 'wall') { c.fillRect(x - 3.5, y - 3, 7, 10); c.fillStyle = ac; c.fillRect(x - 3.5, y + 1, 7, 3); c.fillStyle = col; c.fillRect(x - 2.5, y - 6, 5, 3); c.fillStyle = ac; c.beginPath(); c.arc(x + 6, y - 6, 1.4, 0, 7); c.arc(x + 8.4, y - 3, 1.1, 0, 7); c.arc(x + 8, y - 8.6, 1, 0, 7); c.fill(); }
     else if (type === 'gym') { c.fillRect(x - 6, y - 1.2, 12, 2.4); c.fillRect(x - 8.6, y - 5, 3, 10); c.fillRect(x + 5.6, y - 5, 3, 10); c.fillStyle = ac; c.fillRect(x - 10.4, y - 3, 2, 6); c.fillRect(x + 8.4, y - 3, 2, 6); }
+    else if (type === 'mc') { c.beginPath(); c.roundRect(x - 3.4, y - 8, 6.8, 10, 3.4); c.fill(); c.strokeStyle = col; c.lineWidth = 1.6; c.beginPath(); c.arc(x, y, 6, .15, Math.PI - .15); c.stroke(); c.fillRect(x - .8, y + 5.6, 1.6, 3); c.fillStyle = ac; c.fillRect(x - 3.4, y - 3, 6.8, 1.6); }
+    else if (type === 'dj') { c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill(); c.fillStyle = '#151517'; c.beginPath(); c.arc(x, y, 5.4, 0, 7); c.fill(); c.fillStyle = ac; c.beginPath(); c.arc(x, y, 2.6, 0, 7); c.fill(); }
     else if (type === 'job') { c.fillStyle = '#F2E2B8'; c.beginPath(); c.moveTo(x - 6, y - 6); c.lineTo(x + 7, y - 3); c.lineTo(x - 2, y + 8); c.fill(); c.fillStyle = '#3BD16F'; c.fillRect(x - 3, y - 4, 7, 2); c.fillStyle = '#C8102E'; c.fillRect(x - 3, y - 1, 5, 2); }
     else { c.font = '400 17px Anton, Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ac; c.fillText('?', x, y + 1); }
   }
@@ -587,5 +598,5 @@
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(fogCan, ox, oy, MW * TS, MH * TS); c.imageSmoothingEnabled = false;
   }
 
-  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, pickup, mytag, smoke, carAt, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
+  window.CITY_GFX = { TS, setMap, drawMap, crate, crown, pickup, mytag, smoke, carAt, deck, person, aura, bird, sign, night, lightsNow, glow, fog, trees: () => trees, _chunks: () => chunks.size, _sprites: () => sprites.size };
 })();
