@@ -8,8 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=2';
-import { initGame } from './city3d-game.js?v=3';
+import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=3';
+import { initGame } from './city3d-game.js?v=4';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -354,7 +354,7 @@ function lamp(scene, x, z, rotY, o = {}) {
   });
   shadowAll(g); scene.add(g);
   const head = new THREE.Vector3(0, 3.82, .9).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(g.position);
-  const s = new THREE.SpotLight('#ffb36b', (o.power ?? 95) * 2.6, 0, o.angle ?? .95, .75, 2);
+  const s = new THREE.SpotLight('#ffb36b', (o.power ?? 95) * 3.2, 0, o.angle ?? .95, .75, 2);
   s.position.copy(head); s.target.position.set(head.x, 0, head.z + (o.lean ?? 0)); scene.add(s, s.target);
   if (o.shadow) { s.castShadow = true; s.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048); s.shadow.bias = -.0004; s.shadow.normalBias = .02; s.shadow.radius = 3; s.shadow.camera.near = .5; s.shadow.camera.far = 9; }
   // visible light cone (cheap fake volume)
@@ -651,6 +651,12 @@ async function build(scene) {
   lamp(scene, 7.9, 7.6, -.9, { shadow: true, power: 80 });
   lamp(scene, 13.9, -9, -Math.PI / 2, { power: 70, flicker: true });
   lamp(scene, 13.9, 10, -Math.PI / 2, { power: 60 });
+  // more light (owner 14.11 «добавь больше освещения»): lamps by the crews' corners + warm fill over the cypher and the yard
+  lamp(scene, -9.6, -11.7, .75, { power: 90, angle: 1.0, lean: 1.2 });
+  lamp(scene, -11.2, -4.7, 1.2, { power: 90, angle: 1.0, lean: 1.0 });
+  lamp(scene, 1.6, 4.8, Math.PI, { power: 70, angle: 1.0 });
+  [[cx, cz, '#ffb36b', 26], [-7.2, -9.4, '#ffa65e', 14], [8.6, -6.2, '#c8ffb0', 10], [-8.6, -2.4, '#c9b8ff', 12], [4.6, 9.2, '#ffd98a', 14], [1, 2, '#ffbf80', 10]]
+    .forEach(([x, z, c, p]) => { const l = new THREE.PointLight(c, p, 9, 1.6); l.position.set(x, 3.4, z); scene.add(l); });
   lamps.forEach((l, i) => i < 3 && dust(scene, l.head));
 
   // ---- people ----
@@ -705,7 +711,7 @@ function updateCrew(_tb, dt) {
   } else { J.play('Breakdance_Ready', { fade: .5, speed: .95 }); J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z); T.who++; T.plan = null; }
   W.crew.forEach((D, i) => {
     if (D !== J) { const face = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.root.position.set(D.c.slot.x, 0, D.c.slot.z); D.root.rotation.y = face; }
-    D.mixer.update(dt);
+    D.tick(dt);
   });
   W.freezeNow = freezeNow;
 }
@@ -760,7 +766,7 @@ function updateHero(dt, tb) {
   const nearC = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5;
   if (k > .08) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); }
   else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready'; if (H.cur !== want) H.play(want, { fade: .35 }); }
-  H.mixer.update(dt);
+  H.tick(dt);
   s.wk = lerp(s.wk || 0, k > .08 ? k : 0, 1 - Math.exp(-dt * 10));
   if (s.wk > .02) {
     s.ph += dt * (5 + 6 * k); const sn = S(s.ph), w = s.wk, B = H.B;
@@ -788,12 +794,12 @@ async function boot() {
   let PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
   renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.4;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0a0c11'); scene.fog = new THREE.FogExp2('#0a0c11', .016);
   const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 120);
 
   // dusk light: cool sky + moon with long soft shadows
-  scene.add(new THREE.HemisphereLight('#7d8fba', '#2a1e16', 1.1));
+  scene.add(new THREE.HemisphereLight('#8a9cc8', '#3a2a1e', 1.55));
   const moon = new THREE.DirectionalLight('#9db4e6', 1.1); moon.position.set(-9, 22, -6); moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048); moon.shadow.camera.left = -16; moon.shadow.camera.right = 16; moon.shadow.camera.top = 16; moon.shadow.camera.bottom = -16; moon.shadow.camera.near = 1; moon.shadow.camera.far = 60; moon.shadow.bias = -.0005; moon.shadow.normalBias = .03; moon.shadow.radius = 4;
   scene.add(moon, moon.target);

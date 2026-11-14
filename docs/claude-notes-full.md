@@ -1259,3 +1259,11 @@
   equal level 50 %, +1 ≈ 70 %, +2 ≈ 80 %. «Пропустить» counts the rest instantly. Hero = mocap person too: Ready / Bboy_Uprock base +
   procedural walk swings on the bones (UpLeg/Leg about local X, Arms about local Z — signs found numerically). `?lv=N` overrides the level.
   Tested headless 390×844: approach → button → battle → falls / clean → judges → reward → save; no errors. NOT on a real phone. Texts Russian only.
+- City 3D transitions + light (owner 14.11.2026 20:57 «иногда фигурка телепортируется куда-то за круг. Добавь больше освещения»): the clips
+  carry hips travel on the floor (Uprock_To_Ground 1.1 m, Swipes up to 1.6 m, Freeze vars 1.2–2 m), and every new clip started at 0 ⇒ jumps.
+  ROOT MOTION in city3d-mocap.js (`?v=3`): loadMocap keeps the hips xz curve per clip (RM) and puts only y in the track; `J.tick(dt)` (use it
+  INSTEAD of mixer.update) moves the rig by the active clip's own travel (wrap-aware), with a soft pull back (`J.pull` .55/s) and an edge
+  (`J.maxR` .95 m); loops play the detrended curve (in place), travelling moves (TRAVEL regex: To_Ground, Footwork, Freeze, Headspin_Start/End,
+  Ending) use the real travel; `play(name, {travel})` overrides. Checked frame by frame in node (60 fps): max step 3.6 cm per frame, never
+  further than 0.95 m from the spot. Battle crossfades .3–.45 s. Light: exposure 1.62, hemisphere 1.55, lamps ×3.2 power, 3 new lamps
+  (rusty / owls corners, yard middle) + warm/tinted PointLights over the cypher and each crew (no shadows — phone cost).

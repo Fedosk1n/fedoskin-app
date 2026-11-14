@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen } from './city3d-mocap.js?v=2';
+import { mocapPerson, clipLen } from './city3d-mocap.js?v=3';
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
@@ -251,7 +251,7 @@ export function initGame(ctx) {
       let si = T.seq.findIndex(s => t < s.b);
       if (t >= .9 && si >= 0 && si !== T.si) {
         const s = T.seq[si]; T.si = si;
-        if (s.c) { J.play(s.c, { fade: s.kind === 'down' ? .2 : .3, at: s.at }); if (J.act) J.act.timeScale = 1; }
+        if (s.c) { J.play(s.c, { fade: s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4, at: s.at }); if (J.act) J.act.timeScale = 1; }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
         else if (s.kind === 'power' || s.kind === 'freeze') mvText(s);
         paintScore(T);
@@ -269,7 +269,7 @@ export function initGame(ctx) {
       if (t >= T.len) { if (J.fall) fallEnd(J); T.score += T.style; paintScore(T); nextTurn(); }
       W.camT.x = lerp(W.camT.x, J.root.position.x, 1 - Math.exp(-dt * 2)); W.camT.z = lerp(W.camT.z, J.root.position.z + .3, 1 - Math.exp(-dt * 2));
     }
-    H.mixer.update(dt); B.opp.mixer.update(dt);
+    H.tick(dt); B.opp.tick(dt);
   }
   function paintScore(T) {
     const me = B.turns.filter(x => x.who === 'me').reduce((a, x) => a + x.score, 0), op = B.turns.filter(x => x.who === 'op').reduce((a, x) => a + x.score, 0);
@@ -331,8 +331,8 @@ export function initGame(ctx) {
 
   // ---------- per frame ----------
   function update(dt) {
-    if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.mixer.update(dt); B.opp.mixer.update(dt); } }
-    crews.forEach(g => { if (!g.label.visible) return; g.people.forEach(J => { if (!B || J !== B.opp) J.mixer.update(dt); }); });
+    if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.tick(dt); B.opp.tick(dt); } }
+    crews.forEach(g => { if (!g.label.visible) return; g.people.forEach(J => { if (!B || J !== B.opp) J.tick(dt); }); });
     if (!B) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
       crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });

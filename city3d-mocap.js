@@ -6,6 +6,10 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 let DATA = null;
 const CLIPS = {};
+// ROOT MOTION: the floor-plane travel of the hips is taken OUT of the tracks and moves the dancer instead (J.tick), so the
+// next move starts where the last one ended — no snapping back to the centre (owner 14.11 «фигурка телепортируется за круг»).
+// RM[name] = {xz: Float32Array (m), dur, fps, end: [x, z]}; looping plays use the detrended curve (travel removed) so loops stay in place.
+const RM = {};
 export async function loadMocap(url = 'anim/bboy.json?v=1') {
   if (DATA) return DATA;
   DATA = await (await fetch(url)).json();
@@ -13,7 +17,12 @@ export async function loadMocap(url = 'anim/bboy.json?v=1') {
     const times = Float32Array.from({ length: c.n }, (_, i) => i / c.fps), tracks = [];
     for (const [k, v] of Object.entries(c.t)) {
       const [bone, kind] = k.split('.');
-      if (kind === 'p') tracks.push(new THREE.VectorKeyframeTrack(bone + '.position', times, Float32Array.from(v, x => x / 100)));
+      if (kind === 'p') {
+        const xz = new Float32Array(c.n * 2), y = Float32Array.from(v, (x, i) => (i % 3 === 1 ? x / 100 : 0));
+        for (let i = 0; i < c.n; i++) { xz[i * 2] = v[i * 3] / 100; xz[i * 2 + 1] = v[i * 3 + 2] / 100; }
+        RM[name] = { xz, fps: c.fps, n: c.n, dur: (c.n - 1) / c.fps, end: [xz[(c.n - 1) * 2], xz[(c.n - 1) * 2 + 1]] };
+        tracks.push(new THREE.VectorKeyframeTrack(bone + '.position', times, y));
+      }
       else tracks.push(new THREE.QuaternionKeyframeTrack(bone + '.quaternion', times, Float32Array.from(v, x => x / 1000)));
     }
     CLIPS[name] = new THREE.AnimationClip(name, (c.n - 1) / c.fps, tracks);
@@ -23,6 +32,14 @@ export async function loadMocap(url = 'anim/bboy.json?v=1') {
 export const getClip = n => CLIPS[n];
 export const clipLen = n => (CLIPS[n] ? CLIPS[n].duration : 0);
 export const hasClip = n => !!CLIPS[n];
+// floor position of the hips at time t (loop = travel removed so the loop closes)
+function rmAt(r, t, loop, out) {
+  t = Math.max(0, Math.min(r.dur, t)); const f = t * r.fps, i = Math.min(r.n - 2, Math.floor(f)), k = f - i;
+  out[0] = r.xz[i * 2] + (r.xz[i * 2 + 2] - r.xz[i * 2]) * k; out[1] = r.xz[i * 2 + 1] + (r.xz[i * 2 + 3] - r.xz[i * 2 + 1]) * k;
+  if (loop) { const u = t / r.dur; out[0] -= r.end[0] * u; out[1] -= r.end[1] * u; }
+  return out;
+}
+const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending/;
 
 const mats = new Map();
 const M = (c, r = .8, m = 0) => { const k = c + r + m; if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m })); return mats.get(k); };
@@ -83,8 +100,25 @@ export function mocapPerson(look, opt = {}) {
   }
   root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   const mixer = new THREE.AnimationMixer(rig);
-  const J = { root, rig, B, mixer, cur: null, act: null };
+  const J = { root, rig, B, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95 };
+  // advance the animation and move the dancer by the clip's own travel
+  J.tick = dt => {
+    const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
+    mixer.update(dt);
+    if (r && a.timeScale > 0) {
+      let t1 = a.time; const loop = J.rmLoop;
+      rmAt(r, t0, loop, _a);
+      if (t1 < t0 - 1e-4) { rmAt(r, r.dur, loop, _b); J.dx += (_b[0] - _a[0]) * scale; J.dz += (_b[1] - _a[1]) * scale; rmAt(r, 0, loop, _a); }   // wrapped around
+      rmAt(r, t1, loop, _b); J.dx += (_b[0] - _a[0]) * scale; J.dz += (_b[1] - _a[1]) * scale;
+    }
+    // stay near the spot: a soft pull back and a hard edge
+    const k = Math.exp(-dt * J.pull); J.dx *= k; J.dz *= k;
+    const d = Math.hypot(J.dx, J.dz); if (d > J.maxR) { J.dx *= J.maxR / d; J.dz *= J.maxR / d; }
+    rig.position.x = J.dx; rig.position.z = J.dz;
+  };
+  J.home0 = () => { J.dx = J.dz = 0; rig.position.x = rig.position.z = 0; };
   J.play = (name, o = {}) => {
+    J.rmLoop = !(o.travel ?? TRAVEL.test(name));   // loops stay in place; going down, footwork, freezes travel for real
     const c = CLIPS[name]; if (!c) return;
     const a = mixer.clipAction(c); a.reset(); a.setLoop(o.once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = !!o.once;
     a.timeScale = o.speed || 1; if (o.at) a.time = o.at;
