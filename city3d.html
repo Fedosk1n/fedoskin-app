@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0B0D12">
+<title>Fedoskin · Город 3D (черновик)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap">
+<style>
+  html, body { margin: 0; height: 100%; background: #0B0D12; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body { font-family: Inter, system-ui, sans-serif; color: #F2EFE8; }
+  #c3 { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hud { position: fixed; left: 0; right: 0; top: 0; padding: max(10px, env(safe-area-inset-top)) 12px 0; display: flex; gap: 8px; align-items: center; pointer-events: none; z-index: 5; }
+  .hud > * { pointer-events: auto; }
+  .hb { height: 40px; min-width: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,.14); background: rgba(12,14,19,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        color: #F2EFE8; font: 700 15px Inter, sans-serif; display: inline-flex; align-items: center; justify-content: center; padding: 0 12px; text-decoration: none; cursor: pointer; }
+  .hb:active { scale: .94; }
+  .ttl { flex: 1; text-align: center; font: 400 17px Anton, sans-serif; letter-spacing: .06em; text-shadow: 0 2px 8px #000; pointer-events: none; }
+  .ttl small { display: block; font: 600 10px Inter, sans-serif; letter-spacing: .14em; color: #E2611A; opacity: .9; }
+  #hint { position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 10px 16px; border-radius: 22px;
+          background: rgba(12,14,19,.7); border: 1px solid rgba(226,97,26,.45); font: 600 13px Inter, sans-serif; white-space: nowrap; transition: opacity .6s; z-index: 5; pointer-events: none; }
+  #hint.off { opacity: 0; }
+  #joy { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04);
+         pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 4; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(226,97,26,.75); box-shadow: 0 0 18px rgba(226,97,26,.6); }
+  #joy.on { opacity: 1; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font: 600 15px Inter, sans-serif; z-index: 9; }
+  #fps { position: fixed; right: 12px; bottom: calc(8px + env(safe-area-inset-bottom)); font: 600 10px Inter, sans-serif; color: rgba(255,255,255,.35); z-index: 5; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c3"></canvas>
+<div class="hud">
+  <a class="hb" href="./" aria-label="Назад">←</a>
+  <div class="ttl">ДВОР<small>НОВАЯ ГРАФИКА · ЧЕРНОВИК</small></div>
+  <button class="hb" id="mus" type="button" aria-label="Музыка">🎵</button>
+</div>
+<div id="joy"><i></i></div>
+<div id="hint">Веди пальцем по экрану — герой пойдёт</div>
+<div id="err">Этот телефон не умеет показывать 3D-графику (WebGL).</div>
+<div id="fps"></div>
+<script src="hero.js?v=15"></script>
+<script src="city-gfx.js?v=5"></script>
+<script src="rhythm.js?v=18"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script type="module" src="city3d.js?v=1"></script>
+</body>
+</html>

@@ -1224,3 +1224,13 @@
   warm-up and «Разогрет уроком» unchanged. 15 i18n keys (1026). hero.js `?v=15`, rhythm.js `?v=18`, city.js `?v=13`, city-balance.js `?v=6`.
   Tested headless: gearBoost caps, setup note, a played round with the gold cap (1 miss forgiven) and synthetic taps 85 ms late (PERFECT with
   +20 ms; no-gear behaviour same as the previous version), 7 lesson minutes ⇒ +35 ⚡, energy dialog, sleep ⇒ 40. NOT on a real phone.
+- City in 3D, draft 1 (owner 14.11.2026 17:25 sent a top-down 3D reference: «вот так надо было с самого начала… а не этот тетрис»; 18:54 «начинай»):
+  separate page `city3d.html` + `city3d.js` (ES module, NOT linked from the app yet; the flat city stays as is). three.js r18x vendored in
+  `vendor/three/` (MIT, three.module.js + three.core.js + addons used: RoundedBoxGeometry, EffectComposer/RenderPass/UnrealBloomPass/OutputPass/
+  ShaderPass) via an importmap. Everything is built in code: low-poly props (crates, barrels, pallets, tyres, wood/chain fences, jersey barriers,
+  dumpster, cars, hoop, speakers, boombox), canvas textures (concrete, asphalt, worn paint), ground decals (CYPHER ZONE, hazard bands, arrows,
+  FEDOSKIN TEAM stencil, puddles), two buildings with lit windows + graffiti from CITY_GFX.graf, garages, lamps = SpotLights with shadows + fake
+  light cones + dust motes; dusk hemisphere + moon; bloom + vignette + grain; perspective camera ~61° from the south following the hero.
+  People = joint rigs from HERO.topDown looks (hero = my look incl. street gear); the crew of 5 dances in the cypher in turns on the city beat
+  (RB.bgm, 🎵 button). Drag = joystick. Auto quality: fps < 40 ⇒ fewer pixels, then no bloom; `?fps` shows fps. Tested headless 390×844
+  (swiftshader): renders, walks, no errors. NOT seen on a real phone yet (speed, heat, battery).
