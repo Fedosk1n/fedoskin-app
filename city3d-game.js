@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen } from './city3d-mocap.js?v=4';
+import { mocapPerson, clipLen } from './city3d-mocap.js?v=5';
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {

@@ -8,8 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen } from './city3d-mocap.js?v=4';
-import { initGame } from './city3d-game.js?v=5';
+import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
+import { initGame } from './city3d-game.js?v=6';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -774,6 +774,10 @@ function updateHero(dt, tb) {
     const w = s.wk, run = clamp((w - .45) / .4, 0, 1), stride = 1.25 + .9 * run;          // metres per full cycle (two steps)
     s.ph += sp * dt / stride * Math.PI * 2; if (!moving) s.ph += dt * 4 * w;            // finish the step when stopping
     const sn = S(s.ph), cs = Cc(s.ph), B = H.B;
+    // start every frame from the SAME still pose (a paused clip is not re-applied by the mixer, so adding onto last frame's bones
+    // used to pile up into somersaults — owner 14.11 21:45 «кувырками передвигается»)
+    if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
+    const WB = W.walkBase; for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]); B.Hips.position.y = WB.y;
     const rx = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_X, a)), rz = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_Z, a));
     const legA = (.32 + .38 * run) * w, kneeA = (.45 + .85 * run) * w;
     // thighs swing; the knee bends while that leg swings forward (cos > 0 for the left), a little give on the standing leg
@@ -790,7 +794,7 @@ function updateHero(dt, tb) {
     B.Hips.position.y -= (.025 + .045 * run) * Math.abs(cs) * w;
   }
 }
-const _Yv = new THREE.Vector3(0, 1, 0);
+const _Yv = new THREE.Vector3(0, 1, 0), GAIT = ['LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'Spine', 'Spine1'];
 const _q = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0), _Z = new THREE.Vector3(0, 0, 1);
 
 // ---------- music ----------

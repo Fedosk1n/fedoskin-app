@@ -1276,3 +1276,8 @@
   each frame (capsule ends + radius, sphere centre + radius, box corners of other meshes) and lifts the rig at once (lowers softly);
   J.rest = lie exactly on the ground (falls). Falls no longer move rig y. Measured in node on real vertices: falls during headspin /
   1990 / flare / swipes 0 cm (were −48…−109 cm), normal dancing never below 0.
+- City 3D walk fix (owner 14.11.2026 21:45 «он кувырками передвигается»): with the base clip paused (timeScale 0) the mixer stopped
+  re-applying the bones, so the gait's quaternion multiplies piled up frame after frame ⇒ somersaults. Now `poseOf(clip, t)` (city3d-mocap
+  `?v=5`) gives a fixed still pose of Ready (t .05); every walking frame first copies it into the GAIT bones (+ hips height), then adds the
+  gait. RULE: never multiply onto bone rotations that the mixer may not rewrite — always start from a known base. Checked: 25 s of joystick
+  walking, head stays 0.49 m above the hips (was going below the hips after ~10 s).

@@ -32,6 +32,13 @@ export async function loadMocap(url = 'anim/bboy.json?v=1') {
 export const getClip = n => CLIPS[n];
 export const clipLen = n => (CLIPS[n] ? CLIPS[n].duration : 0);
 export const hasClip = n => !!CLIPS[n];
+// a still pose of a clip at time t: {bone: Quaternion}, hips height — used as the fixed base under the walking gait
+export function poseOf(name, t) {
+  const c = CLIPS[name], out = { q: {}, y: 1 }; if (!c) return out;
+  for (const tr of c.tracks) { const [bn, pr] = tr.name.split('.'), v = tr.createInterpolant().evaluate(t);
+    if (pr === 'quaternion') out.q[bn] = new THREE.Quaternion(v[0], v[1], v[2], v[3]).normalize(); else out.y = v[1]; }
+  return out;
+}
 // floor position of the hips at time t (loop = travel removed so the loop closes)
 function rmAt(r, t, loop, out) {
   t = Math.max(0, Math.min(r.dur, t)); const f = t * r.fps, i = Math.min(r.n - 2, Math.floor(f)), k = f - i;
