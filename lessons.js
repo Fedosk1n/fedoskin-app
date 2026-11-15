@@ -37,6 +37,18 @@ window.LESSONS_DATA = [
   "r2": "tr-kick-step-5iix8jqf.mp4"
  },
  {
+  "id": "tr-side-kick",
+  "sec": "Toprock",
+  "name": "Side kick",
+  "dur": 42,
+  "ru": "",
+  "added": "2026-11-15",
+  "at": 1794747204783,
+  "pv": true,
+  "vertical": true,
+  "r2": "tr-side-kick-u57gpgpy.mp4"
+ },
+ {
   "id": "fw-6step",
   "sec": "Footwork",
   "name": "6-step",
