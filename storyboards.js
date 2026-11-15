@@ -181,6 +181,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "fr-one-hand-planche": {
+  "src": "r2:fr-one-hand-planche-4yxgn5vl.mp4",
+  "every": 0.5,
+  "n": 66,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "tk-monkey": {
   "src": "r2:tk-monkey-5l5vx1ua.mp4",
   "every": 0.5,
@@ -307,10 +316,10 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "fr-one-hand-planche": {
-  "src": "r2:fr-one-hand-planche-4yxgn5vl.mp4",
+ "tr-side-kick": {
+  "src": "r2:tr-side-kick-u57gpgpy.mp4",
   "every": 0.5,
-  "n": 66,
+  "n": 83,
   "w": 180,
   "h": 320,
   "cols": 10,
