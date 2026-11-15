@@ -1281,3 +1281,13 @@
   `?v=5`) gives a fixed still pose of Ready (t .05); every walking frame first copies it into the GAIT bones (+ hips height), then adds the
   gait. RULE: never multiply onto bone rotations that the mixer may not rewrite — always start from a known base. Checked: 25 s of joystick
   walking, head stays 0.49 m above the hips (was going below the hips after ~10 s).
+- City 3D, 16.11.2026 (owner «продолжи работу над городом»): (1) ONE WARDROBE: a won street piece goes into S.own AND is put on at once
+  (`wearGear` → fedoskin-eq, one per slot via HERO.itemOf().slot; city3d `rewear()` rebuilds the hero person in place); app `cityOwned()`
+  in index.html now unions the flat city's gear with `fedoskin-city3d`.own. (2) DAILY GOALS: 3 a day (seeded by the date) from GOALS (win,
+  win ×2, clean win, paint a wall, 3 lesson minutes, watch the cypher 8 s, beat a crew lv ≥ 2); each +5 ★, all three +15 ⚡ once; HUD chip
+  📋 n/3 → sheet. (3) CREW WALLS: a free-standing slab per crew placed ~2.9 m from its spot on a free side (colliders checked), art =
+  CITY_GFX.graf (RUST block / ACID bubble / OWLS wild / GOLD d3, same as the flat city); after beating a crew that day ⇒ button «🎨
+  Закрасить стену» (−10 ⚡): hero walks up, sprays (RB.hiss), my piece (profile nick or FT, crew's style, fire palette, crown) wipes in
+  from left to right on the canvas texture ⇒ S.turf[id], +8 ★, every new day +3 ★ per wall; crew not beaten for 3 days paints it back.
+  HUD chip 🎨 n/4 → sheet. Save fields added: turf, last, goals, goalsDay, goalsPaid, lday, word. Tested headless 390×844: win → bandana on
+  the hero + in fedoskin-eq → paint → turf + goal; no errors. city3d-game `?v=7`, city3d.js `?v=9`.

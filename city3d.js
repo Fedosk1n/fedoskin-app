@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
-import { initGame } from './city3d-game.js?v=6';
+import { initGame } from './city3d-game.js?v=7';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -831,7 +831,10 @@ async function boot() {
 
   await loadMocap();
   await build(scene);
-  const GAME = initGame({ scene, W, circ, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  // swap the hero's clothes in place (a piece of street gear was just won and put on)
+  const rewear = () => { const o = W.hero, n = mocapPerson(myLook()); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
+    n.st = o.st; n.play('Breakdance_Ready'); scene.remove(o.root); scene.add(n.root); W.hero = n; };
+  const GAME = initGame({ scene, W, circ, box, colliders, rewear, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 

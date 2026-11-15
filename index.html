@@ -5311,8 +5311,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // in the same list as shop items; the city save keeps what is owned. One item per slot across both.
   const isCityK = k => typeof k === 'string' && k.slice(0, 2) === 'c:';
   function cityOwned(){
-    try { if (window.CITY && CITY.owned) { const o = CITY.owned(); if (o) return o; } } catch (_) {}
-    try { const c = JSON.parse(localStorage.getItem('fedoskin-city') || 'null'); return (c && c.gear && c.gear.own) || []; } catch (_) { return []; }
+    let own = []; try { if (window.CITY && CITY.owned) { const o = CITY.owned(); if (o) own = o.slice(); } } catch (_) {}
+    if (!own.length) { try { const c = JSON.parse(localStorage.getItem('fedoskin-city') || 'null'); own = (c && c.gear && c.gear.own) || []; } catch (_) {} }
+    // street gear won in the 3D city (city3d-game.js save) is the same wardrobe
+    try { const c3 = JSON.parse(localStorage.getItem('fedoskin-city3d') || 'null'); if (c3 && c3.own) own = own.concat(c3.own.filter(x => !own.includes(x))); } catch (_) {}
+    return own;
   }
   const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
   const eqWith = (eq, k) => eq.filter(x => x !== k && slotOf(x) !== slotOf(k)).concat(k);   // put on k, take off what was in its slot
