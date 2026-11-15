@@ -51,6 +51,7 @@ const ease = t => t * t * (3 - 2 * t);
 const today = () => { const d = new Date(); return d.getFullYear() * 1e4 + (d.getMonth() + 1) * 100 + d.getDate(); };
 const pick = (a, r) => a[Math.floor(r() * a.length) % a.length];
 function rng(seed) { let a = seed >>> 0 || 1; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const sfx = k => { try { window.RB && RB.sfx && RB.sfx(k); } catch (_) {} };
 const lessonSec = () => { try { return +(JSON.parse(localStorage.getItem('fedoskin-stats') || '{}').sec || 0); } catch (_) { return 0; } };
 
 // ---------- save ----------
@@ -377,8 +378,8 @@ export function initGame(ctx) {
       const s = si >= 0 ? T.seq[si] : null;
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
-        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); mvText(s, ['bad', s.kind === 'power' ? 'Срыв! +0.5 за попытку' : 'Не удержал! 0']); if (T.who === 'me') B.clean = false; }
-        else { T.score += s.pts; mvText(s, ['ok', 'Чисто! +' + s.pts]); ctx.flash && ctx.flash(s.kind === 'freeze'); }
+        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? 'Срыв! +0.5 за попытку' : 'Не удержал! 0']); if (T.who === 'me') B.clean = false; }
+        else { T.score += s.pts; mvText(s, ['ok', 'Чисто! +' + s.pts]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
         paintScore(T);
       }
       if (J.fall) fallTick(J, dt, s && s.soft);
@@ -437,7 +438,7 @@ export function initGame(ctx) {
       ${lines.map(l => `<p>${l}</p>`).join('')}
       ${win ? '' : `<button class="sec" id="g3les">🎬 К урокам — стать сильнее</button>`}<button id="g3ok">Дальше</button>`;
     res.querySelectorAll('.jd i').forEach((e, i) => setTimeout(() => e.classList.add('on'), 500 + i * 450));
-    res.classList.add('on');
+    res.classList.add('on'); setTimeout(() => sfx(win ? 'win' : 'lose'), 500 + 3 * 450);
     $('#g3ok').onclick = endBattle; const L = $('#g3les'); if (L) L.onclick = () => (location.href = './');
   }
   function endBattle() {

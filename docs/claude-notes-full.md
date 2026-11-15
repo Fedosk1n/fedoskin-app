@@ -1291,3 +1291,6 @@
   from left to right on the canvas texture ⇒ S.turf[id], +8 ★, every new day +3 ★ per wall; crew not beaten for 3 days paints it back.
   HUD chip 🎨 n/4 → sheet. Save fields added: turf, last, goals, goalsDay, goalsPaid, lday, word. Tested headless 390×844: win → bandana on
   the hero + in fedoskin-eq → paint → turf + goal; no errors. city3d-game `?v=7`, city3d.js `?v=9`.
+- City 3D battle sounds (16.11.2026): RB.sfx new kinds hit / crash / win / lose (own synth + filtered-noise crowd; rhythm.js `?v=20` in
+  index.html + city3d.html); clean power/freeze ⇒ 'hit' + short camera punch (zoom .34 → .4), fall ⇒ 'crash', verdict ⇒ 'win'/'lose' after
+  the judges' cards. city3d-game `?v=8`, city3d.js `?v=10`. Sounds never heard by Claude.

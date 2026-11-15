@@ -606,8 +606,13 @@
       const o = ctx.createGain(); o.gain.value = .5; o.connect(ctx.destination); const t = ctx.currentTime + .01;
       if (kind === 'coin') { tone(o, t, 'square', 1318, 0, .11, .08); tone(o, t + .07, 'square', 1976, 0, .11, .22); tone(o, t + .07, 'sine', 3952, 0, .05, .18); }
       else if (kind === 'can') { for (let i = 0; i < 4; i++) { tone(o, t + i * .07, 'triangle', 2400 + i * 140, 1800, .16, .045); hiss(o, t + i * .07, 'bandpass', 4200, 3, .1, .03); } }
+      // city 3D battles (16.11.2026): clean move / crash / win / loss, each with a bit of crowd (filtered noise)
+      else if (kind === 'hit') { tone(o, t, 'square', 784, 0, .08, .07); tone(o, t + .06, 'square', 1175, 0, .09, .14); hiss(o, t + .05, 'bandpass', 1100, .7, .14, .5); }
+      else if (kind === 'crash') { tone(o, t, 'sine', 140, 45, .55, .32); hiss(o, t, 'lowpass', 500, .7, .4, .18); hiss(o, t + .12, 'bandpass', 700, .6, .16, .8); }
+      else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => tone(o, t + i * .09, 'square', f, 0, .1, .2 + i * .05)); hiss(o, t + .1, 'bandpass', 1300, .5, .22, 1.6); }
+      else if (kind === 'lose') { [392, 330, 262].forEach((f, i) => tone(o, t + i * .14, 'triangle', f, f * .97, .14, .22)); hiss(o, t + .2, 'bandpass', 600, .6, .08, .6); }
       else { hiss(o, t, 'bandpass', 1400, 1.5, .35, .06); hiss(o, t + .05, 'bandpass', 900, 1.5, .25, .07); tone(o, t + .1, 'sine', 660, 990, .08, .12); }
-      setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 800);
+      setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 2500);
     } catch (_) {}
   }
 

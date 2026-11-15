@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
-import { initGame } from './city3d-game.js?v=7';
+import { initGame } from './city3d-game.js?v=8';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
