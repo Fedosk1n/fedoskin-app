@@ -50,6 +50,10 @@
     // the Park crews (16.11.2026, 3D city): Фанк-бригада lv 5, Корни lv 6, Волна lv 7 (the district's owners)
     funkTrack: { name: 'Олимпийка «Фанк»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:funk', f: { top: 'track' }, col: { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { cor: 8 } },
     rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
+    // the industrial zone's crews (16.11.2026, 3D city): Арматура lv 6, Высоковольтные lv 7, Литейка lv 8 (the district's owners)
+    rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 20 } },
+    voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:volt', col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
+    forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 3, ico: '⛓️', src: 'gang:forge', f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
     waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },

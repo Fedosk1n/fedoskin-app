@@ -567,7 +567,11 @@
     // банды Парка (16.11.2026)
     funk: { a: '#FF5AC8', b: '#FFD23F', c: '#B02A8A', o: '#1A0620', k: '#4A1466', bg: '#7A2FB8', hi: '#FFFFFF' },
     roots: { a: '#3FBF4A', b: '#FFD23F', c: '#1F7A2E', o: '#0D1A0A', k: '#5A1410', bg: '#C8202A', hi: '#FFF6C8' },
-    wave: { a: '#19B8C4', b: '#C8F6FF', c: '#0E6F86', o: '#04141C', k: '#0A3A4A', bg: '#0F2A5C', hi: '#FFFFFF' }
+    wave: { a: '#19B8C4', b: '#C8F6FF', c: '#0E6F86', o: '#04141C', k: '#0A3A4A', bg: '#0F2A5C', hi: '#FFFFFF' },
+    // банды Промзоны (16.11.2026)
+    rebar: { a: '#FF7A1A', b: '#FFD23F', c: '#B5440C', o: '#120C08', k: '#3A1C08', bg: '#3D4046', hi: '#FFF1D0' },
+    volt: { a: '#FFE23F', b: '#FFFFFF', c: '#D9A400', o: '#07080C', k: '#101A44', bg: '#1846B0', hi: '#FFFFFF' },
+    forge: { a: '#FF4A2A', b: '#FFD9A0', c: '#A81C0C', o: '#140604', k: '#4A0E06', bg: '#2A1512', hi: '#FFF3D6' }
   };
   const GRAF_STYLES = ['tag', 'bubble', 'block', 'wild', 'd3'];
   const grafCache = new Map();
@@ -633,6 +637,17 @@
     for (let i = -3; i <= 3; i++) { const a = i * .42, l = s * (.46 - Math.abs(i) * .06); c.save(); c.rotate(a); [[P.o, 1.25], [i % 2 ? P.c : P.a, 1]].forEach(([col, k]) => { c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(s * .09 * k, -l * .5, 0, -l * (k > 1 ? 1.06 : 1)); c.quadraticCurveTo(-s * .09 * k, -l * .5, 0, 0); c.fill(); });
       c.strokeStyle = P.b; c.lineWidth = s * .012; c.beginPath(); c.moveTo(0, -l * .1); c.lineTo(0, -l * .85); c.stroke(); c.restore(); }
     c.strokeStyle = P.o; c.lineWidth = s * .06; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, s * .3); c.stroke(); c.strokeStyle = P.c; c.lineWidth = s * .03; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, s * .29); c.stroke(); c.restore(); };
+  // знаки банд Промзоны: гайка (Арматура), молния (Высоковольтные), капля металла (Литейка)
+  GRAF_EXTRA.nut = (c, x, y, s, P) => { c.lineJoin = 'round'; c.save(); c.translate(x, y); c.rotate(.26); const hex = r => { c.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * 6.2832; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); };
+    hex(s * .44); c.fillStyle = P.o; c.fill(); hex(s * .38); const g = c.createLinearGradient(0, -s * .38, 0, s * .38); g.addColorStop(0, P.b); g.addColorStop(.55, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+    c.fillStyle = P.o; c.beginPath(); c.arc(0, 0, s * .2, 0, 7); c.fill(); c.fillStyle = P.k; c.beginPath(); c.arc(0, 0, s * .15, 0, 7); c.fill();
+    c.strokeStyle = P.hi; c.lineWidth = s * .03; c.beginPath(); c.arc(0, 0, s * .29, 3.5, 4.6); c.stroke(); c.restore(); };
+  GRAF_EXTRA.zap = (c, x, y, s, P) => { c.lineJoin = 'miter'; const bolt = k => { c.beginPath(); [[.1, -.48], [-.26, .04], [-.04, .04], [-.16, .48], [.28, -.1], [.04, -.1], [.24, -.48]].forEach(([dx, dy], i) => { const px = x + s * dx * k, py = y + s * dy * k; if (i) c.lineTo(px, py); else c.moveTo(px, py); }); c.closePath(); };
+    bolt(1); c.strokeStyle = P.o; c.lineWidth = s * .11; c.stroke(); const g = c.createLinearGradient(0, y - s * .48, 0, y + s * .48); g.addColorStop(0, P.b); g.addColorStop(.5, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+    c.strokeStyle = P.hi; c.lineWidth = s * .02; [[-.4, -.2, -.3, -.3], [.36, .2, .46, .12], [-.34, .34, -.44, .4]].forEach(([a, b, d, e]) => { c.beginPath(); c.moveTo(x + s * a, y + s * b); c.lineTo(x + s * d, y + s * e); c.stroke(); }); };
+  GRAF_EXTRA.drop = (c, x, y, s, P) => { c.lineJoin = 'round'; const d = k => { c.beginPath(); c.moveTo(x, y - s * .48 * k); c.bezierCurveTo(x + s * .12 * k, y - s * .2 * k, x + s * .36 * k, y, x + s * .36 * k, y + s * .16 * k); c.arc(x, y + s * .16 * k, s * .36 * k, 0, Math.PI); c.bezierCurveTo(x - s * .36 * k, y, x - s * .12 * k, y - s * .2 * k, x, y - s * .48 * k); c.closePath(); };
+    d(1); c.fillStyle = P.o; c.fill(); d(.86); const g = c.createRadialGradient(x - s * .06, y + s * .2, s * .03, x, y + s * .14, s * .4); g.addColorStop(0, P.hi); g.addColorStop(.35, P.b); g.addColorStop(.7, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+    c.fillStyle = P.b; [[-.4, -.3, .04], [.42, -.22, .05], [.3, -.42, .03]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + s * dx, y + s * dy, s * r, 0, 7); c.fill(); }); };
   GRAF_EXTRA.surf = (c, x, y, s, P) => { c.lineJoin = 'round'; c.lineCap = 'round'; const wave = k => { c.beginPath(); c.moveTo(x - s * .46, y + s * .32); c.quadraticCurveTo(x - s * .4, y - s * .1 * k, x - s * .05, y - s * .36 * k); c.quadraticCurveTo(x + s * .32, y - s * .46 * k, x + s * .36, y - s * .12);
       c.quadraticCurveTo(x + s * .2, y - s * .26, x + s * .04, y - s * .12); c.quadraticCurveTo(x - s * .08, y + s * .06, x + s * .1, y + s * .2); c.quadraticCurveTo(x + s * .3, y + s * .3, x + s * .46, y + s * .32); c.closePath(); };
     wave(1); c.strokeStyle = P.o; c.lineWidth = s * .09; c.stroke(); const g = c.createLinearGradient(0, y - s * .4, 0, y + s * .32); g.addColorStop(0, P.b); g.addColorStop(.45, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();

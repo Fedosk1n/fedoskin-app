@@ -741,6 +741,13 @@ t('Кроссы «Волна»', '“Wave” kicks', 'Zapas «Ola»', 'Tênis �
 t('Фанк-бригада', 'Funk Brigade', 'Brigada Funk', 'Brigada Funk', 'Brigade Funk', 'Funk-Brigade', 'ファンク・ブリゲード', '펑크 브리게이드', '放克帮')
 t('Корни', 'Roots', 'Raíces', 'Raízes', 'Racines', 'Roots', 'ルーツ', '루츠', '根源帮')
 t('Волна', 'Wave', 'Ola', 'Onda', 'Vague', 'Welle', 'ウェーブ', '웨이브', '浪潮帮')
+# ---- 3D-город, район «Промзона» (16.11.2026): шмотки и банды ----
+t('Кепка «Арматура»', '“Rebar” cap', 'Gorra «Varilla»', 'Boné “Vergalhão”', 'Casquette « Ferraille »', '„Bewehrung“-Cap', '「リバー」キャップ', '‘리바’ 캡', '“钢筋”棒球帽')
+t('Кроссы «Высокое напряжение»', '“High Voltage” kicks', 'Zapas «Alto Voltaje»', 'Tênis “Alta Tensão”', 'Baskets « Haute tension »', '„Hochspannung“-Sneaker', '「ハイボルテージ」スニーカー', '‘하이 볼티지’ 스니커즈', '“高压”球鞋')
+t('Цепь «Литейка»', '“Foundry” chain', 'Cadena «Fundición»', 'Corrente “Fundição”', 'Chaîne « Fonderie »', '„Gießerei“-Kette', '「ファウンドリー」チェーン', '‘파운드리’ 체인', '“铸造厂”项链')
+t('Арматура', 'Rebar', 'Varilla', 'Vergalhão', 'Ferraille', 'Bewehrung', 'リバー', '리바', '钢筋帮')
+t('Высоковольтные', 'High Voltage', 'Alto Voltaje', 'Alta Tensão', 'Haute Tension', 'Hochspannung', 'ハイボルテージ', '하이 볼티지', '高压帮')
+t('Литейка', 'Foundry', 'Fundición', 'Fundição', 'Fonderie', 'Gießerei', 'ファウンドリー', '파운드리', '铸造帮')
 t('обычная', 'common', 'común', 'comum', 'commune', 'gewöhnlich', 'コモン', '일반', '普通')
 t('редкая', 'rare', 'rara', 'rara', 'rare', 'selten', 'レア', '희귀', '稀有')
 t('эпическая', 'epic', 'épica', 'épica', 'épique', 'episch', 'エピック', '에픽', '史诗')

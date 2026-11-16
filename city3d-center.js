@@ -10,7 +10,7 @@ export async function buildCenter(TK) {
   const mesh = (geo, mat, x, y, z, par = scene) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; par.add(m); return m; };
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const t = tex(c), m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m; };
-  const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power, dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
+  const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power * (TK.FILL_K || 1), dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
   const text = (x, t, px, py, font, col, align = 'center') => { x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(t, px, py); };
 
   // a slightly lighter, bluer night than the yard: the centre is lit

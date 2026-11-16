@@ -8,10 +8,11 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf } from './city3d-mocap.js?v=6';
-import { initGame } from './city3d-game.js?v=14';
-import { buildCenter } from './city3d-center.js?v=2';
-import { buildPark } from './city3d-park.js?v=1';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf } from './city3d-mocap.js?v=7';
+import { initGame } from './city3d-game.js?v=15';
+import { buildProm } from './city3d-prom.js?v=1';
+import { buildCenter } from './city3d-center.js?v=3';
+import { buildPark } from './city3d-park.js?v=2';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -342,6 +343,9 @@ function boombox() {
 }
 
 // ---------- lamps ----------
+// LAMP_K = how bright the fixtures are. Was 3.2 («добавь больше освещения», 14.11); the owner 16.11.2026: «слегка уменьши яркость освещения
+// от световых приборов (слишком ярко)» ⇒ 2.5 for the spots, the glowing strip 3.2 → 2.5, the fake cone .085 → .066, fill PointLights × FILL_K.
+const LAMP_K = 2.5, FILL_K = .8;
 const lamps = [];
 function lamp(scene, x, z, rotY, o = {}) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotY;
@@ -352,11 +356,11 @@ function lamp(scene, x, z, rotY, o = {}) {
   const heads = o.double ? [[-.0, .0], [0, .9]] : [[0, .9]];
   heads.forEach(([hx, hz], i) => {
     const hd = new THREE.Mesh(new RoundedBoxGeometry(.5, .14, .3, 2, .03), M('#25292f', .5, .5)); hd.position.set(hx, 3.92 + (o.double && !i ? .02 : 0), hz); g.add(hd);
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(.42, .02, .2), glowMat(o.col || '#ffb15c', 3.2)); strip.position.set(hx, 3.84, hz); g.add(strip);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(.42, .02, .2), glowMat(o.col || '#ffb15c', 2.5)); strip.position.set(hx, 3.84, hz); g.add(strip);
   });
   shadowAll(g); scene.add(g);
   const head = new THREE.Vector3(0, 3.82, .9).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(g.position);
-  const s = new THREE.SpotLight(o.col || '#ffb36b', (o.power ?? 95) * 3.2, 0, o.angle ?? .95, .75, 2);
+  const s = new THREE.SpotLight(o.col || '#ffb36b', (o.power ?? 95) * LAMP_K, 0, o.angle ?? .95, .75, 2);
   s.position.copy(head); s.target.position.set(head.x, 0, head.z + (o.lean ?? 0)); scene.add(s, s.target);
   if (o.shadow) { s.castShadow = true; s.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048); s.shadow.bias = -.0004; s.shadow.normalBias = .02; s.shadow.radius = 3; s.shadow.camera.near = .5; s.shadow.camera.far = 9; }
   // visible light cone (cheap fake volume)
@@ -370,7 +374,7 @@ function lamp(scene, x, z, rotY, o = {}) {
 function coneMat(col) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
-    uniforms: { uCol: { value: new THREE.Color(col || '#ffae5e') }, uK: { value: .085 } },
+    uniforms: { uCol: { value: new THREE.Color(col || '#ffae5e') }, uK: { value: .066 } },
     vertexShader: 'varying float vH; varying vec3 vN; varying vec3 vV; void main(){ vH = -position.y; vec4 wp = modelMatrix * vec4(position,1.); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }',
     fragmentShader: 'uniform vec3 uCol; uniform float uK; varying float vH; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(abs(dot(vN, vV)), 2.2); float h = clamp(vH / 3.8, 0., 1.); float a = uK * f * (1. - h * .75) * smoothstep(0., .12, h) * smoothstep(1.02, .7, h); gl_FragColor = vec4(uCol * a, a); }',
   });
@@ -520,7 +524,8 @@ const MOVES = {
 // (set by the gates). 'yard' is built here, 'center' in city3d-center.js with the same toolkit (TK).
 const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15.4, z1: 14.2 }, spawn: [1.2, -2.6, Math.PI] },
   center: { name: 'ЦЕНТР', bounds: { x0: -13.2, x1: 13.4, z0: -14.9, z1: 14.4 }, spawn: [0, 11.2, Math.PI] },
-  park: { name: 'ПАРК', bounds: { x0: -12.4, x1: 12.5, z0: -11.2, z1: 14.2 }, spawn: [-10.6, 1.4, Math.PI / 2] } };
+  park: { name: 'ПАРК', bounds: { x0: -12.4, x1: 12.5, z0: -11.2, z1: 14.2 }, spawn: [-10.6, 1.4, Math.PI / 2] },
+  prom: { name: 'ПРОМЗОНА', bounds: { x0: -12.5, x1: 12.8, z0: -9.9, z1: 13.9 }, spawn: [-10.6, 9.5, Math.PI / 2] } };
 const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
 const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
 const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
@@ -528,11 +533,11 @@ async function build(scene) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
-    lamp, lamps, dust, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, asphaltTex, facadeTex, roofTex, stripeTex,
+    lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, asphaltTex, facadeTex, roofTex, stripeTex,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
-  if (DIST === 'center') await buildCenter(TK); else if (DIST === 'park') await buildPark(TK); else await buildYard(scene);
+  if (DIST === 'center') await buildCenter(TK); else if (DIST === 'park') await buildPark(TK); else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene);
   // the hero (my look incl. street gear)
-  let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
+  let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook()); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
@@ -572,7 +577,7 @@ async function buildYard(scene) {
   const door = (x, w, h, col, lit) => {
     const d = new THREE.Mesh(new THREE.BoxGeometry(w, h, .08), M(col, .6, .3)); d.position.set(x, h / 2, -15.98); scene.add(shadowAll(d));
     if (lit) { const l = new THREE.Mesh(new THREE.BoxGeometry(.5, .12, .15), glowMat('#ffd29a', 2.5)); l.position.set(x, h + .35, -15.9); scene.add(l);
-      const pl = new THREE.PointLight('#ffb875', 8, 7, 2); pl.position.set(x, h + .1, -15.3); scene.add(pl); }
+      const pl = new THREE.PointLight('#ffb875', 8 * FILL_K, 7, 2); pl.position.set(x, h + .1, -15.3); scene.add(pl); }
   };
   door(-10.5, 1.2, 2.2, '#1d2228', true);
   // roller door of a shop in the lower building
@@ -675,7 +680,7 @@ async function buildYard(scene) {
   lamp(scene, -11.2, -4.7, 1.2, { power: 90, angle: 1.0, lean: 1.0 });
   lamp(scene, 1.6, 4.8, Math.PI, { power: 70, angle: 1.0 });
   [[cx, cz, '#ffb36b', 26], [-7.2, -9.4, '#ffa65e', 14], [8.6, -6.2, '#c8ffb0', 10], [-8.6, -2.4, '#c9b8ff', 12], [4.6, 9.2, '#ffd98a', 14]]
-    .forEach(([x, z, c, p]) => { const l = new THREE.PointLight(c, p, 9, 1.6); l.position.set(x, 3.4, z); scene.add(l); });
+    .forEach(([x, z, c, p]) => { const l = new THREE.PointLight(c, p * FILL_K, 9, 1.6); l.position.set(x, 3.4, z); scene.add(l); });
   lamps.forEach((l, i) => i < 3 && dust(scene, l.head));
 
   // ---- people ----
@@ -714,10 +719,10 @@ function updateCrew(_tb, dt) {
   if (!W.crew.length || !W.cyph) return;
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
-  if (W.cyBusy) { W.crew.forEach(D => { if (D.cur !== 'Breakdance_Ready') D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
+  if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (D.cur !== 'Breakdance_Ready') D.play('Breakdance_Ready', { fade: .4 }); else if (D.act && D.act.timeScale === 0) D.act.timeScale = 1; D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
     D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
   if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; }
-  const rel = now - T.start, walk = 2.2, back = 2.2, J = W.crew[T.who % n], c = J.c;
+  const rel = now - T.start, walk = 2.2, back = 2.9, J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
   let freezeNow = false;
   if (rel < T.plan.len) {
     const i = T.plan.list.findIndex(s => rel < s.b); const s = T.plan.list[i];
@@ -726,12 +731,13 @@ function updateCrew(_tb, dt) {
     J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z);
     freezeNow = FRZ.test(s.c) && rel - s.a > .8; W.power = POWER.test(s.c);
   } else if (rel < T.plan.len + back) {
-    if (!T.out) { T.out = true; J.play('Bboy_Uprock', { fade: .4 }); }
-    const k = ease((rel - T.plan.len) / back); J.root.position.set(lerp(cx, c.slot.x, k), 0, lerp(cz, c.slot.z, k)); W.power = false;
-  } else { J.play('Breakdance_Ready', { fade: .5, speed: .95 }); J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z); T.who++; T.plan = null; }
+    // the set is over: he gets up and WALKS back to his place, then turns to the circle again
+    if (!T.out) { T.out = true; walkStart(J); }
+    walkMove(J, dt, c.slot.x, c.slot.z, ease(clamp((rel - T.plan.len) / 2.2, 0, 1)), toMid); W.power = false;
+  } else { J.ws = null; J.play('Breakdance_Ready', { fade: .5, speed: .95 }); J.root.position.set(c.slot.x, 0, c.slot.z); J.root.rotation.y = toMid; T.who++; T.plan = null; }
   W.crew.forEach((D, i) => {
     if (D !== J) { const face = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.root.position.set(D.c.slot.x, 0, D.c.slot.z); D.root.rotation.y = face; }
-    D.tick(dt);
+    D.tick(dt); if (D.ws) walkPose(D, dt);
   });
   W.freezeNow = freezeNow;
 }
@@ -796,14 +802,18 @@ function updateHero(dt, tb) {
 function standPose(H) { if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
 function stride(H, s, sp, moving, k, dt) {
   s.wk = lerp(s.wk || 0, moving ? k : 0, 1 - Math.exp(-dt * (moving ? 8 : 6)));
-  if (s.wk > .01) {
+  if (s.wk > .01 || s.from) {
     const w = s.wk, run = clamp((w - .45) / .4, 0, 1), stride = 1.25 + .9 * run;          // metres per full cycle (two steps)
     s.ph += sp * dt / stride * Math.PI * 2; if (!moving) s.ph += dt * 4 * w;            // finish the step when stopping
     const sn = S(s.ph), cs = Cc(s.ph), B = H.B;
     // start every frame from the SAME still pose (a paused clip is not re-applied by the mixer, so adding onto last frame's bones
     // used to pile up into somersaults — owner 14.11 21:45 «кувырками передвигается»)
     if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
-    const WB = W.walkBase; for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]); B.Hips.position.y = WB.y;
+    const WB = W.walkBase;
+    if (s.from) {   // walking off the floor: rise from the pose the dance ended in (walkStart) instead of snapping upright
+      s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(WB.q[n], kb);
+      B.Hips.position.y = lerp(s.from.y, WB.y, kb); if (kb >= 1) s.from = null;
+    } else { for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]); B.Hips.position.y = WB.y; }
     const rx = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_X, a)), rz = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_Z, a));
     const legA = (.32 + .38 * run) * w, kneeA = (.45 + .85 * run) * w;
     // thighs swing; the knee bends while that leg swings forward (cos > 0 for the left), a little give on the standing leg
@@ -820,6 +830,25 @@ function stride(H, s, sp, moving, k, dt) {
     B.Hips.position.y -= (.025 + .045 * run) * Math.abs(cs) * w;
   }
 }
+// LEAVING THE FLOOR ON FOOT (owner 16.11.2026 «проработай уход человечка с танцпола (можно просто шагами, не надо танцем)»).
+// A dancer used to slide back to his place while toprocking, face still to the middle. Now: walkStart(J) once (takes the body's
+// real spot, remembers the pose), then every frame walkMove(J, dt, tx, tz, k 0…1, endFace) BEFORE J.tick and walkPose(J, dt) AFTER
+// it; he turns to where he goes, walks there with the shared gait, and at the end turns to endFace. Clear with J.ws = null.
+function walkStart(J) {
+  const a = J.root.rotation.y, c = Cc(a), sn = S(a), p = J.root.position; p.x += J.dx * c + J.dz * sn; p.z += -J.dx * sn + J.dz * c; J.home0();
+  if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
+  const q = {}; for (const n of GAIT) q[n] = J.B[n].quaternion.clone();
+  J.ws = { wk: 0, ph: 0, from: { q, y: J.B.Hips.position.y }, bt: 0, x0: p.x, z0: p.z, sp: 0, mv: false };
+  J.rest = false; J.play('Breakdance_Ready', { fade: .4 }); if (J.act) { J.act.timeScale = 0; J.act.time = .05; }
+}
+function walkMove(J, dt, tx, tz, k, endFace) {
+  const s = J.ws, p = J.root.position, nx = lerp(s.x0, tx, k), nz = lerp(s.z0, tz, k), dx = nx - p.x, dz = nz - p.z, sp = dt > 0 ? Math.hypot(dx, dz) / dt : 0;
+  p.x = nx; p.z = nz; s.mv = sp > .12 && k < 1; s.sp = Math.min(sp, 3);
+  const want = s.mv ? Math.atan2(dx, dz) : k >= 1 && endFace !== undefined ? endFace : null;
+  if (want !== null) { let d = want - J.root.rotation.y; d = Math.atan2(S(d), Cc(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * (s.mv ? 9 : 7))); }
+}
+function walkPose(J, dt) { const s = J.ws; if (s) stride(J, s, s.sp, s.mv, clamp(s.sp / 2.4, 0, 1), dt); }
+W.walk = { start: walkStart, move: walkMove, pose: walkPose };
 const _Yv = new THREE.Vector3(0, 1, 0), GAIT = ['LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'Spine', 'Spine1'];
 const _q = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0), _Z = new THREE.Vector3(0, 0, 1);
 
@@ -869,7 +898,7 @@ async function boot() {
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .55, .5, .82); comp.addPass(bloom);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84); comp.addPass(bloom);
   comp.addPass(new OutputPass());
   const fin = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
@@ -901,7 +930,7 @@ async function boot() {
     moon.position.set(camLook.x - 9, 22, camLook.z - 6); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
-    (W.speakers || []).forEach(sp => sp.userData.cones.forEach(c => { c.cone.position.z = .251 + beat * .03; c.ring.material.color.setRGB(2.4 * (.6 + beat), .62 * (.6 + beat), .16 * (.6 + beat)); }));
+    (W.speakers || []).forEach(sp => sp.userData.cones.forEach(c => { c.cone.position.z = .251 + beat * .03; c.ring.material.color.setRGB(1.75 * (.6 + beat), .45 * (.6 + beat), .12 * (.6 + beat)); }));
     // lamp flicker, dust drift
     lamps.forEach(l => { if (l.flick) { const f = Math.sin(now * .013) + Math.sin(now * .031) > 1.55 ? .25 : 1; l.light.intensity = l.base * f; l.cone.visible = f > .5; } });
     motes.forEach(m => { const a = m.p.geometry.attributes.position, A = a.array, B = m.base; for (let i = 0; i < m.seed.length; i++) { const q = m.seed[i], t = now * .0002 + q; A[i * 3] = B[i * 3] + Math.sin(t * 1.3) * .25; A[i * 3 + 1] = B[i * 3 + 1] + Math.sin(t * .9 + q) * .2; A[i * 3 + 2] = B[i * 3 + 2] + Math.cos(t * 1.1) * .25; } a.needsUpdate = true; });

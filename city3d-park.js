@@ -11,7 +11,7 @@ export async function buildPark(TK) {
   const mesh = (geo, mat, x, y, z, par = scene) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; par.add(m); return m; };
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m; };
-  const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power, dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
+  const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power * (TK.FILL_K || 1), dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
   const text = (x, t, px, py, font, col, align = 'center') => { x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(t, px, py); };
   const flat = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -PI / 2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); return m; };
 
@@ -42,7 +42,7 @@ export async function buildPark(TK) {
     mesh(new THREE.BoxGeometry(34, 2.4, .3), dark, 0, -1.2, QZ - .3); box(0, QZ, 34, .7);
     // pedestals with globe lamps — the embankment's string of lights
     for (let px = -12; px <= 12; px += 4.8) { mesh(new THREE.BoxGeometry(.6, 1.25, .62), granite, px, .62, QZ); mesh(new THREE.CylinderGeometry(.04, .05, 1.1, 8), M('#1c1f24', .5, .6), px, 1.8, QZ);
-      const gl = mesh(new THREE.SphereGeometry(.2, 14, 10), glowMat('#ffd9a0', 1.5), px, 2.45, QZ); gl.castShadow = false; }
+      const gl = mesh(new THREE.SphereGeometry(.2, 14, 10), glowMat('#ffd9a0', 1.25), px, 2.45, QZ); gl.castShadow = false; }
     [-9.6, 0, 9.6].forEach(px => point('#ffc98a', 20, px, 2.5, QZ + .9, 10));
     // the water: dark, glossy, with long streaks of the lights of the other bank that drift slowly
     const S = 512, c = can(S, S), x = c.getContext('2d'), r = rng(12); x.fillStyle = '#000'; x.fillRect(0, 0, S, S);
@@ -84,7 +84,7 @@ export async function buildPark(TK) {
   bin(-1.95, 8.6); bin(7.4, -9); bin(-1.9, -1.9);
   // an old-style park lamp: a dark post with a warm globe (only some of them carry a real light — phones)
   const plamp = (x, z, lit) => { mesh(new THREE.CylinderGeometry(.05, .09, 2.9, 8), M('#1c1f24', .5, .6), x, 1.45, z); mesh(new THREE.CylinderGeometry(.14, .1, .12, 10), M('#1c1f24', .5, .6), x, 2.92, z);
-    mesh(new THREE.SphereGeometry(.23, 14, 10), glowMat('#ffd49a', 1.5), x, 3.16, z).castShadow = false; circ(x, z, .14); if (lit) point('#ffc27a', lit, x, 3, z, 11); };
+    mesh(new THREE.SphereGeometry(.23, 14, 10), glowMat('#ffd49a', 1.25), x, 3.16, z).castShadow = false; circ(x, z, .14); if (lit) point('#ffc27a', lit, x, 3, z, 11); };
   [[-1.75, 10.6, 30], [1.75, 4, 0], [-1.75, -.8, 30], [1.75, -6.4, 0], [-10, 9.9, 0], [10.1, 11, 26], [-10, -2.6, 22], [10.1, -1.2, 0], [-6.2, 2.6, 0], [5.4, -1.2, 24]].forEach(a => plamp(...a));
 
   // ---------- the stage «ЭСТРАДА» (north-west): a shell and a round wooden floor ----------
