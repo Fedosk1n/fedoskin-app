@@ -1303,3 +1303,25 @@
   (BAL.gateRank 2), until then shows how much ★ is missing; after that «строится — скоро» (the next district is the next big step).
   Positions found by `freeNear()` against the colliders. New goals: show, train ×2, dj. Lights trimmed to 6 PointLights (phone cost: were 9).
   Emulator note: swiftshader runs ~0.1 game s per real s here — give tests minutes, not seconds. Tested all four places headless, no errors.
+- City 3D DISTRICTS + «ЦЕНТР» (owner 16.11.2026 09:39 «продолжаем 3D-город, строим Центр»). One page, the district is chosen at load:
+  `?d=center` (test link, opens it whatever the rank) or the save's `where` (city3d.js DISTS / DIST; W.dist, W.bounds, W.tickers — per-frame
+  hooks of a district). `build()` = shared textures → `buildYard()` or `buildCenter(TK)` (NEW city3d-center.js, gets the toolkit of city3d.js)
+  → the hero at the district's spawn. The gait is now `stride(H, s, sp, moving, k, dt)` + `standPose(H)` — shared by the hero and walking
+  people. lamp() takes `col`. CENTRE scene: pavers, the mall «КРУГ» (own facade canvas: glass storeys, shop windows with dummies, lit
+  entrance, canopy with a leaning sign — signs lean back ~0.6 rad or they can't be read from the camera; roof sign, a screen with 3 adverts),
+  glossy tiled apron, fountain with a bronze b-boy (mocap Freeze_Var_2 @2.0 s, paused), metro pavilion open to the SOUTH (anything that must
+  be read faces +z: the camera looks from the south), tea kiosk, bus stop, benches, trees only on the east edge (tall things south of the
+  walking area hide the hero), street with a passing car, houses west/east. People: GUARD walks z −13.5, x ±11 (1.25 m/s, 4.5 s pause),
+  red ring = `see` 3.2 m; 5 passers-by on a loop, 2 idlers at the doors; `W.center = { show, guard, crowd(on), kiosk, metro, gateYard, gatePark }`.
+  GAME (city3d-game `?v=12`): CREWS have `d`, `wall` [x, z], `base` + `fix(look)`, `boss`; HERE = crews of this district. Centre crews:
+  Трафареты 3 (stencil), Турникеты 4 (tile mosaic), Хромированные 5 (chrome, boss «Хромосома», first win ⇒ «хозяин Центра»). New graffiti
+  styles in city-gfx.js `?v=6`: stencil / chrome / tile (NOT in GRAF_STYLES — the flat city's picker is unchanged), pals stencil / metro,
+  signs can / token / chromo. 6 new gear pieces in hero.js `?v=16` (stencilBandana, stencilBomber, turnBucket, turnKicks, chromeKicks,
+  chromeTrack) + CGEAR in server/push-worker.js (NEEDS A SERVER REDEPLOY by the owner) + names in 9 languages; index.html cityGang knows
+  the 3 crews. Places: yard gate now really leads to the Centre (rank «Уважаемый»); Centre: «Шоу у ТЦ» (−10 ⚡, 2 a day, my random set,
+  tiles −4 % falls, +6 ★ +4 clean; guard within 3.2 m ⇒ cut, +2 ★ — start right after he has passed: ≈18 s free vs a 13.5 s set),
+  tea kiosk (+5 ⚡ per my Centre wall, once a day), metro = map of the city + ride to the yard, arch «← ДВОР», arch «ПАРК →» (closed; after
+  the boss «скоро»). Ranks +2 (1100 Голос улиц, 1700 Имя города). Goals mall / cwin join the pool after the first visit. Save fields:
+  where, seen, mallDay, teaDay. Tested headless 390×844: show clean / caught / limit, battle + gear, painting, metro map, yard ⇄ centre,
+  yard unchanged; no errors. NOT on a real phone (speed with ~18 animated people!). Texts Russian only. Emulator: dt-driven things
+  (painting, guard) crawl — wait a minute or move them by hand.

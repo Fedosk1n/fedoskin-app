@@ -560,7 +560,10 @@
     rusty: { a: '#D9682E', b: '#F6B45C', c: '#8A3414', o: '#1A0E08', k: '#3E1A0C', bg: '#2F6F6C', hi: '#FFE9C4' },
     acid: { a: '#7CFF4F', b: '#EAFF6A', c: '#1FB84A', o: '#12051F', k: '#4A1A78', bg: '#A53BF0', hi: '#FFFFFF' },
     owls: { a: '#A77BD6', b: '#FFD23F', c: '#5A36A0', o: '#0D0A1E', k: '#251848', bg: '#1B2A6B', hi: '#FFF4B8' },
-    gold: { a: '#FFC82E', b: '#FFF3B0', c: '#E08A1C', o: '#1A1206', k: '#7A4A0C', bg: '#8E1B2B', hi: '#FFFFFF' }
+    gold: { a: '#FFC82E', b: '#FFF3B0', c: '#E08A1C', o: '#1A1206', k: '#7A4A0C', bg: '#8E1B2B', hi: '#FFFFFF' },
+    // банды Центра (16.11.2026)
+    stencil: { a: '#F2EFE8', b: '#FFFFFF', c: '#C9C5BC', o: '#0E0E10', k: '#000000', bg: '#C8202A', hi: '#FFFFFF' },
+    metro: { a: '#2F7BFF', b: '#9CC8FF', c: '#1846B0', o: '#0A1024', k: '#0A1F5C', bg: '#E9E4D8', hi: '#FFFFFF' }
   };
   const GRAF_STYLES = ['tag', 'bubble', 'block', 'wild', 'd3'];
   const grafCache = new Map();
@@ -610,6 +613,24 @@
       GRAF_EXTRA.crown(c, x, y - s * .42, s * .5, { o: P.o, b: P.hi, hi: P.a, c: P.c });
       [[.36, -.3, .09], [-.4, .2, .06], [.34, .36, .05]].forEach(d => { const X = x + d[0] * s, Y = y + d[1] * s, r = d[2] * s; c.fillStyle = P.hi; c.beginPath(); c.moveTo(X, Y - r * 2); c.quadraticCurveTo(X, Y, X + r * 2, Y); c.quadraticCurveTo(X, Y, X, Y + r * 2); c.quadraticCurveTo(X, Y, X - r * 2, Y); c.quadraticCurveTo(X, Y, X, Y - r * 2); c.fill(); }); }
   };
+  // баллончик (Трафареты)
+  GRAF_EXTRA.can = (c, x, y, s, P) => { c.lineJoin = 'round'; c.save(); c.translate(x, y); c.rotate(-.18);
+    c.fillStyle = P.o; c.fillRect(-s * .2, -s * .3, s * .4, s * .72); c.fillRect(-s * .1, -s * .44, s * .2, s * .16);
+    const g = c.createLinearGradient(-s * .16, 0, s * .16, 0); g.addColorStop(0, P.c); g.addColorStop(.4, P.b); g.addColorStop(1, P.c); c.fillStyle = g; c.fillRect(-s * .16, -s * .26, s * .32, s * .64);
+    c.fillStyle = P.bg; c.fillRect(-s * .16, -s * .08, s * .32, s * .22); c.fillStyle = P.o; c.fillRect(-s * .07, -s * .41, s * .14, s * .1); c.fillStyle = P.b; c.fillRect(-s * .04, -s * .47, s * .1, s * .06);
+    c.fillStyle = P.b; for (let i = 0; i < 14; i++) { const a = -.5 + (i % 5) * .22, d = s * (.16 + (i * 37 % 10) * .03); c.globalAlpha = .9 - d / s; c.beginPath(); c.arc(s * .08 + Math.cos(a) * d, -s * .45 - Math.sin(a) * d * .8, s * (.012 + (i % 3) * .008), 0, 7); c.fill(); } c.globalAlpha = 1; c.restore(); };
+  // жетон со стрелкой вниз (Турникеты)
+  GRAF_EXTRA.token = (c, x, y, s, P) => { c.lineJoin = 'round'; c.lineCap = 'round'; c.beginPath(); c.arc(x, y, s * .44, 0, 7); c.fillStyle = P.o; c.fill();
+    const g = c.createLinearGradient(0, y - s * .4, 0, y + s * .4); g.addColorStop(0, P.b); g.addColorStop(.5, P.a); g.addColorStop(1, P.c); c.beginPath(); c.arc(x, y, s * .38, 0, 7); c.fillStyle = g; c.fill();
+    c.strokeStyle = P.hi; c.lineWidth = s * .03; c.setLineDash([s * .05, s * .05]); c.beginPath(); c.arc(x, y, s * .31, 0, 7); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = P.o; c.lineWidth = s * .17; c.beginPath(); c.moveTo(x, y - s * .2); c.lineTo(x, y + s * .16); c.moveTo(x - s * .15, y + s * .02); c.lineTo(x, y + s * .19); c.lineTo(x + s * .15, y + s * .02); c.stroke();
+    c.strokeStyle = P.hi; c.lineWidth = s * .09; c.beginPath(); c.moveTo(x, y - s * .2); c.lineTo(x, y + s * .16); c.moveTo(x - s * .15, y + s * .02); c.lineTo(x, y + s * .19); c.lineTo(x + s * .15, y + s * .02); c.stroke(); };
+  // блестящая «хромосома» — знак Хромированных и их главаря
+  GRAF_EXTRA.chromo = (c, x, y, s, P) => { c.lineCap = 'round'; const arms = [[-.2, -.4, .04, -.02], [.24, -.38, -.02, -.02], [-.26, .4, .03, .03], [.2, .42, -.03, .03]];
+    const draw = (col, lw) => { c.strokeStyle = col; c.lineWidth = lw; arms.forEach(a => { c.beginPath(); c.moveTo(x + a[2] * s, y + a[3] * s); c.quadraticCurveTo(x + a[0] * s * .4, y + a[1] * s * .7, x + a[0] * s, y + a[1] * s); c.stroke(); }); };
+    draw(P.o, s * .3); const g = c.createLinearGradient(0, y - s * .45, 0, y + s * .45); g.addColorStop(0, P.bg); g.addColorStop(.3, P.b); g.addColorStop(.48, P.hi); g.addColorStop(.52, P.k); g.addColorStop(.75, P.a); g.addColorStop(1, P.hi); draw(g, s * .2);
+    c.fillStyle = P.o; c.beginPath(); c.arc(x, y, s * .11, 0, 7); c.fill(); c.fillStyle = P.hi; c.beginPath(); c.arc(x - s * .02, y - s * .02, s * .05, 0, 7); c.fill();
+    [[-.3, -.46, .1], [.34, .3, .08], [.36, -.2, .05]].forEach(d => { const X = x + d[0] * s, Y = y + d[1] * s, r = d[2] * s; c.fillStyle = P.hi; c.beginPath(); c.moveTo(X, Y - r * 2); c.quadraticCurveTo(X, Y, X + r * 2, Y); c.quadraticCurveTo(X, Y, X, Y + r * 2); c.quadraticCurveTo(X, Y, X - r * 2, Y); c.quadraticCurveTo(X, Y, X, Y - r * 2); c.fill(); }); };
   const star4 = (c, X, Y, r, col) => { c.fillStyle = col; c.beginPath(); c.moveTo(X, Y - r); c.quadraticCurveTo(X, Y, X + r, Y); c.quadraticCurveTo(X, Y, X, Y + r); c.quadraticCurveTo(X, Y, X - r, Y); c.quadraticCurveTo(X, Y, X, Y - r); c.fill(); };
   // spec: { word, style, pal, w, h, seed, extra } — draws into c inside the box 0…w × 0…h
   function grafDraw(c, S) {
@@ -620,7 +641,9 @@
     // wt — how fat (in grid units of height), f — but never fatter than this share of the letter's width; r — round corners; gap — between letters
     // (below zero = they lean on each other); ol — outline; hgt — how much of the wall's height the letters take; wide — how far a letter may stretch
     const K = { tag: { wt: .62, f: .16, r: 1.1, gap: .1, ol: .3, skew: -.3, rot: .03, hgt: .5, wide: 1 }, bubble: { wt: 2.25, f: .6, r: 1.5, gap: -.4, ol: .3, skew: 0, rot: .08, hgt: .56, wide: 1.1 }, block: { wt: 1.75, f: .47, r: 0, gap: .2, ol: .28, skew: 0, rot: 0, hgt: .66, wide: 1.5 },
-      wild: { wt: 1.45, f: .4, r: .3, gap: -.3, ol: .28, skew: .26, rot: .11, hgt: .56, wide: 1.1 }, d3: { wt: 1.7, f: .44, r: .5, gap: .12, ol: 0, skew: -.12, rot: 0, hgt: .56, wide: 1.4 } }[st] || {};
+      wild: { wt: 1.45, f: .4, r: .3, gap: -.3, ol: .28, skew: .26, rot: .11, hgt: .56, wide: 1.1 }, d3: { wt: 1.7, f: .44, r: .5, gap: .12, ol: 0, skew: -.12, rot: 0, hgt: .56, wide: 1.4 },
+      stencil: { wt: 1.5, f: .4, r: 0, gap: .34, ol: 0, skew: 0, rot: 0, hgt: .58, wide: 1.35 }, chrome: { wt: 2.0, f: .52, r: 1.0, gap: -.22, ol: .3, skew: -.1, rot: .05, hgt: .58, wide: 1.2 },
+      tile: { wt: 1.7, f: .46, r: 0, gap: .22, ol: .22, skew: 0, rot: 0, hgt: .6, wide: 1.4 } }[st] || {};
     // the size: the height of the wall decides how tall the letters are; a long word makes them narrower (and thinner), a short one — wider
     let sy = h * K.hgt / (6 + K.wt), sx, wt;
     const room = lw * (st === 'wild' ? .8 : .9), q = 4 * n + 4 * K.f * ((n - 1) * (1 + K.gap) + 1);
@@ -631,7 +654,7 @@
     const path = (l, dx, dy) => { c.save(); c.translate(l.cx + (dx || 0), l.cy + (dy || 0)); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.scale(l.k, l.k); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); };
     const stroke = (l, col, lwd, dx, dy) => { if (l.ch === ' ') return; path(l, dx, dy); c.strokeStyle = col; c.lineWidth = lwd; c.stroke(); c.restore(); };
     const all = (col, lwd, dx, dy) => L.forEach(l => stroke(l, col, lwd, dx, dy));
-    const round = st !== 'block'; c.lineCap = round ? 'round' : 'square'; c.lineJoin = round ? 'round' : 'miter'; c.miterLimit = 3;
+    const round = st !== 'block' && st !== 'stencil' && st !== 'tile'; c.lineCap = round ? 'round' : 'square'; c.lineJoin = round ? 'round' : 'miter'; c.miterLimit = 3;
     const top = y0 - wt / 2, bot = y0 + 6 * sy + wt / 2, left = x0 - wt / 2, right = left + tot, mx = (left + right) / 2, my = (top + bot) / 2;
     const vgrad = (c1, c2, c3) => { const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, c1); g.addColorStop(.5, c2); g.addColorStop(1, c3); return g; };
     const drips = (col, k, edge) => { for (let i = 0; i < k; i++) { const X = left + wt * .4 + rnd() * (tot - wt * .8), len = h * (.06 + rnd() * .16), dw = Math.max(1.6, wt * (.1 + rnd() * .08)); if (edge) { c.strokeStyle = P.o; c.lineWidth = dw + ol * 1.2; c.beginPath(); c.moveTo(X, bot - wt * .4); c.lineTo(X, bot + len); c.stroke(); } c.strokeStyle = col; c.lineWidth = dw; c.beginPath(); c.moveTo(X, bot - wt * .5); c.lineTo(X, bot + len); c.stroke(); } };
@@ -689,6 +712,52 @@
       const vx = mx, vy = bot + h * .9, N = Math.max(10, Math.round(wt * 1.1));
       for (let i = N; i >= 1; i--) { const t = i / N * .2, col = mixCol(P.k, P.c, 1 - i / N); L.forEach(l => { if (l.ch === ' ') return; c.save(); c.translate(vx, vy); c.scale(1 - t, 1 - t); c.translate(-vx, -vy); c.translate(l.cx, l.cy); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); c.strokeStyle = col; c.lineWidth = wt; c.stroke(); c.restore(); }); }
       all(vgrad(P.hi, P.b, P.a), wt); c.save(); c.globalAlpha = .5; all(P.c, wt * .1, wt * .2, wt * .24); c.restore(); shine(wt * .18, 1); stars(5);
+    } else if (st === 'stencil') {
+      // stencil: a sprayed band with a soft edge, flat letters cut by «bridges», overspray dust and a frame of tape marks
+      const bx = left - h * .12, bw = tot + h * .24, by = top - h * .1, bh = bot - top + h * .2;
+      c.save(); c.shadowColor = P.bg; c.shadowBlur = h * .07; c.fillStyle = P.bg; c.fillRect(bx, by, bw, bh); c.restore();
+      for (let i = 0; i < 90; i++) { c.fillStyle = P.bg; c.globalAlpha = .25 + rnd() * .4; const e = rnd() < .5, X = e ? bx + rnd() * bw : (rnd() < .5 ? bx - rnd() * h * .07 : bx + bw + rnd() * h * .07), Y = e ? (rnd() < .5 ? by - rnd() * h * .07 : by + bh + rnd() * h * .07) : by + rnd() * bh; c.beginPath(); c.arc(X, Y, h * (.004 + rnd() * .009), 0, 7); c.fill(); } c.globalAlpha = 1;
+      c.strokeStyle = P.b; c.lineWidth = Math.max(1.5, h * .012); c.strokeRect(bx + h * .035, by + h * .035, bw - h * .07, bh - h * .07);
+      // the letters go on their own layer so that the bridges can be cut out of them
+      const o = document.createElement('canvas'); o.width = Math.ceil(w); o.height = Math.ceil(h); const C0 = c; c = o.getContext('2d'); c.lineCap = 'butt'; c.lineJoin = 'miter'; c.miterLimit = 3;
+      all(P.b, wt);
+      c.globalCompositeOperation = 'destination-out'; c.fillStyle = '#000';
+      L.forEach(l => { if (l.ch === ' ') return; const g = Math.max(2, wt * .17); c.fillRect(l.cx - g / 2 - sx * .1, l.cy - 3 * sy - wt, g, sy * .9 + wt); c.fillRect(l.cx - g / 2 + sx * .3, l.cy + 3 * sy - sy * .9, g, sy * .9 + wt); });
+      for (let i = 0; i < 160; i++) { c.globalAlpha = rnd() * .5; c.fillRect(left + rnd() * tot, top + rnd() * (bot - top), 1 + rnd() * 2.2, 1 + rnd() * 2.2); }
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c = C0;
+      c.save(); c.shadowColor = P.k; c.shadowBlur = 0; c.shadowOffsetX = h * .014; c.shadowOffsetY = h * .018; c.drawImage(o, 0, 0); c.restore();
+      // tape corners + a few runs of thin paint
+      c.fillStyle = 'rgba(233,228,216,.75)'; [[bx, by], [bx + bw, by], [bx, by + bh], [bx + bw, by + bh]].forEach(([X, Y], i) => { c.save(); c.translate(X, Y); c.rotate((i % 2 ? -1 : 1) * .6 + (rnd() - .5) * .3); c.fillRect(-h * .06, -h * .018, h * .12, h * .036); c.restore(); });
+      for (let i = 0; i < 3; i++) { const X = bx + bw * (.1 + rnd() * .8); c.strokeStyle = P.bg; c.lineWidth = Math.max(1.5, h * .012); c.lineCap = 'round'; c.beginPath(); c.moveTo(X, by + bh - 2); c.lineTo(X, by + bh + h * (.04 + rnd() * .09)); c.stroke(); } c.lineCap = 'butt';
+    } else if (st === 'chrome') {
+      // chrome: fat round letters like polished metal — sky on top, a white horizon, a dark ground line and a warm glow below; hard black
+      // shadow, a cloud of colour behind and sparkles on the corners
+      const cloud = (col, grow) => { c.fillStyle = col; c.beginPath(); const m = Math.max(5, Math.round(tot / (h * .2))); for (let i = 0; i <= m; i++) { const X = left + tot * i / m, r = h * (.13 + (i % 2) * .04) + grow; c.moveTo(X, top); c.arc(X, top, r, 0, 7); c.moveTo(X, bot); c.arc(X, bot, r, 0, 7); } c.rect(left - h * .1 - grow, top, tot + h * .2 + grow * 2, bot - top); c.fill(); };
+      cloud(P.o, ol * .8); cloud(P.bg, 0);
+      c.save(); c.globalAlpha = .22; c.fillStyle = P.hi; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(left + rnd() * tot, top - h * .08 + rnd() * h * .2, h * (.015 + rnd() * .03), 0, 7); c.fill(); } c.restore();
+      const dp = Math.max(4, wt * .42); for (let i = Math.ceil(dp); i >= 1; i--) all(P.o, wt + ol * 2, i, i * 1.1);
+      all(P.o, wt + ol * 2);
+      const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, P.bg); g.addColorStop(.3, P.b); g.addColorStop(.47, P.hi); g.addColorStop(.5, P.k); g.addColorStop(.56, P.c); g.addColorStop(.8, P.a); g.addColorStop(1, P.hi);
+      all(g, wt);
+      c.save(); c.globalAlpha = .9; all(P.hi, wt * .09, -wt * .26, -wt * .28); c.restore(); shine(wt * .2, 1);
+      L.forEach((l, i) => { if (l.ch === ' ') return; star4(c, l.cx - sx * 1.7 + (i % 2) * sx * 3.2, l.cy - sy * 2.9, h * (.05 + rnd() * .04), P.hi); });
+      stars(3);
+    } else if (st === 'tile') {
+      // mosaic: a panel of small wall tiles like in an underground hall, the letters are laid out of coloured tiles with grout between them
+      const bx = left - h * .12, bw = tot + h * .24, by = top - h * .1, bh = bot - top + h * .2, q = Math.max(4, Math.round(h * .045));
+      c.fillStyle = P.o; c.fillRect(bx - 3, by - 3, bw + 6, bh + 6); c.fillStyle = P.bg; c.fillRect(bx, by, bw, bh);
+      for (let Y = by; Y < by + bh; Y += q) for (let X = bx; X < bx + bw; X += q) { const v = rnd(); c.fillStyle = v < .5 ? 'rgba(0,0,0,' + (v * .12).toFixed(3) + ')' : 'rgba(255,255,255,' + ((v - .5) * .22).toFixed(3) + ')'; c.fillRect(X, Y, Math.min(q, bx + bw - X), Math.min(q, by + bh - Y)); }
+      const grid = (C, col, a) => { C.strokeStyle = col; C.globalAlpha = a; C.lineWidth = Math.max(1, q * .16); C.beginPath(); for (let X = bx; X <= bx + bw + 1; X += q) { C.moveTo(X, by); C.lineTo(X, by + bh); } for (let Y = by; Y <= by + bh + 1; Y += q) { C.moveTo(bx, Y); C.lineTo(bx + bw, Y); } C.stroke(); C.globalAlpha = 1; };
+      grid(c, P.o, .35);
+      c.fillStyle = P.c; c.fillRect(bx, by, bw, q); c.fillRect(bx, by + bh - q, bw, q); grid(c, P.o, .2);
+      const o = document.createElement('canvas'); o.width = Math.ceil(w); o.height = Math.ceil(h); const C0 = c; c = o.getContext('2d'); c.lineCap = 'square'; c.lineJoin = 'miter'; c.miterLimit = 3;
+      all(P.o, wt + ol * 2);
+      const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, P.b); g.addColorStop(.35, P.a); g.addColorStop(1, P.c); all(g, wt);
+      c.globalCompositeOperation = 'source-atop';
+      for (let Y = by; Y < by + bh; Y += q) for (let X = bx; X < bx + bw; X += q) { const v = rnd(); c.fillStyle = v < .5 ? 'rgba(0,0,0,' + (v * .3).toFixed(3) + ')' : 'rgba(255,255,255,' + ((v - .5) * .5).toFixed(3) + ')'; c.fillRect(X, Y, q, q); }
+      grid(c, P.o, .55); c.globalCompositeOperation = 'source-over'; c = C0;
+      c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowOffsetX = h * .012; c.shadowOffsetY = h * .018; c.drawImage(o, 0, 0); c.restore();
+      c.fillStyle = 'rgba(255,255,255,.14)'; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + bw * .5, by); c.lineTo(bx + bw * .28, by + bh); c.lineTo(bx, by + bh); c.fill();
     }
     if (ex) GRAF_EXTRA[ex](c, S.exLeft ? exW * .5 : w - exW * .52, h * .5, exW * .92, P);
     if (S.extra === 'crown') { const l = L[0], s = Math.min(h * .26, sx * 5 + wt); c.save(); c.translate(l.cx - sx * .6, top - s * .16); c.rotate(-.22); GRAF_EXTRA.crown(c, 0, 0, s, P); c.restore(); }

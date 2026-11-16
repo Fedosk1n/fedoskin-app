@@ -61,6 +61,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   cards), rhythm battle by hand (answer within 24 h) or auto cartoon, moves unlocked by STUDYING lessons (3 views with sound + level),
   starter gate for new players, rare/mythic moves, points for fresh lessons, coach bridge.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
+- City 3D districts: yard + «Центр» (city3d-center.js, test link `city3d.html?d=center`) — see the last entry of the full notes.
 - City 3D (draft, separate page, not linked): see the last section of the full notes. Owner's direction 14.11: top-down 3D like his
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
   missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Game layer `city3d-game.js`: crews, AUTO battles

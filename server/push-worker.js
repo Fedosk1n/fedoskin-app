@@ -552,7 +552,8 @@ const DJ_SLOT = 30 * 60e3; // the DJ keeps a pair's track for half an hour
 // must match HERO.SHOP in hero.js: id → [slot, price]
 // street gear won in the app's «Город» (14.11.2026): worn as 'c:<id>', never sold, earned offline on the phone ⇒ not checked for
 // ownership; one per slot together with SHOP. Ids/slots = hero.js GEAR — keep them equal.
-const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', acidBucket: 'head', owlPhones: 'ears', owlHoodie: 'top', goldChain: 'neck', goldCap: 'head', cypherBomber: 'top', djGloves: 'hands', writerKicks: 'kicks' };
+const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', acidBucket: 'head', owlPhones: 'ears', owlHoodie: 'top', goldChain: 'neck', goldCap: 'head', cypherBomber: 'top', djGloves: 'hands', writerKicks: 'kicks',
+  stencilBandana: 'head', stencilBomber: 'top', turnBucket: 'head', turnKicks: 'kicks', chromeKicks: 'kicks', chromeTrack: 'top' };
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0] }; // tee = not sold: given for push notifications (owner 11.11.2026)
 const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3, PTS_GOLD = 5, PTS_RED = 10; // + bonus for pulling out a rare move (owner 11.11.2026)
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };

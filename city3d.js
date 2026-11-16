@@ -9,7 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
-import { initGame } from './city3d-game.js?v=11';
+import { initGame } from './city3d-game.js?v=12';
+import { buildCenter } from './city3d-center.js?v=1';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -350,25 +351,25 @@ function lamp(scene, x, z, rotY, o = {}) {
   const heads = o.double ? [[-.0, .0], [0, .9]] : [[0, .9]];
   heads.forEach(([hx, hz], i) => {
     const hd = new THREE.Mesh(new RoundedBoxGeometry(.5, .14, .3, 2, .03), M('#25292f', .5, .5)); hd.position.set(hx, 3.92 + (o.double && !i ? .02 : 0), hz); g.add(hd);
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(.42, .02, .2), glowMat('#ffb15c', 3.2)); strip.position.set(hx, 3.84, hz); g.add(strip);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(.42, .02, .2), glowMat(o.col || '#ffb15c', 3.2)); strip.position.set(hx, 3.84, hz); g.add(strip);
   });
   shadowAll(g); scene.add(g);
   const head = new THREE.Vector3(0, 3.82, .9).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(g.position);
-  const s = new THREE.SpotLight('#ffb36b', (o.power ?? 95) * 3.2, 0, o.angle ?? .95, .75, 2);
+  const s = new THREE.SpotLight(o.col || '#ffb36b', (o.power ?? 95) * 3.2, 0, o.angle ?? .95, .75, 2);
   s.position.copy(head); s.target.position.set(head.x, 0, head.z + (o.lean ?? 0)); scene.add(s, s.target);
   if (o.shadow) { s.castShadow = true; s.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048); s.shadow.bias = -.0004; s.shadow.normalBias = .02; s.shadow.radius = 3; s.shadow.camera.near = .5; s.shadow.camera.far = 9; }
   // visible light cone (cheap fake volume)
   const h = head.y, rad = Math.tan((o.angle ?? .95) * .78) * h;
   const cg = new THREE.ConeGeometry(rad, h, 28, 1, true); cg.translate(0, -h / 2, 0);
-  const cone = new THREE.Mesh(cg, coneMat()); cone.position.copy(head); cone.renderOrder = 5; scene.add(cone);
+  const cone = new THREE.Mesh(cg, coneMat(o.col)); cone.position.copy(head); cone.renderOrder = 5; scene.add(cone);
   lamps.push({ head, light: s, cone, flick: o.flicker ? 1 : 0, base: s.intensity });
   box(x, z, .6, .6);
   return g;
 }
-function coneMat() {
+function coneMat(col) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
-    uniforms: { uCol: { value: new THREE.Color('#ffae5e') }, uK: { value: .085 } },
+    uniforms: { uCol: { value: new THREE.Color(col || '#ffae5e') }, uK: { value: .085 } },
     vertexShader: 'varying float vH; varying vec3 vN; varying vec3 vV; void main(){ vH = -position.y; vec4 wp = modelMatrix * vec4(position,1.); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }',
     fragmentShader: 'uniform vec3 uCol; uniform float uK; varying float vH; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(abs(dot(vN, vV)), 2.2); float h = clamp(vH / 3.8, 0., 1.); float a = uK * f * (1. - h * .75) * smoothstep(0., .12, h) * smoothstep(1.02, .7, h); gl_FragColor = vec4(uCol * a, a); }',
   });
@@ -514,10 +515,26 @@ const MOVES = {
 };
 
 // ---------- the world ----------
-const W = { hero: null, crew: [], cyph: { x: 1.5, z: -7.2 }, t0: performance.now() };
+// DISTRICTS (16.11.2026 «строим Центр»): one page, the district is picked at load — `?d=center` (test link) or the save's `where`
+// (set by the gates). 'yard' is built here, 'center' in city3d-center.js with the same toolkit (TK).
+const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15.4, z1: 14.2 }, spawn: [1.2, -2.6, Math.PI] },
+  center: { name: 'ЦЕНТР', bounds: { x0: -13.2, x1: 13.4, z0: -14.9, z1: 14.4 }, spawn: [0, 11.2, Math.PI] } };
+const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
+const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
+const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
 async function build(scene) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
+  if (DIST === 'center') await buildCenter({ THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
+    lamp, lamps, dust, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, asphaltTex, facadeTex, roofTex, stripeTex,
+    mocapPerson, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX });
+  else await buildYard(scene);
+  // the hero (my look incl. street gear)
+  let sp = DISTS[DIST].spawn; try { if (DIST === 'yard' && sessionStorage.getItem('fedoskin-city3d-from') === 'center') sp = [-1.2, -12.2, 0]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
+  W.hero = mocapPerson(myLook()); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
+  W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
+}
+async function buildYard(scene) {
 
   // ground
   const con = concreteTex(); [con.map, con.rough, con.bump].forEach(t => t.repeat.set(70 / 6, 70 / 6));
@@ -660,9 +677,6 @@ async function build(scene) {
   lamps.forEach((l, i) => i < 3 && dust(scene, l.head));
 
   // ---- people ----
-  const look = myLook();
-  W.hero = mocapPerson(look); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(1.2, 0, -2.6); W.hero.root.rotation.y = Math.PI; scene.add(W.hero.root);
-  W.hero.st = { vx: 0, vz: 0, face: Math.PI, ph: 0, idle: 0, tgt: null };
   const crewLooks = [[3, ['c:rustyBandana']], [5, ['c:owlPhones', 'knee']], [6, ['girl', 'c:acidBucket']], [7, ['c:goldChain']], [4, ['c:djGloves']]];
   crewLooks.forEach(([lv, acc], i) => {
     const J = mocapPerson(HERO.topDown(lv, acc)), a = -Math.PI / 2 + (i - (crewLooks.length - 1) / 2) * .78 + (i >= 3 ? Math.PI * .55 : 0);
@@ -695,6 +709,7 @@ const POWER = /Swipes|1990|Flair|Head_Spinning/, FRZ = /Freeze/;
 function planSet(n) { const s = SETS[n % SETS.length], out = []; let t = 0;
   s.forEach(([c, rep, cut]) => { const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
 function updateCrew(_tb, dt) {
+  if (!W.crew.length || !W.cyph) return;
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
   if (W.cyBusy) { W.crew.forEach(D => { if (D.cur !== 'Breakdance_Ready') D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
@@ -746,7 +761,7 @@ function collide(x, z, r) {
     else { const nx = clamp(x, c.x0, c.x1), nz = clamp(z, c.z0, c.z1), dx = x - nx, dz = z - nz, d = Math.hypot(dx, dz);
       if (d < r) { if (d > 1e-4) { x = nx + dx / d * r; z = nz + dz / d * r; } else { const o = [x - c.x0, c.x1 - x, z - c.z0, c.z1 - z], k = o.indexOf(Math.min(...o)); if (k === 0) x = c.x0 - r; else if (k === 1) x = c.x1 + r; else if (k === 2) z = c.z0 - r; else z = c.z1 + r; } } }
   }
-  return { x: clamp(x, -12.6, 13.2), z: clamp(z, -15.4, 14.2) };
+  const b = W.bounds; return { x: clamp(x, b.x0, b.x1), z: clamp(z, b.z0, b.z1) };
 }
 function updateHero(dt, tb) {
   const H = W.hero, s = H.st, p = H.root.position;
@@ -767,11 +782,17 @@ function updateHero(dt, tb) {
   const k = clamp(sp / SPD, 0, 1);
   // base = motion capture (Ready / toprock near the cypher); walking = a gait added on top of a still frame of Ready.
   // The step is driven by the distance actually covered (stride length grows with speed), so the feet don't skate.
-  const nearC = Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .06;
+  const nearC = !!W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .06;
   if (moving) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
   else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready';
     if (H.cur !== want) H.play(want, { fade: .35 }); else if (H.act && H.act.timeScale === 0) H.act.timeScale = 1; }
   H.tick(dt);
+  stride(H, s, sp, moving, k, dt);
+}
+// the walking gait on top of a still frame of Ready — shared by the hero and by walking people of the city (guard, passers-by).
+// s = { wk, ph } kept by the caller; sp = speed m/s, k = sp / top speed (0…1). Call AFTER H.tick(dt).
+function standPose(H) { if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
+function stride(H, s, sp, moving, k, dt) {
   s.wk = lerp(s.wk || 0, moving ? k : 0, 1 - Math.exp(-dt * (moving ? 8 : 6)));
   if (s.wk > .01) {
     const w = s.wk, run = clamp((w - .45) / .4, 0, 1), stride = 1.25 + .9 * run;          // metres per full cycle (two steps)
@@ -834,10 +855,11 @@ async function boot() {
 
   await loadMocap();
   await build(scene);
+  { const t = $('.ttl'); if (t && t.firstChild) t.firstChild.nodeValue = DISTS[DIST].name; document.title = 'Fedoskin · ' + DISTS[DIST].name; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook()); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
     n.st = o.st; n.play('Breakdance_Ready'); scene.remove(o.root); scene.add(n.root); W.hero = n; };
-  const GAME = initGame({ scene, W, circ, box, colliders, rewear, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
@@ -866,7 +888,7 @@ async function boot() {
     requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     const tb = ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
-    updateHero(dt, tb); updateCrew(tb, dt); GAME.update(dt);
+    updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction
     const s = W.hero.st; look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 + s.vz * .25);
     if (W.camT) look.set(W.camT.x, 0, W.camT.z);

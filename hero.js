@@ -49,6 +49,13 @@
     goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
+    // the Centre crews (16.11.2026, 3D city): Трафареты lv 3, Турникеты lv 4, Хромированные lv 5 (the district's owners)
+    stencilBandana: { name: 'Бандана Трафаретов', slot: 'head', rar: 1, ico: '🧣', src: 'gang:stencil', f: { hat: 'bandana' }, col: { hat: ['#F2EFE8', '#C8202A'] }, perk: ['time', 6], bt: { win: 10 } },
+    stencilBomber: { name: 'Бомбер Трафаретов', slot: 'top', rar: 2, ico: '🧥', src: 'gang:stencil', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#F2EFE8', cuff: '#C8202A', trim: '#C8202A' }, perk: ['rep', 2], bt: { cor: 6 } },
+    turnBucket: { name: 'Панама Турникетов', slot: 'head', rar: 2, ico: '🎩', src: 'gang:turn', f: { hat: 'bucket' }, col: { hat: ['#2F7BFF', '#F2EFE8'] }, perk: ['coin', 1], bt: { cor: 6 } },
+    turnKicks: { name: 'Кроссы «Час пик»', slot: 'kicks', rar: 2, ico: '👟', src: 'gang:turn', col: { shoe: '#2F7BFF', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFD23F' }, perk: ['en', 2], bt: { win: 15 } },
+    chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 20 } },
+    chromeTrack: { name: 'Олимпийка «Хром»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:chrome', f: { top: 'track' }, col: { top: '#C9CED6', yoke: '#18181B', sleeve: '#C9CED6', cuff: '#18181B', trim: '#3F8FD8' }, perk: ['life', 1], bt: { save: 1 } },
     writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
