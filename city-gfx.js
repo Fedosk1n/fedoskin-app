@@ -563,7 +563,11 @@
     gold: { a: '#FFC82E', b: '#FFF3B0', c: '#E08A1C', o: '#1A1206', k: '#7A4A0C', bg: '#8E1B2B', hi: '#FFFFFF' },
     // банды Центра (16.11.2026)
     stencil: { a: '#F2EFE8', b: '#FFFFFF', c: '#C9C5BC', o: '#0E0E10', k: '#000000', bg: '#C8202A', hi: '#FFFFFF' },
-    metro: { a: '#2F7BFF', b: '#9CC8FF', c: '#1846B0', o: '#0A1024', k: '#0A1F5C', bg: '#E9E4D8', hi: '#FFFFFF' }
+    metro: { a: '#2F7BFF', b: '#9CC8FF', c: '#1846B0', o: '#0A1024', k: '#0A1F5C', bg: '#E9E4D8', hi: '#FFFFFF' },
+    // банды Парка (16.11.2026)
+    funk: { a: '#FF5AC8', b: '#FFD23F', c: '#B02A8A', o: '#1A0620', k: '#4A1466', bg: '#7A2FB8', hi: '#FFFFFF' },
+    roots: { a: '#3FBF4A', b: '#FFD23F', c: '#1F7A2E', o: '#0D1A0A', k: '#5A1410', bg: '#C8202A', hi: '#FFF6C8' },
+    wave: { a: '#19B8C4', b: '#C8F6FF', c: '#0E6F86', o: '#04141C', k: '#0A3A4A', bg: '#0F2A5C', hi: '#FFFFFF' }
   };
   const GRAF_STYLES = ['tag', 'bubble', 'block', 'wild', 'd3'];
   const grafCache = new Map();
@@ -619,6 +623,21 @@
     const g = c.createLinearGradient(-s * .16, 0, s * .16, 0); g.addColorStop(0, P.c); g.addColorStop(.4, P.b); g.addColorStop(1, P.c); c.fillStyle = g; c.fillRect(-s * .16, -s * .26, s * .32, s * .64);
     c.fillStyle = P.bg; c.fillRect(-s * .16, -s * .08, s * .32, s * .22); c.fillStyle = P.o; c.fillRect(-s * .07, -s * .41, s * .14, s * .1); c.fillStyle = P.b; c.fillRect(-s * .04, -s * .47, s * .1, s * .06);
     c.fillStyle = P.b; for (let i = 0; i < 14; i++) { const a = -.5 + (i % 5) * .22, d = s * (.16 + (i * 37 % 10) * .03); c.globalAlpha = .9 - d / s; c.beginPath(); c.arc(s * .08 + Math.cos(a) * d, -s * .45 - Math.sin(a) * d * .8, s * (.012 + (i % 3) * .008), 0, 7); c.fill(); } c.globalAlpha = 1; c.restore(); };
+  // знаки банд Парка: бумбокс (Фанк-бригада), лист (Корни), волна с гребнем (Волна)
+  GRAF_EXTRA.boom = (c, x, y, s, P) => { c.lineJoin = 'round'; c.save(); c.translate(x, y); c.rotate(-.08); const rr = (X, Y, W, H, R) => { c.beginPath(); c.roundRect(X, Y, W, H, R); };
+    c.strokeStyle = P.o; c.lineWidth = s * .07; c.beginPath(); c.moveTo(-s * .22, -s * .2); c.quadraticCurveTo(0, -s * .46, s * .22, -s * .2); c.stroke();
+    c.fillStyle = P.o; rr(-s * .44, -s * .24, s * .88, s * .52, s * .07); c.fill(); const g = c.createLinearGradient(0, -s * .2, 0, s * .24); g.addColorStop(0, P.b); g.addColorStop(1, P.a); c.fillStyle = g; rr(-s * .4, -s * .2, s * .8, s * .44, s * .05); c.fill();
+    [-1, 1].forEach(k => { c.fillStyle = P.o; c.beginPath(); c.arc(k * s * .22, s * .05, s * .15, 0, 7); c.fill(); c.fillStyle = P.c; c.beginPath(); c.arc(k * s * .22, s * .05, s * .1, 0, 7); c.fill(); c.fillStyle = P.hi; c.beginPath(); c.arc(k * s * .22, s * .05, s * .035, 0, 7); c.fill(); });
+    c.fillStyle = P.o; c.fillRect(-s * .09, -s * .15, s * .18, s * .08); c.fillStyle = P.hi; for (let i = 0; i < 3; i++) c.fillRect(-s * .07 + i * s * .05, -s * .13, s * .03, s * .04); c.restore(); };
+  GRAF_EXTRA.leaf = (c, x, y, s, P) => { c.lineJoin = 'round'; c.lineCap = 'round'; c.save(); c.translate(x, y + s * .06);
+    for (let i = -3; i <= 3; i++) { const a = i * .42, l = s * (.46 - Math.abs(i) * .06); c.save(); c.rotate(a); [[P.o, 1.25], [i % 2 ? P.c : P.a, 1]].forEach(([col, k]) => { c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(s * .09 * k, -l * .5, 0, -l * (k > 1 ? 1.06 : 1)); c.quadraticCurveTo(-s * .09 * k, -l * .5, 0, 0); c.fill(); });
+      c.strokeStyle = P.b; c.lineWidth = s * .012; c.beginPath(); c.moveTo(0, -l * .1); c.lineTo(0, -l * .85); c.stroke(); c.restore(); }
+    c.strokeStyle = P.o; c.lineWidth = s * .06; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, s * .3); c.stroke(); c.strokeStyle = P.c; c.lineWidth = s * .03; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, s * .29); c.stroke(); c.restore(); };
+  GRAF_EXTRA.surf = (c, x, y, s, P) => { c.lineJoin = 'round'; c.lineCap = 'round'; const wave = k => { c.beginPath(); c.moveTo(x - s * .46, y + s * .32); c.quadraticCurveTo(x - s * .4, y - s * .1 * k, x - s * .05, y - s * .36 * k); c.quadraticCurveTo(x + s * .32, y - s * .46 * k, x + s * .36, y - s * .12);
+      c.quadraticCurveTo(x + s * .2, y - s * .26, x + s * .04, y - s * .12); c.quadraticCurveTo(x - s * .08, y + s * .06, x + s * .1, y + s * .2); c.quadraticCurveTo(x + s * .3, y + s * .3, x + s * .46, y + s * .32); c.closePath(); };
+    wave(1); c.strokeStyle = P.o; c.lineWidth = s * .09; c.stroke(); const g = c.createLinearGradient(0, y - s * .4, 0, y + s * .32); g.addColorStop(0, P.b); g.addColorStop(.45, P.a); g.addColorStop(1, P.c); c.fillStyle = g; c.fill();
+    c.fillStyle = P.hi; [[.3, -.3, .05], [.4, -.2, .035], [.22, -.4, .04], [.44, -.05, .03], [.12, -.44, .03]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + s * dx, y + s * dy, s * r, 0, 7); c.fill(); });
+    c.strokeStyle = P.hi; c.lineWidth = s * .025; c.beginPath(); c.moveTo(x - s * .3, y + s * .2); c.quadraticCurveTo(x - s * .26, y - s * .08, x - s * .04, y - s * .24); c.stroke(); };
   // жетон со стрелкой вниз (Турникеты)
   GRAF_EXTRA.token = (c, x, y, s, P) => { c.lineJoin = 'round'; c.lineCap = 'round'; c.beginPath(); c.arc(x, y, s * .44, 0, 7); c.fillStyle = P.o; c.fill();
     const g = c.createLinearGradient(0, y - s * .4, 0, y + s * .4); g.addColorStop(0, P.b); g.addColorStop(.5, P.a); g.addColorStop(1, P.c); c.beginPath(); c.arc(x, y, s * .38, 0, 7); c.fillStyle = g; c.fill();

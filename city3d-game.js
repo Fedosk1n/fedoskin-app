@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen } from './city3d-mocap.js?v=5';   // v=12: districts (Центр)
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=6';   // v=12: districts (Центр)
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
@@ -16,24 +16,41 @@ export const BAL = {
   dj: 5, train: 8, trainMax: 3, show: 0, repShow: 4, repShowClean: 3, gateRank: 2,
   // the Centre: a street show on the mall's tiles (the guard!), tea for those whose pieces are on the Centre's walls
   mall: 10, mallMax: 2, repMall: 6, repMallClean: 4, repMallCaught: 2, mallFloor: .04, tea: 5,
+  // the Park: the daily jam on the stage (three opponents in a row), the old-timer who rewards lesson minutes, the warm-up at the bars
+  jam: 25, jamLv: [5, 6, 7], jamRep: [10, 16, 24], jamChamp: 30, ogMin: 5, ogRep: 8, ogEn: 10, warm: .04,
 };
 // the crews; d = district ('yard' when absent); gear = HERO.GEAR pieces (1st win → 1st piece, 3rd win → 2nd piece);
 // wall = [x, z] where the crew's wall stands (the yard's walls find a free spot themselves); boss = the owners of the district
 export const CREWS = [
-  { id: 'rusty', name: 'Ржавые', lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
-  { id: 'acid', name: 'Кислотные', lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
-  { id: 'owls', name: 'Ночные совы', lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
-  { id: 'gold', name: 'Золотые зубы', lv: 4, col: '#FFD23F', at: [4.6, 9.2], looks: [['c:goldChain'], ['c:goldCap'], ['c:goldChain', 'girl'], []], gear: ['goldChain', 'goldCap'] },
+  { id: 'rusty', bodies: ['stocky', 'slim', 'avg'], name: 'Ржавые', lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
+  { id: 'acid', bodies: ['lanky', 'small', 'slim'], name: 'Кислотные', lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
+  { id: 'owls', bodies: ['athl', 'slim', 'small'], name: 'Ночные совы', lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
+  { id: 'gold', bodies: ['heavy', 'big', 'avg', 'stocky'], name: 'Золотые зубы', lv: 4, col: '#FFD23F', at: [4.6, 9.2], looks: [['c:goldChain'], ['c:goldCap'], ['c:goldChain', 'girl'], []], gear: ['goldChain', 'goldCap'] },
   // ЦЕНТР (16.11.2026)
-  { id: 'stencil', d: 'center', name: 'Трафареты', lv: 3, col: '#FF6B5E', at: [-8, 10.2], wall: [-8, 7.3], base: 3, fix: l => { if (l.col.hat) l.col.hat = l.hat === 'bandana' ? l.col.hat : ['#18181B', '#C8202A']; if (l.top !== 'bomber') l.col.top = '#18181B'; l.col.pants = '#232327'; }, looks: [['c:stencilBandana'], ['c:stencilBomber'], ['c:stencilBandana', 'girl']], gear: ['stencilBandana', 'stencilBomber'] },
-  { id: 'turn', d: 'center', name: 'Турникеты', lv: 4, col: '#5FA4FF', at: [-8.2, 3.2], wall: [-8.2, .3], base: 4, fix: l => { if (l.col.hat && l.hat !== 'bucket') l.col.hat = ['#2F7BFF', '#F2EFE8']; l.col.top = '#1c2c4a'; if (l.col.sleeve) l.col.sleeve = '#1c2c4a'; }, looks: [['c:turnBucket'], ['c:turnKicks'], ['c:turnBucket', 'girl'], ['c:turnKicks']], gear: ['turnBucket', 'turnKicks'] },
-  { id: 'chrome', d: 'center', name: 'Хромированные', lv: 5, col: '#DCE6F2', at: [7.6, 3.6], wall: [7.6, .7], boss: 'Хромосома', base: 6, fix: l => { if (l.col.hat) l.col.hat = ['#D9DEE6', '#3F8FD8']; l.col.gold = '#D9DEE6'; if (l.top !== 'track') { l.col.top = '#18181B'; if (l.col.sleeve) l.col.sleeve = '#18181B'; l.col.cuff = '#D9DEE6'; l.col.trim = '#D9DEE6'; } }, looks: [['c:chromeTrack', 'c:chromeKicks'], ['c:chromeKicks'], ['c:chromeTrack', 'girl'], ['c:chromeKicks']], gear: ['chromeKicks', 'chromeTrack'] },
+  { id: 'stencil', bodies: ['slim', 'athl', 'small'], d: 'center', name: 'Трафареты', lv: 3, col: '#FF6B5E', at: [-8, 10.2], wall: [-8, 7.3], base: 3, fix: l => { if (l.col.hat) l.col.hat = l.hat === 'bandana' ? l.col.hat : ['#18181B', '#C8202A']; if (l.top !== 'bomber') l.col.top = '#18181B'; l.col.pants = '#232327'; }, looks: [['c:stencilBandana'], ['c:stencilBomber'], ['c:stencilBandana', 'girl']], gear: ['stencilBandana', 'stencilBomber'] },
+  { id: 'turn', bodies: ['avg', 'heavy', 'slim', 'lanky'], d: 'center', name: 'Турникеты', lv: 4, col: '#5FA4FF', at: [-8.2, 3.2], wall: [-8.2, .3], base: 4, fix: l => { if (l.col.hat && l.hat !== 'bucket') l.col.hat = ['#2F7BFF', '#F2EFE8']; l.col.top = '#1c2c4a'; if (l.col.sleeve) l.col.sleeve = '#1c2c4a'; }, looks: [['c:turnBucket'], ['c:turnKicks'], ['c:turnBucket', 'girl'], ['c:turnKicks']], gear: ['turnBucket', 'turnKicks'] },
+  { id: 'chrome', bodies: ['athl', 'big', 'lanky', 'stocky'], d: 'center', name: 'Хромированные', lv: 5, col: '#DCE6F2', at: [7.6, 3.6], wall: [7.6, .7], boss: 'Хромосома', base: 6, fix: l => { if (l.col.hat) l.col.hat = ['#D9DEE6', '#3F8FD8']; l.col.gold = '#D9DEE6'; if (l.top !== 'track') { l.col.top = '#18181B'; if (l.col.sleeve) l.col.sleeve = '#18181B'; l.col.cuff = '#D9DEE6'; l.col.trim = '#D9DEE6'; } }, looks: [['c:chromeTrack', 'c:chromeKicks'], ['c:chromeKicks'], ['c:chromeTrack', 'girl'], ['c:chromeKicks']], gear: ['chromeKicks', 'chromeTrack'] },
 ];
-const DNAME = { yard: 'двор', center: 'Центр' };
+// the Park's crews (16.11.2026): Фанк-бригада lv 5 (old-school funk, tracksuits), Корни lv 6 (dreads, green-gold-red), Волна lv 7 —
+// the owners of the embankment, boss «Кюрасао» (a nickname from the owner's list). bodies = builds of the members (type or a full body)
+CREWS.push(
+  { id: 'funk', d: 'park', name: 'Фанк-бригада', lv: 5, col: '#FF7AD9', at: [-8.2, 8.4], wall: [-8.2, 5.5], base: 5, bodies: [{ type: 'stocky', style: 'afro' }, { type: 'heavy', style: 'top', beard: true }, { type: 'slim', style: 'afro' }],
+    fix: l => { l.top = 'track'; Object.assign(l.col, { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F', pants: '#7A2FB8', stripe: '#FFD23F' }); if (l.col.hat) l.col.hat = ['#FFD23F', '#7A2FB8']; }, looks: [['c:funkTrack'], [], ['girl']], gear: ['funkTrack'] },
+  { id: 'roots', d: 'park', name: 'Корни', lv: 6, col: '#7CD957', at: [8.2, 2.4], wall: [8.2, -.5], base: 5, bodies: [{ type: 'lanky', style: 'dreads' }, { type: 'slim', style: 'braids' }, { type: 'athl', style: 'dreads', beard: true }, { type: 'small', style: 'dreads' }],
+    fix: l => { if (l.top !== 'tee') { l.col.top = '#1f3d24'; if (l.col.sleeve) l.col.sleeve = '#1f3d24'; l.col.cuff = '#FFD23F'; l.col.trim = '#C8202A'; } else l.col.top = '#2F8F3A'; l.col.pants = '#3a3226'; l.col.stripe = null; if (l.col.hat) l.col.hat = ['#2F8F3A', '#FFD23F']; },
+    looks: [['c:rootsBeanie'], ['c:rootsBeanie', 'girl'], [], ['c:rootsBeanie']], gear: ['rootsBeanie'] },
+  { id: 'wave', d: 'park', name: 'Волна', lv: 7, col: '#3FD6E0', at: [4.2, -5.4], wall: [4.2, -8.3], boss: 'Кюрасао', base: 7, bodies: [{ type: 'athl', h: 1.12, style: 'mohawk', dye: '#3FD6E0' }, { type: 'slim', style: 'buns' }, { type: 'big', style: 'buzz', beard: true }, { type: 'lanky', style: 'curly' }],
+    fix: l => { l.col.top = l.top === 'tee' ? '#F2EFE8' : '#0f3a44'; if (l.col.sleeve) l.col.sleeve = '#0f3a44'; l.col.cuff = '#3FD6E0'; l.col.trim = '#3FD6E0'; l.col.pants = '#12262c'; if (l.col.stripe) l.col.stripe = '#3FD6E0'; if (l.col.hat) l.col.hat = ['#19B8C4', '#F2EFE8']; l.col.gold = '#D9DEE6'; },
+    looks: [['c:waveKicks'], ['c:waveKicks', 'girl'], [], ['c:waveKicks']], gear: ['waveKicks'] },
+);
+const DNAME = { yard: 'двор', center: 'Центр', park: 'Парк' };
+// the three dancers of the daily jam on the Park's stage (nicknames from the reserve list)
+const JAM = [{ name: 'Шуруп', col: '#7CFF4F' }, { name: 'Ртуть', col: '#C9D4E6' }, { name: 'Кобра', col: '#FFB547' }];
 const ART = { rusty: { word: 'RUST', style: 'block', pal: 'rusty', extra: 'cog' }, acid: { word: 'ACID', style: 'bubble', pal: 'acid', extra: 'slime' },
   owls: { word: 'OWLS', style: 'wild', pal: 'owls', extra: 'owl' }, gold: { word: 'GOLD', style: 'd3', pal: 'gold', extra: 'tooth' },
-  stencil: { word: 'STENCIL', style: 'stencil', pal: 'stencil', extra: 'can' }, turn: { word: 'METRO', style: 'tile', pal: 'metro', extra: 'token' }, chrome: { word: 'CHROME', style: 'chrome', pal: 'chrome', extra: 'chromo' } };
-const MYSTYLE = { rusty: 'block', acid: 'bubble', owls: 'wild', gold: 'd3', stencil: 'stencil', turn: 'tile', chrome: 'chrome' };
+  stencil: { word: 'STENCIL', style: 'stencil', pal: 'stencil', extra: 'can' }, turn: { word: 'METRO', style: 'tile', pal: 'metro', extra: 'token' }, chrome: { word: 'CHROME', style: 'chrome', pal: 'chrome', extra: 'chromo' },
+  funk: { word: 'FUNK', style: 'bubble', pal: 'funk', extra: 'boom' }, roots: { word: 'ROOTS', style: 'wild', pal: 'roots', extra: 'leaf' }, wave: { word: 'WAVE', style: 'd3', pal: 'wave', extra: 'surf' } };
+const MYSTYLE = { rusty: 'block', acid: 'bubble', owls: 'wild', gold: 'd3', stencil: 'stencil', turn: 'tile', chrome: 'chrome', funk: 'bubble', roots: 'wild', wave: 'd3' };
 // daily to-do list: 3 a day from this pool; each +5 ★, all three = +15 ⚡
 const GOALS = [
   { id: 'win', t: 'Выиграй батл', n: 1 }, { id: 'win2', t: 'Выиграй 2 батла', n: 2, k: 'win' }, { id: 'clean', t: 'Выиграй батл без срывов', n: 1 },
@@ -42,6 +59,8 @@ const GOALS = [
   { id: 'show', t: 'Выйди сам в круг сайфера', n: 1 }, { id: 'train', t: 'Потренируйся на мате 2 раза', n: 2 }, { id: 'dj', t: 'Закажи бит у диджея', n: 1 },
   // only after the Centre has been visited
   { id: 'mall', t: 'Станцуй шоу у ТЦ и не попадись охраннику', n: 1, c: 1 }, { id: 'cwin', t: 'Победи банду Центра', n: 1, c: 1 },
+  // only after the Park has been visited
+  { id: 'pwin', t: 'Победи банду Парка', n: 1, p: 1 }, { id: 'jam', t: 'Выиграй хотя бы один раунд джема на эстраде', n: 1, p: 1 }, { id: 'og', t: 'Покажи Маятнику, что учился сегодня', n: 1, p: 1 },
 ];
 const TOP = ['Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Breakdance_Uprock_Var_2'];
 const FOOT = ['Breakdance_Footwork_1', 'Breakdance_Footwork_2', 'Breakdance_Footwork_3'];
@@ -75,7 +94,7 @@ function load() {
   if (!s || s.v !== 1) s = { v: 1, en: BAL.enStart, day: today(), lsec: lessonSec(), rep: 0, wins: {}, beat: {}, own: [], fights: 0 };
   s.form = s.form || { day: 0, n: 0 }; s.djDay = s.djDay || 0; s.showDay = s.showDay || 0;
   s.turf = s.turf || {}; s.last = s.last || {}; s.goals = s.goals || null; s.word = s.word || '';
-  s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard';
+  s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   return s;
 }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} };
@@ -94,7 +113,7 @@ function refill() {
     if (rep) { S.rep += rep; notes.push('🎨 Твои стены: +' + rep + ' ★'); }
     if (lost.length) notes.push('⚠️ ' + lost.join(', ') + ' закрасили свою стену обратно');
   }
-  if (!S.goals) { const r = rng(today()); const pool = GOALS.filter(g => !g.c || S.seen.center); S.goals = [];
+  if (!S.goals) { const r = rng(today()); const pool = GOALS.filter(g => (!g.c || S.seen.center) && (!g.p || S.seen.park)); S.goals = [];
     while (S.goals.length < 3) { const g = pool.splice(Math.floor(r() * pool.length), 1)[0]; if (S.goals.some(x => (x.k || x.id) === (g.k || g.id))) continue; S.goals.push({ id: g.id, n: 0, done: false }); }
     S.goalsDay = today(); S.goalsPaid = false; S.lday = sec; }
   if (S.goals) bumpGoal('lesson', Math.floor((sec - (S.lday || sec)) / 60), true);
@@ -184,6 +203,7 @@ export function initGame(ctx) {
   NHERE = HERE.length; IDS = HERE.map(c => c.id);
   const W = ctx.W, scene = ctx.scene, notes = refill();
   if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых'); }
+  if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов'); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
   addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
   $('#g3en').onclick = () => info(`<h4>⚡ Энергия</h4><p>Каждый батл с бандой стоит <b>${BAL.battle} ⚡</b>. Максимум ${BAL.enMax}.</p>
@@ -210,7 +230,7 @@ export function initGame(ctx) {
     const r = rng(ci * 77 + 3);
     c.looks.forEach((acc, i) => {
       const lk = HERO.topDown(c.base ? c.base + (i % 2) : Math.min(8, c.lv + 2 + (i % 2)), acc); if (c.fix) c.fix(lk);
-      const J = mocapPerson(lk), a = Math.PI * 2 * i / c.looks.length + ci;
+      const bd = (c.bodies || [])[i], J = mocapPerson(lk, { body: bodyOf((D === 'park' ? 900 : 0) + ci * 31 + i * 7 + 11, Object.assign({ girl: acc.includes('girl') }, typeof bd === 'string' ? { type: bd } : bd)) }), a = Math.PI * 2 * i / c.looks.length + ci;
       J.home = { x: g.x + Math.cos(a) * 1.35, z: g.z + Math.sin(a) * 1.35 }; J.root.position.set(J.home.x, 0, J.home.z);
       J.root.rotation.y = Math.atan2(g.x - J.home.x, g.z - J.home.z);
       J.play(i === 0 ? pick(TOP, r) : 'Breakdance_Ready', { at: r() * 2, speed: .9 + r() * .2 });
@@ -318,7 +338,7 @@ export function initGame(ctx) {
     mk(r, new THREE.CylinderGeometry(.07, .07, .021, 16), M('#E2611A', .5, 0, '#E2611A'), 0, .001, 0); return r; });
   mk(dj, new THREE.BoxGeometry(.3, .05, .4), M('#25282e', .5), 0, .97, 0);
   const strip = mk(dj, new THREE.BoxGeometry(1.6, .04, .02), M('#E2611A', .4, 0, '#E2611A'), 0, .2, .36);
-  const djP = mocapPerson(HERO.topDown(6, ['c:djGloves'].filter(k => HERO.itemOf && HERO.itemOf(k)))); djP.root.position.set(0, 0, -.75); dj.add(djP.root); djP.play('Breakdance_Ready', { speed: .8 });
+  const djP = mocapPerson(HERO.topDown(6, ['c:djGloves'].filter(k => HERO.itemOf && HERO.itemOf(k))), { body: bodyOf(5, { type: 'heavy', style: 'dreads', beard: true }) }); djP.root.position.set(0, 0, -.75); dj.add(djP.root); djP.play('Breakdance_Ready', { speed: .8 });
   ctx.circ && ctx.circ(djAt.x, djAt.z, .95); const djLab = label('ДИДЖЕЙ', '#FFB547', djAt.x, djAt.z, 2.3);
   const djFront = { x: djAt.x + Math.sin(dj.rotation.y) * 1.1, z: djAt.z + Math.cos(dj.rotation.y) * 1.1 };
   // practice mat: a padded mat with taped lines and a pair of cones
@@ -345,18 +365,23 @@ export function initGame(ctx) {
     { id: 'mall', x: CN.show.x, z: CN.show.z, r: 1.9 }, { id: 'tea', x: CN.kiosk.x, z: CN.kiosk.z, r: 1.5 }, { id: 'metro', x: CN.metro.x, z: CN.metro.z, r: 1.7 },
     { id: 'yard', x: CN.gateYard.x, z: CN.gateYard.z, r: 1.4 }, { id: 'park', x: CN.gatePark.x, z: CN.gatePark.z, r: 1.7 },
   ];
+  // the Park's places are built by city3d-park.js (W.park)
+  const PK = W.park || null;
+  if (PK) PLACES.push({ id: 'jam', x: PK.stage.x, z: PK.stage.z + 1.9, r: 2.1 }, { id: 'og', x: PK.og.x, z: PK.og.z, r: 1.6 }, { id: 'bars', x: PK.bars.x, z: PK.bars.z, r: 1.7 },
+    { id: 'pcenter', x: PK.gateCenter.x, z: PK.gateCenter.z, r: 1.4 }, { id: 'prom', x: PK.gateProm.x, z: PK.gateProm.z, r: 1.5 });
+  const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
   const myWalls = () => IDS.filter(id => S.turf[id]).length;
   // moving between districts: the save remembers where I am, the page builds that district
   function travel(to) { S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
     const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;background:#0B0D12;opacity:0;transition:opacity .35s;z-index:20'; document.body.appendChild(f); requestAnimationFrame(() => (f.style.opacity = 1));
     setTimeout(() => { const u = new URL(location.href); u.searchParams.delete('d'); location.replace(u.toString()); }, 400); }
-  function metroMap() { const boss = S.wins.chrome;
+  function metroMap() { const boss = S.wins.chrome || S.seen.park;
     info(`<h4>🚇 Метро — карта города</h4>
       <div class="row"><span>🏠 Двор</span><span>открыт</span></div><div class="row"><span>🏙 <b>Центр</b></span><span>ты здесь</span></div>
-      <div class="row"><span>🌳 Парк и набережная</span><span>${boss ? '🚧 строится' : '🔒 победи «Хромированных»'}</span></div>
-      <div class="row"><span>🏭 Промзона</span><span>🔒 после Парка</span></div><div class="row"><span>🪩 Клуб</span><span>🔒 после Промзоны</span></div>
+      <div class="row"><span>🌳 Парк и набережная</span><span>${boss ? 'открыт' : '🔒 победи «Хромированных»'}</span></div>
+      <div class="row"><span>🏭 Промзона</span><span>${S.wins.wave ? '🚧 строится' : '🔒 победи «Волну» в Парке'}</span></div><div class="row"><span>🪩 Клуб</span><span>🔒 после Промзоны</span></div>
       <p style="margin-top:10px">Новые районы открываются, когда побеждаешь хозяев предыдущего. Диджей, тренировочный мат и сайфер ждут во дворе — их бонусы действуют весь день и здесь.</p>
-      <button id="g3go">🏠 Поехать во двор</button>`); $('#g3go').onclick = () => travel('yard'); }
+      ${boss ? '<button id="g3gp">🌳 Поехать в Парк</button>' : ''}<button id="g3go" class="sec">🏠 Поехать во двор</button>`); $('#g3go').onclick = () => travel('yard'); if ($('#g3gp')) $('#g3gp').onclick = () => travel('park'); }
   // what each place offers right now (button text) and what it does
   function placeBtn(pl) {
     const t = today();
@@ -367,12 +392,20 @@ export function initGame(ctx) {
     // ---- the Centre ----
     if (pl.id === 'yard') return { h: '🚪 Вернуться во двор', s: 'Диджей, мат и сайфер — там' };
     if (pl.id === 'metro') return { h: '🚇 Метро — карта города', s: 'Какие районы открыты и что дальше' };
-    if (pl.id === 'park') return S.wins.chrome ? { off: true, h: '🚧 Парк и набережная — скоро', s: 'Ты победил хозяев Центра. Район строится' } : { off: true, h: '🔒 Парк — победи «Хромированных»', s: 'Хозяева Центра · ур. 5 · главарь Хромосома' };
+    if (pl.id === 'park') return S.wins.chrome || S.seen.park ? { h: '🚪 Войти в Парк', s: 'Банды 5–7 уровня · джем на эстраде · набережная' } : { off: true, h: '🔒 Парк — победи «Хромированных»', s: 'Хозяева Центра · ур. 5 · главарь Хромосома' };
     if (pl.id === 'tea') { const n = myWalls(); return S.teaDay === t ? { off: true, h: '🥤 Чай на сегодня выпит', s: 'Завтра нальют ещё' } : !n ? { off: true, h: '🥤 Ларёк угощает только своих', s: 'Закрась стену банды в Центре: +' + BAL.tea + ' ⚡ за каждую в день' } : { h: '🥤 Чай для своих · +' + n * BAL.tea + ' ⚡', s: 'Раз в день: +' + BAL.tea + ' ⚡ за каждую твою стену в Центре' }; }
+    // ---- the Park ----
+    if (pl.id === 'pcenter') return { h: '🚪 Вернуться в Центр', s: 'ТЦ, метро и ларёк — там' };
+    if (pl.id === 'prom') return S.wins.wave ? { off: true, h: '🚧 Промзона — скоро', s: 'Ты победил хозяев Парка. Район строится' } : { off: true, h: '🔒 Промзона — победи «Волну»', s: 'Хозяева набережной · ур. 7 · главарь Кюрасао' };
+    if (pl.id === 'bars') return S.warmDay === t ? { off: true, h: '🤸 Ты размят до конца дня', s: 'Срывов в батлах меньше на ' + Math.round(BAL.warm * 100) + '%' } : { h: '🤸 Размяться на площадке', s: 'Бесплатно раз в день: −' + Math.round(BAL.warm * 100) + '% срывов сегодня' };
+    if (pl.id === 'og') { const m = lesMin(); return S.ogDay === t ? { off: true, h: '🧓 Маятник: «На сегодня всё. Завтра приходи»', s: 'Старый би-бой проверяет тебя раз в день' }
+      : m < BAL.ogMin ? { go: true, h: '🧓 Маятник: «Сначала поучись»', s: BAL.ogMin + ' мин уроков сегодня (сейчас ' + m + ') → +' + BAL.ogRep + ' ★ и +' + BAL.ogEn + ' ⚡' }
+      : { h: '🧓 Показать Маятнику, чему научился', s: 'Ты учился сегодня ' + m + ' мин: +' + BAL.ogRep + ' ★ и +' + BAL.ogEn + ' ⚡' }; }
+    if (pl.id === 'jam') return S.jamDay === t ? { off: true, h: '🏆 Джем на сегодня сыгран', s: 'Завтра эстрада ждёт снова' } : { h: '🏆 Джем на эстраде · −' + BAL.jam + ' ⚡', s: 'Три соперника подряд: ур. ' + BAL.jamLv.join(', ') + ' · до +' + (BAL.jamRep.reduce((a, b) => a + b, 0) + BAL.jamChamp) + ' ★', low: S.en < BAL.jam };
     if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: '🕺 Толпа устала — приходи завтра', s: 'Шоу у ТЦ: ' + BAL.mallMax + ' раза в день' } : { h: '🕺 Шоу у ТЦ · −' + BAL.mall + ' ⚡', s: 'Начинай, когда охранник далеко: красный круг — его зона', low: S.en < BAL.mall }; }
   }
   function placeRun(pl) {
-    const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low) { location.href = './'; return; }
+    const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
     if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'); paintAct(); }
     if (pl.id === 'mat') startTrain();
     if (pl.id === 'show') startShow();
@@ -381,7 +414,27 @@ export function initGame(ctx) {
     if (pl.id === 'metro') metroMap();
     if (pl.id === 'tea') { const add = Math.min(BAL.enMax - S.en, myWalls() * BAL.tea); S.en += add; S.teaDay = today(); save(); paintHud(); sfx('hit'); toast('🥤 Горячий чай: +' + add + ' ⚡. Твои стены в Центре кормят тебя каждый день'); paintAct(); }
     if (pl.id === 'mall') startMall();
+    if (pl.id === 'park') travel('park');
+    if (pl.id === 'pcenter') travel('center');
+    if (pl.id === 'og') { const add = Math.min(BAL.enMax - S.en, BAL.ogEn); S.en += add; S.rep += BAL.ogRep; S.ogDay = today(); save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
+      toast('🧓 Маятник: «Вижу, работаешь. Так и растут» · +' + BAL.ogRep + ' ★ и +' + add + ' ⚡'); paintAct(); }
+    if (pl.id === 'bars') { const H = W.hero; S.warmDay = today(); save(); A = { kind: 'warm', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: PK.bars.x, z: PK.bars.z } }; W.lock = true; W.camT = { x: PK.bars.x, z: PK.bars.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); paintAct(); }
+    if (pl.id === 'jam') startJam();
   }
+  // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
+  // what was earned stays. Runs on the same battle engine as the crews — the «crew» is one dancer with the flag tour.
+  let JM = null;
+  function startJam() { S.en -= BAL.jam; S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false }; PK.crowd(true); jamRound(); }
+  function jamRound() { const J = PK.dancers[JM.i], d = JAM[JM.i]; J.busy = true;
+    startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
+  function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
+    if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
+      lines.push(`<span class="rw">+${rep} ★ уважения</span> · раунд ${i + 1} из 3`);
+      if (JM.i >= 3) { JM.over = true; S.jamWon = (S.jamWon || 0) + 1; lines.unshift(`<span class="rw">🏆 Ты выиграл джем на эстраде! Всего +${JM.rep} ★</span>`); }
+      else lines.push(`Дальше — <b>${JAM[JM.i].name}</b>, ур. ${BAL.jamLv[JM.i]}. Энергия уже оплачена`); }
+    else { JM.over = true; lines.push(i ? `Джем окончен на ${i + 1}-м раунде. За сегодня +${JM.rep} ★` : 'Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.'); }
+    const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">🏅 Новое звание: ${BAL.ranks[rk]}</span>`);
+    return lines; }
   // practice: the hero runs one power move on the mat; the form point is given whatever happens
   function startTrain() {
     S.en -= BAL.train; if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
@@ -409,6 +462,10 @@ export function initGame(ctx) {
   let A = null;   // a place action in progress
   function actTick(dt) {
     const H = W.hero;
+    if (A.kind === 'warm') { A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
+      if (A.t > .8 && !A.p) { A.p = true; H.play('Breakdance_Footwork_1', { fade: .3 }); toast('🤸 Разминка…'); }
+      if (A.t > 4.6) { H.play('Breakdance_Ready', { fade: .4 }); sfx('hit'); toast('🤸 Размялся! Сегодня срывов в батлах меньше на ' + Math.round(BAL.warm * 100) + '%'); endAct(); }
+      H.tick(dt); return; }
     if (A.kind === 'train') {
       A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
       if (A.t > .8 && !A.p) { A.p = true; H.play(A.P.c, { fade: .3 }); toast('💪 ' + A.P.nm + '…'); }
@@ -474,7 +531,7 @@ export function initGame(ctx) {
   // ---------- the battle ----------
   let B = null;
   // today's buffs from the DJ and the practice mat (only for me)
-  const buff = () => ({ fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) });
+  const buff = () => ({ fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0) + (S.warmDay === today() ? BAL.warm : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) });
   function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
     // a set: toprock → down → footwork → power → freeze, each step with an outcome
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
@@ -498,12 +555,12 @@ export function initGame(ctx) {
     return { J, who, seq, len: t + 1.4, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
   function startBattle(g) {
-    S.en -= BAL.battle; S.fights++; save(); paintHud();
+    if (!g.c.tour) S.en -= BAL.battle; S.fights++; save(); paintHud();
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
     const opp = g.people[0], cx = g.x, cz = g.z;
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
     const meSpot = { x: cx - .3, z: cz + 2.1 }, opSpot = { x: cx + .3, z: cz - 2.1 };
-    const turns = [], rounds = c.lv >= 3 ? 2 : 1;
+    const turns = [], rounds = c.tour ? 1 : c.lv >= 3 ? 2 : 1;
     for (let i = 0; i < rounds; i++) { turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff())); }
     B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, fromMe: { x: H.root.position.x, z: H.root.position.z }, fromOp: { x: opp.root.position.x, z: opp.root.position.z }, clean: true };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
@@ -595,7 +652,8 @@ export function initGame(ctx) {
     const votes = [0, 1, 2].map(() => (diff + (Math.random() - .5) * 2.4 > 0 ? 'me' : 'op')), myV = votes.filter(v => v === 'me').length, win = myV >= 2;
     H.play(win ? 'Breakdance_Ending_1' : 'Breakdance_Ready', { fade: .4 }); B.opp.play(win ? 'Breakdance_Ready' : 'Bboy_Uprock', { fade: .4 });
     let lines = [];
-    if (win) {
+    if (c.tour) lines = jamResult(win);
+    else if (win) {
       const was = S.wins[c.id] || 0, rk0 = rankOf(S.rep), rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
       S.rep += rep; S.wins[c.id] = was + 1; S.beat[c.id] = today();
       lines.push(`<span class="rw">+${rep} ★ уважения</span>${B.clean ? ' (чистый батл без срывов)' : ''}`);
@@ -603,8 +661,8 @@ export function initGame(ctx) {
       if (gid && !S.own.includes(gid) && HERO.GEAR && HERO.GEAR[gid]) { S.own.push(gid); B.wear = gid; const G = HERO.GEAR[gid]; lines.push(`<span class="rw">${G.ico} Новая шмотка: ${G.name} — уже на тебе</span>`); }
       else if (c.gear[1] && was < 2 && !S.own.includes(c.gear[1])) lines.push(`Победи их ещё ${2 - was} раз — получишь ${HERO.GEAR[c.gear[1]] ? HERO.GEAR[c.gear[1]].name : 'шмотку'}`);
       const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">🏅 Новое звание: ${BAL.ranks[rk]}</span>`);
-      S.last[c.id] = today(); bumpGoal('win'); if (B.clean) bumpGoal('clean'); if (c.lv >= 2) bumpGoal('strong'); if (c.d === 'center') bumpGoal('cwin');
-      if (c.boss && was === 0) lines.unshift(`<span class="rw">👑 ${c.boss} и «${c.name}» признали тебя: ты хозяин Центра! Дорога в Парк открыта</span>`);
+      S.last[c.id] = today(); bumpGoal('win'); if (B.clean) bumpGoal('clean'); if (c.lv >= 2) bumpGoal('strong'); if (c.d === 'center') bumpGoal('cwin'); if (c.d === 'park') bumpGoal('pwin');
+      if (c.boss && was === 0) lines.unshift(`<span class="rw">👑 ${c.boss} и «${c.name}» признали тебя: ${c.d === 'park' ? 'ты хозяин Парка! Дальше — Промзона' : 'ты хозяин Центра! Дорога в Парк открыта'}</span>`);
       lines.push(S.turf[c.id] ? 'Банда ушла до завтра. Твоя стена под защитой ещё ' + BAL.hold + ' дня.' : 'Банда ушла до завтра — <b>закрась их стену</b> рядом!');
     } else {
       lines.push(B.lv < c.lv ? 'Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.' : 'Не повезло со срывами. Попробуй ещё раз.');
@@ -626,6 +684,7 @@ export function initGame(ctx) {
     W.hero.play('Breakdance_Ready', { fade: .3 });
     if (B.wear) wearGear(B.wear);
     setShown(g); B = null; W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); paintAct();
+    if (g.c.tour) { g.people[0].busy = false; g.people[0].root.rotation.y = 0; if (JM && !JM.over) jamRound(); else { JM = null; PK.crowd(false); } }
   }
 
   let cyT = 0;
@@ -635,7 +694,8 @@ export function initGame(ctx) {
     if (A) actTick(dt);
     if (Y) { recs.forEach(r => r.rotation.y += dt * 3.5); strip.material.emissiveIntensity = 1 + Math.sin(performance.now() / 160) * .6; djP.tick(dt);
       chain.visible = rankOf(S.rep) < BAL.gateRank; matLab.visible = djLab.visible = !A && !B && !P; }
-    if (CN) { CN.gatePark.chain.visible = true; CN.guard.tag.visible = !B && !P; }
+    if (PK) { PK.gateProm.chain.visible = true; }
+    if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
     if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.tick(dt); B.opp.tick(dt); } }
     crews.forEach(g => { if (!g.label.visible) return; g.people.forEach(J => { if (!B || J !== B.opp) J.tick(dt); }); });
     if (!B && !P && !A) {

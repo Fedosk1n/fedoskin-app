@@ -734,6 +734,13 @@ t('Олимпийка «Хром»', '“Chrome” track jacket', 'Chaqueta «Cr
 t('Трафареты', 'Stencils', 'Esténciles', 'Estênceis', 'Pochoirs', 'Schablonen', 'ステンシルズ', '스텐실', '模板帮')
 t('Турникеты', 'Turnstiles', 'Torniquetes', 'Catracas', 'Tourniquets', 'Drehkreuze', 'ターンスタイルズ', '턴스타일', '闸机帮')
 t('Хромированные', 'Chromed', 'Cromados', 'Cromados', 'Chromés', 'Verchromte', 'クロームド', '크롬드', '镀铬帮')
+# ---- 3D-город, район «Парк» (16.11.2026): шмотки и банды ----
+t('Олимпийка «Фанк»', '“Funk” track jacket', 'Chaqueta «Funk»', 'Jaqueta “Funk”', 'Veste de survêt « Funk »', '„Funk“-Trainingsjacke', '「ファンク」トラックジャケット', '‘펑크’ 트랙 재킷', '“放克”运动夹克')
+t('Шапка «Корни»', '“Roots” beanie', 'Gorro «Raíces»', 'Gorro “Raízes”', 'Bonnet « Racines »', '„Roots“-Mütze', '「ルーツ」ビーニー', '‘루츠’ 비니', '“根源”毛线帽')
+t('Кроссы «Волна»', '“Wave” kicks', 'Zapas «Ola»', 'Tênis “Onda”', 'Baskets « Vague »', '„Welle“-Sneaker', '「ウェーブ」スニーカー', '‘웨이브’ 스니커즈', '“浪潮”球鞋')
+t('Фанк-бригада', 'Funk Brigade', 'Brigada Funk', 'Brigada Funk', 'Brigade Funk', 'Funk-Brigade', 'ファンク・ブリゲード', '펑크 브리게이드', '放克帮')
+t('Корни', 'Roots', 'Raíces', 'Raízes', 'Racines', 'Roots', 'ルーツ', '루츠', '根源帮')
+t('Волна', 'Wave', 'Ola', 'Onda', 'Vague', 'Welle', 'ウェーブ', '웨이브', '浪潮帮')
 t('обычная', 'common', 'común', 'comum', 'commune', 'gewöhnlich', 'コモン', '일반', '普通')
 t('редкая', 'rare', 'rara', 'rara', 'rare', 'selten', 'レア', '희귀', '稀有')
 t('эпическая', 'epic', 'épica', 'épica', 'épique', 'episch', 'エピック', '에픽', '史诗')

@@ -1325,3 +1325,30 @@
   where, seen, mallDay, teaDay. Tested headless 390×844: show clean / caught / limit, battle + gear, painting, metro map, yard ⇄ centre,
   yard unchanged; no errors. NOT on a real phone (speed with ~18 animated people!). Texts Russian only. Emulator: dt-driven things
   (painting, guard) crawl — wait a minute or move them by hand.
+- City 3D PEOPLE + «ПАРК» (owner 16.11.2026 14:00 «продолжи работу над городом и так же улучши визуал человечков, добавь разнообразия (разный
+  вес, рост, типаж)»). (1) BODIES, city3d-mocap.js `?v=6`: BODY_TYPES (avg, slim, lanky, athl, stocky, heavy, big, small) = numbers that reshape
+  our figure on the SAME mocap skeleton: h (whole rig scale), limb / arm radii, chest / waist / hip widths (clavicle and hip-joint offsets are
+  scaled — the only change to the skeleton, moves untouched), belly (a sphere on Spine), head size. `bodyOf(seed, o)` = a seeded person: type,
+  ±5 % jitter, skin (6 tones), hair colour (10) and style (short, buzz, bald, afro, top, mohawk, dreads, curly, long, tail, bun, buns, braids),
+  beard, optional pack / coat / hood / dye. mocapPerson(look, { body }) — without a body the plain average figure (the hero). Also new for
+  everyone: tapered torso (hips in trousers + hem + chest + shoulders), eyes, ears, nose, thumbs, bare forearm under a short sleeve, headphones,
+  wristband and knee pads (they were in the look but never drawn in 3D), hair tucked under hats. Crews carry `bodies` (a type or a full body per
+  member), the DJ is heavy with dreads, the guard is big, the Centre's passers-by are townsfolk (old man in a coat, schoolgirl with a backpack…).
+  Cost: ~10 more meshes per person — watch the speed on a real phone. (2) PARK: NEW city3d-park.js (`?v=1`), `?d=park`; DISTS.park in city3d.js
+  (`?v=15`). Scene: grass + gravel alleys, the granite embankment (z −12) with globe lamps, the river (emissive streak texture that drifts, a
+  boat with a garland every 46 s, the far bank), the stage «ЭСТРАДА · JAM» (round wooden floor r 3.1 at −6.6, −5.9, a shell behind, garland),
+  chess tables with the old-timer «Маятник», a street-workout corner, park lamps (only 5 carry a PointLight), fireflies, walkers on the ring
+  alley (granny, heavy man, kid) and two joggers. Tall things only on the edges / north. W.park = { stage, dancers[3], og, bars, crowd,
+  gateCenter, gateProm }. GAME (city3d-game `?v=14`): crews Фанк-бригада 5 (FUNK, bubble, sign boom), Корни 6 (ROOTS, wild, leaf), Волна 7
+  (WAVE, d3, surf; boss «Кюрасао» ⇒ «хозяин Парка»); pals funk / roots / wave + the 3 signs in city-gfx.js `?v=7`; gear funkTrack, rootsBeanie,
+  waveKicks (one per crew, first win) in hero.js `?v=17` + CGEAR in the worker (SERVER REDEPLOY) + 9 languages. Places: JAM on the stage
+  (−25 ⚡, once a day): three battles in a row on the normal battle engine — the «crew» is one stage dancer with `c.tour` (no energy per
+  battle, 1 round, jamResult() instead of the crew rewards, endBattle starts the next round), lv 5 / 6 / 7 (Шуруп, Ртуть, Кобра), +10 / +16 /
+  +24 ★ and +30 for all three; a lost battle ends the jam. «Маятник»: once a day +8 ★ +10 ⚡ if ≥ 5 lesson minutes today (else the button
+  leads to the lessons). Warm-up at the bars: free, once a day, −4 % falls today (buff()). Arches «← ЦЕНТР» and «ПРОМЗОНА →» (closed; after
+  the boss «скоро»). The Centre's park arch now opens after beating Хромированные (or once the Park was seen); the metro map rides to the
+  Park. Goals pwin / jam / og after the first visit. Save fields: jamDay, ogDay, warmDay, jamWon, seen.park. Tested headless 390×844: people
+  line-ups in all districts, warm-up, mentor button, jam (lost in round 1 three times with real votes; all three rounds with forced votes),
+  boss win → gear + «хозяин Парка», Centre ⇄ Park, metro map, yard unchanged; no errors. BALANCE NOTE: with both sides lv ≥ 4 a one-round
+  battle is close to a coin flip (same power list, style differs by .15 per level, judges ±1.2), so winning the whole jam is rare — tune
+  jamLv or the vote noise after the owner tries it. NOT on a real phone (speed: ~20 animated people in the Park), sounds never heard.

@@ -1774,11 +1774,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=16"></script>
+<script src="hero.js?v=17"></script>
 <script src="rhythm.js?v=20"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
-<script src="city-gfx.js?v=6"></script>
+<script src="city-gfx.js?v=7"></script>
 <script src="city.js?v=13"></script>
 <script src="vendor/qr.js"></script>
 <script>
@@ -5319,7 +5319,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
   const eqWith = (eq, k) => eq.filter(x => x !== k && slotOf(x) !== slotOf(k)).concat(k);   // put on k, take off what was in its slot
-  function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные' }[id]; return c3 ? T(c3) : id; }
+  function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные', funk: 'Фанк-бригада', roots: 'Корни', wave: 'Волна' }[id]; return c3 ? T(c3) : id; }
   function citySrc(g){
     const s = g.src || '';
     if (s.slice(0, 5) === 'gang:') return T('Выбей с банды «{x}» в городе', { x: cityGang(s.slice(5)) });

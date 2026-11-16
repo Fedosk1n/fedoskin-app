@@ -8,9 +8,10 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
-import { initGame } from './city3d-game.js?v=12';
-import { buildCenter } from './city3d-center.js?v=1';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf } from './city3d-mocap.js?v=6';
+import { initGame } from './city3d-game.js?v=14';
+import { buildCenter } from './city3d-center.js?v=2';
+import { buildPark } from './city3d-park.js?v=1';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -518,19 +519,20 @@ const MOVES = {
 // DISTRICTS (16.11.2026 «строим Центр»): one page, the district is picked at load — `?d=center` (test link) or the save's `where`
 // (set by the gates). 'yard' is built here, 'center' in city3d-center.js with the same toolkit (TK).
 const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15.4, z1: 14.2 }, spawn: [1.2, -2.6, Math.PI] },
-  center: { name: 'ЦЕНТР', bounds: { x0: -13.2, x1: 13.4, z0: -14.9, z1: 14.4 }, spawn: [0, 11.2, Math.PI] } };
+  center: { name: 'ЦЕНТР', bounds: { x0: -13.2, x1: 13.4, z0: -14.9, z1: 14.4 }, spawn: [0, 11.2, Math.PI] },
+  park: { name: 'ПАРК', bounds: { x0: -12.4, x1: 12.5, z0: -11.2, z1: 14.2 }, spawn: [-10.6, 1.4, Math.PI / 2] } };
 const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
 const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
 const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
 async function build(scene) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
-  if (DIST === 'center') await buildCenter({ THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
+  const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, asphaltTex, facadeTex, roofTex, stripeTex,
-    mocapPerson, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX });
-  else await buildYard(scene);
+    mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
+  if (DIST === 'center') await buildCenter(TK); else if (DIST === 'park') await buildPark(TK); else await buildYard(scene);
   // the hero (my look incl. street gear)
-  let sp = DISTS[DIST].spawn; try { if (DIST === 'yard' && sessionStorage.getItem('fedoskin-city3d-from') === 'center') sp = [-1.2, -12.2, 0]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
+  let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook()); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
@@ -679,7 +681,7 @@ async function buildYard(scene) {
   // ---- people ----
   const crewLooks = [[3, ['c:rustyBandana']], [5, ['c:owlPhones', 'knee']], [6, ['girl', 'c:acidBucket']], [7, ['c:goldChain']], [4, ['c:djGloves']]];
   crewLooks.forEach(([lv, acc], i) => {
-    const J = mocapPerson(HERO.topDown(lv, acc)), a = -Math.PI / 2 + (i - (crewLooks.length - 1) / 2) * .78 + (i >= 3 ? Math.PI * .55 : 0);
+    const J = mocapPerson(HERO.topDown(lv, acc), { body: bodyOf(40 + i * 13, { type: ['slim', 'athl', 'small', 'big', 'stocky'][i], girl: acc.includes('girl') }) }), a = -Math.PI / 2 + (i - (crewLooks.length - 1) / 2) * .78 + (i >= 3 ? Math.PI * .55 : 0);
     const slot = { x: cx + Math.cos(a) * 2.75, z: cz + Math.sin(a) * 2.75 };
     J.root.position.set(slot.x, 0, slot.z); scene.add(J.root);
     J.c = { slot, ph: Math.random(), mood: 'idle', x: slot.x, z: slot.z }; J.play('Breakdance_Ready', { at: Math.random(), speed: .9 + Math.random() * .2 });

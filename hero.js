@@ -47,6 +47,10 @@
     owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'bomber' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8], bt: { cor: 6 } },
     goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', src: 'gang:gold', f: { chain: 2 }, perk: ['cash', 15], bt: { hold: 1 } },
     goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1], bt: { save: 1 } },
+    // the Park crews (16.11.2026, 3D city): Фанк-бригада lv 5, Корни lv 6, Волна lv 7 (the district's owners)
+    funkTrack: { name: 'Олимпийка «Фанк»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:funk', f: { top: 'track' }, col: { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { cor: 8 } },
+    rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
+    waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
     // the Centre crews (16.11.2026, 3D city): Трафареты lv 3, Турникеты lv 4, Хромированные lv 5 (the district's owners)

@@ -59,47 +59,108 @@ function seg(bone, to, r, mat, r2) {
   m.quaternion.setFromUnitVectors(UP, to.clone().normalize()); m.position.copy(to).multiplyScalar(.5);
   bone.add(m); return m;
 }
-// body + clothes on a Mixamo skeleton
+// ---------- BODIES (owner 16.11.2026 «улучши визуал человечков, добавь разнообразия: разный вес, рост, типаж») ----------
+// A body = numbers that reshape our own low-poly figure on the same mocap skeleton: h height (whole rig), limb / arm thickness,
+// chest / waist / hip width, belly 0..1, head size; plus skin, hair colour and hair style, beard, backpack, coat.
+// The moves are untouched (only the clavicle and hip offsets get wider), so every build dances the same real capture.
+export const BODY_TYPES = {
+  avg:    { h: 1,    limb: 1,    arm: 1,    chest: 1,    waist: 1,    hip: 1,    belly: 0,   head: 1 },
+  slim:   { h: 1,    limb: .82,  arm: .84,  chest: .9,   waist: .86,  hip: .92,  belly: 0,   head: .98 },
+  lanky:  { h: 1.1,  limb: .84,  arm: .84,  chest: .93,  waist: .88,  hip: .93,  belly: 0,   head: .93 },
+  athl:   { h: 1.04, limb: 1.08, arm: 1.24, chest: 1.14, waist: .93,  hip: 1,    belly: 0,   head: .97 },
+  stocky: { h: .9,   limb: 1.18, arm: 1.2,  chest: 1.15, waist: 1.14, hip: 1.1,  belly: .3,  head: 1.06 },
+  heavy:  { h: .98,  limb: 1.3,  arm: 1.2,  chest: 1.22, waist: 1.36, hip: 1.26, belly: .9,  head: 1.03 },
+  big:    { h: 1.13, limb: 1.24, arm: 1.36, chest: 1.3,  waist: 1.18, hip: 1.12, belly: .45, head: .96 },
+  small:  { h: .83,  limb: .86,  arm: .86,  chest: .9,   waist: .92,  hip: .94,  belly: 0,   head: 1.13 },
+};
+export const SKINS = ['#F0C8A4', '#E3B088', '#C68A5E', '#A9713F', '#80502E', '#5C3820'];
+export const HAIRS = ['#1E1714', '#17120f', '#2e1e14', '#4d3120', '#7a4a22', '#b98d4e', '#dcc9a0', '#a23c1f', '#8d9096', '#e9e9ec'];
+const MEN = ['short', 'short', 'buzz', 'bald', 'afro', 'top', 'mohawk', 'dreads', 'curly', 'long'], WOMEN = ['tail', 'bun', 'long', 'braids', 'afro', 'short', 'curly', 'buns'];
+function mul(seed) { let a = seed >>> 0 || 1; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// a body made up from a number: the same seed always gives the same person. o = { type, girl, old, + any field to fix }
+export function bodyOf(seed, o = {}) {
+  const r = mul(seed * 2654435761), names = Object.keys(BODY_TYPES), pick = a => a[Math.floor(r() * a.length)];
+  const type = o.type || pick(o.girl ? ['avg', 'slim', 'slim', 'small', 'lanky', 'athl', 'stocky', 'heavy'] : names), T = BODY_TYPES[type] || BODY_TYPES.avg, j = k => 1 + (r() - .5) * k;
+  const b = { type, h: T.h * j(.05), limb: T.limb * j(.07), arm: T.arm * j(.07), chest: T.chest * j(.05), waist: T.waist * j(.06), hip: T.hip * j(.05), belly: T.belly * j(.3), head: T.head * j(.03),
+    skin: pick(SKINS), hair: o.old ? pick(['#8d9096', '#e9e9ec', '#b9bcc2']) : HAIRS[Math.floor(Math.pow(r(), 1.6) * 8)], style: pick(o.girl ? WOMEN : MEN), beard: !o.girl && r() < (o.old ? .5 : .28), girl: !!o.girl };
+  if (o.girl) { b.chest *= .9; b.arm *= .88; b.hip *= 1.07; b.waist *= .93; b.h *= .96; }
+  return Object.assign(b, o);
+}
+const BASE = BODY_TYPES.avg;
+// body + clothes on a Mixamo skeleton. opt.body = a body from bodyOf() or a type name; without it — the plain average figure
 export function mocapPerson(look, opt = {}) {
-  const R = DATA.rest, C = look.col, scale = opt.scale || .9;
+  const R = DATA.rest, C = Object.assign({}, look.col);
+  const bd = Object.assign({}, BASE, typeof (opt.body || look.body) === 'string' ? BODY_TYPES[opt.body || look.body] : (opt.body || look.body || {}));
+  if (bd.skin) C.skin = bd.skin; if (bd.hair) C.hair = bd.hair;
+  const girl = look.girl || bd.girl, scale = (opt.scale || .9) * bd.h, L = bd.limb, A = bd.arm, gW = girl && !opt.body ? .92 : 1;
   const root = new THREE.Group(), rig = new THREE.Group(); rig.scale.setScalar(scale); root.add(rig);
   const B = {};
   for (const [n, b] of Object.entries(R)) { const bo = new THREE.Bone(); bo.name = n; bo.position.fromArray(b.pos); bo.quaternion.fromArray(b.q); B[n] = bo; }
   for (const [n, b] of Object.entries(R)) (b.p ? B[b.p] : rig).add(B[n]);
-  const P = n => new THREE.Vector3().fromArray(R[n].pos);
+  // wider or narrower frame: clavicles and hip joints move with the chest and the hips
+  for (const s of ['Left', 'Right']) { B[s + 'Shoulder'].position.x *= bd.chest * gW; B[s + 'Arm'].position.multiplyScalar(bd.chest * gW); B[s + 'UpLeg'].position.x *= Math.max(1, bd.hip * (1 + (L - 1) * .5)); }
+  const P = n => B[n].position.clone();
   const skin = M(C.skin, .7), top = M(C.top, .78), pants = M(C.pants, .85), shoe = M(C.shoe, .5), sole = M(C.sole || '#eee', .6), hair = M(C.hair, .9);
-  const sleeveLong = !/^tee/.test(look.top || 'tee'), sleeve = M(C.sleeve || C.top, .78);
-  // torso: hips block + chest
-  { const h = new THREE.Mesh(new RoundedBoxGeometry(.34, .2, .22, 2, .06), pants); h.position.set(0, .02, 0); B.Hips.add(h); }
-  { const t = new THREE.Mesh(new RoundedBoxGeometry(.38, .3, .22, 2, .08), top); t.position.set(0, .08, .005); B.Spine1.add(t);
-    const t2 = new THREE.Mesh(new RoundedBoxGeometry(.42, .22, .24, 2, .09), top); t2.position.set(0, .1, -.005); B.Spine2.add(t2);
-    if (C.trim) { const z = new THREE.Mesh(new THREE.BoxGeometry(.025, .4, .02), M(C.trim, .6)); z.position.set(0, .05, .125); B.Spine2.add(z); }
-    if (look.top === 'teeTeam') { const d = new THREE.Mesh(new THREE.CircleGeometry(.07, 16), M('#E2611A', .7)); d.position.set(0, .12, .122); B.Spine2.add(d); }
-    if (look.chain) { const ch = new THREE.Mesh(new THREE.TorusGeometry(.11, look.chain > 1 ? .02 : .012, 6, 18), M(C.gold, .25, 1)); ch.rotation.x = Math.PI / 2 - .35; ch.position.set(0, .2, .07); B.Spine2.add(ch); } }
-  seg(B.Neck, P('Head'), .055, skin);
-  // head, hair, hat
-  { const hd = new THREE.Mesh(new THREE.SphereGeometry(.12, 18, 14), skin); hd.scale.set(1, 1.12, 1.05); hd.position.set(0, .1, .01); B.Head.add(hd);
-    const hr = new THREE.Mesh(new THREE.SphereGeometry(.124, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.1), hair); hr.position.set(0, .115, -.005); hr.scale.set(1, 1.05, 1.06); B.Head.add(hr);
-    if (look.girl) { const tail = new THREE.Mesh(new THREE.CapsuleGeometry(.04, .16, 3, 8), hair); tail.position.set(0, .02, -.12); tail.rotation.x = .3; B.Head.add(tail); }
-    const H = C.hat;
-    if (H && /cap/i.test(look.hat || '')) { const cp = new THREE.Mesh(new THREE.SphereGeometry(.13, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(H[0], .7)); cp.position.set(0, .13, 0); B.Head.add(cp);
-      const br = new THREE.Mesh(new RoundedBoxGeometry(.16, .02, .12, 1, .008), M(H[1], .7)); br.position.set(0, .14, look.hat === 'capBack' ? -.15 : .15); B.Head.add(br); }
-    else if (H && look.hat === 'beanie') { const cp = new THREE.Mesh(new THREE.SphereGeometry(.132, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.9), M(H[0], .8)); cp.scale.y = 1.2; cp.position.set(0, .12, 0); B.Head.add(cp); }
-    else if (H && look.hat === 'bucket') { const cp = new THREE.Mesh(new THREE.CylinderGeometry(.11, .13, .1, 16), M(H[0], .8)); cp.position.set(0, .2, 0); B.Head.add(cp);
-      const br = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, .035, 18), M(H[0], .8)); br.position.set(0, .15, 0); B.Head.add(br); }
-    else if (H && look.hat === 'bandana') { const cp = new THREE.Mesh(new THREE.SphereGeometry(.13, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.1), M(H[0], .8)); cp.position.set(0, .12, 0); B.Head.add(cp); } }
+  const sleeveLong = !/^tee/.test(look.top || 'tee'), sleeve = M(C.sleeve || C.top, .78), baggy = /Big|bomber|track/.test(look.top || '') ? 1.06 : 1;
+  const cw = bd.chest * gW * baggy, ww = bd.waist * baggy, dp = 1 + (bd.chest - 1) * .7 + bd.belly * .12, add = (bone, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); bone.add(m); return m; };
+  // torso: hips in the trousers, then the top from its hem up to the shoulders (tapered: waist → chest → shoulders)
+  add(B.Hips, new RoundedBoxGeometry(.3 * bd.hip, .19, .2 * (1 + (bd.hip - 1) * .8), 2, .07), pants, 0, -.005, 0);
+  add(B.Spine, new RoundedBoxGeometry(.31 * ww, .17, .2 * dp * (1 + (ww - 1) * .5), 2, .07), top, 0, .02, .004);
+  add(B.Spine1, new RoundedBoxGeometry(.35 * (cw * .6 + ww * .4), .2, .21 * dp, 2, .08), top, 0, .06, .006);
+  add(B.Spine2, new RoundedBoxGeometry(.41 * cw, .23, .235 * dp, 2, .095), top, 0, .095, -.004);
+  if (bd.belly > .12) { const s = add(B.Spine, new THREE.SphereGeometry(.15 + .035 * bd.belly, 16, 12), top, 0, .05, .015 + .04 * bd.belly); s.scale.set(1.08 * ww / (1 + bd.belly * .1), 1.2, 1); }
+  if (bd.coat) { const c = add(B.Hips, new THREE.CylinderGeometry(.165 * bd.hip, .215 * bd.hip, .36, 12, 1, true), M(C.top, .8), 0, -.2, 0); c.scale.z = .78 * dp; c.material.side = THREE.DoubleSide; }
+  if (C.trim) add(B.Spine2, new THREE.BoxGeometry(.025, .4, .02), M(C.trim, .6), 0, .05, .122 * dp);
+  if (look.top === 'teeTeam') add(B.Spine2, new THREE.CircleGeometry(.07, 16), M('#E2611A', .7), 0, .12, .1195 * dp);
+  if (look.chain) { const ch = add(B.Spine2, new THREE.TorusGeometry(.11, look.chain > 1 ? .02 : .012, 6, 18), M(C.gold, .25, 1), 0, .2, .07 * dp); ch.rotation.x = Math.PI / 2 - .35; }
+  if (bd.pack) { add(B.Spine2, new RoundedBoxGeometry(.27, .34, .13, 2, .05), M(bd.pack, .8), 0, .04, -.18 * dp); }
+  if (/hood|owl/i.test((look.top || '') + (bd.hood ? 'hood' : ''))) { const h = add(B.Spine2, new THREE.SphereGeometry(.105, 12, 8), top, 0, .2, -.1 * dp); h.scale.set(1.25, .7, .9); }
+  seg(B.Neck, P('Head'), .052 * Math.sqrt(A), skin);
+  // head: face, ears, hair by style, beard, hat
+  { const hg = new THREE.Group(); hg.scale.setScalar(bd.head); B.Head.add(hg); const eye = M('#17130f', .4), H = C.hat, hat = H ? (look.hat || '') : '';
+    const hd = add(hg, new THREE.SphereGeometry(.12, 18, 14), skin, 0, .1, .01); hd.scale.set(1, 1.12, 1.05);
+    for (const s of [-1, 1]) { const e = add(hg, new THREE.SphereGeometry(.0135, 8, 6), eye, s * .045, .112, .128); e.scale.set(1, 1.25, .5);
+      const er = add(hg, new THREE.SphereGeometry(.03, 8, 6), skin, s * .118, .098, .005); er.scale.set(.45, 1, .75); }
+    { const n = add(hg, new THREE.SphereGeometry(.018, 8, 6), skin, 0, .086, .136); n.scale.set(.9, 1.2, 1); }
+    if (bd.beard) { const b = add(hg, new THREE.SphereGeometry(.122, 14, 8, Math.PI * .04, Math.PI * .92, Math.PI * .64, Math.PI * .36), hair, 0, .092, .012); b.scale.set(1.03, 1.2, 1.08); }
+    let st = bd.style || (girl ? 'tail' : 'short'); if (hat && /afro|mohawk|top|bun|buns|curly/.test(st)) st = girl ? 'tail' : 'short';
+    const cap = (r, th, sy = 1.05) => { const hr = add(hg, new THREE.SphereGeometry(r, 16, 10, 0, Math.PI * 2, 0, th), hair, 0, .115, -.006); hr.scale.set(1.01, sy, 1.07); hr.rotation.x = -.16; return hr; };
+    if (st !== 'bald' && !(hat && st === 'buzz')) {
+      if (st === 'buzz') cap(.1215, Math.PI / 2.25, 1.1); else if (hat) cap(.121, Math.PI / 2, 1.08); else if (st !== 'afro') cap(.126, Math.PI / 2.05);
+      if (st === 'afro') { const a = add(hg, new THREE.SphereGeometry(.165, 14, 10), hair, 0, .15, -.02); a.scale.set(1.05, .95, 1); }
+      else if (st === 'top') add(hg, new THREE.CylinderGeometry(.1, .092, .07, 14), hair, 0, .235, 0);
+      else if (st === 'mohawk') add(hg, new RoundedBoxGeometry(.035, .075, .24, 1, .015), M(bd.dye || C.hair, .8), 0, .25, -.01).rotation.x = -.12;
+      else if (st === 'curly') [[0, .225, .03, .06], [.06, .21, -.03, .055], [-.06, .21, -.03, .055], [0, .2, -.08, .05]].forEach(([x, y, z, r]) => add(hg, new THREE.IcosahedronGeometry(r, 1), hair, x, y, z));
+      else if (st === 'bun') add(hg, new THREE.SphereGeometry(.052, 10, 8), hair, 0, .25, -.05);
+      else if (st === 'buns') [-1, 1].forEach(s => add(hg, new THREE.SphereGeometry(.045, 10, 8), hair, s * .085, .225, -.02));
+      else if (st === 'tail') { const t = add(hg, new THREE.CapsuleGeometry(.038, .17, 3, 8), hair, 0, .03, -.135); t.rotation.x = .3; }
+      else if (st === 'long') add(hg, new RoundedBoxGeometry(.215, .25, .09, 2, .04), hair, 0, .03, -.085);
+      else if (st === 'braids') [-1, 1].forEach(s => { const t = add(hg, new THREE.CapsuleGeometry(.026, .2, 3, 6), hair, s * .1, -.02, -.05); t.rotation.z = s * .12; });
+      else if (st === 'dreads') [[-.1, -.05], [-.05, -.11], [.05, -.11], [.1, -.05], [0, -.125]].forEach(([x, z]) => { const t = add(hg, new THREE.CapsuleGeometry(.021, .15, 2, 6), hair, x, .03, z); t.rotation.x = .2; });
+    }
+    if (hat && /cap/i.test(hat)) { const cp = add(hg, new THREE.SphereGeometry(.132, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(H[0], .7), 0, .13, 0); cp.scale.y = 1.02;
+      add(hg, new RoundedBoxGeometry(.16, .02, .12, 1, .008), M(H[1], .7), 0, .14, hat === 'capBack' ? -.15 : .15); }
+    else if (hat === 'beanie') { const cp = add(hg, new THREE.SphereGeometry(.133, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.9), M(H[0], .8), 0, .12, 0); cp.scale.y = 1.2; }
+    else if (hat === 'bucket') { add(hg, new THREE.CylinderGeometry(.112, .132, .13, 16), M(H[0], .8), 0, .215, 0); add(hg, new THREE.CylinderGeometry(.14, .2, .035, 18), M(H[0], .8), 0, .15, 0); }
+    else if (hat === 'bandana') add(hg, new THREE.SphereGeometry(.131, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.1), M(H[0], .8), 0, .12, 0);
+    if (look.phones) { const ph = M('#18191c', .5, .3); [-1, 1].forEach(s => add(hg, new THREE.CylinderGeometry(.042, .042, .03, 12), ph, s * .128, .1, 0).rotation.z = Math.PI / 2);
+      const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .1, 0); band.scale.y = 1.2; } }
   // arms
   for (const s of ['Left', 'Right']) {
-    seg(B[s + 'Shoulder'], P(s + 'Arm'), .06, top);
-    seg(B[s + 'Arm'], P(s + 'ForeArm'), .062, sleeveLong ? sleeve : top);
-    if (!sleeveLong) seg(B[s + 'Arm'], P(s + 'ForeArm').multiplyScalar(.35), .066, top);
-    seg(B[s + 'ForeArm'], P(s + 'Hand'), .05, sleeveLong ? sleeve : skin);
-    if (sleeveLong && C.cuff) { const cf = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, .05, 10), M(C.cuff, .7)); cf.position.copy(P(s + 'Hand')).multiplyScalar(.92); B[s + 'ForeArm'].add(cf); }
-    const hand = new THREE.Mesh(new RoundedBoxGeometry(.07, .12, .04, 1, .018), look.gloves ? M('#18191c', .6) : skin); hand.position.set(0, .055, 0); B[s + 'Hand'].add(hand);
+    seg(B[s + 'Shoulder'], P(s + 'Arm'), .06 * A, top);
+    if (sleeveLong) seg(B[s + 'Arm'], P(s + 'ForeArm'), .062 * A, sleeve);
+    else { seg(B[s + 'Arm'], P(s + 'ForeArm'), .055 * A, skin); seg(B[s + 'Arm'], P(s + 'ForeArm').multiplyScalar(.48), .066 * A, top); }
+    seg(B[s + 'ForeArm'], P(s + 'Hand'), .05 * (A * .7 + .3), sleeveLong ? sleeve : skin);
+    if (sleeveLong && C.cuff) { const cf = new THREE.Mesh(new THREE.CylinderGeometry(.055 * A, .055 * A, .05, 10), M(C.cuff, .7)); cf.position.copy(P(s + 'Hand')).multiplyScalar(.92); B[s + 'ForeArm'].add(cf); }
+    if (look.wrist && !sleeveLong) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.054 * A, .054 * A, .035, 10), M(look.wrist, .6)); w.position.copy(P(s + 'Hand')).multiplyScalar(.9); if (s === 'Left') B[s + 'ForeArm'].add(w); }
+    // hand: palm + thumb
+    add(B[s + 'Hand'], new RoundedBoxGeometry(.074, .115, .042, 1, .02), look.gloves ? M('#18191c', .6) : skin, 0, .055, 0);
+    add(B[s + 'Hand'], new THREE.CapsuleGeometry(.014, .03, 2, 6), look.gloves ? M('#18191c', .6) : skin, 0, .045, .034).rotation.x = .5;
     // legs
-    seg(B[s + 'UpLeg'], P(s + 'Leg'), .085, pants, .09);
-    seg(B[s + 'Leg'], P(s + 'Foot'), .07, pants);
-    if (C.stripe) { const st = new THREE.Mesh(new THREE.BoxGeometry(.012, P(s + 'Leg').length() * .9, .03), M(C.stripe, .6)); st.position.copy(P(s + 'Leg')).multiplyScalar(.5); st.position.x += s === 'Left' ? .085 : -.085; B[s + 'UpLeg'].add(st); }
+    seg(B[s + 'UpLeg'], P(s + 'Leg'), .085 * L, pants, .09 * L);
+    seg(B[s + 'Leg'], P(s + 'Foot'), .068 * (L * .75 + .25), pants);
+    if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.075 * L, 10, 8), M('#18191c', .6), 0, .01, .03).scale.set(1, 1.1, .8);
+    if (C.stripe) { const st = new THREE.Mesh(new THREE.BoxGeometry(.012, P(s + 'Leg').length() * .9, .03), M(C.stripe, .6)); st.position.copy(P(s + 'Leg')).multiplyScalar(.5); st.position.x += (s === 'Left' ? .085 : -.085) * L; B[s + 'UpLeg'].add(st); }
     // shoe: from the ankle to the toes
     const toe = P(s + 'ToeBase'), sh = new THREE.Mesh(new RoundedBoxGeometry(.11, toe.length() + .1, .1, 2, .035), shoe);
     sh.quaternion.setFromUnitVectors(UP, toe.clone().normalize()); sh.position.copy(toe).multiplyScalar(.5); B[s + 'Foot'].add(sh);

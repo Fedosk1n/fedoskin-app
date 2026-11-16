@@ -5,7 +5,7 @@
 // what it needs from here is left in W.center: { show, guard, crowd(on), kiosk, metro, gateYard, gatePark }.
 export async function buildCenter(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, TOUCH, OR, PAINT_W, M, glowMat, tex, can, grain, blotch, rng, lerp, clamp, decal, paintCanvas, shadowAll, box, circ,
-    lamp, lamps, dust, trashBag, car, asphaltTex, facadeTex, roofTex, stripeTex, mocapPerson, stride, standPose, HERO, GFX } = TK;
+    lamp, lamps, dust, trashBag, car, asphaltTex, facadeTex, roofTex, stripeTex, mocapPerson, bodyOf, stride, standPose, HERO, GFX } = TK;
   const P = 48, PI = Math.PI;
   const mesh = (geo, mat, x, y, z, par = scene) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; par.add(m); return m; };
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const t = tex(c), m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
@@ -251,7 +251,7 @@ export async function buildCenter(TK) {
   lamps.forEach((l, i) => i < 2 && dust(scene, l.head));
 
   // ---------- people: the guard, passers-by, two by the entrance ----------
-  const person = (lv, acc, fix) => { const look = HERO.topDown(lv, acc); if (fix) fix(look); const J = mocapPerson(look); J.play('Breakdance_Ready', { at: Math.random() }); scene.add(J.root); J.st = { wk: 0, ph: Math.random() * 6 }; return J; };
+  let pn = 0; const person = (lv, acc, fix, body) => { const look = HERO.topDown(lv, acc); if (fix) fix(look); const J = mocapPerson(look, { body: bodyOf(200 + (pn++) * 17, Object.assign({ girl: acc.includes('girl') }, body)) }); J.play('Breakdance_Ready', { at: Math.random() }); scene.add(J.root); J.st = { wk: 0, ph: Math.random() * 6 }; return J; };
   const turn = (J, a, dt, k = 8) => { let d = a - J.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * k)); };
   const tag = (txt, col) => { const lc = can(512, 128), lx = lc.getContext('2d'); lx.font = '400 60px Anton, sans-serif'; const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill(); text(lx, txt, 256, 66, '400 60px Anton, sans-serif', col);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(lc), depthTest: false, toneMapped: false })); sp.scale.set(2.4, .6, 1); sp.renderOrder = 10; scene.add(sp); return sp; };
@@ -262,7 +262,7 @@ export async function buildCenter(TK) {
 
   // THE GUARD walks along the mall's front; the red ring on the tiles is how far he sees a street show
   const GZ = -13.5, GX = 11, SEE = 3.2, _qa = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -1.15);
-  const guard = { J: person(2, [], l => { l.top = 'bomber'; l.hat = 'cap'; l.chain = 0; l.phones = false; Object.assign(l.col, { top: '#1b2536', sleeve: '#1b2536', cuff: '#FFD23F', trim: '#FFD23F', pants: '#14161b', stripe: null, shoe: '#101114', shoe2: '#101114', sole: '#2a2c31', hat: ['#14161b', '#14161b'] }); }),
+  const guard = { J: person(2, [], l => { l.top = 'bomber'; l.hat = 'cap'; l.chain = 0; l.phones = false; Object.assign(l.col, { top: '#1b2536', sleeve: '#1b2536', cuff: '#FFD23F', trim: '#FFD23F', pants: '#14161b', stripe: null, shoe: '#101114', shoe2: '#101114', sole: '#2a2c31', hat: ['#14161b', '#14161b'] }); }, { type: 'big', beard: true, style: 'buzz', skin: '#C68A5E', hair: '#2e1e14' }),
     x: -GX + 3, z: GZ, dir: 1, wait: 0, alert: 0, see: SEE };
   { const bc = can(128, 48), x = bc.getContext('2d'); x.fillStyle = '#FFD23F'; x.fillRect(0, 0, 128, 48); text(x, 'ОХРАНА', 64, 26, '900 26px Inter, sans-serif', '#14161b');
     const b = new THREE.Mesh(new THREE.PlaneGeometry(.3, .11), new THREE.MeshBasicMaterial({ map: tex(bc) })); b.position.set(0, .12, -.128); b.rotation.y = PI; guard.J.B.Spine2.add(b);
@@ -278,10 +278,13 @@ export async function buildCenter(TK) {
   // PASSERS-BY walk a loop around the square; when a show starts, those who are near come to watch
   const LOOP = [[-5.3, -8.5], [11, -8.5], [11, 11.5], [-5.3, 11.5]], LEN = LOOP.map((p, i) => { const q = LOOP[(i + 1) % 4]; return Math.hypot(q[0] - p[0], q[1] - p[1]); }), TOT = LEN.reduce((a, b) => a + b, 0);
   const at = (u, side) => { u = ((u % TOT) + TOT) % TOT; for (let i = 0; i < 4; i++) { if (u <= LEN[i]) { const p = LOOP[i], q = LOOP[(i + 1) % 4], k = u / LEN[i], nx = (q[1] - p[1]) / LEN[i], nz = -(q[0] - p[0]) / LEN[i]; return { x: lerp(p[0], q[0], k) + nx * side, z: lerp(p[1], q[1], k) + nz * side }; } u -= LEN[i]; } return { x: LOOP[0][0], z: LOOP[0][1] }; };
-  const walkers = [[1, []], [3, ['girl']], [5, []], [2, ['girl']], [4, []]].map(([lv, acc], i) => { const J = person(lv, acc), w = { J, u: TOT * i / 5 + i, dir: i % 2 ? -1 : 1, v: 1.15 + (i % 3) * .12, mode: 'path', slot: null };
+  // ordinary townsfolk, each of their own build: an old man in a coat, a schoolgirl with a backpack, a tall student, a lady in a coat, a big fellow
+  const plain = (top, pants, shoe) => l => { l.hat = null; l.chain = 0; l.phones = false; l.wrist = null; l.top = 'bomber'; Object.assign(l.col, { top, sleeve: top, cuff: null, trim: null, pants, stripe: null, shoe, shoe2: shoe, sole: '#d8d4c8', hat: null }); };
+  const walkers = [[1, [], plain('#5b4a3a', '#2b2d33', '#3a2c22'), { type: 'heavy', old: true, coat: true, style: 'short', beard: true, skin: '#E3B088' }], [3, ['girl'], null, { type: 'small', pack: '#E2611A', style: 'buns' }], [5, [], null, { type: 'lanky', pack: '#2f4f8a', style: 'curly' }],
+    [2, ['girl'], plain('#7a2f3a', '#1f2126', '#e9e4d8'), { type: 'avg', coat: true, style: 'long' }], [4, [], plain('#39424e', '#3E5F8E', '#f2efe8'), { type: 'big', style: 'short' }]].map(([lv, acc, fix, body], i) => { const J = person(lv, acc, fix, body), w = { J, u: TOT * i / 5 + i, dir: i % 2 ? -1 : 1, v: 1.15 + (i % 3) * .12, mode: 'path', slot: null };
     const p = at(w.u, w.dir * .4); J.root.position.set(p.x, 0, p.z); return w; });
   // two people hanging about at the mall's doors
-  const idlers = [[-4.9, -14.6, .5, 3, []], [5.1, -14.5, -.6, 6, ['girl']]].map(([x, z, ry, lv, acc]) => { const J = person(lv, acc); J.root.position.set(x, 0, z); J.root.rotation.y = ry; J.home = ry; circ(x, z, .3); return J; });
+  const idlers = [[-4.9, -14.6, .5, 3, [], { type: 'stocky' }], [5.1, -14.5, -.6, 6, ['girl'], { type: 'slim', style: 'braids' }]].map(([x, z, ry, lv, acc, body]) => { const J = person(lv, acc, null, body); J.root.position.set(x, 0, z); J.root.rotation.y = ry; J.home = ry; circ(x, z, .3); return J; });
   let showOn = false;
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;
