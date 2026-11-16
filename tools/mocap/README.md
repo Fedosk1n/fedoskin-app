@@ -5,3 +5,7 @@ Mixamo FBX → anim/bboy.json (how it was made 14.11.2026)
 3. Serve /tmp/mx on :8767, open convert.html in Playwright, call convert(file) for each → /tmp/mx/out/<name>.json
    (longest clip, 22 bones, 30 fps), then pack: hips xz minus frame 0, cm ints; quats ×1000 ints → anim/bboy.json.
 Never commit the raw .fbx files.
+
+Walk / run (16.11.2026): `drop.html` (live at /tools/mocap/drop.html) does the same in the OWNER'S browser — he downloads the .fbx from
+mixamo.com (FBX Binary, Without Skin, 30 fps, NOT «In Place»: the hips' travel gives the clip's natural speed) and drops the files on the
+page; three.js + FBXLoader come from a CDN; Claude reads `window.OUT` (already packed like anim/bboy.json) through Claude in Chrome.

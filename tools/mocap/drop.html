@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Движения → приложение</title>
+<style>
+  body { background: #0B0D12; color: #F2EFE8; font: 17px/1.5 system-ui, sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+  #drop { border: 3px dashed #E2611A; border-radius: 26px; padding: 56px 44px; max-width: 640px; transition: background .15s; }
+  #drop.over { background: rgba(226, 97, 26, .16); }
+  h1 { font-size: 27px; margin: 0 0 10px; } p { color: #C9C5BC; margin: 6px 0; }
+  input { margin-top: 16px; font-size: 16px; }
+  #log { margin-top: 20px; color: #3BD16F; white-space: pre-line; font-weight: 600; min-height: 26px; }
+</style></head>
+<body>
+<div id="drop">
+  <h1>Перетащи сюда файлы .fbx<br>из папки «Загрузки»</h1>
+  <p>Это записи движений из Mixamo. Можно все сразу.</p>
+  <p>Или выбери их кнопкой:</p>
+  <input id="f" type="file" accept=".fbx" multiple>
+  <div id="log"></div>
+</div>
+<!-- Mixamo FBX → the packed format of anim/bboy.json (22 bones, 30 fps, quats ×1000, hips cm with xz minus frame 0).
+     Runs in the owner's browser (three.js + FBXLoader from a CDN, same version as vendor/three); Claude reads window.OUT.
+     The raw .fbx files never leave the computer and are never committed. See README.md. -->
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+const KEEP = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase'];
+const ORDER = ['Hips.p', 'Hips.q', 'Spine.q', 'Spine1.q', 'Spine2.q', 'Neck.q', 'Head.q', 'RightShoulder.q', 'RightArm.q', 'RightForeArm.q', 'RightHand.q', 'LeftShoulder.q', 'LeftArm.q', 'LeftForeArm.q', 'LeftHand.q', 'RightUpLeg.q', 'RightLeg.q', 'RightFoot.q', 'RightToeBase.q', 'LeftUpLeg.q', 'LeftLeg.q', 'LeftFoot.q', 'LeftToeBase.q'];
+const log = t => { document.getElementById('log').textContent += t + '\n'; };
+window.OUT = {}; window.REST = {}; window.ERR = [];
+function convert(name, buf) {
+  const o = new FBXLoader().parse(buf, ''), clip = o.animations.reduce((a, b) => (b.duration > a.duration ? b : a));
+  const rest = {}, seen = new Set();
+  o.traverse(n => { if (!n.isBone) return; const k = n.name.replace('mixamorig', ''); if (!KEEP.includes(k) || seen.has(k)) return; seen.add(k);
+    rest[k] = { pos: n.position.toArray().map(v => +(v / 100).toFixed(4)), q: n.quaternion.toArray().map(v => +v.toFixed(4)) }; });
+  const fps = 30, n = Math.max(2, Math.round(clip.duration * fps) + 1), t = {};
+  for (const tr of clip.tracks) {
+    const [bn, prop] = tr.name.split('.'), k = bn.replace('mixamorig', '');
+    if (!KEEP.includes(k) || prop === 'scale' || (prop === 'position' && k !== 'Hips')) continue;
+    const it = tr.createInterpolant(), out = [];
+    for (let i = 0; i < n; i++) { const v = it.evaluate(Math.min(clip.duration, i / fps)); for (const x of v) out.push(Math.round(prop === 'position' ? x : x * 1000)); }
+    t[k + (prop === 'position' ? '.p' : '.q')] = out;
+  }
+  const p = t['Hips.p'], x0 = p[0], z0 = p[2]; for (let i = 0; i < n; i++) { p[i * 3] -= x0; p[i * 3 + 2] -= z0; }
+  const packed = { n, fps, t: {} }; ORDER.forEach(k => { if (t[k]) packed.t[k] = t[k]; });
+  return { packed, rest, dur: clip.duration, missing: ORDER.filter(k => !t[k]) };
+}
+async function take(files) {
+  for (const f of files) {
+    if (!/\.fbx$/i.test(f.name)) { log('Пропускаю (не .fbx): ' + f.name); continue; }
+    try { const name = f.name.replace(/\.fbx$/i, '').replace(/\s*\(\d+\)$/, '').trim().replace(/\s+/g, '_'), r = convert(name, await f.arrayBuffer());
+      window.OUT[name] = r.packed; window.REST[name] = r.rest; log('✓ ' + f.name + ' — ' + r.packed.n + ' кадров' + (r.missing.length ? ' (нет: ' + r.missing.join(', ') + ')' : ''));
+    } catch (e) { window.ERR.push(f.name + ': ' + e.message); log('✗ ' + f.name + ': ' + e.message); }
+  }
+  log('Готово — возвращайся в чат, Claude заберёт движения сам.');
+}
+const d = document.getElementById('drop');
+addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); });
+addEventListener('dragleave', () => d.classList.remove('over'));
+addEventListener('drop', e => { e.preventDefault(); d.classList.remove('over'); take([...e.dataTransfer.files]); });
+document.getElementById('f').addEventListener('change', e => take([...e.target.files]));
+window.READY = true;
+</script>
+</body></html>
