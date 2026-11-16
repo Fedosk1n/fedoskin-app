@@ -1294,3 +1294,12 @@
 - City 3D battle sounds (16.11.2026): RB.sfx new kinds hit / crash / win / lose (own synth + filtered-noise crowd; rhythm.js `?v=20` in
   index.html + city3d.html); clean power/freeze ⇒ 'hit' + short camera punch (zoom .34 → .4), fall ⇒ 'crash', verdict ⇒ 'win'/'lose' after
   the judges' cards. city3d-game `?v=8`, city3d.js `?v=10`. Sounds never heard by Claude.
+- City 3D places (16.11.2026 09:14 «додумывай… добавляй локации и действия»), all in city3d-game.js (`?v=11`), PLACES + placeBtn/placeRun,
+  shared proximity button (key() compares crews / walls / places): (1) CYPHER «Выйти в круг» — free once a day, my own random set (makeTurn
+  with buffs), crew steps back and watches (`W.cyBusy` hook at the top of updateCrew in city3d.js), +4 ★ (+3 clean), goal show; (2) DJ
+  booth by the cypher (table, spinning records, glowing strip, DJ mocap person) — «Заказать бит» −5 ⚡ ⇒ today in battles −3 % falls and
+  +0.4 style (`buff()`), goal dj; (3) PRACTICE MAT (blue padded mat, cones) — −8 ⚡, plays my best power move (30 % fall), +1 form (max 3
+  a day) ⇒ −3 % falls and +0.15 style per point today, goal train; (4) GATE «ЦЕНТР →» (arch + chain) — opens with rank «Уважаемый»
+  (BAL.gateRank 2), until then shows how much ★ is missing; after that «строится — скоро» (the next district is the next big step).
+  Positions found by `freeNear()` against the colliders. New goals: show, train ×2, dj. Lights trimmed to 6 PointLights (phone cost: were 9).
+  Emulator note: swiftshader runs ~0.1 game s per real s here — give tests minutes, not seconds. Tested all four places headless, no errors.

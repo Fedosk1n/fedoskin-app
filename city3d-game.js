@@ -5,6 +5,7 @@
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
 import { mocapPerson, clipLen } from './city3d-mocap.js?v=5';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
@@ -12,6 +13,7 @@ export const BAL = {
   rep: [0, 30, 90, 200, 400, 700],
   ranks: ['Новичок двора', 'Свой', 'Уважаемый', 'Авторитет', 'Хозяин двора', 'Легенда района'],
   repWin: 12, repClean: 6, paint: 10, repPaint: 8, turfRep: 3, hold: 3,
+  dj: 5, train: 8, trainMax: 3, show: 0, repShow: 4, repShowClean: 3, gateRank: 2,
 };
 // the crews of the yard; gear = HERO.GEAR pieces (1st win → 1st piece, 3rd win → 2nd piece)
 export const CREWS = [
@@ -28,6 +30,7 @@ const GOALS = [
   { id: 'win', t: 'Выиграй батл', n: 1 }, { id: 'win2', t: 'Выиграй 2 батла', n: 2, k: 'win' }, { id: 'clean', t: 'Выиграй батл без срывов', n: 1 },
   { id: 'paint', t: 'Закрась стену банды своим граффити', n: 1 }, { id: 'lesson', t: 'Посмотри урок 3 минуты (энергия)', n: 3 },
   { id: 'cypher', t: 'Посмотри выход в сайфере (постой у круга)', n: 1 }, { id: 'strong', t: 'Победи банду 2 уровня или выше', n: 1 },
+  { id: 'show', t: 'Выйди сам в круг сайфера', n: 1 }, { id: 'train', t: 'Потренируйся на мате 2 раза', n: 2 }, { id: 'dj', t: 'Закажи бит у диджея', n: 1 },
 ];
 const TOP = ['Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Breakdance_Uprock_Var_2'];
 const FOOT = ['Breakdance_Footwork_1', 'Breakdance_Footwork_2', 'Breakdance_Footwork_3'];
@@ -59,6 +62,7 @@ let S;
 function load() {
   let s = null; try { s = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
   if (!s || s.v !== 1) s = { v: 1, en: BAL.enStart, day: today(), lsec: lessonSec(), rep: 0, wins: {}, beat: {}, own: [], fights: 0 };
+  s.form = s.form || { day: 0, n: 0 }; s.djDay = s.djDay || 0; s.showDay = s.showDay || 0;
   s.turf = s.turf || {}; s.last = s.last || {}; s.goals = s.goals || null; s.word = s.word || '';
   return s;
 }
@@ -274,6 +278,104 @@ export function initGame(ctx) {
       eq = eq.filter(x => x !== k && (!HERO.itemOf(x) || HERO.itemOf(x).slot !== slot)).concat(k); localStorage.setItem('fedoskin-eq', JSON.stringify(eq)); ctx.rewear && ctx.rewear(); } catch (_) {}
   }
 
+  // ---------- places with actions (16.11.2026 «добавляй локации и действия») ----------
+  const freeNear = (px, pz, clear) => { for (let ring = 0; ring < 6; ring++) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, x = px + Math.cos(a) * ring * .8, z = pz + Math.sin(a) * ring * .8;
+      if (x < -11.8 || x > 12.4 || z < -14.6 || z > 13.4) continue;
+      if ((ctx.colliders || []).every(c => c.r !== undefined ? Math.hypot(x - c.x, z - c.z) > c.r + clear : Math.hypot(x - clamp(x, c.x0, c.x1), z - clamp(z, c.z0, c.z1)) > clear)) return { x, z }; }
+    return { x: px, z: pz }; };
+  const M = (c, r = .7, m = 0, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m, emissive: e || '#000', emissiveIntensity: e ? 1.6 : 0 });
+  const mk = (g, geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  const label = (txt, col, x, z, y = 2.5) => { const lc = document.createElement('canvas'); lc.width = 512; lc.height = 128; const lx = lc.getContext('2d');
+    lx.font = '400 60px Anton, sans-serif'; lx.textAlign = 'center'; const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill();
+    lx.fillStyle = col; lx.fillText(txt, 256, 86); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(lc), depthTest: false, toneMapped: false }));
+    sp.scale.set(2.4, .6, 1); sp.position.set(x, y, z); sp.renderOrder = 10; scene.add(sp); return sp; };
+  const C0 = W.cyph || { x: 1.5, z: -7.2 };
+  // DJ booth by the cypher: a table, two decks with spinning records, a mixer, a laptop glow and a DJ
+  const djAt = freeNear(C0.x + 4.2, C0.z + 2.6, 1.3), dj = new THREE.Group(); dj.position.set(djAt.x, 0, djAt.z); dj.rotation.y = Math.atan2(C0.x - djAt.x, C0.z - djAt.z); scene.add(dj);
+  mk(dj, new THREE.BoxGeometry(1.7, .9, .7), M('#1b1d22', .6), 0, .45, 0); mk(dj, new THREE.BoxGeometry(1.75, .05, .75), M('#2c2f36', .4, .3), 0, .92, 0);
+  const recs = [-.48, .48].map(x => { mk(dj, new THREE.CylinderGeometry(.27, .27, .04, 24), M('#3a3d44', .5, .4), x, .96, 0); const r = mk(dj, new THREE.CylinderGeometry(.24, .24, .02, 24), M('#0c0c0e', .3), x, .99, 0);
+    mk(r, new THREE.CylinderGeometry(.07, .07, .021, 16), M('#E2611A', .5, 0, '#E2611A'), 0, .001, 0); return r; });
+  mk(dj, new THREE.BoxGeometry(.3, .05, .4), M('#25282e', .5), 0, .97, 0);
+  const strip = mk(dj, new THREE.BoxGeometry(1.6, .04, .02), M('#E2611A', .4, 0, '#E2611A'), 0, .2, .36);
+  const djP = mocapPerson(HERO.topDown(6, ['c:djGloves'].filter(k => HERO.itemOf && HERO.itemOf(k)))); djP.root.position.set(0, 0, -.75); dj.add(djP.root); djP.play('Breakdance_Ready', { speed: .8 });
+  ctx.circ && ctx.circ(djAt.x, djAt.z, .95); const djLab = label('ДИДЖЕЙ', '#FFB547', djAt.x, djAt.z, 2.3);
+  const djFront = { x: djAt.x + Math.sin(dj.rotation.y) * 1.1, z: djAt.z + Math.cos(dj.rotation.y) * 1.1 };
+  // practice mat: a padded mat with taped lines and a pair of cones
+  const matAt = freeNear(9.6, 3.6, 1.6), mat = new THREE.Group(); mat.position.set(matAt.x, 0, matAt.z); scene.add(mat);
+  mk(mat, new RoundedBoxGeometry(2.6, .06, 2.6, 2, .02), M('#2b3f63', .9), 0, .03, 0);
+  [-1, 1].forEach(k => { mk(mat, new THREE.BoxGeometry(2.4, .005, .05), M('#e9e4d8', .8), 0, .065, k * 1.1); mk(mat, new THREE.ConeGeometry(.12, .3, 10), M('#E2611A', .6), k * 1.45, .15, 1.45 * k); });
+  const matLab = label('ТРЕНИРОВКА', '#7CC4FF', matAt.x, matAt.z, 2.2);
+  // the gate to the next district: an arch with a lit sign, closed by a chain until the right rank
+  const gAt = freeNear(-1.2, -14.2, 1.4), gate = new THREE.Group(); gate.position.set(gAt.x, 0, gAt.z); scene.add(gate);
+  [-1.4, 1.4].forEach(x => mk(gate, new THREE.BoxGeometry(.35, 3, .35), M('#3a3c42', .8), x, 1.5, 0));
+  mk(gate, new THREE.BoxGeometry(3.2, .45, .4), M('#2a2c31', .7), 0, 3.1, 0);
+  const gSign = document.createElement('canvas'); gSign.width = 512; gSign.height = 64; const gx = gSign.getContext('2d'); gx.fillStyle = '#E2611A'; gx.font = '400 46px Anton, sans-serif'; gx.textAlign = 'center'; gx.fillText('ЦЕНТР  →', 256, 50);
+  mk(gate, new THREE.PlaneGeometry(2.9, .36), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gSign), transparent: true, toneMapped: false }), 0, 3.1, .21);
+  const chain = mk(gate, new THREE.BoxGeometry(2.5, .06, .06), M('#c9c4b8', .3, .9), 0, 1.1, 0);
+  ctx.circ && ctx.circ(gAt.x - 1.4, gAt.z, .3); ctx.circ && ctx.circ(gAt.x + 1.4, gAt.z, .3); ctx.box && ctx.box(gAt.x, gAt.z, 2.4, .2);
+  const PLACES = [
+    { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
+  ];
+  // what each place offers right now (button text) and what it does
+  function placeBtn(pl) {
+    const t = today();
+    if (pl.id === 'show') return S.showDay === t ? { off: true, h: '🔥 Ты уже выходил в круг сегодня', s: 'Завтра снова — а пока батлы с бандами' } : { h: '🔥 Выйти в круг сайфера', s: 'Бесплатно раз в день · до +' + (BAL.repShow + BAL.repShowClean) + ' ★' };
+    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: '🎧 Бит качает до конца дня', s: 'Меньше срывов и больше стиля в батлах' } : { h: '🎧 Заказать бит · −' + BAL.dj + ' ⚡', s: 'На весь день: меньше срывов, больше стиля', low: S.en < BAL.dj };
+    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: '💪 Форма на максимуме сегодня', s: 'Срывов в батлах меньше на ' + 3 * n + '%' } : { h: '💪 Тренировать пауэр · −' + BAL.train + ' ⚡', s: 'Форма ' + n + ' / ' + BAL.trainMax + ' — каждая: −3% срывов сегодня', low: S.en < BAL.train }; }
+    if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: '🔒 Центр — со звания «' + BAL.ranks[BAL.gateRank] + '»', s: 'Сейчас: ' + BAL.ranks[rk] + ' · ' + S.rep + ' / ' + BAL.rep[BAL.gateRank] + ' ★' } : { off: true, h: '🚧 Центр открывается', s: 'Новый район строится — скоро' }; }
+  }
+  function placeRun(pl) {
+    const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low) { location.href = './'; return; }
+    if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'); paintAct(); }
+    if (pl.id === 'mat') startTrain();
+    if (pl.id === 'show') startShow();
+  }
+  // practice: the hero runs one power move on the mat; the form point is given whatever happens
+  function startTrain() {
+    S.en -= BAL.train; if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
+    const H = W.hero, lv = ctx.heroLevel(), pw = POWER.filter(p => p.lv <= lv), P = pw[pw.length - 1], fail = Math.random() < .3;
+    A = { kind: 'train', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: matAt, P, fail, said: false };
+    W.lock = true; W.camT = { x: matAt.x, z: matAt.z + .3, zoom: .45 }; document.body.classList.add('g3fight'); paintAct();
+    H.play('Breakdance_Uprock_To_Ground', { fade: .3 });
+  }
+  // a turn of my own in the cypher (free once a day): the same random set as in battles, the crew watches
+  function startShow() {
+    const H = W.hero, r = rng(Date.now() >>> 0), T = makeTurn(H, ctx.heroLevel(), r, 'me', buff());
+    A = { kind: 'show', T, t0: performance.now() / 1000, from: { x: H.root.position.x, z: H.root.position.z } };
+    S.showDay = today(); save(); W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: .42 }; document.body.classList.add('g3fight');
+    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = 'Твой выход в сайфере'; paintAct();
+  }
+  let A = null;   // a place action in progress
+  function actTick(dt) {
+    const H = W.hero;
+    if (A.kind === 'train') {
+      A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
+      if (A.t > .8 && !A.p) { A.p = true; H.play(A.P.c, { fade: .3 }); toast('💪 ' + A.P.nm + '…'); }
+      if (A.fail && A.t > 2.6 && !A.f) { A.f = true; fallStart(H); sfx('crash'); }
+      if (H.fall) fallTick(H, dt, false);
+      if (A.t > 4.4) { if (H.fall) fallEnd(H); H.play('Breakdance_Ready', { fade: .4 }); bumpGoal('train');
+        toast(A.fail ? '💪 Сорвался, но форма растёт: ' + S.form.n + ' / ' + BAL.trainMax + ' · −' + 3 * S.form.n + '% срывов сегодня' : '💪 Чисто! Форма ' + S.form.n + ' / ' + BAL.trainMax + ' · −' + 3 * S.form.n + '% срывов сегодня');
+        if (!A.fail) sfx('hit'); endAct(); }
+      H.tick(dt); return;
+    }
+    if (A.kind === 'show') {
+      const T = A.T, t = performance.now() / 1000 - A.t0, kin = ease(clamp(t / .9, 0, 1)), kout = ease(clamp((t - (T.len - 1.4)) / 1.2, 0, 1));
+      H.root.position.set(lerp(A.from.x, C0.x, kin * (1 - kout)) , 0, lerp(A.from.z, C0.z, kin * (1 - kout)));
+      if (t < .9) H.root.rotation.y = Math.atan2(C0.x - A.from.x, C0.z - A.from.z);
+      const si = T.seq.findIndex(s => t < s.b);
+      if (t >= .9 && si >= 0 && si !== T.si) { const s = T.seq[si]; T.si = si; if (s.c) { H.play(s.c, { fade: .35, at: s.at }); if (H.act) H.act.timeScale = 1; } if (s.nm) mvText(s); }
+      const s = si >= 0 ? T.seq[si] : null;
+      if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) { s.done = true;
+        if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', 'Срыв!']); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', 'Чисто!']); } }
+      if (H.fall) fallTick(H, dt, s && s.soft); if (s && s.kind !== 'fall' && H.fall && H.fall.up) fallEnd(H);
+      if (si < 0 && !A.back) { A.back = true; if (H.fall) fallEnd(H); H.play('Bboy_Uprock', { fade: .4 }); $('#g3mv').innerHTML = ''; }
+      if (t >= T.len) { const clean = A.clean !== false, rep = BAL.repShow + (clean ? BAL.repShowClean : 0); S.rep += rep; save(); bumpGoal('show');
+        sfx('win'); toast('🔥 Сайфер принял тебя! +' + rep + ' ★' + (clean ? ' (чисто)' : '')); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); W.cyBusy = false; }
+      H.tick(dt); return;
+    }
+  }
+  function endAct() { A = null; W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); paintHud(); near = null; paintAct(); }
+
   const shown = g => !S.beat[g.c.id];
   const setShown = g => { const v = shown(g); g.people.forEach(J => J.root.visible = v); g.ring.visible = g.label.visible = v; };
   crews.forEach(setShown);
@@ -281,13 +383,15 @@ export function initGame(ctx) {
   // ---------- proximity button ----------
   let near = null; const act = $('#g3act');
   act.onclick = () => {
-    if (!near || B || P) return;
+    if (!near || B || P || A) return;
     if (near.paint) { startPaint(near.g); return; }
+    if (near.place) { placeRun(near.place); return; }
     if (S.en < BAL.battle) { location.href = './'; return; }
     startBattle(near);
   };
   function paintAct() {
-    if (!near || B || P) { act.classList.remove('on'); return; }
+    if (!near || B || P || A) { act.classList.remove('on'); return; }
+    if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? '🎬 Мало энергии — посмотри урок' : b.h) + `<small>${b.low ? '1 минута урока = +' + BAL.perMin + ' ⚡' : b.s}</small>`; return; }
     if (near.paint) { const low = S.en < BAL.paint; act.className = 'on' + (low ? ' low' : '');
       act.innerHTML = `🎨 Закрасить стену «${near.g.c.name}» · −${BAL.paint} ⚡<small>${low ? 'Мало энергии — посмотри урок' : 'Твой кусок + ' + BAL.turfRep + ' ★ каждый день'}</small>`; return; }
     const low = S.en < BAL.battle, lv = ctx.heroLevel(), c = near.c;
@@ -298,14 +402,16 @@ export function initGame(ctx) {
 
   // ---------- the battle ----------
   let B = null;
-  function makeTurn(J, lv, r, who) {
+  // today's buffs from the DJ and the practice mat (only for me)
+  const buff = () => ({ fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) });
+  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
     // a set: toprock → down → footwork → power → freeze, each step with an outcome
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
     const top = pick(TOP, r); push(top, 2.3, r() * .5, { nm: TOPNM[top], pts: 1, kind: 'top' });
     push('Breakdance_Uprock_To_Ground', clipLen('Breakdance_Uprock_To_Ground') - .05, 0, { kind: 'down' });
     push(pick(FOOT, r), 2.4, r() * .8, { nm: 'FOOTWORK', pts: 1.5, kind: 'foot' });
     const pw = POWER.filter(p => p.lv <= lv), P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
-    const failP = clamp(.13 + P.risk - .06 * (lv - P.lv), .04, .32);
+    const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall, .03, .32);
     const pFail = r() < failP;
     if (P.pre) push(P.pre, 1.6, 1.0, { kind: 'pre' });
     const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
@@ -313,12 +419,12 @@ export function initGame(ctx) {
     if (pFail) push(null, 2.2, 0, { kind: 'fall' });
     else {
       if (P.post) push(P.post, 1.4, 0, { kind: 'post' });
-      const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1), .04, .2);
+      const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall, .03, .2);
       push(F.c, F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 });
       if (fFail) push(null, 1.6, 0, { kind: 'fall', soft: true });
     }
     let t = .9; seq.forEach(s => { s.a = t; t += s.len; s.b = t; });   // .9 s to step into the middle
-    return { J, who, seq, len: t + 1.4, score: 0, style: Math.round((r() * .8 + .15 * lv) * 10) / 10 };
+    return { J, who, seq, len: t + 1.4, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
   function startBattle(g) {
     S.en -= BAL.battle; S.fights++; save(); paintHud();
@@ -327,7 +433,7 @@ export function initGame(ctx) {
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
     const meSpot = { x: cx - .3, z: cz + 2.1 }, opSpot = { x: cx + .3, z: cz - 2.1 };
     const turns = [], rounds = c.lv >= 3 ? 2 : 1;
-    for (let i = 0; i < rounds; i++) { turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me')); }
+    for (let i = 0; i < rounds; i++) { turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff())); }
     B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, fromMe: { x: H.root.position.x, z: H.root.position.z }, fromOp: { x: opp.root.position.x, z: opp.root.position.z }, clean: true };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
@@ -454,16 +560,22 @@ export function initGame(ctx) {
   // ---------- per frame ----------
   function update(dt) {
     if (P) paintTick(dt);
+    if (A) actTick(dt);
+    recs.forEach(r => r.rotation.y += dt * 3.5); strip.material.emissiveIntensity = 1 + Math.sin(performance.now() / 160) * .6; djP.tick(dt);
+    chain.visible = rankOf(S.rep) < BAL.gateRank;
+    matLab.visible = djLab.visible = !A && !B && !P;
     if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.tick(dt); B.opp.tick(dt); } }
     crews.forEach(g => { if (!g.label.visible) return; g.people.forEach(J => { if (!B || J !== B.opp) J.tick(dt); }); });
-    if (!B) {
+    if (!B && !P && !A) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
       crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
+      if (!A) PLACES.forEach(pl => { const d = Math.hypot(p.x - pl.x, p.z - pl.z); if (d < pl.r && d < bd) { bd = d; best = { place: pl }; } });
       crews.forEach(g => { if (!canPaint(g)) return; const d = Math.hypot(p.x - g.wall.x, p.z - g.wall.z); if (d < 2.4 && d < bd) { bd = d; best = { paint: true, g }; } });
-      if ((best && best.paint ? best.g : best) !== (near && near.paint ? near.g : near) || !!(best && best.paint) !== !!(near && near.paint)) { near = best; paintAct(); }
+      const key = o => !o ? null : o.paint ? 'p:' + o.g.c.id : o.place ? 'l:' + o.place.id : 'c:' + o.c.id;
+      if (key(best) !== key(near)) { near = best; paintAct(); }
       // to-do «watch a turn in the cypher»: stand near the circle for 8 s
       if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
     }
   }
-  return { update, busy: () => !!B || !!P, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf } from './city3d-mocap.js?v=5';
-import { initGame } from './city3d-game.js?v=8';
+import { initGame } from './city3d-game.js?v=11';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -655,7 +655,7 @@ async function build(scene) {
   lamp(scene, -9.6, -11.7, .75, { power: 90, angle: 1.0, lean: 1.2 });
   lamp(scene, -11.2, -4.7, 1.2, { power: 90, angle: 1.0, lean: 1.0 });
   lamp(scene, 1.6, 4.8, Math.PI, { power: 70, angle: 1.0 });
-  [[cx, cz, '#ffb36b', 26], [-7.2, -9.4, '#ffa65e', 14], [8.6, -6.2, '#c8ffb0', 10], [-8.6, -2.4, '#c9b8ff', 12], [4.6, 9.2, '#ffd98a', 14], [1, 2, '#ffbf80', 10]]
+  [[cx, cz, '#ffb36b', 26], [-7.2, -9.4, '#ffa65e', 14], [8.6, -6.2, '#c8ffb0', 10], [-8.6, -2.4, '#c9b8ff', 12], [4.6, 9.2, '#ffd98a', 14]]
     .forEach(([x, z, c, p]) => { const l = new THREE.PointLight(c, p, 9, 1.6); l.position.set(x, 3.4, z); scene.add(l); });
   lamps.forEach((l, i) => i < 3 && dust(scene, l.head));
 
@@ -696,6 +696,9 @@ function planSet(n) { const s = SETS[n % SETS.length], out = []; let t = 0;
   s.forEach(([c, rep, cut]) => { const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
 function updateCrew(_tb, dt) {
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
+  // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
+  if (W.cyBusy) { W.crew.forEach(D => { if (D.cur !== 'Breakdance_Ready') D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
+    D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
   if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; }
   const rel = now - T.start, walk = 2.2, back = 2.2, J = W.crew[T.who % n], c = J.c;
   let freezeNow = false;
