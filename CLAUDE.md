@@ -61,7 +61,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   cards), rhythm battle by hand (answer within 24 h) or auto cartoon, moves unlocked by STUDYING lessons (3 views with sound + level),
   starter gate for new players, rare/mythic moves, points for fresh lessons, coach bridge.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
-- City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) — see the last entries of the full notes.
+- City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) + «Промзона» (city3d-prom.js, `?d=prom`) — see the last entries of the full notes.
+- City 3D bodies are ONE skinned mesh per person (`skinGeo` in city3d-mocap.js) — don't hang new limb pieces on bones; dancers leave the floor on foot (`W.walk`); fixture brightness = `LAMP_K` / `FILL_K` in city3d.js (owner 16.11: «слишком ярко»).
 - City 3D PEOPLE have BODIES: `bodyOf(seed, {type, girl, old, …})` → `mocapPerson(look, { body })` (city3d-mocap.js: BODY_TYPES avg / slim / lanky /
   athl / stocky / heavy / big / small, skin, hair colour + style, beard, backpack, coat). Every new person gets a body; the hero keeps the plain one.
 - City 3D (draft, separate page, not linked): see the last section of the full notes. Owner's direction 14.11: top-down 3D like his
