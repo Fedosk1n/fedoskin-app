@@ -150,6 +150,8 @@ const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Sta
 const mats = new Map();
 const M = (c, r = .8, m = 0) => { const k = c + r + m; if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m })); return mats.get(k); };
 const UP = new THREE.Vector3(0, 1, 0);
+// two-sided cloth (a brim seen from below, an open band): its own cached material, the one-sided M() ones stay as they are
+const M2 = (c, r = .8) => { const k = 'd' + c + r; if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, side: THREE.DoubleSide })); return mats.get(k); };
 // a limb piece from the bone's origin to its child's rest position
 function seg(bone, to, r, mat, r2) {
   const len = to.length(), m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(.01, len - r * 1.4), 3, 10), mat);
@@ -262,7 +264,7 @@ export function mocapPerson(look, opt = {}) {
   for (const s of ['Left', 'Right']) { B[s + 'Shoulder'].position.x *= bd.chest * gW; B[s + 'Arm'].position.multiplyScalar(bd.chest * gW); B[s + 'UpLeg'].position.x *= Math.max(1, bd.hip * (1 + (L - 1) * .5)); }
   const P = n => B[n].position.clone();
   const skin = M(C.skin, .7), top = M(C.top, .78), pants = M(C.pants, .85), shoe = M(C.shoe, .5), sole = M(C.sole || '#eee', .6), hair = M(C.hair, .9);
-  const sleeveLong = !/^tee/.test(look.top || 'tee'), sleeve = M(C.sleeve || C.top, .78), baggy = /Big|bomber|track/.test(look.top || '') ? 1.06 : 1;
+  const sleeveLong = !/^tee/.test(look.top || 'tee'), sleeve = M(C.sleeve || C.top, .78), baggy = /Big|bomber|track|hoodie/.test(look.top || '') ? 1.06 : 1;
   const cw = bd.chest * gW * baggy, ww = bd.waist * baggy, dp = 1 + (bd.chest - 1) * .7 + bd.belly * .12, add = (bone, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); bone.add(m); return m; };
   // ---- the smooth body: torso + arms + HANDS + legs + SHOES as one skinned mesh (see skinGeo) ----
   // 16.11.2026 night (owner «улучши визуал главного персонажа, он всё ещё слишком шарнирный»): the hands and the shoes used to be
@@ -272,7 +274,7 @@ export function mocapPerson(look, opt = {}) {
   rig.updateMatrixWorld(true);
   const names = Object.keys(R), BI = {}; names.forEach((n, i) => { BI[n] = i; });
   const JP = n => new THREE.Vector3().setFromMatrixPosition(B[n].matrixWorld), FWD = new THREE.Vector3(0, 0, 1), DOWN = new THREE.Vector3(0, -1, 0), G = skinGeo();
-  const hi = !!opt.hero, NT = hi ? 24 : 16, NA = hi ? 14 : 10, NL = hi ? 16 : 12, cus = look.cus || {}, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const hi = !!opt.hero, NT = 24, NA = 14, NL = 16, cus = look.cus || {}, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hd = 1 + (bd.hip - 1) * .8, wd = 1 + (ww - 1) * .5, topC = C.top, slC = C.sleeve || C.top, tp = look.top || 'tee', yk = C.yoke && C.yoke !== topC ? C.yoke : null, uc = yk || topC;
   // ground contact points given in rest-pose space (they ride on a bone): the body may never sink into the asphalt
   const PTS = [], lpt = (bone, wp, r = 0) => PTS.push({ m: B[bone], p: B[bone].worldToLocal(wp.clone()), r: r * scale });
@@ -282,7 +284,7 @@ export function mocapPerson(look, opt = {}) {
     // trousers: the seat up to the waistband (the top hangs over it)
     G.limb(P, TB, BI.Hips, TZ, [[-.105, .068 * hd, .09 * bd.hip, C.pants, 0, .78], [-.07, .094 * hd, .138 * bd.hip, C.pants, 0, .86], [-.02, .102 * hd, .152 * bd.hip, C.pants, 0, .95], [.055, hemD, hemW, C.pants]], NT, FWD, .78, -.125, .07);
     // the top: hem (a big tee hangs lower; jackets end in a rib band) → waist → chest → sloped shoulders → collar
-    const rib = /track|bomber/.test(tp) && C.cuff ? C.cuff : null, drop = tp === 'teeBig' ? .08 : /^tee/.test(tp) ? .045 : .015, lo = .04 - drop, ex = (tp === 'teeBig' ? .017 : .01) * baggy;
+    const rib = /track|bomber|hoodie/.test(tp) && C.cuff ? C.cuff : null, drop = tp === 'teeBig' ? .08 : /^tee/.test(tp) ? .045 : .015, lo = .04 - drop, ex = (tp === 'teeBig' ? .017 : .01) * baggy;
     const st = [[lo, hemD + ex, hemW + ex * 1.15, rib || topC, 0, .8]];
     if (rib) st.push([lo + .036, hemD + ex, hemW + ex * 1.15, rib, 0, .92], [lo + .036, hemD + ex + .005, hemW + ex + .006, topC, 1, .92]);
     const sy = S('Spine2') + .05, nk = S('Neck');
@@ -335,7 +337,7 @@ export function mocapPerson(look, opt = {}) {
       if (C.stripe) { const out = lg.v.clone().multiplyScalar(Math.sign(lg.v.x) * sg), f = (R, k) => R.c.clone().addScaledVector(out, R.rv + .004).addScaledVector(lg.u, k * .016), end = cuffed ? F - .061 : F;
         for (let i = 2; i < lg.length - 1; i++) { const a = lg[i], b = lg[i + 1]; if (b.s - a.s < 1e-4 || b.s > end) continue; G.quad(f(a, sg), f(a, -sg), f(b, sg), f(b, -sg), C.stripe, a.w, b.w); } } }
     { // SNEAKER: a sole and an upper, both closed skinned shapes
-      const A0 = JP(s + 'Foot'), T0 = JP(s + 'ToeBase'), x0 = A0.x, yB = -.04, bigS = hi ? 1.06 : 1, zH = A0.z - .078 * bigS, zT = T0.z + .108 * bigS, len = zT - zH, n = hi ? 16 : 12;
+      const A0 = JP(s + 'Foot'), T0 = JP(s + 'ToeBase'), x0 = A0.x, yB = -.04, bigS = hi ? 1.06 : 1, zH = A0.z - .078 * bigS, zT = T0.z + .108 * bigS, len = zT - zH, n = 16;
       const gum = cus.kicks >= 2, soleC = gum ? '#C98A45' : (C.sole || '#eeeeee'), yM = yB + (gum ? .042 : .032), highT = /high/.test(look.shoe || '') ? .045 : 0, up = C.shoe, cap = C.shoe2 || C.shoe, laceC = C.lace || '#F2EFE8';
       const wOf = (z, y) => { let t = clamp((z - (T0.z - .03)) / .06, 0, 1); t = t * t * (3 - 2 * t); return t <= 0 ? (y > .085 ? [[bn('Foot'), .6], [bn('Leg'), .4]] : [[bn('Foot'), 1]]) : t >= 1 ? [[bn('ToeBase'), 1]] : [[bn('Foot'), 1 - t], [bn('ToeBase'), t]]; };
       // sections along the foot: t (0 heel … 1 toe), half-width, height of the top
@@ -360,12 +362,27 @@ export function mocapPerson(look, opt = {}) {
   // culled like everything else, with a sphere big enough for any pose (lying, handstand, arms out: the hips never leave the rig's centre,
   // root motion moves the rig). It was never culled: every body was skinned and drawn in every shadow map even far off screen (17.11.2026)
   body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, .8, 0), 1.8); rig.add(body); body.bind(new THREE.Skeleton(bones)); rig.scale.setScalar(scale);
-  if (bd.belly > .12) { const s = add(B.Spine, new THREE.SphereGeometry(.15 + .035 * bd.belly, 16, 12), top, 0, .05, .015 + .04 * bd.belly); s.scale.set(1.08 * ww / (1 + bd.belly * .1), 1.2, 1); }
+  // belly: a flatter, taller oval that sits in the torso (17.11.2026: the round ball stuck out like a balloon); hoodies get their pocket on it
+  if (bd.belly > .12) { const s = add(B.Spine, new THREE.SphereGeometry(.15 + .035 * bd.belly, 20, 14), top, 0, .035, .004 + .03 * bd.belly); s.scale.set(1.06 * ww / (1 + bd.belly * .1), 1.32, .8); }
   if (bd.coat) { const c = add(B.Hips, new THREE.CylinderGeometry(.165 * bd.hip, .215 * bd.hip, .36, 12, 1, true), M(C.top, .8), 0, -.2, 0); c.scale.z = .78 * dp; c.material.side = THREE.DoubleSide; }
   if (look.top === 'teeTeam') add(B.Spine2, new THREE.CircleGeometry(.062, 16), M('#E2611A', .7), 0, .062, .119 * dp);
-  if (look.chain) { const ch = add(B.Spine2, new THREE.TorusGeometry(.11, look.chain > 1 ? .02 : .012, 6, 18), M(C.gold, .25, 1), 0, .2, .07 * dp); ch.rotation.x = Math.PI / 2 - .35; }
+  // CHAIN (17.11.2026, owner «улучши визуал других человечков»): it was a flat ring around the neck (read as a collar from above).
+  // Now a loop that lies on the shoulders just outside the collar and hangs down onto the chest; a heavy one (chain 2) is longer,
+  // thicker and carries a medallion. Coordinates in Spine2's space; fz(y) = the front of the top at that height + the cord.
+  if (look.chain) { const NK = P('Neck'), ny = NK.y, nz = NK.z, heavy = look.chain > 1, tb = heavy ? .012 : .0075, drop = heavy ? .2 : .155, gm = M(C.gold, .25, 1);
+    const surf = y => y < .065 ? .115 + .0025 * y / .065 : y < .112 ? .1175 - .0095 * (y - .065) / .047 : .108 - .022 * clamp((y - .112) / Math.max(.01, ny - .128), 0, 1);
+    const fz = y => nz * y / ny + surf(y) * dp + .014 * (baggy > 1 ? 1.4 : 1) + bd.belly * .045 * clamp((ny - y) / drop, 0, 1) + tb, yb = ny - drop;
+    const pts = [[0, yb, fz(yb) + .002], [.046, yb + .022, fz(yb + .022)], [.074, ny - drop * .52, fz(ny - drop * .52)], [.09, ny - .012, nz + .045 * dp], [.092, ny + .006, nz - .02], [.062, ny + .012, nz - .07], [0, ny + .014, nz - .084]];
+    const loop = pts.concat(pts.slice(1, -1).reverse().map(([x, y, z]) => [-x, y, z])).map(([x, y, z]) => new THREE.Vector3(x, y, z));
+    add(B.Spine2, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true, 'centripetal'), 44, tb, 6, true), gm, 0, 0, 0);
+    if (heavy) { const my = yb - .028, md = add(B.Spine2, new THREE.CylinderGeometry(.03, .03, .009, 18), gm, 0, my, fz(my) + .004); md.rotation.x = Math.PI / 2 - .12;
+      add(B.Spine2, new THREE.TorusGeometry(.009, .003, 4, 10), gm, 0, yb - .004, fz(yb) + .002); } }
   if (bd.pack) { add(B.Spine2, new RoundedBoxGeometry(.27, .34, .13, 2, .05), M(bd.pack, .8), 0, .04, -.18 * dp); }
   if (/hood|owl/i.test((look.top || '') + (bd.hood ? 'hood' : ''))) { const h = add(B.Spine2, new THREE.SphereGeometry(.105, 12, 8), top, 0, .2, -.1 * dp); h.scale.set(1.25, .7, .9); }
+  // a HOODIE (17.11.2026): the hood on the back (above) + a kangaroo pocket on the belly and two drawstrings from the collar
+  if (look.top === 'hoodie') { const pc = shadeOf(C.top, .86), sz = .1 * dp * wd + bd.belly * .03 + .006;
+    if (bd.belly < .4) { const pk = add(B.Spine, new RoundedBoxGeometry(.19 * ww, .085, .014, 2, .006), M(pc, .85), 0, -.012, sz + bd.belly * .05); pk.rotation.x = -.08; }
+    const NK = P('Neck'), sc = M(shadeOf(C.top, 1.25), .7); for (const k of [-1, 1]) { const st = add(B.Spine2, new THREE.CapsuleGeometry(.0055, .07, 2, 5), sc, k * .03, NK.y - .07, NK.z * .55 + .113 * dp + .006); st.rotation.x = .12; } }
   seg(B.Neck, P('Head'), .052 * Math.sqrt(A), skin);
   // head: face, ears, hair by style, beard, hat
   { const hg = new THREE.Group(); hg.scale.setScalar(bd.head); B.Head.add(hg); const eye = M('#17130f', .4), H = C.hat, hat = H ? (look.hat || '') : '';
@@ -392,7 +409,9 @@ export function mocapPerson(look, opt = {}) {
     if (hat && /cap/i.test(hat)) { const cp = add(hg, new THREE.SphereGeometry(.132, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(H[0], .7), 0, .13, 0); cp.scale.y = 1.02;
       add(hg, new RoundedBoxGeometry(.16, .02, .12, 1, .008), M(H[1], .7), 0, .14, hat === 'capBack' ? -.15 : .15); }
     else if (hat === 'beanie') { const cp = add(hg, new THREE.SphereGeometry(.133, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.9), M(H[0], .8), 0, .12, 0); cp.scale.y = 1.2; }
-    else if (hat === 'bucket') { add(hg, new THREE.CylinderGeometry(.112, .132, .13, 16), M(H[0], .8), 0, .215, 0); add(hg, new THREE.CylinderGeometry(.14, .2, .035, 18), M(H[0], .8), 0, .15, 0); }
+    else if (hat === 'bucket') {   // a soft rounded crown, a band, a brim sloping down (17.11.2026: it was a cylinder and read as a top hat)
+      const pr = [[0, .262], [.07, .259], [.104, .249], [.123, .23], [.133, .2], [.137, .17], [.139, .148], [.166, .131], [.196, .111], [.206, .102], [.2, .096], [.168, .114], [.14, .13]].map(([x, y]) => new THREE.Vector2(x, y));
+      add(hg, new THREE.LatheGeometry(pr, 22), M2(H[0], .85), 0, 0, 0); add(hg, new THREE.CylinderGeometry(.1395, .1405, .022, 22, 1, true), M2(H[1] || H[0], .8), 0, .16, 0); }
     else if (hat === 'bandana') add(hg, new THREE.SphereGeometry(.131, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.1), M(H[0], .8), 0, .12, 0);
     if (look.phones) { const ph = M('#18191c', .5, .3); [-1, 1].forEach(s => add(hg, new THREE.CylinderGeometry(.042, .042, .03, 12), ph, s * .128, .1, 0).rotation.z = Math.PI / 2);
       const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .1, 0); band.scale.y = 1.2; }
@@ -400,9 +419,9 @@ export function mocapPerson(look, opt = {}) {
     if (cus.head && !hat) { const ac = look.acc || '#E2611A', bandM = cus.head >= 3 ? glowOf(ac) : M(ac, .75);
       const sb = add(hg, new THREE.TorusGeometry(.129, .016, 8, 30), bandM, 0, .175, -.008); sb.rotation.x = Math.PI / 2 - .2;
       if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, .262, -.01); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, .264, -.01); } }
-    if (cus.head && hat) { const ac = look.acc || '#E2611A', bk = hat === 'bucket', top = bk ? .283 : hat === 'beanie' ? .28 : hat === 'bandana' ? .251 : .266, by = bk ? .2 : hat === 'beanie' ? .14 : .152, br = bk ? .121 : .136;
+    if (cus.head && hat) { const ac = look.acc || '#E2611A', bk = hat === 'bucket', top = bk ? .263 : hat === 'beanie' ? .28 : hat === 'bandana' ? .251 : .266, by = bk ? .16 : hat === 'beanie' ? .14 : .152, br = bk ? .1415 : .136;
       { const d = new THREE.Vector3(.52, bk ? 0 : .5, .7).normalize(), pin = add(hg, new THREE.CylinderGeometry(.021, .021, .009, 14), M('#E7B23C', .3, 1), 0, 0, 0);
-        pin.position.set(0, bk ? .235 : .13, 0).addScaledVector(d, bk ? .124 : hat === 'beanie' ? .145 : .135); pin.quaternion.setFromUnitVectors(UP, d); }
+        pin.position.set(0, bk ? .2 : .13, 0).addScaledVector(d, bk ? .137 : hat === 'beanie' ? .145 : .135); pin.quaternion.setFromUnitVectors(UP, d); }
       if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, top, 0); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, top + .002, 0); }
       if (cus.head >= 3) add(hg, new THREE.TorusGeometry(br, .0075, 6, 28), glowOf(ac), 0, by, 0).rotation.x = Math.PI / 2; } }
   for (const s of ['Left', 'Right']) if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.082 * L, 10, 8), M('#18181B', .6), 0, .01, .03).scale.set(1, 1.1, .8);
@@ -421,7 +440,8 @@ export function mocapPerson(look, opt = {}) {
   // more draw call in every shadow map every frame — owner 17.11.2026 «…притормаживает… займись оптимизацией»)
   root.userData.person = true;
   root.traverse(m => { if (!m.isMesh) return; m.receiveShadow = true; if (m.isSkinnedMesh) { m.castShadow = true; return; }
-    const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); m.castShadow = g.type !== 'CircleGeometry' && g.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z) * scale >= .05; });
+    const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const rr = g.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
+    m.castShadow = g.type !== 'CircleGeometry' && rr >= .05; if (rr < .045 && g.type !== 'CircleGeometry' && !(m.material.emissive && m.material.emissive.getHex())) m.userData.tiny = true; });   // tiny = hidden when the map is zoomed far out (city3d.js)
   personShadows(root);   // the rest: one merged shadow piece per bone (head + hair + cap = one draw instead of five)
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
   root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;

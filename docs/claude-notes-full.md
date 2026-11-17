@@ -1442,3 +1442,31 @@ Owner: «Продолжи работу над городом, а так же у�
 - Not changed: lights (15 in the yard, all per pixel), bloom, MSAA, pixel ratio and the quality guard (fps < 40 twice → fewer pixels → no bloom).
   If the phone is still not smooth, next levers: fewer fill PointLights per district, pixel ratio 1.75 on phones, main-pass batching of
   static meshes by material (only ~48 static draws in view vs ~90 person parts — people parts by bone+material would be the bigger win).
+
+### City 3D — the camera keeps the hero after a change of clothes, other people dressed one by one, two-finger zoom (17.11.2026, owner «Улучши визуал других человечков. Исправь баг (мой человечек выбежал за кадр и его не видно). Добавь возможность двумя пальцами зумить экран (карту), чтобы можно было видеть всю область, когда есть такая нужда»)
+- THE BUG: the frame loop (city3d.js) took `hp = W.hero.root.position` ONCE at boot. `rewear()` (a gear piece won in a battle → wearGear, or a
+  detail bought from the tailor) builds a NEW person and removes the old one — the camera kept following the old, removed position and the
+  hero walked out of the picture (owner's screenshots: right after a battle with «Ржавые»). Now the hero is read every frame. `CITY3D.rewear`
+  is exposed for tests. (The dark blots in his screenshots are the yard's puddle decals, not a bug.)
+- PEOPLE (city3d-game.js `CSTY`, `dress`, `tidy`, exported `crewLook(c, ci, i, D)` — the crews' body + clothes, also used by test pages):
+  members used to wear the hero's outfit of their level (the team's black + orange) → crews were clones. Now each member gets his own cut
+  (hoodie / tee / teeBig / track / bomber), trousers, a hat or none (afro, mohawk, dreads, top, bun(s), curly, braids, long ⇒ no hat, the hair
+  shows), headphones only on every 3rd, a chain only on every 3rd (unless it is the crew's prize), a wristband in the crew colour on half.
+  Yard crews have palettes (Ржавые rust/brown workwear + jeans, Кислотные black/violet/acid green, Совы navy/grey hoodies, Золотые зубы white
+  and gold); the other districts keep their colours through `c.fix` (applied after `dress`; `tidy` keeps a hoodie one colour). The crew's
+  prize item (`c:<gear>` slots from HERO.itemOf) is never touched. hero.js untouched.
+- BODIES (city3d-mocap.js `?v=11`): everyone has the hero's mesh detail (NT 24 / NA 14 / NL 16, sneaker rings 16: +560 vertices a person,
+  draw calls the same; the hero keeps his slightly bigger hands and shoes). New top `hoodie` (hood, rib hem/cuffs, kangaroo pocket on Spine,
+  two drawstrings). CHAIN = a closed tube that lies on the shoulders outside the collar and hangs onto the chest (heavy: longer, thicker, a
+  medallion; follows a belly) — it was a flat ring around the neck. BUCKET hat = a lathe crown + band in the 2nd hat colour + brim sloping down
+  (was a cylinder = a top hat); custom details on it moved to the new crown. Belly = flatter, taller oval (was a ball). `M2()` = cached
+  two-sided materials. Small parts (radius < 4.5 cm, not glowing, not patches) carry `userData.tiny`.
+- ZOOM (city3d.js): `W.uZoom` (ZMIN .7 … ZMAX 3, saved in `fedoskin-city3d-zoom`), pinch on the canvas (every finger tracked; a 2nd finger
+  cancels the joystick/tap of the 1st, nothing new starts until all are lifted), mouse wheel, Safari gesture events blocked. W.camT (battles,
+  actions) still sets its own zoom and gives the player's back afterwards. With the zoom: look point offset ×zoom (hero stays low on the
+  screen), fog density / zoom, name tags (sprites with depthTest false) × zoom^.6, the moon's shadow refitted per ¼ step (`zoomBucket`: grows at
+  once, shrinks when the camera settles; ground clamped to ±19 m; map ≤ 2048 → softer shadows far out). Far out (zoom > 1.7): tiny parts
+  hidden, moon shadow every 2nd frame, lamp shadows take turns (1 in 3). Hint got a 2nd line and moved up to 100 px (the place button covered it).
+- MEASURED headless, yard spawn: draw calls 376 → 386 (people), zoom 3: ~680 / ~520 alternating frames (814 without the far-out savings).
+  Tested: all 4 districts load clean, battle with Ржавые (skip → win → bandana put on → rewear) + walking 12 m: hero stays at screen centre;
+  pinch in/out via CDP touch; line-ups of all 13 crews. NOT on a real iPhone (pinch feel, speed when zoomed out).

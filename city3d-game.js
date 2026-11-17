@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=10';   // v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=11';   // v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
@@ -71,6 +71,54 @@ CREWS.push(
     looks: [['c:forgeChain'], ['c:forgeChain', 'girl'], [], ['c:forgeChain']], gear: ['forgeChain'] },
 );
 const DNAME = { yard: 'двор', center: 'Центр', park: 'Парк', prom: 'Промзона' };
+// ---- OUTFITS OF CREW MEMBERS (owner 17.11.2026 «улучши визуал других человечков») ----
+// Every member used to wear the hero's outfit of his level — the team's black and orange — so the yard was full of clones of one
+// kit, told apart only by the one prize item. Now each member is dressed on his own: a top of his own cut (hoodie / tee / big tee /
+// track top / bomber), trousers, a hat or none (a member with an afro, a mohawk, dreads… shows his hair), headphones, chain and
+// wristband only on some. Yard crews get their own palettes (CSTY: Ржавые = rust and brown workwear, Кислотные = black with acid
+// green and violet, Совы = night-blue hoodies, Золотые зубы = white and gold); the other districts keep their colours (c.fix).
+// The crew's prize item (c:<gear>) is never touched: it shows exactly what you win.
+const CSTY = {
+  rusty: { acc: '#E07A45', tops: ['#8A3B22', '#4B3428', '#6E6A55', '#A0522D'], pants: ['#4A3B2E', '#2E3742', '#5C5546'], hat: ['#4B3428', '#E07A45'],
+    shoes: [['#3a2a20', '#E07A45', '#d9cfbf'], ['#E9E4D8', '#8A3B22', '#E9E4D8'], ['#2a2420', '#2a2420', '#C8603A']], cuts: ['hoodie', 'tee', 'bomber'], legs: ['jeans', 'wind', 'jeans'] },
+  acid: { acc: '#7CFF4F', tops: ['#141518', '#2a1f3d', '#5ED63A', '#22252b'], pants: ['#141518', '#22252b', '#2a1f3d'], hat: ['#141518', '#7CFF4F'],
+    shoes: [['#141518', '#7CFF4F', '#141518'], ['#E9E4D8', '#9B5CFF', '#E9E4D8'], ['#2a1f3d', '#7CFF4F', '#E9E4D8']], cuts: ['track', 'hoodie', 'tee'], legs: ['trackp', 'wind', 'trackp'], trim: '#9B5CFF' },
+  owls: { acc: '#A98BFF', tops: ['#2B2F4A', '#3A3D45', '#1d1f2e'], pants: ['#1d2030', '#2a2a33', '#3E4A66'], hat: ['#2B2F4A', '#A98BFF'],
+    shoes: [['#2B2F4A', '#A98BFF', '#E9E4D8'], ['#E9E4D8', '#2B2F4A', '#E9E4D8'], ['#1d1f2e', '#1d1f2e', '#A98BFF']], cuts: ['hoodie', 'hoodie', 'teeBig'], legs: ['wind', 'jeans', 'trackp'] },
+  gold: { acc: '#FFD23F', tops: ['#E9E4D8', '#18181B', '#6b4f1d', '#E9E4D8'], pants: ['#E6E1D6', '#18181B', '#2b2620', '#18181B'], hat: ['#18181B', '#E7B23C'],
+    shoes: [['#F2EFE8', '#E7B23C', '#F2EFE8'], ['#18181B', '#E7B23C', '#E7B23C'], ['#E9E4D8', '#18181B', '#E9E4D8']], cuts: ['track', 'teeBig', 'bomber', 'tee'], legs: ['trackp', 'wind', 'trackp', 'jeans'], trim: '#E7B23C' },
+};
+const CUTS = ['hoodie', 'tee', 'track', 'bomber', 'teeBig'], HAIRY = /afro|mohawk|dreads|top|bun|curly|braids|long/;
+const tint = (c, k) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
+function dress(l, c, i, acc, body) {
+  const slots = new Set(acc.map(k => HERO.itemOf && HERO.itemOf(k)).filter(Boolean).map(g => g.slot)), st = CSTY[c.id], r = rng((c.id.length * 131 + c.id.charCodeAt(0) * 17 + i * 7919) >>> 0), C = l.col;
+  const at = (a, k = 0) => a[(i + k) % a.length], A = st ? st.acc : c.col;
+  if (!slots.has('top')) {
+    const t = st ? at(st.cuts) : at(CUTS, c.id.length); l.top = t;
+    const long = !/^tee/.test(t), top = st ? at(st.tops) : C.top || '#18181B';
+    C.top = top; C.sleeve = long ? (t === 'bomber' && st ? at(st.tops, 1) : top) : null; C.yoke = t === 'track' ? (st ? (top === '#18181B' || top === '#141518' ? A : '#18181B') : C.yoke || '#18181B') : null;
+    C.cuff = t === 'hoodie' ? tint(top, .8) : t === 'track' ? (st ? '#18181B' : C.cuff || '#18181B') : t === 'bomber' ? (st ? A : C.cuff || A) : null;
+    C.trim = t === 'track' ? (st && st.trim ? st.trim : '#F2EFE8') : t === 'bomber' ? (st ? A : C.trim || '#9A968E') : null;
+  }
+  if (st) { const lg = at(st.legs); l.pants = lg; C.pants = lg === 'jeans' ? at(['#3E5F8E', '#2E3742', '#55606e']) : at(st.pants); C.stripe = lg === 'trackp' ? (st.trim || A) : null; }
+  if (!slots.has('head')) {
+    if (body && HAIRY.test(body.style || '')) l.hat = null;
+    else { l.hat = at([l.hat || 'cap', null, 'beanie', 'capBack', null], c.id.length); }
+    C.hat = l.hat ? (st ? st.hat.slice() : C.hat || ['#18181B', A]) : null;
+  }
+  if (st && !slots.has('kicks')) { const [a, b, so] = at(st.shoes); C.shoe = a; C.shoe2 = b; C.sole = so; C.lace = a === '#F2EFE8' || a === '#E9E4D8' ? b : '#F2EFE8'; }
+  if (!slots.has('ears')) l.phones = !!l.phones && i % 3 === 2;
+  if (!slots.has('neck')) l.chain = i % 3 === 0 ? Math.min(1, l.chain || 0) : 0;
+  l.wrist = r() < .5 ? A : null;
+}
+// member i of crew c (ci = its index among the district's crews): the body and the clothes (also used by the line-up test page)
+export function crewLook(c, ci, i, D = c.d || 'yard') {
+  const acc = c.looks[i], bd = (c.bodies || [])[i], body = bodyOf((D === 'park' ? 900 : D === 'prom' ? 1800 : 0) + ci * 31 + i * 7 + 11, Object.assign({ girl: acc.includes('girl') }, typeof bd === 'string' ? { type: bd } : bd));
+  const lk = HERO.topDown(c.base ? c.base + (i % 2) : Math.min(8, c.lv + 2 + (i % 2)), acc); dress(lk, c, i, acc, body); if (c.fix) c.fix(lk); tidy(lk);
+  return { lk, body };
+}
+// after the district's own colours (c.fix): a hoodie is one colour with darker rib cuffs, whatever the fix did to the sleeves
+function tidy(l) { if (l.top === 'hoodie') { l.col.sleeve = l.col.top; l.col.cuff = tint(l.col.top, .8); l.col.trim = null; l.col.yoke = null; } }
 // the regulars of the underground ring in the industrial zone (nicknames from the reserve list)
 const RING = [{ name: 'Штопор', col: '#FFB547' }, { name: 'Гвоздь', col: '#C9D4E6' }, { name: 'Магнит', col: '#FF5A4F' }, { name: 'Вихрь', col: '#7CC4FF' }, { name: 'Пружина', col: '#7CFF4F' }, { name: 'Компас', col: '#FFD23F' }];
 // the three dancers of the daily jam on the Park's stage (nicknames from the reserve list)
@@ -271,8 +319,7 @@ export function initGame(ctx) {
     const g = { c, people: [], x: c.at[0], z: c.at[1] };
     const r = rng(ci * 77 + 3);
     c.looks.forEach((acc, i) => {
-      const lk = HERO.topDown(c.base ? c.base + (i % 2) : Math.min(8, c.lv + 2 + (i % 2)), acc); if (c.fix) c.fix(lk);
-      const bd = (c.bodies || [])[i], J = mocapPerson(lk, { body: bodyOf((D === 'park' ? 900 : D === 'prom' ? 1800 : 0) + ci * 31 + i * 7 + 11, Object.assign({ girl: acc.includes('girl') }, typeof bd === 'string' ? { type: bd } : bd)) }), a = Math.PI * 2 * i / c.looks.length + ci;
+      const { lk, body } = crewLook(c, ci, i, D), J = mocapPerson(lk, { body }), a = Math.PI * 2 * i / c.looks.length + ci;
       J.home = { x: g.x + Math.cos(a) * 1.35, z: g.z + Math.sin(a) * 1.35 }; J.root.position.set(J.home.x, 0, J.home.z);
       J.root.rotation.y = Math.atan2(g.x - J.home.x, g.z - J.home.z);
       J.play(i === 0 ? pick(TOP, r) : 'Breakdance_Ready', { at: r() * 2, speed: .9 + r() * .2 });

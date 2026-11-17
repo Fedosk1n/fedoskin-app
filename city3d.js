@@ -8,9 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=10';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=11';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=18';
+import { initGame } from './city3d-game.js?v=19';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -530,6 +530,13 @@ const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15
 const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
 const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
 const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
+// the player's own zoom (owner 17.11.2026 «добавь возможность двумя пальцами зумить экран (карту), чтобы можно было видеть всю область»):
+// 1 = the normal view, up to ZMAX pulled back (the camera goes further along the same angle), down to ZMIN closer. Kept between visits.
+const ZMIN = .7, ZMAX = 3;
+W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom'); return z ? clamp(z, ZMIN, ZMAX) : 1; } catch (_) { return 1; } })();
+W.zoom = W.uZoom;
+const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
+const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
 async function build(scene) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
@@ -756,7 +763,24 @@ function updateCrew(_tb, dt) {
 const ctl = { down: false, sx: 0, sy: 0, x: 0, y: 0, joy: false, t: 0, id: null };
 function setupInput(cv, camera) {
   const joy = $('#joy'), knob = joy.firstElementChild, ray = new THREE.Raycaster(), pl = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), v = new THREE.Vector3();
-  cv.addEventListener('pointerdown', e => { if (ctl.down) return; ctl.down = true; ctl.id = e.pointerId; ctl.sx = ctl.x = e.clientX; ctl.sy = ctl.y = e.clientY; ctl.t = performance.now(); ctl.joy = false; try { cv.setPointerCapture(e.pointerId); } catch (_) {} startMusic(); });
+  // TWO FINGERS = zoom the map (pinch). Every finger on the canvas is tracked; when a second one lands, the walk of the first is
+  // dropped (no joystick, no tap), and until all fingers are lifted nothing else starts. The mouse wheel zooms on a computer.
+  const fingers = new Map(), gap = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+  const pinchEnd = () => { if (!W.pinch) return; W.pinch = null; saveZoom(); };
+  cv.addEventListener('pointerdown', e => {
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) {} startMusic();
+    if (fingers.size >= 2) {   // the second finger: from now on it is a pinch
+      if (fingers.size === 2) { W.pinch = { d0: gap(), z0: W.uZoom }; hintOff(); }
+      if (ctl.down) { if (ctl.joy) W.hero.st.tgt = null; ctl.down = false; ctl.joy = false; joy.classList.remove('on'); knob.style.transform = ''; }
+      return; }
+    if (ctl.down || W.pinch) return; ctl.down = true; ctl.id = e.pointerId; ctl.sx = ctl.x = e.clientX; ctl.sy = ctl.y = e.clientY; ctl.t = performance.now(); ctl.joy = false; });
+  const lift = e => { fingers.delete(e.pointerId); if (fingers.size < 2) pinchEnd(); };
+  cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
+  cv.addEventListener('pointermove', e => { const f = fingers.get(e.pointerId); if (f) { f.x = e.clientX; f.y = e.clientY; }
+    if (W.pinch && fingers.size >= 2) { setZoom(W.pinch.z0 * W.pinch.d0 / gap()); return; } });
+  cv.addEventListener('wheel', e => { e.preventDefault(); setZoom(W.uZoom * Math.exp(clamp(e.deltaY, -120, 120) * .0016)); clearTimeout(cv._wz); cv._wz = setTimeout(saveZoom, 400); }, { passive: false });
+  // Safari's own page pinch (it ignores user-scalable=no): off, the pinch belongs to the map
+  ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
   cv.addEventListener('pointermove', e => { if (!ctl.down || e.pointerId !== ctl.id) return; ctl.x = e.clientX; ctl.y = e.clientY;
     if (!ctl.joy && Math.hypot(ctl.x - ctl.sx, ctl.y - ctl.sy) > 14) { ctl.joy = true; joy.style.left = ctl.sx + 'px'; joy.style.top = ctl.sy + 'px'; joy.classList.add('on'); W.hero.st.tgt = null; hintOff(); }
     if (ctl.joy) { let dx = ctl.x - ctl.sx, dy = ctl.y - ctl.sy; const l = Math.hypot(dx, dy), m = 42; if (l > m) { dx *= m / l; dy *= m / l; } knob.style.transform = `translate(${dx}px,${dy}px)`; } });
@@ -921,6 +945,7 @@ async function boot() {
   scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false; o.shadow.needsUpdate = true;
     const lp = o.getWorldPosition(new THREE.Vector3()), tp = o.target.getWorldPosition(new THREE.Vector3());
     spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2 }); });
+  let spotN = 0, farOn = false, moonN = 0;
   const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
 
   // post: bloom on the bright bits, then vignette + grade + grain
@@ -937,12 +962,19 @@ async function boot() {
   const off = new THREE.Vector3(0, 15.5, 8.6);   // ~61° down from the south: more volume
   // fit the moon's shadow to the screen: the box (in the moon's view) around everything visible from the ground up to 12 m, + a margin;
   // as many texels per metre as before (2048 over 32 m), so the shadows look the same — just fewer objects and pixels to draw
-  const fitShadows = () => {
-    const c = camera.clone(); c.position.copy(off); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  // z = the zoom it is fitted for (1 = the normal view; pulled back with two fingers — up to ZMAX — it covers more ground, with fewer
+  // texels per metre once the map hits 2048). Refitted only when the zoom crosses a quarter step (zoomBucket), not every frame.
+  let fitZ = 1;
+  // grows at once (the view gets wider before the camera gets there), shrinks only once the camera has settled — no map re-made every frame
+  const zoomBucket = () => { const t = W.camT ? W.camT.zoom : W.uZoom, z = W.zoom || 1, want = Math.max(1, Math.ceil(Math.max(z, t) * 4 - .001) / 4);
+    return want > fitZ || Math.abs(z - t) < .03 ? want : fitZ; };
+  const fitShadows = (z = fitZ) => {
+    fitZ = z; const o = off.clone().multiplyScalar(z), far = 19;   // ground further than 19 m from the look point is outside the district anyway
+    const c = camera.clone(); c.position.copy(o); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
     const sc = new THREE.OrthographicCamera(); sc.position.copy(MOON); sc.lookAt(0, 0, 0); sc.updateMatrixWorld();
     const lb = new THREE.Box3(), d = new THREE.Vector3(), q = new THREE.Vector3(); VIEW.x0 = VIEW.z0 = Infinity; VIEW.x1 = VIEW.z1 = -Infinity;
     for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { d.set(nx, ny, .5).unproject(c).sub(c.position).normalize(); if (d.y > -.02) d.y = -.02;
-      for (const y of [0, 4, 12]) { q.copy(off).addScaledVector(d, (y - off.y) / d.y);
+      for (const y of [0, 4, 12]) { q.copy(o).addScaledVector(d, (y - o.y) / d.y); q.x = clamp(q.x, -far, far); q.z = clamp(q.z, -far, far);
         if (y <= 4) { VIEW.x0 = Math.min(VIEW.x0, q.x); VIEW.x1 = Math.max(VIEW.x1, q.x); VIEW.z0 = Math.min(VIEW.z0, q.z); VIEW.z1 = Math.max(VIEW.z1, q.z); }
         lb.expandByPoint(q.applyMatrix4(sc.matrixWorldInverse)); } }
     const sh = moon.shadow, cm = sh.camera, m = .8; cm.left = lb.min.x - m; cm.right = lb.max.x + m; cm.bottom = lb.min.y - m; cm.top = lb.max.y + m; cm.updateProjectionMatrix();
@@ -955,7 +987,14 @@ async function boot() {
   setupInput(cv, camera);
 
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
-  const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - 2.2); camPos.copy(camLook).add(off);
+  // the hero is read EVERY frame: after a change of clothes (gear won in a battle, a detail from the tailor) W.hero is a NEW person —
+  // the camera used to keep following the old, removed one and the hero ran out of the picture (owner 17.11.2026 «мой человечек
+  // выбежал за кадр и его не видно»)
+  { const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - 2.2); camPos.copy(camLook).add(off); }
+  // fog thins out when the camera is pulled back (pinch zoom), so the far side of the district isn't lost in haze
+  const fog0 = scene.fog.density;
+  // name tags (crews, places, the guard) grow a little when the camera is pulled back, so they stay readable from far away
+  const tags = []; scene.traverse(o => { if (o.isSprite && o.material.depthTest === false) tags.push({ o, s: o.scale.clone() }); }); let tagK = 1;
   let last = performance.now(), fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
@@ -965,17 +1004,29 @@ async function boot() {
     if (showFps) renderer.info.reset();
     const tb = ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
     updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
-    // camera follows with a little lead in the walking direction
-    const s = W.hero.st; look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 + s.vz * .25);
+    // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
+    // battles take over with their own close-ups (W.camT) and give it back afterwards
+    const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;
+    look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
     if (W.camT) look.set(W.camT.x, 0, W.camT.z);
-    camLook.lerp(look, 1 - Math.exp(-dt * 4)); W.zoom = lerp(W.zoom || 1, W.camT ? W.camT.zoom : 1, 1 - Math.exp(-dt * 3));
+    camLook.lerp(look, 1 - Math.exp(-dt * 4)); W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
     camPos.copy(camLook).addScaledVector(off, W.zoom); camera.position.copy(camPos);
+    scene.fog.density = fog0 / Math.max(1, W.zoom);
+    // pulled far back: eyes, ears, laces, pins of every person (one draw each, invisible from up there) are hidden, and the moon's
+    // shadow is redrawn every second frame — the overview of the whole district costs about what the normal view does
+    { const far = W.zoom > 1.7; if (far !== farOn) { farOn = far; scene.traverse(o => { if (o.userData.tiny) o.visible = !far; }); if (!far) moon.shadow.autoUpdate = true; }
+      if (far) { moon.shadow.autoUpdate = false; moon.shadow.needsUpdate = (moonN = (moonN + 1) % 2) === 0; } }
+    { const k = Math.pow(Math.max(1, W.zoom), .6); if (Math.abs(k - tagK) > .004) { tagK = k; for (const t of tags) t.o.scale.copy(t.s).multiplyScalar(k); } }
+    { const zb = zoomBucket(); if (zb !== fitZ) fitShadows(zb); }
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
     camera.lookAt(camLook);
     moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
     // a lamp's shadow is redrawn only while the ground it lights is on screen (else it isn't seen anyway)
     { const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
-      for (const S of spots) { const dx = Math.max(x0 - S.x, 0, S.x - x1), dz = Math.max(z0 - S.z, 0, S.z - z1); if (dx * dx + dz * dz < S.r * S.r) S.l.shadow.needsUpdate = true; } }
+      // pulled far back (two fingers) most lamps are on screen at once: then they take turns, one in three per frame — a person's
+      // shadow under a lamp lags by two frames, invisible at that distance, and the overview stays as light as the normal view
+      const turn = W.zoom > 1.7 ? 3 : 1; spotN = (spotN + 1) % turn;
+      spots.forEach((S, i) => { if (i % turn !== spotN) return; const dx = Math.max(x0 - S.x, 0, S.x - x1), dz = Math.max(z0 - S.z, 0, S.z - z1); if (dx * dx + dz * dz < S.r * S.r) S.l.shadow.needsUpdate = true; }); }
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
     (W.speakers || []).forEach(sp => sp.userData.cones.forEach(c => { c.cone.position.z = .251 + beat * .03; c.ring.material.color.setRGB(1.75 * (.6 + beat), .45 * (.6 + beat), .12 * (.6 + beat)); }));
@@ -992,6 +1043,6 @@ async function boot() {
       fpsN = 0; fpsT = 0; worst = 0; }
   };
   requestAnimationFrame(frame);
-  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots };
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });
