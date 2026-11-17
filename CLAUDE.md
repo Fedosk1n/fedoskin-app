@@ -74,6 +74,9 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   (city3d.js `setMusic`, 40 ms debounce so jam rounds don't re-scratch); `RB.bgm(true, id)` swaps with a DJ scratch; speakers pump on `RB.bgmBeat()`.
   `vol` levelled with `RB._bgmRender(id, bars)` (offline render) — re-measure when a loop changes.
   BATTLE TEMPOS sped up 17.11 (owner «ускорь биты на батлах, фон оставь»): crews/jam/ring 110…138 BPM (= 110 + (old − 80) × .54), yard stays 88.
+  BATTLE PUNCH 17.11 (owner «энергичнее и басовее»): every non-yard loop plays through `hotRig` (HOT set only inside `loopBar`): heavier kick/808 dry +
+  sidechain pump, held saturated «phone bass» 140–460 Hz (level `hb` per loop) + sub, crash / snare roll + riser / pickup kick (`hotDrums`). Yard and the
+  rhythm battle never see HOT. Re-level `vol` (target yard +3.5 dB, double 150 Hz highpass) after any change.
 - City 3D DRAWN POWER (17.11, owner «авто скучно, но и в бит тапать не надо… идеально сделать элемент, нарисовав»): `city3d-power.js` — the hero's
   power step in battles hangs (clock stops), the finger leads his legs round a line MEASURED from the mocap (`DRAW` per clip, `table()`/`timeAt()`),
   the clip's time follows the finger; perfect ×1.5 / clean / fall; no touch → old auto outcome; replay at real tempo after. `makeTurn` builds both

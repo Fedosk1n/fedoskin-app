@@ -186,6 +186,7 @@
 
   // ---- the beat ----
   let ctx = null, master = null, noise = null;
+  let HOT = null;   // the battle punch of a crew loop while it is being scheduled (see hotRig below), null everywhere else
   function audioOn() {
     try {
       if (!ctx) {
@@ -205,13 +206,14 @@
   const env = (g, t, a, d) => { g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(.001, t + d); };
   function tone(out, t, type, f0, f1, a, d) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + d * .5); env(g, t, a, d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + .02); }
   function hiss(out, t, ftype, f, q, a, d) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; fl.type = ftype; fl.frequency.value = f; fl.Q.value = q; env(g, t, a, d); s.connect(fl); fl.connect(g); g.connect(out); s.start(t, Math.random() * .5, d + .02); }
-  const kick = (o, t, a) => tone(o, t, 'sine', 160, 46, a || 1, .3);
+  const kick = (o, t, a) => HOT ? hotKick(t, a || 1) : tone(o, t, 'sine', 160, 46, a || 1, .3);
   const snare = (o, t, a) => { a = a == null ? 1 : a; hiss(o, t, 'bandpass', 1900, .8, .7 * a, .17); tone(o, t, 'triangle', 200, 150, .35 * a, .1); };
   const rim = (o, t) => { tone(o, t, 'square', 1700, 0, .07, .03); hiss(o, t, 'bandpass', 2600, 2, .25, .05); };
   const hat = (o, t, a) => hiss(o, t, 'highpass', 7500, .5, a, .045);
   const ohat = (o, t, a) => hiss(o, t, 'highpass', 6500, .5, a, .22);
   const crash = (o, t) => hiss(o, t, 'highpass', 4500, .3, .45, .9);
-  function bass(o, t, f, d, wave, lp, a) { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave || 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = lp || 520; env(g, t, a || .34, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02); }
+  function bass(o, t, f, d, wave, lp, a) { a = a || .34; if (HOT) { hotLow(t, f, d, a); a *= 1.2; }
+    const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave || 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = lp || 520; env(g, t, a, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02); }
   function chord(o, t, f, iv, wave, lp, a, d) { iv.forEach(m => { const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); os.type = wave; os.frequency.value = f * m; fl.type = 'lowpass'; fl.frequency.value = lp; env(g, t, a, d); os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .04); }); }
   const stab = (o, t, f) => chord(o, t, f, [1, 1.189, 1.498], 'sawtooth', 1500, .06, .32);
   // the DJ's hand on the record: a short noise sweep up or down
@@ -636,7 +638,7 @@
   const vCow = (o, t, a) => { tone(o, t, 'square', 545, 0, .05 * a, .14); tone(o, t, 'square', 815, 0, .04 * a, .12); };
   const vClank = (o, t, a) => { [1220, 1730, 2510, 3390].forEach((f, i) => tone(o, t, 'square', f, f * .985, .035 * a / (1 + i * .4), .09 + i * .02)); hiss(o, t, 'bandpass', 3500, 6, .25 * a, .08); };
   const vAnvil = (o, t, a) => { tone(o, t, 'sine', 1480, 0, .14 * a, .6); tone(o, t, 'sine', 3960, 0, .06 * a, .35); tone(o, t, 'triangle', 2210, 0, .05 * a, .25); };
-  const v808 = (o, t, a) => tone(o, t, 'sine', 130, 43, a, .75);
+  const v808 = (o, t, a) => HOT ? hotKick(t, a, 1) : tone(o, t, 'sine', 130, 43, a, .75);
   const vZap = (o, t, a) => tone(o, t, 'sawtooth', 2600, 110, .07 * a, .16);
   const vShake = (o, t, a) => hiss(o, t, 'highpass', 5200, .7, .1 * a, .05);
   const vBongo = (o, t, f, a) => tone(o, t, 'sine', f, f * .82, .4 * a, .13);
@@ -654,7 +656,7 @@
   }
   // a squelchy 303-style note: saw through a resonant lowpass that snaps open and closes (accent = wider and louder)
   function vAcid(o, t, f, d, a, acc, cut) {
-    const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), A = a * (acc ? 1.3 : 1); os.type = 'sawtooth'; os.frequency.value = f;
+    const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), A = a * (acc ? 1.3 : 1); os.type = 'sawtooth'; os.frequency.value = f; if (HOT) hotLow(t, f, d, A * 1.6);
     fl.type = 'lowpass'; fl.Q.value = 13; fl.frequency.setValueAtTime(cut * (acc ? 3.2 : 2), t); fl.frequency.exponentialRampToValueAtTime(Math.max(120, cut * .5), t + Math.max(.08, d * .9));
     g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(A, t + .004); g.gain.setValueAtTime(A, t + d * .8); g.gain.exponentialRampToValueAtTime(.001, t + d);
     os.connect(fl); fl.connect(g); g.connect(o); os.start(t); os.stop(t + d + .02);
@@ -670,6 +672,7 @@
   // a wobbling bass: saw through a resonant lowpass swept by a slow sine
   function vWob(o, t, f, d, rate, a) {
     const os = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    if (HOT) hotLow(t, f, d, a * 1.4);
     os.type = 'sawtooth'; os.frequency.value = f; fl.type = 'lowpass'; fl.Q.value = 7; fl.frequency.value = 520; lfo.frequency.value = rate; lg.gain.value = 420; lfo.connect(lg); lg.connect(fl.frequency);
     g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(a, t + .01); g.gain.setValueAtTime(a, t + d * .85); g.gain.linearRampToValueAtTime(.0001, t + d);
     os.connect(fl); fl.connect(g); g.connect(o); os.start(t); lfo.start(t); os.stop(t + d + .02); lfo.stop(t + d + .02);
@@ -679,6 +682,50 @@
     os.frequency.setValueAtTime(f0, t + d); os.frequency.linearRampToValueAtTime(f1, t + d + len); g.gain.setValueAtTime(.0001, t + d); g.gain.linearRampToValueAtTime(.08 * a, t + d + .06);
     g.gain.exponentialRampToValueAtTime(.001, t + d + len); os.connect(g); g.connect(o); os.start(t + d); os.stop(t + d + len + .02); }); }
   const each = (o, t, st, list, fn) => list.forEach(n => fn(t + n[0] * st, n));
+  // BATTLE PUNCH (owner 17.11.2026 «Сделай энергичнее и басовее биты на батлы в бандах»): while a crew / jam / ring loop is scheduled,
+  // HOT = hotRig(out). The kick (and the 808) goes straight to `dry`, heavier — a long sub, a knock a phone speaker can play, a click — and
+  // ducks everything else (`pump`: the «pumping» of club music). Every bass note gets a HELD saturated copy (`sh` → only 140–460 Hz: these
+  // overtones make the bass heard on a phone speaker, where the notes themselves, 40–110 Hz, are nearly silent) and a held sine sub for
+  // headphones; the loop's own bass line is 20% louder. Measured (8 bars, offline): the 150–400 Hz band +4…+7 dB, below 120 Hz +5…+9 dB. Every bar gets battle drums (hotDrums): a crash opens each 4 bars, a snare roll + a noise riser close them,
+  // a pickup kick ends every second bar. HOT is null for the yard and for the rest of this file (the rhythm battle) — they sound as before.
+  function hotRig(out, hb) {   // hb = the loop's own level of the phone bass (LOOPS[id].hb)
+    const pump = ctx.createGain(), sh = ctx.createWaveShaper(), lo = ctx.createGain(), F = [['highpass', 140], ['highpass', 140], ['lowpass', 460], ['lowpass', 460]].map(([ty, f]) => { const x = ctx.createBiquadFilter(); x.type = ty; x.frequency.value = f; return x; });
+    const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 4) / Math.tanh(4); }
+    sh.curve = c; sh.oversample = '2x'; lo.gain.value = hb == null ? .3 : hb;
+    pump.connect(out); sh.connect(F[0]); F[0].connect(F[1]); F[1].connect(F[2]); F[2].connect(F[3]); F[3].connect(lo); lo.connect(pump);
+    return { dry: out, pump, sh };
+  }
+  // the saturated copy (→ sh) and the sub (an octave down when the note is above 70 Hz) of one bass note
+  function hotLow(t, f, d, a) {
+    // held, not plucked (the loops' own bass dies away in a tenth of the note): the battle bass sounds through the whole note
+    const hold = (g, A) => { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(A, t + .008); g.gain.setValueAtTime(A, t + d * .7); g.gain.exponentialRampToValueAtTime(.001, t + d); };
+    const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sawtooth'; os.frequency.value = f; hold(g, a); os.connect(g); g.connect(HOT.sh); os.start(t); os.stop(t + d + .02);
+    const sb = ctx.createOscillator(), sg = ctx.createGain(); sb.type = 'sine'; sb.frequency.value = f > 70 ? f / 2 : f; hold(sg, a * .45); sb.connect(sg); sg.connect(HOT.pump); sb.start(t); sb.stop(t + d + .02);
+  }
+  function hotKick(t, a, boom) {
+    const o = HOT.dry;
+    tone(o, t, 'sine', boom ? 130 : 160, boom ? 43 : 46, a, boom ? .75 : .32);   // the kick (the 808: its long boom)
+    tone(o, t, 'sine', 95, 38, a * .55, .5);                                     // a long sub under it
+    tone(o, t, 'sine', 200, 90, a * .6, .11);                                   // the knock a phone speaker can play
+    hiss(o, t, 'highpass', 3200, .7, a * .1, .012);                             // the beater's click
+    const g = HOT.pump.gain; g.setTargetAtTime(.5 + .25 * (1 - Math.min(1, a)), t, .004); g.setTargetAtTime(1, t + .03, .07);   // everything else ducks
+  }
+  function hotDrums(o, t, b, st, bar) {
+    if (b % 4 === 0) { hiss(o, t, 'highpass', 4500, .3, .13, 1); hiss(o, t, 'bandpass', 9000, .6, .05, 1.3); }   // a crash opens the 4 bars
+    if (b % 2 === 1) hotKick(t + 15 * st, .55);                                                                 // a pickup into the next bar
+    if (b % 4 === 3) {
+      [12, 13, 14, 15].forEach((k, i) => snare(o, t + k * st, .14 + i * .1));                                  // a snare roll closes them
+      const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), t0 = t + bar * .5, t1 = t + bar;   // + a noise riser
+      s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.Q.value = 1.4; fl.frequency.setValueAtTime(700, t0); fl.frequency.exponentialRampToValueAtTime(7000, t1);
+      g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.06, t1 - .02); g.gain.linearRampToValueAtTime(.0001, t1 + .01);
+      s.connect(fl); fl.connect(g); g.connect(o); s.start(t0); s.stop(t1 + .03);
+    }
+  }
+  // one bar of a loop: crew / jam / ring loops through their battle rig, the yard as it always was
+  function loopBar(L, rig, out, t, b, st, bar) {
+    if (!rig) { L.play(out, t, b, st, bar); return; }
+    HOT = rig; try { L.play(rig.pump, t, b, st, bar); hotDrums(rig.pump, t, b, st, bar); } finally { HOT = null; }
+  }
   // play(out, t = start of the bar, b = bar number since the loop started, st = a 16th, bar = a bar), all in seconds. vol = the loop's level,
   // evened out by an offline render (17.11.2026): every crew loop ≈ the yard's loudness on a phone speaker (bass below 150 Hz not counted) +1 dB
   // BATTLE TEMPOS sped up 17.11.2026 (owner «ускорь биты на батлах и оставь скорость бита на фоновой музыке»): new = 110 + (old − 80) × .54,
@@ -698,7 +745,7 @@
       chord(o, t, CH[B][0], CH[B][1], 'triangle', 1100, .035, bar * .9);
     } },
     // Ржавые (lv 1): dusty lo-fi boom-bap, a lazy swing, crackle of an old record; E minor
-    rusty: { name: 'Ржавый лоу-фай', bpm: 112, vol: .419, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .22);
+    rusty: { name: 'Ржавый лоу-фай', bpm: 112, vol: .373, hb: .23, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .22);
       L(['X......x..x.....', 'X..x......x..o..'][B], (u, a) => kick(o, u, .9 * a));
       L('....X.......X...', u => snare(o, u, .5));
       L('x.o.x.o.x.o.x.oo', (u, a) => hat(o, u, .12 * a));
@@ -707,7 +754,7 @@
       vCrackle(o, t, bar, 10);
     } },
     // Кислотные (lv 2): acid breaks — a squelchy 303 line whose filter opens and closes over 4 bars; A minor
-    acid: { name: 'Кислотный брейк', bpm: 121, vol: .31, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0), cut = 380 + 700 * (.5 - .5 * Math.cos(b / 4 * Math.PI * 2));
+    acid: { name: 'Кислотный брейк', bpm: 121, vol: .276, hb: .39, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0), cut = 380 + 700 * (.5 - .5 * Math.cos(b / 4 * Math.PI * 2));
       L(['X.....x...X.....', 'X.....x...X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { vClap(o, u, .8); snare(o, u, .3); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .1 * a));
@@ -716,7 +763,7 @@
         (u, [, m, ac]) => vAcid(o, u, mf(m), st * 1.6, .11, ac, cut));
     } },
     // Ночные совы (lv 3, out only at night): slow and dark — deep bass, rimshots, minor pads, an owl hoots now and then; C minor
-    owls: { name: 'Ночной', bpm: 110, vol: .391, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .18);
+    owls: { name: 'Ночной', bpm: 110, vol: .348, hb: .24, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .18);
       L(['X.........X.....', 'X......x..X.....'][b % 2], (u, a) => kick(o, u, .95 * a));
       L('........X.......', u => snare(o, u, .6));
       L('...x......x....x', u => rim(o, u));
@@ -727,7 +774,7 @@
       if (B === 1) vHoot(o, t + 6 * st, 1);
     } },
     // Золотые зубы (lv 4): West-coast G-funk — claps, a fat synth bass, warm chords, a whining lead every other bar, a bling; G minor
-    gold: { name: 'Золотой джи-фанк', bpm: 118, vol: .324, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .14);
+    gold: { name: 'Золотой джи-фанк', bpm: 118, vol: .289, hb: .31, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .14);
       L(['X......x.xX.....', 'X..x...x..X.....'][b % 2], (u, a) => kick(o, u, .95 * a));
       L('....X.......X...', u => { vClap(o, u, .9); snare(o, u, .25); });
       L('x.x.x.x.x.x.x.xo', (u, a) => hat(o, u, .1 * a));
@@ -737,7 +784,7 @@
       if (B === 3) { each(o, t, st, [[2, 72, 74, 3], [6, 77, 79, 4], [11, 79, 77, 4]], (u, [, a0, a1, d]) => vWhine(o, u, mf(a0), mf(a1), d * st, .055)); tone(o, t + 15 * st, 'triangle', 2637, 0, .05, .5); }
     } },
     // Трафареты (lv 3): New York boom-bap — a hard snare, a horn stab, the DJ cuts at the end of every second bar; D minor
-    stencil: { name: 'Нью-йоркский бум-бэп', bpm: 116, vol: .341, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .2);
+    stencil: { name: 'Нью-йоркский бум-бэп', bpm: 116, vol: .304, hb: .27, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .2);
       L(['X.......x.X.....', 'X..x......X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { snare(o, u, .75); vClap(o, u, .3); });
       L('x.x.x.x.x.x.x.xo', (u, a) => hat(o, u, .11 * a));
@@ -746,7 +793,7 @@
       else { chord(o, t, mf(65), [1, 1.26, 1.498], 'sawtooth', 1800, .045, st * 2.5); L('.............xox', (u, a, k) => scratch(o, u, k === 14, .35)); }
     } },
     // Турникеты (lv 4): the metro — hats roll like wheels on rails, the turnstile clanks, a station chime every 4th bar; E minor
-    turn: { name: 'Метро', bpm: 125, vol: .321, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .08), R = [40, 40, 36, 38][B];
+    turn: { name: 'Метро', bpm: 125, vol: .286, hb: .37, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .08), R = [40, 40, 36, 38][B];
       L(['X.........X.....', 'X.X.......X..x..'][b % 2], (u, a) => kick(o, u, a));
       L('....X..o....X...', (u, a) => snare(o, u, .7 * a));
       L('x.xxx.xxx.xxx.xx', (u, a, k) => hat(o, u, k % 4 === 0 ? .13 : .07));
@@ -755,7 +802,7 @@
       if (B === 3) vChime(o, t + 8 * st, [76, 72, 67], st * 2, 1);
     } },
     // Хромированные (lv 5, boss Хромосома): electro — a booming 808, claps, a cowbell, a robot bass in eighths, an orchestra hit; A minor
-    chrome: { name: 'Хромовое электро', bpm: 131, vol: .266, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
+    chrome: { name: 'Хромовое электро', bpm: 131, vol: .237, hb: .6, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
       L(['X.....X...X.....', 'X.....X..X..X...'][B], (u, a) => v808(o, u, .9 * a));
       L('....X.......X...', u => vClap(o, u, 1));
       L('..x...x.....x..x', u => vCow(o, u, 1));
@@ -765,7 +812,7 @@
       if (!B) chord(o, t, mf(57), [1, 1.189, 1.498, 2], 'sawtooth', 2600, .04, .3); else vZap(o, t + 15 * st, 1);
     } },
     // Фанк-бригада (lv 5): a funk break — ghost notes on the snare, a slap bass jumping octaves, short brass stabs, guitar scratches; E
-    funk: { name: 'Фанк-брейк', bpm: 126, vol: .323, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .12);
+    funk: { name: 'Фанк-брейк', bpm: 126, vol: .288, hb: .43, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .12);
       L(['X.x.......x..x..', 'X.....x.x.....x.'][B], (u, a) => kick(o, u, a));
       L('....X..o.o..X..o', (u, a) => snare(o, u, .7 * a));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .1 * a)); L('......x.......x.', u => ohat(o, u, .1));
@@ -775,7 +822,7 @@
       (B ? [6, 8] : [10]).forEach(k => chord(o, t + k * st, mf(52), [1, 1.26, 1.498, 1.782, 2.245], 'sawtooth', 2300, .03, st * 1.4));
     } },
     // Корни (lv 6): jazzy roots — a walking upright bass, electric-piano chords, shaker and rim; Dm7 – G7 – Cmaj7 – A7
-    roots: { name: 'Джазовые корни', bpm: 115, vol: .372, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .24);
+    roots: { name: 'Джазовые корни', bpm: 115, vol: .332, hb: .2, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .24);
       L(['X......x..X.....', 'X.x.......X.....'][b % 2], (u, a) => kick(o, u, .9 * a));
       L('....x.......x...', u => { rim(o, u); snare(o, u, .3); });
       L('.o.o.o.o.o.o.o.o', u => vShake(o, u, .8)); L('x...x...x...x...', u => hat(o, u, .07));
@@ -784,7 +831,7 @@
       chord(o, t, mf(C[0]), C[1], 'sine', 2200, .03, bar * .55); chord(o, t + 10 * st, mf(C[0]), C[1], 'sine', 2200, .02, st * 4);
     } },
     // Волна (lv 7, boss Кюрасао): a fast breakbeat under a pad that swells like a wave, a rolling bass; C# minor
-    wave: { name: 'Волна', bpm: 133, vol: .3, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, 0), R = [37, 33, 40, 35][B];
+    wave: { name: 'Волна', bpm: 133, vol: .267, hb: .35, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, 0), R = [37, 33, 40, 35][B];
       L(['X.........X.X...', 'X.X.......X.....'][b % 2], (u, a) => kick(o, u, a));
       L('....X..o....X..o', (u, a) => { snare(o, u, .7 * a); if (a > .5) vClap(o, u, .4); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .08 * a)); if (B === 0) ohat(o, t, .14);
@@ -793,7 +840,7 @@
       vPad(o, t, mf(P[0]), P[1], bar, .02, 400, 2600);
     } },
     // Арматура (lv 6): industrial boom-bap — a heavy kick, metal clanks on the snare, hammer hits, a gritty bass, a burst of steam; E
-    rebar: { name: 'Индастриал', bpm: 119, vol: .274, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
+    rebar: { name: 'Индастриал', bpm: 119, vol: .244, hb: .59, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
       L(['X.....X...X.....', 'X..X..X...X..X..'][B], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 70, 40, .5 * a, .45); });
       L('....X.......X...', u => { snare(o, u, .7); vClank(o, u, .7); });
       L('..x...........x.', u => vClank(o, u, .35));
@@ -802,7 +849,7 @@
       if (B) hiss(o, t + 8 * st, 'highpass', 3000, .5, .07, .5);
     } },
     // Высоковольтные (lv 7): electro buzz — a wobbling bass, electric zaps; A minor
-    volt: { name: 'Высокое напряжение', bpm: 135, vol: .29, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
+    volt: { name: 'Высокое напряжение', bpm: 135, vol: .258, hb: .41, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
       L(['X.....x...X.....', 'X.....x...X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { snare(o, u, .65); vClap(o, u, .5); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .08 * a));
@@ -810,7 +857,7 @@
       if (B) { vZap(o, t + 14 * st, 1); vZap(o, t + 15 * st, .8); } else vZap(o, t + 7 * st, .6);
     } },
     // Литейка (lv 8, boss Коготь): the hardest — fast double kicks, an anvil rings, a distorted riff in eighths, alarm chords, a tom fill every 4th bar; E minor
-    forge: { name: 'Литейный цех', bpm: 138, vol: .247, play(o, t, b, st) { const B = b % 4, L = grid(t, st, 0);
+    forge: { name: 'Литейный цех', bpm: 138, vol: .22, hb: .41, play(o, t, b, st) { const B = b % 4, L = grid(t, st, 0);
       L(['X.X.......X.X...', 'X.X...X...X.....'][b % 2], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 70, 40, .4, .3); });
       L('....X.......X...', u => snare(o, u, .85));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .09 * a)); if (B !== 3) ohat(o, t + 14 * st, .09);
@@ -820,7 +867,7 @@
       if (B === 3) [13, 14, 15].forEach((k, i) => tom(o, t + k * st, 190 - i * 35));
     } },
     // Джем на эстраде (Парк): the classic b-boy break — bongos over the drums, a tambourine, an organ stab; A minor
-    jam: { name: 'Би-бой брейк с бонгами', bpm: 127, vol: .3, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
+    jam: { name: 'Би-бой брейк с бонгами', bpm: 127, vol: .267, hb: .3, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
       L(['X.........X.....', 'X.x.......X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => snare(o, u, .7));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .08 * a));
@@ -830,7 +877,7 @@
       chord(o, t, mf(B ? 55 : 57), B ? [1, 1.26, 1.498] : [1, 1.189, 1.498], 'square', 1300, .025, st * 6);
     } },
     // Подпольный ринг (Промзона): dark and heavy — a half-time snare, a rumbling bass, low minor stabs; F# minor
-    ring: { name: 'Подпольный', bpm: 123, vol: .304, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .16);
+    ring: { name: 'Подпольный', bpm: 123, vol: .271, hb: .24, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .16);
       L(['X.......X.X.....', 'X..X....X.......'][B], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 65, 38, .45 * a, .5); });
       L('........X.......', u => { snare(o, u, .9); vClap(o, u, .6); });
       L('....x.......x..x', u => rim(o, u));
@@ -854,10 +901,10 @@
           const fx = ctx.createGain(); fx.gain.value = .55; fx.connect(ctx.destination); const n = ctx.currentTime + .02;
           scratch(fx, n, false, .7); scratch(fx, n + .11, true, .6); scratch(fx, n + .2, false, .5); setTimeout(() => { try { fx.disconnect(); } catch (_) {} }, 1200); at = n + .34; }
         const out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination); out.gain.setTargetAtTime(L.vol || .34, swap ? at : ctx.currentTime, swap ? .02 : .4);
-        const N = { id, out, at, t0: at, bpm: L.bpm, i: 0, tm: 0 };
+        const N = { id, out, at, t0: at, bpm: L.bpm, i: 0, tm: 0, rig: id === 'yard' ? null : hotRig(out, L.hb) };
         const fill = () => {
           if (!bgN || bgN !== N) return;
-          while (N.at < ctx.currentTime + .6) { L.play(out, N.at, N.i, st, bar); N.at += bar; N.i++; }
+          while (N.at < ctx.currentTime + .6) { loopBar(L, N.rig, out, N.at, N.i, st, bar); N.at += bar; N.i++; }
         };
         bgN = N; fill(); N.tm = setInterval(fill, 200);
         if (ctx.state !== 'running') { const go = () => { try { ctx.resume(); } catch (_) {} document.removeEventListener('pointerdown', go, true); }; document.addEventListener('pointerdown', go, true); }
@@ -871,7 +918,7 @@
     const L = LOOPS[id]; if (!L || !window.OfflineAudioContext) return Promise.resolve(null);
     const st = 60 / L.bpm / 4, bar = st * 16, sr = 44100, off = new OfflineAudioContext(2, Math.ceil((bar * bars + 1) * sr), sr), keep = [ctx, noise];
     ctx = off; noise = off.createBuffer(1, sr, sr); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    try { const out = off.createGain(); out.gain.value = L.vol || .34; out.connect(off.destination); for (let i = 0; i < bars; i++) L.play(out, .05 + i * bar, i, st, bar); }
+    try { const out = off.createGain(); out.gain.value = L.vol || .34; out.connect(off.destination); const rig = id === 'yard' ? null : hotRig(out, L.hb); for (let i = 0; i < bars; i++) loopBar(L, rig, out, .05 + i * bar, i, st, bar); }
     finally { ctx = keep[0]; noise = keep[1]; }
     return off.startRendering();
   }

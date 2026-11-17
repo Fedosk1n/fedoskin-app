@@ -1604,3 +1604,25 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   21 with djGloves owned in the flat save. city3d.html: RB.LOOPS = new tempos, yard plays before, `GAME._start('rusty')` / `('forge')` switch to
   the crew loop. A listening file (yard + 15 battle loops, ~8 s each) was sent to the owner. Not heard by Claude, not on a real iPhone.
 - Versions: rhythm.js ?v=24 (index.html + city3d.html).
+
+### Crew battle beats — more energy, more bass (17.11.2026, ~23:45)
+- Owner: «Сделай энергичнее и басовее биты на батлы в бандах».
+- rhythm.js: one shared «battle punch» for every loop except `yard` (13 crews, jam, ring), no pattern of a loop changed. `bgm` / `bgmRender` play
+  each bar through `loopBar(L, rig, …)`; for battle loops `rig = hotRig(out, L.hb)` and `HOT = rig` only while that bar is scheduled (try/finally),
+  so the yard, the flat city and the rhythm battle (kick/bass/v808 with HOT null) are byte-for-byte the old sound.
+  - kick / v808 with HOT → `hotKick`: goes to `dry` (= out, not ducked); the old kick + a long sub sine 95→38 + a 200→90 Hz «knock» (what a phone
+    speaker can play) + a short click; it ducks `pump` (everything else) to .5 (softer kicks less) and lets it back with τ 70 ms — the pumping.
+  - every bass note (bass / vGrit / vPluck via bass, vAcid, vWob) → `hotLow`: a HELD saw (the loops' own bass is plucked — exp decay, gone after
+    ~10% of the note) through a tanh shaper and a 140–460 Hz band (2×HP + 2×LP) = the bass you hear on a phone speaker, level `hb` per loop;
+    plus a held sine sub (an octave down above 70 Hz); the loop's own bass ×1.2.
+  - `hotDrums` per bar: a soft crash on bar 1 of every 4, a pickup kick on step 16 of every second bar, a 4-step snare roll + a noise riser on
+    the last half of every 4th bar.
+- Levels: first the plain «same loudness» re-level crushed the drums (the bass layer took the whole budget: −4…−6 dB on hats/keys), so
+  instead: vol = previous vol −1 dB (drums/keys/melody stay almost where they were) and `hb` per loop chosen so the whole loop lands at
+  yard +3.5 dB (was +1). Measured vs the previous version (8 bars offline): 150–400 Hz +2.8…+4.9 dB, below 120 Hz +0.7 (chrome, its 808 was
+  already heavy)…+4.6 dB, above 2 kHz −1.5…+1.3 dB, peaks ≤ .83. Measuring pitfall: a single biquad band leaks a lot (the 200 Hz knock showed
+  up as «400–2000 Hz +5 dB») — use cascaded filters.
+- Tested headless: the yard plays before, battles switch to owls / chrome / roots with sound running, no page errors in city3d (yard, centre,
+  park) and in the app (incl. the rhythm-battle trial). A listening file (yard + 15 loops × 4 bars, so the crash and the roll are heard) was
+  sent to the owner. Not heard by Claude, not on a real iPhone.
+- Versions: rhythm.js ?v=25 (index.html + city3d.html).
