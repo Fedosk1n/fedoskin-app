@@ -1364,3 +1364,22 @@ Owner: «Продолжи работу над городом, а так же у�
   - Entry: the Park's arch opens after the first win over «Волна» (`S.wins.wave || S.seen.prom`). Arch «КЛУБ →» is closed («скоро» after Литейка).
 - Testing: the cypher runs on `performance.now()`, the emulator is slow ⇒ tests replace `performance.now` / `requestAnimationFrame` with a virtual clock (33 ms per rendered frame). Checked headless: all four districts load with no errors, cypher walk-off, ring battle (loss), boss battle (win → gear), stash.
 - Not checked: a live phone (speed with skinned bodies, sound). The server must be re-published from the admin for the three new gear ids.
+
+### City 3D — hero without hinges, real walk/run, clothes custom (16–17.11.2026, owner «улучши визуал главного персонажа, он всё ещё слишком шарнирный, улучши бег (выглядит не естественно), добавь механику улучшения одежды… нашивки»)
+- BODY (city3d-mocap.js `skinGeo` + body block): hands are no longer boxes on the wrist — palm, knuckles, curled fingers and a thumb grow out of the arm's skin;
+  sneakers are a closed sole + upper bending at the toes (laces, toe cap, heel); the top is its own layer over the trousers (hem / rib band, chest, sloped
+  shoulders, crew neck / stand collar / rib collar, yoke colour on the shoulders, zip line), sleeves end in a rib cuff or an open sleeve, trousers are roomier
+  and stack on the shoe (track pants end in a cuff), paint-shading under arms / between legs, a soft rim light (SKIN_MAT.onBeforeCompile). `{ hero: true }`
+  = more segments for the hero. All 8 body types, girls, coats, backpacks checked in a line-up render.
+- WALK / RUN: the owner downloaded «Walking» + «Running» from his Mixamo account (X Bot, FBX without skin, 30 fps) and attached them in chat; converted with
+  tools/mocap/drop.html in his Chrome AND tools/mocap/fbx2clip.py here — identical on all 46 tracks; same skeleton as anim/bboy.json. Walk 1.78 m/s 1.84 m/loop,
+  run 5.92 m/s 3.75 m/loop; phase 0 = left foot furthest ahead (walk frame 8/31, run 4/19). `stride()` blends Ready → walk by speed, walk → run between 2.1 and
+  4.3 m/s, phase advanced by distance / loop length (shorter steps when slow). Hero `HERO_SPD` 3.6 → 5.2; a tap further than 4.5 m = run, nearer = walk; the idle
+  animation waits until the step settles (s.wk < .03). Side-view strips at 1.6 / 3.2 / 5.2 m/s: feet on the ground, natural arms, flight phase in the run.
+- CUSTOM: «Ателье «Игла»» in the yard at freeNear(8.6, −2.2) (between the DJ and the mat, facing the camera): rug, table, sewing machine, spools, rack of jackets
+  with patches, a dummy with a back patch, neon «КАСТОМ», a bulb + SpotLight 46, the tailor (slim girl, bun). The sheet: 4 parts × 3 details —
+  Кроссы (fat laces / gum sole / glowing strips: +.15 pts per level on toprock & footwork), Верх (chest patch / sleeve patches / back patch: +.15 style),
+  Штаны (reinforced knees / cargo pockets / wallet chain: −2% freeze falls), Голова (pin on the hat or a sweatband / spin pad / glowing band: −2% power falls,
+  headspin another −2%). Cost 25 / 50 / 80 ⚡, level 2 from «Свой», level 3 from «Авторитет». While the sheet is open the hero stands by the stall and turns
+  slowly (turntable) under a close camera. Headless note: full-page screenshots with a transparent full-screen overlay sometimes show the page colour instead
+  of the canvas — the renderer's own output is fine (checked by reading the composer output); not a game bug.

@@ -8,8 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf } from './city3d-mocap.js?v=7';
-import { initGame } from './city3d-game.js?v=15';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES } from './city3d-mocap.js?v=8';
+import { initGame } from './city3d-game.js?v=16';
 import { buildProm } from './city3d-prom.js?v=1';
 import { buildCenter } from './city3d-center.js?v=3';
 import { buildPark } from './city3d-park.js?v=2';
@@ -538,7 +538,7 @@ async function build(scene) {
   if (DIST === 'center') await buildCenter(TK); else if (DIST === 'park') await buildPark(TK); else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
-  W.hero = mocapPerson(myLook()); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
+  W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
 async function buildYard(scene) {
@@ -700,7 +700,16 @@ function myLook() {
   let eq = []; try { eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
   try { const p = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}'); if (p.g === 'f') eq.push('girl'); } catch (_) {}
   try { const l = +localStorage.getItem('fedoskin-look'); if (l) eq.push('lv' + l); } catch (_) {}
-  return HERO.topDown(Math.max(lv, Q.get('lv') ? 1 : 4), eq);
+  const look = HERO.topDown(Math.max(lv, Q.get('lv') ? 1 : 4), eq);
+  look.cus = myCustom();   // details added to the clothes in the city (city3d-game.js «Кастом»)
+  return look;
+}
+// custom details of my clothes: { head, top, pants, kicks } 0…3 from the city's save (`?cus=3210` = a test look)
+function myCustom() {
+  const c = { head: 0, top: 0, pants: 0, kicks: 0 };
+  try { Object.assign(c, (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).cus || {}); } catch (_) {}
+  const q = Q.get('cus'); if (q) ['head', 'top', 'pants', 'kicks'].forEach((k, i) => { c[k] = +q[i] || 0; });
+  return c;
 }
 
 // ---------- the cypher: one dancer at a time goes into the middle (motion capture) ----------
@@ -777,9 +786,11 @@ function updateHero(dt, tb) {
   let ix = 0, iz = 0;
   if (ctl.joy) { const dx = ctl.x - ctl.sx, dy = ctl.y - ctl.sy, l = Math.hypot(dx, dy); if (l > 6) { const k = Math.min(1, l / 42); ix = dx / l * k; iz = dy / l * k; } }
   const K = ctl.keys || {}; if (K.ArrowLeft || K.a) ix -= 1; if (K.ArrowRight || K.d) ix += 1; if (K.ArrowUp || K.w) iz -= 1; if (K.ArrowDown || K.s) iz += 1;
-  if (!ix && !iz && s.tgt) { const dx = s.tgt.x - p.x, dz = s.tgt.z - p.z, l = Math.hypot(dx, dz); if (l < .15) s.tgt = null; else { ix = dx / l * Math.min(1, l / .6); iz = dz / l * Math.min(1, l / .6); } }
+  // a tap: a short way is walked, a long one is run (decided at the tap); slows down before the mark
+  if (!ix && !iz && s.tgt) { const dx = s.tgt.x - p.x, dz = s.tgt.z - p.z, l = Math.hypot(dx, dz); if (s.tgt.run === undefined) s.tgt.run = l > 4.5;
+    if (l < .15) s.tgt = null; else { const kk = (s.tgt.run ? 1 : .36) * Math.min(1, l / (s.tgt.run ? 1.3 : .6)); ix = dx / l * kk; iz = dz / l * kk; } }
   const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
-  const SPD = 3.6; s.vx = lerp(s.vx, ix * SPD, 1 - Math.exp(-dt * 12)); s.vz = lerp(s.vz, iz * SPD, 1 - Math.exp(-dt * 12));
+  const SPD = HERO_SPD; s.vx = lerp(s.vx, ix * SPD, 1 - Math.exp(-dt * 12)); s.vz = lerp(s.vz, iz * SPD, 1 - Math.exp(-dt * 12));
   const sp = Math.hypot(s.vx, s.vz);
   if (sp > .05) {
     const n = collide(p.x + s.vx * dt, p.z + s.vz * dt, .3); if (s.tgt && Math.hypot(n.x - p.x, n.z - p.z) < sp * dt * .25) s.tgt = null;
@@ -788,47 +799,40 @@ function updateHero(dt, tb) {
   }
   H.root.rotation.y = s.face;
   const k = clamp(sp / SPD, 0, 1);
-  // base = motion capture (Ready / toprock near the cypher); walking = a gait added on top of a still frame of Ready.
-  // The step is driven by the distance actually covered (stride length grows with speed), so the feet don't skate.
-  const nearC = !!W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .06;
-  if (moving) { s.idle = 0; if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
+  // base = motion capture (Ready / toprock near the cypher); moving = the recorded walk / run over a still frame of Ready (stride).
+  // The idle animation starts only once the last step has settled into the stance (no jump from the still frame).
+  const nearC = !!W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .04;
+  if (moving || (s.wk || 0) > .03) { if (moving) s.idle = 0; standPose(H); }
   else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready';
     if (H.cur !== want) H.play(want, { fade: .35 }); else if (H.act && H.act.timeScale === 0) H.act.timeScale = 1; }
   H.tick(dt);
   stride(H, s, sp, moving, k, dt);
 }
-// the walking gait on top of a still frame of Ready — shared by the hero and by walking people of the city (guard, passers-by).
-// s = { wk, ph } kept by the caller; sp = speed m/s, k = sp / top speed (0…1). Call AFTER H.tick(dt).
+// WALK / RUN = REAL MOTION CAPTURE (owner 16.11.2026 «улучши бег (выглядит не естественно)»): Mixamo «Walking» + «Running»
+// (city3d-mocap.js gaitPose). The hand-made gait (sines on thighs, knees and arms over a still frame) is gone. Over a still frame of
+// Ready the whole body is blended into the recorded walk (more when faster), and between 2.1 and 4.3 m/s from the walk into the run,
+// both in step (phase 0 = left foot ahead). The phase is driven by the distance covered: one loop = 1.84 m walking … 3.75 m running,
+// shorter steps when slow, so the feet don't skate. Shared by the hero, dancers walking off the floor and walking people of the
+// districts. s = { wk, wr, ph } kept by the caller; sp = speed m/s. Call AFTER H.tick(dt).
+const HERO_SPD = 5.2;   // top speed of the hero (m/s): the recorded run looks right from ~4.5 m/s
 function standPose(H) { if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
-function stride(H, s, sp, moving, k, dt) {
-  s.wk = lerp(s.wk || 0, moving ? k : 0, 1 - Math.exp(-dt * (moving ? 8 : 6)));
-  if (s.wk > .01 || s.from) {
-    const w = s.wk, run = clamp((w - .45) / .4, 0, 1), stride = 1.25 + .9 * run;          // metres per full cycle (two steps)
-    s.ph += sp * dt / stride * Math.PI * 2; if (!moving) s.ph += dt * 4 * w;            // finish the step when stopping
-    const sn = S(s.ph), cs = Cc(s.ph), B = H.B;
-    // start every frame from the SAME still pose (a paused clip is not re-applied by the mixer, so adding onto last frame's bones
-    // used to pile up into somersaults — owner 14.11 21:45 «кувырками передвигается»)
-    if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
-    const WB = W.walkBase;
-    if (s.from) {   // walking off the floor: rise from the pose the dance ended in (walkStart) instead of snapping upright
-      s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(WB.q[n], kb);
-      B.Hips.position.y = lerp(s.from.y, WB.y, kb); if (kb >= 1) s.from = null;
-    } else { for (const n of GAIT) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]); B.Hips.position.y = WB.y; }
-    const rx = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_X, a)), rz = (b, a) => b.quaternion.multiply(_q.setFromAxisAngle(_Z, a));
-    const legA = (.32 + .38 * run) * w, kneeA = (.45 + .85 * run) * w;
-    // thighs swing; the knee bends while that leg swings forward (cos > 0 for the left), a little give on the standing leg
-    rx(B.LeftUpLeg, legA * sn); rx(B.RightUpLeg, -legA * sn);
-    rx(B.LeftLeg, -(kneeA * Math.max(0, cs) + .12 * w)); rx(B.RightLeg, -(kneeA * Math.max(0, -cs) + .12 * w));
-    // feet roll: toes up as the leg reaches forward
-    rx(B.LeftFoot, -.25 * w * Math.max(0, sn)); rx(B.RightFoot, -.25 * w * Math.max(0, -sn));
-    // arms opposite to legs, elbows bent more when running
-    const armA = (.28 + .35 * run) * w, elb = (.25 + .9 * run) * w;
-    rz(B.LeftArm, -armA * sn); rz(B.RightArm, -armA * sn);
-    rz(B.LeftForeArm, elb + .25 * run * w * Math.max(0, -sn)); rz(B.RightForeArm, -(elb + .25 * run * w * Math.max(0, sn)));
-    // lean into the run, a little twist of the chest, and the body bobs twice per cycle
-    rx(B.Spine, (.06 + .14 * run) * w); B.Spine1.quaternion.multiply(_q.setFromAxisAngle(_Yv, .12 * sn * w));
-    B.Hips.position.y -= (.025 + .045 * run) * Math.abs(cs) * w;
-  }
+function stride(H, s, sp, moving, _k, dt) {
+  const G = gaitInfo(); if (!G) return;
+  s.wk = lerp(s.wk || 0, moving ? clamp(.5 + .5 * sp / G.walk.v, 0, 1) : 0, 1 - Math.exp(-dt * (moving ? 9 : 7)));
+  if (moving) s.wr = lerp(s.wr || 0, clamp((sp - 2.1) / 2.2, 0, 1), 1 - Math.exp(-dt * 6));
+  if (s.wk < .004 && !s.from) return;
+  const w = s.wk, wr = s.wr || 0, L = lerp(G.walk.len, G.run.len, wr) * Math.max(.5, w);
+  s.ph = ((s.ph || 0) + (moving ? sp * dt / L : dt * .8 * w)) % 1;     // stopping: the step finishes slowly while the body settles
+  // start every frame from the SAME still pose (a paused clip is not re-applied by the mixer — adding onto last frame's bones
+  // used to pile up into somersaults, owner 14.11 «кувырками передвигается»), then blend into the recorded step
+  if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
+  const WB = W.walkBase, B = H.B, P = gaitPose(s.ph, wr); let by = WB.y;
+  if (s.from) {   // walking off the floor: rise from the pose the dance ended in (walkStart) instead of snapping upright
+    s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GALL) if (WB.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(WB.q[n], kb);
+    by = lerp(s.from.y, WB.y, kb); if (kb >= 1) s.from = null;
+  } else for (const n of GALL) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]);
+  for (const n of GALL) B[n].quaternion.slerp(P.q[n], w);
+  B.Hips.position.set(P.x * w, lerp(by, P.y, w), P.z * w);
 }
 // LEAVING THE FLOOR ON FOOT (owner 16.11.2026 «проработай уход человечка с танцпола (можно просто шагами, не надо танцем)»).
 // A dancer used to slide back to his place while toprocking, face still to the middle. Now: walkStart(J) once (takes the body's
@@ -837,8 +841,8 @@ function stride(H, s, sp, moving, k, dt) {
 function walkStart(J) {
   const a = J.root.rotation.y, c = Cc(a), sn = S(a), p = J.root.position; p.x += J.dx * c + J.dz * sn; p.z += -J.dx * sn + J.dz * c; J.home0();
   if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
-  const q = {}; for (const n of GAIT) q[n] = J.B[n].quaternion.clone();
-  J.ws = { wk: 0, ph: 0, from: { q, y: J.B.Hips.position.y }, bt: 0, x0: p.x, z0: p.z, sp: 0, mv: false };
+  const q = {}; for (const n of GALL) q[n] = J.B[n].quaternion.clone();
+  J.ws = { wk: 0, wr: 0, ph: 0, from: { q, y: J.B.Hips.position.y }, bt: 0, x0: p.x, z0: p.z, sp: 0, mv: false };
   J.rest = false; J.play('Breakdance_Ready', { fade: .4 }); if (J.act) { J.act.timeScale = 0; J.act.time = .05; }
 }
 function walkMove(J, dt, tx, tz, k, endFace) {
@@ -847,10 +851,9 @@ function walkMove(J, dt, tx, tz, k, endFace) {
   const want = s.mv ? Math.atan2(dx, dz) : k >= 1 && endFace !== undefined ? endFace : null;
   if (want !== null) { let d = want - J.root.rotation.y; d = Math.atan2(S(d), Cc(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * (s.mv ? 9 : 7))); }
 }
-function walkPose(J, dt) { const s = J.ws; if (s) stride(J, s, s.sp, s.mv, clamp(s.sp / 2.4, 0, 1), dt); }
+function walkPose(J, dt) { const s = J.ws; if (s) stride(J, s, s.sp, s.mv, 0, dt); }
 W.walk = { start: walkStart, move: walkMove, pose: walkPose };
-const _Yv = new THREE.Vector3(0, 1, 0), GAIT = ['LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'Spine', 'Spine1'];
-const _q = new THREE.Quaternion(), _X = new THREE.Vector3(1, 0, 0), _Z = new THREE.Vector3(0, 0, 1);
+const GALL = GAIT_BONES;
 
 // ---------- music ----------
 let musicOn = false, musicT0 = 0;
@@ -888,8 +891,9 @@ async function boot() {
   await build(scene);
   { const t = $('.ttl'); if (t && t.firstChild) t.firstChild.nodeValue = DISTS[DIST].name; document.title = 'Fedoskin · ' + DISTS[DIST].name; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
-  const rewear = () => { const o = W.hero, n = mocapPerson(myLook()); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
-    n.st = o.st; n.play('Breakdance_Ready'); scene.remove(o.root); scene.add(n.root); W.hero = n; };
+  const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
+    n.st = o.st; n.play('Breakdance_Ready'); scene.remove(o.root); scene.add(n.root); W.hero = n;
+    o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
   const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
@@ -943,6 +947,6 @@ async function boot() {
       fpsN = 0; fpsT = 0; }
   };
   requestAnimationFrame(frame);
-  window.CITY3D = { W, camera, scene, renderer, GAME };
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });

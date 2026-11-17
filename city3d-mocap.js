@@ -10,7 +10,7 @@ const CLIPS = {};
 // next move starts where the last one ended — no snapping back to the centre (owner 14.11 «фигурка телепортируется за круг»).
 // RM[name] = {xz: Float32Array (m), dur, fps, end: [x, z]}; looping plays use the detrended curve (travel removed) so loops stay in place.
 const RM = {};
-export async function loadMocap(url = 'anim/bboy.json?v=1') {
+export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   DATA = await (await fetch(url)).json();
   for (const [name, c] of Object.entries(DATA.clips)) {
@@ -27,7 +27,45 @@ export async function loadMocap(url = 'anim/bboy.json?v=1') {
     }
     CLIPS[name] = new THREE.AnimationClip(name, (c.n - 1) / c.fps, tracks);
   }
+  gaitPrep();
   return DATA;
+}
+// ---------- WALK / RUN from real motion capture (owner 16.11.2026 «улучши бег (выглядит не естественно)») ----------
+// Mixamo «Walking» (1.78 m/s, 1.84 m per loop) and «Running» (5.92 m/s, 3.75 m per loop); one loop = two steps. The owner
+// downloaded both from his Mixamo account (17.11.2026), converted by tools/mocap (same maths as FBXLoader, checked track by track).
+// gaitPose(ph, wr): the whole body at gait phase ph (0…1, 0 = left foot furthest ahead) as a blend of the walk and the run
+// (wr 0…1). The travel along the clip is removed (the caller moves the person and advances ph by the distance covered —
+// no skating); the hips keep their bob, sway and surge.
+const GAIT = { Walking: { ph0: 8 / 31 }, Running: { ph0: 4 / 19 } }, GP = { q: {}, x: 0, y: 1, z: 0 };
+export const GAIT_BONES = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+  'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase'];
+function gaitPrep() {
+  for (const [name, g] of Object.entries(GAIT)) {
+    const c = DATA.clips[name]; if (!c) return;
+    const n = c.n, hp = c.t['Hips.p'], ex = hp[(n - 1) * 3] / 100, ez = hp[(n - 1) * 3 + 2] / 100;
+    g.n = n; g.len = Math.hypot(ex, ez); g.v = g.len / ((n - 1) / c.fps); g.q = {}; g.x = new Float32Array(n); g.y = new Float32Array(n); g.z = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const u = i / (n - 1); g.x[i] = hp[i * 3] / 100 - ex * u; g.y[i] = hp[i * 3 + 1] / 100; g.z[i] = hp[i * 3 + 2] / 100 - ez * u; }
+    for (const b of GAIT_BONES) { const v = c.t[b + '.q'], a = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { const o = i * 4, l = Math.hypot(v[o], v[o + 1], v[o + 2], v[o + 3]) || 1; for (let j = 0; j < 4; j++) a[o + j] = v[o + j] / l; }
+      g.q[b] = a; }
+  }
+  for (const b of GAIT_BONES) GP.q[b] = new THREE.Quaternion();
+  GAIT.ok = true;
+}
+export const gaitInfo = () => (GAIT.ok ? { walk: GAIT.Walking, run: GAIT.Running } : null);
+const _ga = new Float32Array(4), _gb = new Float32Array(4), _gc = new Float32Array(4), _gd = new Float32Array(4);
+const gFrame = (g, ph) => { const f = ((ph + g.ph0) % 1 + 1) % 1 * (g.n - 1), i = Math.min(g.n - 2, Math.floor(f)); return [i, f - i]; };
+export function gaitPose(ph, wr) {
+  const W = GAIT.Walking, Rn = GAIT.Running, [iw, kw] = gFrame(W, ph), [ir, kr] = gFrame(Rn, ph), lin = (a, i, k) => a[i] + (a[i + 1] - a[i]) * k;
+  for (const b of GAIT_BONES) {
+    const qw = W.q[b], qr = Rn.q[b];
+    THREE.Quaternion.slerpFlat(_ga, 0, qw, iw * 4, qw, iw * 4 + 4, kw);
+    if (wr > 0) { THREE.Quaternion.slerpFlat(_gb, 0, qr, ir * 4, qr, ir * 4 + 4, kr); THREE.Quaternion.slerpFlat(_gc, 0, _ga, 0, _gb, 0, wr); GP.q[b].fromArray(_gc); }
+    else GP.q[b].fromArray(_ga);
+  }
+  const m = (k1, k2) => k1 + (k2 - k1) * wr;
+  GP.x = m(lin(W.x, iw, kw), lin(Rn.x, ir, kr)); GP.y = m(lin(W.y, iw, kw), lin(Rn.y, ir, kr)); GP.z = m(lin(W.z, iw, kw), lin(Rn.z, ir, kr));
+  return GP;
 }
 export const getClip = n => CLIPS[n];
 export const clipLen = n => (CLIPS[n] ? CLIPS[n].duration : 0);
@@ -65,39 +103,62 @@ function seg(bone, to, r, mat, r2) {
 // one bone, or two bones near a joint (soft bend). Colours (top, sleeves, skin, trousers) are vertex colours ⇒ one draw call.
 // Small balls inside the knees, elbows and shoulders keep the volume when a joint bends hard. Head, hands, shoes and
 // accessories stay rigid pieces on their bones. The skeleton and the moves are untouched.
-const _p = new THREE.Vector3(), _c1 = new THREE.Color();
-const SKIN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8 });
+const _p = new THREE.Vector3(), _c1 = new THREE.Color(), _c2 = new THREE.Color();
+const SKIN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .82 });
+// a soft rim of light on the edges of the body: a figure reads as one shape against the dark asphalt when seen from above
+SKIN_MAT.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
+  'float rimK = pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), 2.4);\n  outgoingLight += diffuseColor.rgb * rimK * vec3(.62, .68, .86) * .5;\n  #include <opaque_fragment>'); };
+const shadeOf = (c, k) => '#' + _c1.set(c).multiplyScalar(k).getHexString(), mixOf = (c, c2, k) => '#' + _c1.set(c).lerp(_c2.set(c2), k).getHexString();
 function skinGeo() {
   const pos = [], col = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
-  const vert = (p, c, w) => { pos.push(p.x, p.y, p.z); _c1.set(c); col.push(_c1.r, _c1.g, _c1.b); const a = w[0], b = w[1] || [0, 0], t = a[1] + b[1]; si.push(a[0], b[0], 0, 0); sw.push(a[1] / t, b[1] / t, 0, 0); return G.n++; };
-  // n points of a (super)ellipse around c in the plane (u, v); u × v must point along the limb
-  G.ring = (c, u, v, ru, rv, color, w, n, e = 1) => { const i0 = G.n; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
-    vert(_p.copy(c).addScaledVector(u, Math.sign(cs) * Math.pow(Math.abs(cs), e) * ru).addScaledVector(v, Math.sign(sn) * Math.pow(Math.abs(sn), e) * rv), color, w); } return { i0, n }; };
+  // sh = brightness of the vertex colour (painted shade: darker under the arms, between the legs, under a hem)
+  const vert = (p, c, w, sh = 1) => { pos.push(p.x, p.y, p.z); _c1.set(c); col.push(_c1.r * sh, _c1.g * sh, _c1.b * sh); const a = w[0], b = w[1] || [0, 0], t = a[1] + b[1]; si.push(a[0], b[0], 0, 0); sw.push(a[1] / t, b[1] / t, 0, 0); return G.n++; };
+  // n points of a (super)ellipse around c in the plane (u, v); u × v must point along the limb. ao = [brightness, darker towards +u, darker towards +v]
+  G.ring = (c, u, v, ru, rv, color, w, n, e = 1, ao) => { const i0 = G.n; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
+    vert(_p.copy(c).addScaledVector(u, Math.sign(cs) * Math.pow(Math.abs(cs), e) * ru).addScaledVector(v, Math.sign(sn) * Math.pow(Math.abs(sn), e) * rv), color, w, ao ? ao[0] * (1 - Math.max(0, cs * ao[1] + sn * ao[2])) : 1); } return { i0, n }; };
+  // a ring of any shape: points, a colour (or one per point), weights (or a list per point), brightness per point
+  G.loop = (pts, cols, ws, shs) => { const i0 = G.n; pts.forEach((p, i) => vert(p, Array.isArray(cols) ? cols[i] : cols, Array.isArray(ws[0][0]) ? ws[i] : ws, shs ? shs[i] : 1)); return { i0, n: pts.length }; };
   G.join = (A, B) => { for (let i = 0, n = A.n; i < n; i++) { const j = (i + 1) % n; idx.push(A.i0 + i, A.i0 + j, B.i0 + i, A.i0 + j, B.i0 + j, B.i0 + i); } };
-  G.pole = (R, p, color, w, start) => { const k = vert(p, color, w); for (let i = 0; i < R.n; i++) { const j = (i + 1) % R.n; if (start) idx.push(k, R.i0 + j, R.i0 + i); else idx.push(R.i0 + i, R.i0 + j, k); } };
+  G.pole = (R, p, color, w, start, sh = 1) => { const k = vert(p, color, w, sh); for (let i = 0; i < R.n; i++) { const j = (i + 1) % R.n; if (start) idx.push(k, R.i0 + j, R.i0 + i); else idx.push(R.i0 + i, R.i0 + j, k); } };
   G.seam = (A, B) => seams.push([A, B]);
   G.quad = (a, b, c, d, color, wa, wc) => { const i = vert(a, color, wa); vert(b, color, wa); vert(c, color, wc); vert(d, color, wc); idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2); };
   const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
   G.ball = (c, r, color, w, n = 8) => { let prev = null; const m = 5; for (let k = 1; k < m; k++) { const a = -Math.PI / 2 + k / m * Math.PI, R = G.ring(_p.copy(c).addScaledVector(Y, Math.sin(a) * r).clone(), Z, X, Math.cos(a) * r, Math.cos(a) * r, color, w, n);
       if (prev) G.join(prev, R); else G.pole(R, c.clone().addScaledVector(Y, -r), color, w, true); prev = R; } G.pole(prev, c.clone().addScaledVector(Y, r), color, w, false); };
   // a limb along the joints P[0..m]: bones[k] drives the piece P[k]→P[k+1], `pre` drives what lies before P[0]; near joint k the
-  // two neighbours are blended over ±bz[k] metres. st = stations [s (m along the limb from P[0]), ru (forward), rv (sideways), colour, seam?];
-  // returns the rings (for stripes). fwd = the body's forward; e = superellipse power (1 = round)
-  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1) => {
+  // two neighbours are blended over ±bz[k] metres. st = stations [s (m along the limb from P[0]), ru (forward), rv (sideways), colour, seam?, brightness?];
+  // seam: 1 = a colour change (same place, no faces between, normals shared), 2 = a step with faces (a sleeve's opening);
+  // returns the rings (for stripes). fwd = the body's forward; e = superellipse power (1 = round); side = [towards +u, towards +v] = the shaded side
+  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1, side) => {
     const L = [0]; for (let k = 1; k < P.length; k++) L.push(L[k - 1] + P[k].distanceTo(P[k - 1]));
     const d = P[P.length - 1].clone().sub(P[0]).normalize(), u = fwd.clone().addScaledVector(d, -fwd.dot(d)).normalize(), v = d.clone().cross(u);
     const at = s => { if (s <= 0) return P[0].clone().addScaledVector(d, s); for (let k = 1; k < P.length; k++) if (s <= L[k]) return P[k - 1].clone().lerp(P[k], (s - L[k - 1]) / (L[k] - L[k - 1])); return P[P.length - 1].clone().addScaledVector(d, s - L[L.length - 1]); };
     const wt = s => { for (let k = 0; k < P.length - 1; k++) { const b = bz[k] || 0; if (b && Math.abs(s - L[k]) < b) { let t = .5 + (s - L[k]) / (2 * b); t = t * t * (3 - 2 * t); const a = k ? bones[k - 1] : pre; return [[a, 1 - t], [bones[k], t]]; } }
       let k = 0; while (k < bones.length - 1 && s > L[k + 1]) k++; return [[s < 0 ? pre : bones[k], 1]]; };
     const rings = []; let prev = null;
-    st.forEach(([s, ru, rv, color, seam]) => { const R = G.ring(at(s), u, v, ru, rv, color, wt(s), n, e); R.s = s; R.c = at(s); R.ru = ru; R.rv = rv; R.w = wt(s);
-      if (prev) { if (seam) G.seam(prev, R); else G.join(prev, R); } else G.pole(R, at(s0), color, wt(s0), true); prev = R; rings.push(R); });
-    G.pole(prev, at(s1), st[st.length - 1][3], wt(s1), false); rings.u = u; rings.v = v; return rings; };
+    st.forEach(([s, ru, rv, color, seam, sh = 1]) => { const ao = side || sh !== 1 ? [sh, side ? side[0] : 0, side ? side[1] : 0] : null, R = G.ring(at(s), u, v, ru, rv, color, wt(s), n, e, ao); R.s = s; R.c = at(s); R.ru = ru; R.rv = rv; R.w = wt(s); R.col = color;
+      if (prev) { if (seam === 1) G.seam(prev, R); else G.join(prev, R); } else G.pole(R, at(s0), color, wt(s0), true, sh * .9); prev = R; rings.push(R); });
+    G.pole(prev, at(s1), st[st.length - 1][3], wt(s1), false, st[st.length - 1][5] || 1); rings.u = u; rings.v = v; rings.d = d; rings.at = at; rings.wt = wt; return rings; };
   G.build = () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx); g.computeVertexNormals();
     const N = g.attributes.normal; seams.forEach(([A, B]) => { for (let i = 0; i < A.n; i++) { _p.set(N.getX(A.i0 + i) + N.getX(B.i0 + i), N.getY(A.i0 + i) + N.getY(B.i0 + i), N.getZ(A.i0 + i) + N.getZ(B.i0 + i)).normalize(); N.setXYZ(A.i0 + i, _p.x, _p.y, _p.z); N.setXYZ(B.i0 + i, _p.x, _p.y, _p.z); } });
     return g; };
   return G;
+}
+// small extras for the CUSTOM details of clothes: glowing trim and round sewn patches (drawn once per colour)
+const GLOW = new Map(), glowOf = c => { if (!GLOW.has(c)) GLOW.set(c, new THREE.MeshStandardMaterial({ color: '#16171b', roughness: .5, emissive: c, emissiveIntensity: 2.2 })); return GLOW.get(c); };
+const PATCH = new Map();
+function patchMat(kind, c) {
+  const k = kind + c; if (PATCH.has(k)) return PATCH.get(k);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'), star = (cx, cy, r, n = 5) => { x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, q = i % 2 ? r * .45 : r; x.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } x.closePath(); x.fill(); };
+  x.fillStyle = '#F2EFE8'; x.beginPath(); x.arc(64, 64, 63, 0, 7); x.fill();                    // stitched edge
+  x.fillStyle = kind === 'back' ? '#15161a' : c; x.beginPath(); x.arc(64, 64, 55, 0, 7); x.fill();
+  if (kind === 'back') { x.strokeStyle = c; x.lineWidth = 9; x.beginPath(); x.arc(64, 64, 44, 0, 7); x.stroke(); x.fillStyle = c; star(64, 66, 30);
+    x.fillStyle = '#F2EFE8'; star(64, 66, 13); }
+  else if (kind === 'arm') { x.strokeStyle = '#15161a'; x.lineWidth = 13; x.lineJoin = 'miter'; for (const y of [50, 78]) { x.beginPath(); x.moveTo(30, y + 16); x.lineTo(64, y - 12); x.lineTo(98, y + 16); x.stroke(); } }
+  else { x.fillStyle = '#15161a'; star(64, 67, 38); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: .9 }); PATCH.set(k, m); return m;
 }
 // ---------- BODIES (owner 16.11.2026 «улучши визуал человечков, добавь разнообразия: разный вес, рост, типаж») ----------
 // A body = numbers that reshape our own low-poly figure on the same mocap skeleton: h height (whole rig), limb / arm thickness,
@@ -143,42 +204,97 @@ export function mocapPerson(look, opt = {}) {
   const skin = M(C.skin, .7), top = M(C.top, .78), pants = M(C.pants, .85), shoe = M(C.shoe, .5), sole = M(C.sole || '#eee', .6), hair = M(C.hair, .9);
   const sleeveLong = !/^tee/.test(look.top || 'tee'), sleeve = M(C.sleeve || C.top, .78), baggy = /Big|bomber|track/.test(look.top || '') ? 1.06 : 1;
   const cw = bd.chest * gW * baggy, ww = bd.waist * baggy, dp = 1 + (bd.chest - 1) * .7 + bd.belly * .12, add = (bone, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); bone.add(m); return m; };
-  // ---- the smooth body: torso + arms + legs as one skinned mesh (see skinGeo) ----
+  // ---- the smooth body: torso + arms + HANDS + legs + SHOES as one skinned mesh (see skinGeo) ----
+  // 16.11.2026 night (owner «улучши визуал главного персонажа, он всё ещё слишком шарнирный»): the hands and the shoes used to be
+  // boxes hung on the wrist and the ankle — now they grow out of the same surface (palm, curled fingers, thumb; a sneaker that bends at
+  // the toes and whose collar follows the shin). The top is its own layer of cloth over the trousers (hem, rib band, collar, yoke),
+  // trouser legs are wide and stack on the shoe (or end in a cuff), and the cloth is shaded by paint (under the arms, between the legs).
   rig.updateMatrixWorld(true);
   const names = Object.keys(R), BI = {}; names.forEach((n, i) => { BI[n] = i; });
-  const JP = n => new THREE.Vector3().setFromMatrixPosition(B[n].matrixWorld), FWD = new THREE.Vector3(0, 0, 1), G = skinGeo();
-  const hd = 1 + (bd.hip - 1) * .8, wd = 1 + (ww - 1) * .5, topC = C.top, slC = C.sleeve || C.top;
-  { // torso: trousers up to the waist, then the top from its hem to the collar; sloped shoulders instead of a box
-    const P = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck'].map(JP), y0 = P[0].y, S = n => JP(n).y - y0, shW = Math.abs(JP('LeftArm').x) + .028, bl = bd.belly * .03;
-    const hemW = .152 * (bd.hip * .55 + ww * .45), hemD = .102 * (hd * .55 + wd * .45);
-    const tr = G.limb(P, [BI.Hips, BI.Spine, BI.Spine1, BI.Spine2], BI.Hips, [0, .04, .04, .04], [
-      [-.105, .068 * hd, .09 * bd.hip, C.pants], [-.07, .094 * hd, .138 * bd.hip, C.pants], [-.02, .102 * hd, .152 * bd.hip, C.pants], [.04, hemD, hemW, C.pants],
-      [.04, hemD + .007 * baggy, hemW + .008 * baggy, topC, 1], [S('Spine') + .02, .1 * dp * wd + bl, .155 * ww, topC], [S('Spine1'), .105 * dp + bl * .6, .175 * (cw * .6 + ww * .4), topC],
-      [S('Spine2'), .115 * dp, .195 * cw, topC], [S('Spine2') + .065, .1175 * dp, .206 * cw, topC], [S('Spine2') + .112, .108 * dp, shW, topC],
-      [S('Neck') - .016, .086 * dp, shW * .62, topC], [S('Neck') + .012, .066, .074, topC]], 16, FWD, .78, -.125, S('Neck') + .03);
+  const JP = n => new THREE.Vector3().setFromMatrixPosition(B[n].matrixWorld), FWD = new THREE.Vector3(0, 0, 1), DOWN = new THREE.Vector3(0, -1, 0), G = skinGeo();
+  const hi = !!opt.hero, NT = hi ? 24 : 16, NA = hi ? 14 : 10, NL = hi ? 16 : 12, cus = look.cus || {}, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const hd = 1 + (bd.hip - 1) * .8, wd = 1 + (ww - 1) * .5, topC = C.top, slC = C.sleeve || C.top, tp = look.top || 'tee', yk = C.yoke && C.yoke !== topC ? C.yoke : null, uc = yk || topC;
+  // ground contact points given in rest-pose space (they ride on a bone): the body may never sink into the asphalt
+  const PTS = [], lpt = (bone, wp, r = 0) => PTS.push({ m: B[bone], p: B[bone].worldToLocal(wp.clone()), r: r * scale });
+  const _qi = new THREE.Quaternion(), addW = (bone, geo, mat, wp, wq) => { const m = new THREE.Mesh(geo, mat); m.position.copy(B[bone].worldToLocal(wp.clone())); B[bone].getWorldQuaternion(_qi).invert(); m.quaternion.copy(_qi); if (wq) m.quaternion.multiply(wq); B[bone].add(m); return m; };
+  { const P = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck'].map(JP), y0 = P[0].y, S = n => JP(n).y - y0, shW = Math.abs(JP('LeftArm').x) + .03, bl = bd.belly * .03;
+    const hemW = .152 * (bd.hip * .55 + ww * .45), hemD = .102 * (hd * .55 + wd * .45), TB = [BI.Hips, BI.Spine, BI.Spine1, BI.Spine2], TZ = [0, .04, .04, .04];
+    // trousers: the seat up to the waistband (the top hangs over it)
+    G.limb(P, TB, BI.Hips, TZ, [[-.105, .068 * hd, .09 * bd.hip, C.pants, 0, .78], [-.07, .094 * hd, .138 * bd.hip, C.pants, 0, .86], [-.02, .102 * hd, .152 * bd.hip, C.pants, 0, .95], [.055, hemD, hemW, C.pants]], NT, FWD, .78, -.125, .07);
+    // the top: hem (a big tee hangs lower; jackets end in a rib band) → waist → chest → sloped shoulders → collar
+    const rib = /track|bomber/.test(tp) && C.cuff ? C.cuff : null, drop = tp === 'teeBig' ? .08 : /^tee/.test(tp) ? .045 : .015, lo = .04 - drop, ex = (tp === 'teeBig' ? .017 : .01) * baggy;
+    const st = [[lo, hemD + ex, hemW + ex * 1.15, rib || topC, 0, .8]];
+    if (rib) st.push([lo + .036, hemD + ex, hemW + ex * 1.15, rib, 0, .92], [lo + .036, hemD + ex + .005, hemW + ex + .006, topC, 1, .92]);
+    const sy = S('Spine2') + .05, nk = S('Neck');
+    st.push([S('Spine') + .02, .1 * dp * wd + bl, .155 * ww, topC, 0, .93], [S('Spine1'), .105 * dp + bl * .6, .175 * (cw * .6 + ww * .4), topC, 0, .97], [S('Spine2'), .115 * dp, .195 * cw, topC]);
+    if (yk) st.push([sy, .117 * dp, .204 * cw, topC], [sy, .117 * dp, .204 * cw, yk, 1]);
+    st.push([S('Spine2') + .065, .1175 * dp, .206 * cw, uc, 0, 1.03], [S('Spine2') + .112, .108 * dp, shW, uc, 0, 1.07], [nk - .016, .086 * dp, shW * .62, uc, 0, 1.07]);
+    if (/track/.test(tp)) st.push([nk + .008, .073, .081, uc], [nk + .05, .067, .073, C.trim || uc]);                       // stand collar
+    else if (tp === 'bomber') st.push([nk + .006, .076, .084, rib || uc], [nk + .03, .069, .075, rib || uc]);                 // rib collar
+    else { const rc = shadeOf(topC, .72); st.push([nk + .002, .072, .082, topC], [nk + .002, .072, .082, rc, 1], [nk + .02, .063, .07, rc]); }   // crew neck
+    const tr = G.limb(P, TB, BI.Hips, TZ, st, NT, FWD, .78, lo - .012, st[st.length - 1][0] + .012);
     // the zip / button line of a jacket follows the chest
-    if (C.trim) for (let i = 5; i < tr.length - 2; i++) { const a = tr[i], b = tr[i + 1], f = R => R.c.clone().addScaledVector(tr.u, R.ru + .005);
-      G.quad(f(a).addScaledVector(tr.v, .01), f(a).addScaledVector(tr.v, -.01), f(b).addScaledVector(tr.v, .01), f(b).addScaledVector(tr.v, -.01), C.trim, a.w, b.w); } }
-  for (const s of ['Left', 'Right']) {
-    // arm: shoulder cap → upper arm → elbow → forearm → wrist
-    { const P = [s + 'Arm', s + 'ForeArm', s + 'Hand'].map(JP), E = P[0].distanceTo(P[1]), Wd = E + P[1].distanceTo(P[2]), fa = A * .7 + .3, low = sleeveLong ? slC : C.skin, st = [
-        [-.06, .046 * A, .05 * A, topC], [-.03, .06 * A, .064 * A, topC], [0, .066 * A, .068 * A, topC], [.05, .064 * A, .065 * A, slC]];
-      if (sleeveLong) st.push([.14, .059 * A, .059 * A, slC]);
-      else st.push([E * .46, .064 * A, .066 * A, topC], [E * .46, .052 * A, .053 * A, C.skin, 1]);
-      st.push([E - .07, .053 * A, .053 * A, low], [E - .035, .051 * A, .051 * A, low], [E, .05 * A, .05 * A, low], [E + .035, .05 * fa, .051 * fa, low], [E + .09, .051 * fa, .052 * fa, low],
-        [E + .17, .046 * fa, .046 * fa, low], [Wd - .035, .04 * fa, .04 * fa, low], [Wd, .037 * fa, .037 * fa, low]);
-      G.limb(P, [BI[s + 'Arm'], BI[s + 'ForeArm']], BI[s + 'Shoulder'], [.04, .05], st, 10, FWD, 1, -.085, Wd + .012);
-      G.ball(P[1], .038 * A, low, [[BI[s + 'ForeArm'], 1]]); G.ball(P[0], .062 * A, topC, [[BI[s + 'Shoulder'], 1]]); }
-    // leg: hip → thigh → knee → shin → trouser hem
-    { const P = [s + 'UpLeg', s + 'Leg', s + 'Foot'].map(JP), K = P[0].distanceTo(P[1]), F = K + P[1].distanceTo(P[2]), Ls = L * .75 + .25, Lk = (L + Ls) / 2, pc = C.pants;
-      const lg = G.limb(P, [BI[s + 'UpLeg'], BI[s + 'Leg']], BI.Hips, [.05, .06], [
-        [-.04, .074 * L, .07 * L, pc], [0, .092 * L, .088 * L, pc], [.06, .095 * L, .09 * L, pc], [.2, .089 * L, .085 * L, pc], [K - .1, .079 * L, .076 * L, pc], [K - .045, .072 * Lk, .07 * Lk, pc],
-        [K, .069 * Lk, .068 * Lk, pc], [K + .045, .068 * Ls, .067 * Ls, pc], [K + .12, .07 * Ls, .068 * Ls, pc], [K + .26, .063 * Ls, .062 * Ls, pc], [F - .05, .059 * Ls, .059 * Ls, pc], [F, .063 * Ls, .063 * Ls, pc]],
-        12, FWD, 1, -.07, F + .004);
-      G.ball(P[1], .051 * Lk, pc, [[BI[s + 'Leg'], 1]]);
-      // the side stripe of track pants runs down the whole leg
-      if (C.stripe) { const out = lg.v.clone().multiplyScalar(Math.sign(lg.v.x) * (s === 'Left' ? 1 : -1)), f = (R, k) => R.c.clone().addScaledVector(out, R.rv + .004).addScaledVector(lg.u, k * .016);
-        for (let i = 2; i < lg.length - 1; i++) { const a = lg[i], b = lg[i + 1], fl = s === 'Left' ? 1 : -1; G.quad(f(a, fl), f(a, -fl), f(b, fl), f(b, -fl), C.stripe, a.w, b.w); } } }
+    if (C.trim) { const zr = tr.filter(R => R.s >= lo + (rib ? .036 : 0) - 1e-4 && R.s <= nk + .01 && R.col !== rib), f = R => R.c.clone().addScaledVector(tr.u, R.ru + .005);
+      for (let i = 0; i < zr.length - 1; i++) { const a = zr[i], b = zr[i + 1]; if (b.s - a.s < 1e-4) continue;
+        G.quad(f(a).addScaledVector(tr.v, .01), f(a).addScaledVector(tr.v, -.01), f(b).addScaledVector(tr.v, .01), f(b).addScaledVector(tr.v, -.01), C.trim, a.w, b.w); } } }
+  for (const s of ['Left', 'Right']) { const sg = s === 'Left' ? 1 : -1, bn = k => BI[s + k];
+    { // arm: shoulder → upper arm → elbow → forearm → cuff → hand (palm, knuckles, fingers curled a little) + thumb
+      const Jt = [s + 'Arm', s + 'ForeArm', s + 'Hand'].map(JP), d = Jt[2].clone().sub(Jt[0]).normalize(), E = Jt[0].distanceTo(Jt[1]), Wd = E + Jt[1].distanceTo(Jt[2]), fa = A * .7 + .3, hs = (A * .3 + .7) * (hi ? 1.05 : 1);
+      const low = sleeveLong ? slC : C.skin, hc = look.gloves ? '#18181B' : C.skin, tipC = C.skin;
+      const Kn = Jt[2].clone().addScaledVector(d, .074 * hs).addScaledVector(DOWN, .006), Tp = Jt[2].clone().addScaledVector(d, .128 * hs).addScaledVector(DOWN, .042 * hs), HL = Wd + Jt[2].distanceTo(Kn), TL = HL + Kn.distanceTo(Tp);
+      const st = [[-.05, .061 * A, .065 * A, uc], [0, .067 * A, .07 * A, uc], [.045, .065 * A, .067 * A, uc], [.045, .065 * A, .067 * A, slC, 1]];
+      if (sleeveLong) st.push([.14, .059 * A, .06 * A, slC]);
+      else st.push([E * .46, .064 * A, .066 * A, topC], [E * .46, .052 * A, .053 * A, C.skin, 2, .88]);
+      st.push([E - .07, .053 * A, .053 * A, low], [E - .035, .051 * A, .051 * A, low], [E, .05 * A, .05 * A, low], [E + .035, .05 * fa, .051 * fa, low], [E + .09, .051 * fa, .052 * fa, low], [E + .17, .046 * fa, .046 * fa, low]);
+      const cf = sleeveLong && C.cuff ? C.cuff : null, wb = !sleeveLong && look.wrist && s === 'Left' ? look.wrist : null;
+      if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1], [Wd - .014, .044 * fa, .044 * fa, cf]);                       // rib cuff
+      else if (wb) st.push([Wd - .075, .041 * fa, .041 * fa, low], [Wd - .075, .0445 * fa, .0445 * fa, wb, 1], [Wd - .04, .0435 * fa, .0435 * fa, wb], [Wd - .04, .039 * fa, .039 * fa, low, 1], [Wd - .014, .037 * fa, .037 * fa, low]);   // wristband
+      else st.push([Wd - .04, .041 * fa, .041 * fa, low], [Wd - .014, (sleeveLong ? .041 : .037) * fa, (sleeveLong ? .041 : .037) * fa, low]);
+      if (sleeveLong || look.gloves) st.push([Wd - .014, .034 * hs, .033 * hs, hc, 2, .85]);                                  // the sleeve's opening / the glove's edge
+      st.push([Wd + .022 * hs, .04 * hs, .0245 * hs, hc], [Wd + .05 * hs, .047 * hs, .0235 * hs, hc], [HL, .0465 * hs, .0215 * hs, hc]);
+      if (look.gloves) st.push([HL + .012 * hs, .045 * hs, .021 * hs, hc], [HL + .012 * hs, .042 * hs, .019 * hs, tipC, 2]);   // fingerless gloves
+      st.push([HL + .032 * hs, .041 * hs, .019 * hs, tipC], [TL - .01 * hs, .031 * hs, .0155 * hs, tipC]);
+      G.limb([Jt[0], Jt[1], Jt[2], Kn, Tp], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.045, .055, .028, 0], st, NA, FWD, 1, -.075, TL + .004, [0, sg * .2]);
+      G.ball(Jt[1], .04 * A, low, [[bn('ForeArm'), 1]]); G.ball(Jt[0], .058 * A, uc, [[bn('Shoulder'), 1]]);
+      const ta = Jt[2].clone().addScaledVector(d, .02 * hs).addScaledVector(FWD, .03 * hs).addScaledVector(DOWN, .004), tb = Jt[2].clone().addScaledVector(d, .072 * hs).addScaledVector(FWD, .062 * hs).addScaledVector(DOWN, .016), tl = ta.distanceTo(tb);
+      G.limb([ta, tb], [bn('Hand')], bn('Hand'), [0], [[0, .0175 * hs, .0175 * hs, hc], [tl * .55, .016 * hs, .016 * hs, hc], [tl, .0125 * hs, .0125 * hs, tipC]], 6, new THREE.Vector3(0, 1, 0), 1, -.012, tl + .01);
+      lpt(s + 'Hand', Tp, .016); lpt(s + 'Hand', tb, .013); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, .04 * hs), .02); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, -.04 * hs), .02); }
+    { // leg: hip → thigh → knee → shin → hem. Wide legs stack on the shoe; track pants end in a cuff
+      const Jt = [s + 'UpLeg', s + 'Leg', s + 'Foot'].map(JP), K = Jt[0].distanceTo(Jt[1]), F = K + Jt[1].distanceTo(Jt[2]), Ls = L * .75 + .25, Lk = (L + Ls) / 2, pc = C.pants, pt = look.pants || 'jeans';
+      const cuffed = /^trackp/.test(pt), Lb = Ls * (pt === 'wind' ? 1.16 : cuffed ? 1.08 : 1.1), kc = cus.pants >= 1 ? mixOf(pc, '#9aa0ab', .36) : pc;
+      const st = [[-.04, .074 * L, .07 * L, pc, 0, .8], [0, .093 * L, .088 * L, pc, 0, .9], [.06, .098 * L, .091 * L, pc], [.2, .094 * L, .089 * L, pc], [K - .1, .086 * L, .083 * L, pc]];
+      if (kc !== pc) st.push([K - .07, .083 * Lk, .08 * Lk, pc], [K - .07, .086 * Lk, .083 * Lk, kc, 1]);                    // custom: reinforced knees
+      st.push([K - .045, .081 * Lk, .078 * Lk, kc], [K, .078 * Lk, .076 * Lk, kc], [K + .045, .073 * Lb, .071 * Lb, kc]);
+      if (kc !== pc) st.push([K + .09, .074 * Lb, .071 * Lb, kc], [K + .09, .072 * Lb, .069 * Lb, pc, 1]);
+      st.push([K + .14, .072 * Lb, .07 * Lb, pc], [K + .26, .069 * Lb, .067 * Lb, pc, 0, .96]);
+      if (cuffed) { const cc = mixOf(pc, '#8a8d94', .22); st.push([F - .13, .069 * Lb, .067 * Lb, pc, 0, .93], [F - .085, .072 * Lb, .07 * Lb, pc, 0, .9], [F - .062, .061 * Ls, .06 * Ls, pc, 0, .84], [F - .062, .0605 * Ls, .0595 * Ls, cc, 1], [F - .02, .059 * Ls, .058 * Ls, cc]); }
+      else st.push([F - .13, .071 * Lb, .069 * Lb, pc, 0, .94], [F - .09, .077 * Lb, .075 * Lb, pc, 0, .9], [F - .064, .072 * Lb, .07 * Lb, pc, 0, .82], [F - .038, .079 * Lb, .077 * Lb, pc, 0, .9], [F - .01, .075 * Lb, .074 * Lb, pc, 0, .78]);
+      const lg = G.limb(Jt, [bn('UpLeg'), bn('Leg')], BI.Hips, [.05, .065], st, NL, FWD, 1, -.07, F - (cuffed ? .012 : .004), [0, sg * .2]);
+      G.ball(Jt[1], .061 * Lk, kc, [[bn('Leg'), 1]]);
+      // the side stripe of track pants runs down the leg to the cuff
+      if (C.stripe) { const out = lg.v.clone().multiplyScalar(Math.sign(lg.v.x) * sg), f = (R, k) => R.c.clone().addScaledVector(out, R.rv + .004).addScaledVector(lg.u, k * .016), end = cuffed ? F - .061 : F;
+        for (let i = 2; i < lg.length - 1; i++) { const a = lg[i], b = lg[i + 1]; if (b.s - a.s < 1e-4 || b.s > end) continue; G.quad(f(a, sg), f(a, -sg), f(b, sg), f(b, -sg), C.stripe, a.w, b.w); } } }
+    { // SNEAKER: a sole and an upper, both closed skinned shapes
+      const A0 = JP(s + 'Foot'), T0 = JP(s + 'ToeBase'), x0 = A0.x, yB = -.04, bigS = hi ? 1.06 : 1, zH = A0.z - .078 * bigS, zT = T0.z + .108 * bigS, len = zT - zH, n = hi ? 16 : 12;
+      const gum = cus.kicks >= 2, soleC = gum ? '#C98A45' : (C.sole || '#eeeeee'), yM = yB + (gum ? .042 : .032), highT = /high/.test(look.shoe || '') ? .045 : 0, up = C.shoe, cap = C.shoe2 || C.shoe, laceC = C.lace || '#F2EFE8';
+      const wOf = (z, y) => { let t = clamp((z - (T0.z - .03)) / .06, 0, 1); t = t * t * (3 - 2 * t); return t <= 0 ? (y > .085 ? [[bn('Foot'), .6], [bn('Leg'), .4]] : [[bn('Foot'), 1]]) : t >= 1 ? [[bn('ToeBase'), 1]] : [[bn('Foot'), 1 - t], [bn('ToeBase'), t]]; };
+      // sections along the foot: t (0 heel … 1 toe), half-width, height of the top
+      const SEC = [[.03, .027, .06], [.11, .039, .1 + highT], [.23, .045, .108 + highT], [.36, .049, .102 + highT * .8], [.49, .053, .08], [.62, .056, .058], [.74, .056, .047], [.86, .051, .04], [.95, .037, .033]];
+      const part = sole => { let prev = null; SEC.forEach(([t, w, yT]) => { const z = zH + t * len, yb = yB + .015 * Math.pow(clamp((t - .62) / .38, 0, 1), 2) + .012 * Math.pow(clamp((.18 - t) / .18, 0, 1), 2), pts = [], cols = [], ws = [], shs = [];
+          const c0 = sole ? soleC : (t > .7 || t < .18 ? cap : up), top = sole ? yM + .004 : yT, bot = sole ? yb : yM - .008, mid = sole ? (top + bot) / 2 : yM + .004, w2 = w * bigS * (sole ? 1.08 : 1);
+          for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a), px = x0 + Math.sign(cs) * Math.pow(Math.abs(cs), sole ? .5 : .72) * w2;
+            const py = sn >= 0 ? mid + (top - mid) * Math.pow(sn, sole ? .45 : .8) : mid + (bot - mid) * Math.pow(-sn, sole ? .45 : .6);
+            pts.push(new THREE.Vector3(px, py, z)); ws.push(wOf(z, py)); cols.push(!sole && t > .3 && t < .66 && sn > .8 ? laceC : c0); shs.push(sole ? 1 : .84 + .16 * Math.max(0, sn)); }
+          const Rg = G.loop(pts, cols, ws, shs); if (prev) G.join(prev, Rg); else G.pole(Rg, new THREE.Vector3(x0, (top + bot) / 2, zH), c0, wOf(zH, 0), true); prev = Rg; });
+        G.pole(prev, new THREE.Vector3(x0, sole ? yB + .03 : yB + .045, zT), sole ? soleC : cap, [[bn('ToeBase'), 1]], false); };
+      part(true); part(false);
+      [[0, yB, zH + .02], [-.05, yB, T0.z - .01], [.05, yB, T0.z - .01], [0, .11 + highT, A0.z - .04]].forEach(([dx, y, z]) => lpt(s + 'Foot', new THREE.Vector3(x0 + dx, y, z)));
+      [[0, yB + .014, zT - .008], [0, .05, zT - .04], [-.045, yB + .01, T0.z + .04], [.045, yB + .01, T0.z + .04]].forEach(([dx, y, z]) => lpt(s + 'ToeBase', new THREE.Vector3(x0 + dx, y, z)));
+      // custom: fat laces across the instep, glowing strips along the sole
+      if (cus.kicks >= 1) { const lum = c => { _c1.set(c); return _c1.r * .3 + _c1.g * .59 + _c1.b * .11; }, lc = Math.abs(lum(laceC) - lum(up)) < .25 ? (lum(up) > .4 ? '#18181B' : '#F2EFE8') : laceC, q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), .5);
+        [[.39, .099], [.47, .086], [.55, .072]].forEach(([t, y]) => addW(s + 'Foot', new RoundedBoxGeometry(.074 * bigS, .014, .02, 1, .006), M(lc, .7), new THREE.Vector3(x0, y + highT * (t < .5 ? .6 : 0), zH + t * len), q)); }
+      if (cus.kicks >= 3) { const gm = glowOf(look.acc || '#E2611A'); for (const k of [-1, 1]) addW(s + 'Foot', new THREE.BoxGeometry(.007, .013, len * .34), gm, new THREE.Vector3(x0 + k * (.052 * bigS * 1.08 + .001), yB + .022, zH + len * .4));
+        addW(s + 'Foot', new THREE.BoxGeometry(.03, .03, .006), gm, new THREE.Vector3(x0, .075 + highT, zH + .004)); } }
   }
   const bones = names.map(n => B[n]), body = new THREE.SkinnedMesh(G.build(), SKIN_MAT); body.frustumCulled = false; rig.add(body); body.bind(new THREE.Skeleton(bones)); rig.scale.setScalar(scale);
   if (bd.belly > .12) { const s = add(B.Spine, new THREE.SphereGeometry(.15 + .035 * bd.belly, 16, 12), top, 0, .05, .015 + .04 * bd.belly); s.scale.set(1.08 * ww / (1 + bd.belly * .1), 1.2, 1); }
@@ -216,25 +332,30 @@ export function mocapPerson(look, opt = {}) {
     else if (hat === 'bucket') { add(hg, new THREE.CylinderGeometry(.112, .132, .13, 16), M(H[0], .8), 0, .215, 0); add(hg, new THREE.CylinderGeometry(.14, .2, .035, 18), M(H[0], .8), 0, .15, 0); }
     else if (hat === 'bandana') add(hg, new THREE.SphereGeometry(.131, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.1), M(H[0], .8), 0, .12, 0);
     if (look.phones) { const ph = M('#18191c', .5, .3); [-1, 1].forEach(s => add(hg, new THREE.CylinderGeometry(.042, .042, .03, 12), ph, s * .128, .1, 0).rotation.z = Math.PI / 2);
-      const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .1, 0); band.scale.y = 1.2; } }
-  // arms
-  for (const s of ['Left', 'Right']) {
-    if (sleeveLong && C.cuff) { const cf = new THREE.Mesh(new THREE.CylinderGeometry(.047 * A, .044 * A, .05, 10), M(C.cuff, .7)); cf.position.copy(P(s + 'Hand')).multiplyScalar(.92); B[s + 'ForeArm'].add(cf); }
-    if (look.wrist && !sleeveLong) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.044 * A, .042 * A, .035, 10), M(look.wrist, .6)); w.position.copy(P(s + 'Hand')).multiplyScalar(.9); if (s === 'Left') B[s + 'ForeArm'].add(w); }
-    // hand: palm + thumb
-    add(B[s + 'Hand'], new RoundedBoxGeometry(.074, .115, .042, 1, .02), look.gloves ? M('#18191c', .6) : skin, 0, .055, 0);
-    add(B[s + 'Hand'], new THREE.CapsuleGeometry(.014, .03, 2, 6), look.gloves ? M('#18191c', .6) : skin, 0, .045, .034).rotation.x = .5;
-    // legs
-    if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.075 * L, 10, 8), M('#18191c', .6), 0, .01, .03).scale.set(1, 1.1, .8);
-    // shoe: from the ankle to the toes
-    const toe = P(s + 'ToeBase'), sh = new THREE.Mesh(new RoundedBoxGeometry(.11, toe.length() + .1, .1, 2, .035), shoe);
-    sh.quaternion.setFromUnitVectors(UP, toe.clone().normalize()); sh.position.copy(toe).multiplyScalar(.5); B[s + 'Foot'].add(sh);
-    const tp = new THREE.Mesh(new RoundedBoxGeometry(.105, .1, .08, 1, .03), M(C.shoe2 || C.shoe, .5)); tp.position.set(0, .04, 0); B[s + 'ToeBase'].add(tp);
-    const so = new THREE.Mesh(new THREE.BoxGeometry(.115, toe.length() + .12, .02), sole); so.quaternion.copy(sh.quaternion); so.position.copy(sh.position); so.translateZ(-.055); B[s + 'Foot'].add(so);
+      const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .1, 0); band.scale.y = 1.2; }
+    // custom, head: a pin, a spin pad on the crown (the part you see best from above), a glowing band
+    if (cus.head && !hat) { const ac = look.acc || '#E2611A', bandM = cus.head >= 3 ? glowOf(ac) : M(ac, .75);
+      const sb = add(hg, new THREE.TorusGeometry(.129, .016, 8, 30), bandM, 0, .175, -.008); sb.rotation.x = Math.PI / 2 - .2;
+      if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, .262, -.01); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, .264, -.01); } }
+    if (cus.head && hat) { const ac = look.acc || '#E2611A', bk = hat === 'bucket', top = bk ? .283 : hat === 'beanie' ? .28 : hat === 'bandana' ? .251 : .266, by = bk ? .2 : hat === 'beanie' ? .14 : .152, br = bk ? .121 : .136;
+      { const d = new THREE.Vector3(.52, bk ? 0 : .5, .7).normalize(), pin = add(hg, new THREE.CylinderGeometry(.021, .021, .009, 14), M('#E7B23C', .3, 1), 0, 0, 0);
+        pin.position.set(0, bk ? .235 : .13, 0).addScaledVector(d, bk ? .124 : hat === 'beanie' ? .145 : .135); pin.quaternion.setFromUnitVectors(UP, d); }
+      if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, top, 0); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, top + .002, 0); }
+      if (cus.head >= 3) add(hg, new THREE.TorusGeometry(br, .0075, 6, 28), glowOf(ac), 0, by, 0).rotation.x = Math.PI / 2; } }
+  for (const s of ['Left', 'Right']) if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.082 * L, 10, 8), M('#18181B', .6), 0, .01, .03).scale.set(1, 1.1, .8);
+  // ---- CUSTOM details (owner 16.11.2026 «добавь механику улучшения одежды… нашивки»): look.cus = { head, top, pants, kicks }, each 0…3.
+  // top: a patch on the chest → patches on the sleeves → a big patch on the back; pants: reinforced knees (in the skin above) → cargo
+  // pockets → a wallet chain; kicks and head: see the sneaker and the head blocks. Rigid pieces on bones, the hero only.
+  if (look.cus) { const ac = look.acc || '#E2611A';
+    if (cus.top >= 1) add(B.Spine2, new THREE.CircleGeometry(.036, 18), patchMat('chest', ac), .072 * cw, .07, .124 * dp).rotation.y = .36;
+    if (cus.top >= 2) for (const s of ['Left', 'Right']) add(B[s + 'Arm'], new THREE.CircleGeometry(.036 * A, 16), patchMat('arm', ac), 0, .105, -(.07 * A + .003)).rotation.x = Math.PI;
+    if (cus.top >= 3) add(B.Spine2, new THREE.CircleGeometry(.094, 28), patchMat('back', ac), 0, .03, -(.118 * dp + .004)).rotation.y = Math.PI;
+    if (cus.pants >= 2) for (const s of ['Left', 'Right']) { const k = s === 'Left' ? -1 : 1, pc = mixOf(C.pants, '#9aa0ab', .2);
+      add(B[s + 'UpLeg'], new RoundedBoxGeometry(.03, .125, .1, 2, .012), M(pc, .85), k * (.086 * L + .008), .27, 0); add(B[s + 'UpLeg'], new RoundedBoxGeometry(.036, .036, .106, 2, .012), M(mixOf(C.pants, '#9aa0ab', .36), .85), k * (.086 * L + .009), .212, 0); }
+    if (cus.pants >= 3) { const ch = add(B.Hips, new THREE.TorusGeometry(.085, .0075, 6, 20, Math.PI), M('#C9CED6', .28, 1), -(.153 * bd.hip + .012), -.005, .005); ch.rotation.set(0, Math.PI / 2, Math.PI); ch.scale.y = 1.25; }
   }
   root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
-  const PTS = [];
   root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
     if (g.type === 'CapsuleGeometry') { const h = P.height / 2; PTS.push({ m, p: new THREE.Vector3(0, h, 0), r: P.radius * sc }, { m, p: new THREE.Vector3(0, -h, 0), r: P.radius * sc }); }
     else if (g.type === 'SphereGeometry' && P.thetaLength > 3) PTS.push({ m, p: new THREE.Vector3(), r: P.radius * sc });

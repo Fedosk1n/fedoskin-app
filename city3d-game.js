@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=7';   // v=12: districts (Центр)
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=8';   // v=12: districts (Центр)
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
@@ -20,7 +20,20 @@ export const BAL = {
   jam: 25, jamLv: [5, 6, 7], jamRep: [10, 16, 24], jamChamp: 30, ogMin: 5, ogRep: 8, ogEn: 10, warm: .04,
   // the industrial zone: the underground ring (a one-round battle; a WIN STREAK that lives across days pays more and more), stashes
   ring: 15, ringMax: 2, ringLv: [6, 7, 8], ringRep: 14, streakRep: 4, streakMax: 5, stashN: 3, stashEn: 6, stashRep: 3,
+  // the tailor «Игла» in the yard: custom details for the clothes, paid with energy (= lesson minutes); level 2 needs the rank «Свой»,
+  // level 3 «Авторитет». Per level: toprock/footwork +.15 pts, style +.15, freezes −2% falls, power −2% falls (headspin another −2%)
+  cusCost: [25, 50, 80], cusRank: [0, 1, 3], cusStep: .15, cusStyle: .15, cusFreeze: .02, cusPower: .02, cusSpin: .02,
 };
+// ---------- CUSTOM (owner 16.11.2026 «добавь механику улучшения одежды (продумай что именно улучшать, может быть какие нашивки)») ----------
+// Four parts of the hero's outfit, three details each. Every detail is SEEN on the hero (city3d-mocap.js look.cus) and gives a small
+// permanent plus in the city's battles where it makes sense for breaking: sneakers → steps, patches → style, knees → freezes,
+// a spin pad → power / headspins. Kept in the save as S.cus = { kicks, top, pants, head } (0…3).
+export const CUS = [
+  { id: 'kicks', ico: '👟', nm: 'Кроссы', lv: ['Толстые шнурки', 'Каучуковая подошва', 'Светящийся кант'], v: n => '+' + +(n * BAL.cusStep).toFixed(2), un: 'очка за топрок и футворк' },
+  { id: 'top', ico: '🧥', nm: 'Верх', lv: ['Нашивка на грудь', 'Нашивки на рукава', 'Большой патч на спину'], v: n => '+' + +(n * BAL.cusStyle).toFixed(2), un: 'к стилю у судей' },
+  { id: 'pants', ico: '👖', nm: 'Штаны', lv: ['Усиленные колени', 'Карманы-карго', 'Цепь на пояс'], v: n => '−' + Math.round(n * BAL.cusFreeze * 100) + '%', un: 'срывов во фризах' },
+  { id: 'head', ico: '🧢', nm: 'Голова', lv: ['Значок на шапку или повязка', 'Спин-пад на макушку', 'Светящийся обод'], v: n => '−' + Math.round(n * BAL.cusPower * 100) + '%', un: 'срывов в пауэре, на хедспине вдвое' },
+];
 // the crews; d = district ('yard' when absent); gear = HERO.GEAR pieces (1st win → 1st piece, 3rd win → 2nd piece);
 // wall = [x, z] where the crew's wall stands (the yard's walls find a free spot themselves); boss = the owners of the district
 export const CREWS = [
@@ -115,6 +128,7 @@ function load() {
   s.turf = s.turf || {}; s.last = s.last || {}; s.goals = s.goals || null; s.word = s.word || '';
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
+  s.cus = Object.assign({ kicks: 0, top: 0, pants: 0, head: 0 }, s.cus || {});
   return s;
 }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} };
@@ -189,6 +203,13 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 #g3info>div{width:min(460px,100%);background:#14161b;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));font:500 14px/1.45 Inter,sans-serif;color:#D9D4CA;max-height:80vh;overflow:auto}
 #g3info h4{margin:0 0 8px;font:400 22px Anton,sans-serif;letter-spacing:.04em;color:#F2EFE8}#g3info b{color:#F2EFE8}#g3info .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)}
 #g3info button{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:800 15px Inter,sans-serif;background:#E2611A;color:#0B0D12}
+#g3info button.sec{background:#262a33;color:#F2EFE8}
+#g3info .cu{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)}#g3info .cu>i{font-style:normal;font-size:26px;width:34px;text-align:center}
+#g3info .cu>div{flex:1;min-width:0}#g3info .cu small{display:block;color:#9a968e;font-size:12.5px;line-height:1.35}#g3info .cu small.n{color:#D9D4CA}#g3info .cu .dots{color:#E2611A;letter-spacing:2px;margin-left:6px;font-size:12px}
+#g3info .cu button{margin:0;width:auto;flex:none;padding:10px 12px;font-size:13.5px;border-radius:12px;white-space:nowrap}#g3info .cu button:disabled{background:#262a33;color:#7d7a74}
+#g3info .cu.max button{background:rgba(59,209,111,.14);color:#3BD16F}
+#g3info.cum{background:linear-gradient(rgba(5,6,9,0) 30%,rgba(5,6,9,.55))}#g3info.cum>div{max-height:60vh;padding-top:14px}#g3info.cum p{margin:0 0 4px;font-size:13px}#g3info.cum .cu{padding:8px 0}
+#g3info.cum button#g3cuL{margin-top:8px;padding:10px;font-size:13.5px}
 `;
 function ui() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
@@ -367,6 +388,35 @@ export function initGame(ctx) {
   mk(mat, new RoundedBoxGeometry(2.6, .06, 2.6, 2, .02), M('#2b3f63', .9), 0, .03, 0);
   [-1, 1].forEach(k => { mk(mat, new THREE.BoxGeometry(2.4, .005, .05), M('#e9e4d8', .8), 0, .065, k * 1.1); mk(mat, new THREE.ConeGeometry(.12, .3, 10), M('#E2611A', .6), k * 1.45, .15, 1.45 * k); });
   const matLab = label('ТРЕНИРОВКА', '#7CC4FF', matAt.x, matAt.z, 2.2);
+  // the tailor «Игла» (16.11.2026 custom): a stall with a sewing machine, a rack of jackets, a dummy with a back patch, a neon sign
+  const atAt = freeNear(8.6, -2.2, 1.9), at = new THREE.Group(); at.position.set(atAt.x, 0, atAt.z); scene.add(at);   // faces +z: the camera sees the sign, the tailor and the rack
+  mk(at, new RoundedBoxGeometry(3.4, .04, 2.2, 2, .015), M('#3a2a2a', .95), 0, .02, -.1);                              // a worn rug
+  mk(at, new THREE.BoxGeometry(1.5, .06, .72), M('#6b4a32', .6), 0, .8, 0); [[-.68, -.3], [.68, -.3], [-.68, .3], [.68, .3]].forEach(([x, z]) => mk(at, new THREE.BoxGeometry(.06, .78, .06), M('#2a2c31', .6, .4), x, .39, z));
+  { const sm = new THREE.Group(); sm.position.set(-.2, .83, 0); at.add(sm); const wm = M('#CFC9BC', .4, .1);   // the sewing machine
+    mk(sm, new RoundedBoxGeometry(.5, .08, .22, 2, .02), wm, 0, .04, 0); mk(sm, new RoundedBoxGeometry(.1, .24, .16, 2, .03), wm, .2, .2, 0);
+    mk(sm, new RoundedBoxGeometry(.46, .09, .15, 2, .03), wm, .02, .33, 0); mk(sm, new RoundedBoxGeometry(.07, .1, .1, 2, .02), wm, -.2, .25, 0);
+    mk(sm, new THREE.CylinderGeometry(.06, .06, .03, 16), M('#2a2c31', .5, .5), .27, .26, .1).rotation.x = Math.PI / 2;
+    mk(sm, new THREE.CylinderGeometry(.004, .004, .06, 6), M('#c9c4b8', .3, .9), -.2, .17, 0); mk(sm, new THREE.BoxGeometry(.18, .005, .16), M('#E2611A', .8), -.2, .085, 0); }
+  [['#E2611A', .35, .2], ['#3BD16F', .5, -.15], ['#F2EFE8', .2, -.05]].forEach(([c, x, z]) => mk(at, new THREE.CylinderGeometry(.035, .035, .07, 12), M(c, .7), x, .865, z));   // spools
+  const rack = new THREE.Group(); rack.position.set(.2, 0, -.9); at.add(rack);                                         // the rack with jackets
+  [-.8, .8].forEach(x => mk(rack, new THREE.CylinderGeometry(.025, .025, 1.7, 8), M('#9a9da4', .35, .8), x, .85, 0)); mk(rack, new THREE.CylinderGeometry(.02, .02, 1.7, 8), M('#9a9da4', .35, .8), 0, 1.68, 0).rotation.z = Math.PI / 2;
+  [['#18181B', -.5], ['#7A2FB8', -.12], ['#2F7BFF', .26], ['#C8202A', .6]].forEach(([c, x], i) => { const j = mk(rack, new RoundedBoxGeometry(.34, .55, .08, 2, .03), M(c, .85), x, 1.34, 0); j.rotation.y = .5 - i * .15;
+    mk(j, new THREE.CircleGeometry(.05, 14), M(i % 2 ? '#FFD23F' : '#E2611A', .8), .06, .12, .042); mk(rack, new THREE.TorusGeometry(.05, .006, 4, 10, Math.PI), M('#9a9da4', .35, .8), x, 1.66, 0); });
+  { const dm = new THREE.Group(); dm.position.set(1.25, 0, -.4); dm.rotation.y = -2.73; at.add(dm);                  // the dummy shows its back patch
+    mk(dm, new THREE.CylinderGeometry(.02, .02, 1.1, 8), M('#2a2c31', .5, .5), 0, .55, 0); mk(dm, new THREE.CylinderGeometry(.18, .02, .04, 12), M('#2a2c31', .5, .5), 0, .02, 0);
+    const tor = mk(dm, new RoundedBoxGeometry(.42, .55, .24, 3, .1), M('#18181B', .8), 0, 1.3, 0);
+    const bp = new THREE.Mesh(new THREE.CircleGeometry(.14, 26), M('#F2EFE8', .8)); bp.position.set(0, .04, -.125); bp.rotation.y = Math.PI; tor.add(bp);
+    const bp2 = new THREE.Mesh(new THREE.CircleGeometry(.12, 26), M('#E2611A', .8, 0, '#E2611A')); bp2.material.emissiveIntensity = .25; bp2.position.set(0, .04, -.127); bp2.rotation.y = Math.PI; tor.add(bp2); }
+  const sg = document.createElement('canvas'); sg.width = 512; sg.height = 128; { const x = sg.getContext('2d'); x.font = '400 92px Anton, sans-serif'; x.textAlign = 'center'; x.shadowColor = '#FF4FD8'; x.shadowBlur = 18; x.fillStyle = '#FFB3F0'; x.fillText('КАСТОМ', 256, 102); }
+  const atSign = mk(at, new THREE.PlaneGeometry(1.5, .37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sg), transparent: true, toneMapped: false, color: new THREE.Color(.8, .8, .8) }), -.35, 2.05, -.9);
+  [-1.05, .35].forEach(x => mk(at, new THREE.CylinderGeometry(.02, .02, 2.1, 6), M('#2a2c31', .5, .5), x, 1.05, -.92));
+  const atP = mocapPerson(HERO.topDown(5, []), { body: bodyOf(77, { girl: true, type: 'slim', style: 'bun' }) }); atP.root.position.set(0, 0, -.55); at.add(atP.root); atP.play('Breakdance_Ready', { speed: .6 });
+  ctx.circ && ctx.circ(atAt.x, atAt.z, .95); ctx.box && ctx.box(atAt.x + .2, atAt.z - .9, 1.8, .3); ctx.circ && ctx.circ(atAt.x + 1.25, atAt.z - .4, .3);
+  { // a bare bulb on a wire over the table and its warm light on the stall (the corner was dark)
+    mk(at, new THREE.CylinderGeometry(.006, .006, .7, 4), M('#111', .9), .05, 2.55, .1); const bulb = mk(at, new THREE.SphereGeometry(.07, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.35, 1.1, .75), toneMapped: false }), .05, 2.17, .1); bulb.castShadow = false;
+    const sp = new THREE.SpotLight('#ffcf9a', 46, 0, 1.05, .85, 2); sp.position.set(atAt.x + .05, 2.12, atAt.z + .1); sp.target.position.set(atAt.x + .1, 0, atAt.z + .75); scene.add(sp, sp.target); }
+  const atLab = label('АТЕЛЬЕ «ИГЛА»', '#FFB3F0', atAt.x, atAt.z, 2.7);
+  const atFront = { x: atAt.x, z: atAt.z + 1.25 };
   // the gate to the next district: an arch with a lit sign, closed by a chain until the right rank
   const gAt = freeNear(-1.2, -14.2, 1.4), gate = new THREE.Group(); gate.position.set(gAt.x, 0, gAt.z); scene.add(gate);
   [-1.4, 1.4].forEach(x => mk(gate, new THREE.BoxGeometry(.35, 3, .35), M('#3a3c42', .8), x, 1.5, 0));
@@ -377,9 +427,10 @@ export function initGame(ctx) {
   ctx.circ && ctx.circ(gAt.x - 1.4, gAt.z, .3); ctx.circ && ctx.circ(gAt.x + 1.4, gAt.z, .3); ctx.box && ctx.box(gAt.x, gAt.z, 2.4, .2);
   const PLACES = [
     { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
+    { id: 'atelier', x: atFront.x, z: atFront.z, r: 1.6 },
   ];
-  return { recs, strip, djP, djLab, matAt, matLab, chain, PLACES }; })();
-  const { recs = [], strip = null, djP = null, djLab = null, matAt = null, matLab = null, chain = null } = Y || {};
+  return { recs, strip, djP, djLab, matAt, matLab, chain, atP, atLab, atSign, atFront, PLACES }; })();
+  const { recs = [], strip = null, djP = null, djLab = null, matAt = null, matLab = null, chain = null, atP = null, atLab = null, atSign = null, atFront = null } = Y || {};
   // the Centre's places are built by city3d-center.js (W.center); here is only what they do
   const CN = W.center || null;
   const PLACES = Y ? Y.PLACES : !CN ? [] : [
@@ -415,6 +466,8 @@ export function initGame(ctx) {
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: '🔥 Ты уже выходил в круг сегодня', s: 'Завтра снова — а пока батлы с бандами' } : { h: '🔥 Выйти в круг сайфера', s: 'Бесплатно раз в день · до +' + (BAL.repShow + BAL.repShowClean) + ' ★' };
     if (pl.id === 'dj') return S.djDay === t ? { off: true, h: '🎧 Бит качает до конца дня', s: 'Меньше срывов и больше стиля в батлах' } : { h: '🎧 Заказать бит · −' + BAL.dj + ' ⚡', s: 'На весь день: меньше срывов, больше стиля', low: S.en < BAL.dj };
     if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: '💪 Форма на максимуме сегодня', s: 'Срывов в батлах меньше на ' + 3 * n + '%' } : { h: '💪 Тренировать пауэр · −' + BAL.train + ' ⚡', s: 'Форма ' + n + ' / ' + BAL.trainMax + ' — каждая: −3% срывов сегодня', low: S.en < BAL.train }; }
+    if (pl.id === 'atelier') { const left = CUS.reduce((a, c) => a + 3 - (S.cus[c.id] || 0), 0);
+      return { h: '🧵 Ателье «Игла» — кастом шмота', s: left ? 'Нашивки, шнурки, спин-пад: вещи становятся сильнее в батлах' : 'Весь кастом сделан — зайди полюбоваться' }; }
     if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: '🔒 Центр — со звания «' + BAL.ranks[BAL.gateRank] + '»', s: 'Сейчас: ' + BAL.ranks[rk] + ' · ' + S.rep + ' / ' + BAL.rep[BAL.gateRank] + ' ★' } : { h: '🚪 Войти в Центр', s: 'Банды 3–5 уровня · ТЦ · метро' }; }
     // ---- the Centre ----
     if (pl.id === 'yard') return { h: '🚪 Вернуться во двор', s: 'Диджей, мат и сайфер — там' };
@@ -442,6 +495,7 @@ export function initGame(ctx) {
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
     if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'); paintAct(); }
     if (pl.id === 'mat') startTrain();
+    if (pl.id === 'atelier') startAtelier();
     if (pl.id === 'show') startShow();
     if (pl.id === 'gate') travel('center');
     if (pl.id === 'yard') travel('yard');
@@ -504,15 +558,47 @@ export function initGame(ctx) {
   // a street show on the mall's tiles: my random set, passers-by come to watch — and the guard walks his round.
   // If he gets close while I dance (his red ring reaches me), the show is over and almost nothing is earned.
   function startMall() {
-    const H = W.hero, r = rng(Date.now() >>> 0), bf = buff(), T = makeTurn(H, ctx.heroLevel(), r, 'me', { fall: bf.fall + BAL.mallFloor, style: bf.style });
+    const H = W.hero, r = rng(Date.now() >>> 0), bf = buff(), T = makeTurn(H, ctx.heroLevel(), r, 'me', Object.assign({}, bf, { fall: bf.fall + BAL.mallFloor }));
     S.en -= BAL.mall; if (S.mallDay.day !== today()) S.mallDay = { day: today(), n: 0 }; S.mallDay.n++; save(); paintHud();
     A = { kind: 'show', mall: true, T, c: CN.show, t0: performance.now() / 1000, from: { x: H.root.position.x, z: H.root.position.z } };
     W.lock = true; W.camT = { x: CN.show.x, z: CN.show.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); CN.crowd(true);
     $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = 'Шоу у ТЦ · следи за охранником'; paintAct();
   }
   let A = null;   // a place action in progress
+  // ---- the tailor: the hero stands by the stall and turns slowly (front patch, then the back) while the sheet is open ----
+  function startAtelier() {
+    const H = W.hero; H.st.vx = H.st.vz = 0; H.st.wk = 0; H.st.tgt = null; H.play('Breakdance_Ready', { fade: .3 }); if (H.act) H.act.timeScale = 1;
+    A = { kind: 'atelier', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: atFront.x + .45, z: atFront.z + .15 } };
+    W.lock = true; W.camT = { x: atFront.x + .45, z: atFront.z + 1.6, zoom: .4 }; document.body.classList.add('g3fight'); paintAct(); sheetAtelier();
+  }
+  function sheetAtelier() {
+    const rk = rankOf(S.rep), rows = CUS.map(c => { const n = S.cus[c.id] || 0, max = n >= 3, cost = BAL.cusCost[n], need = BAL.cusRank[n], lock = !max && rk < need;
+      const btn = max ? '<button disabled>✓ Всё</button>' : lock ? `<button disabled>🔒 «${BAL.ranks[need]}»</button>` : `<button data-cu="${c.id}"${S.en < cost ? ' class="sec"' : ''}>Пришить · ${cost} ⚡</button>`;
+      const fx = max ? c.v(3) + ' ' + c.un : n ? c.v(n) + ' → ' + c.v(n + 1) + ' ' + c.un : 'Даст ' + c.v(1) + ' ' + c.un;
+      return `<div class="cu${max ? ' max' : ''}"><i>${c.ico}</i><div><b>${c.nm}</b><span class="dots">${'●'.repeat(n)}${'○'.repeat(3 - n)}</span>
+        <small class="n">${max ? 'Готово: ' + c.lv[2] : '→ ' + c.lv[n]}</small><small>${fx}</small></div>${btn}</div>`; }).join('');
+    info(`<h4>🧵 Ателье «Игла»</h4><p>Доработки видны на герое и <b>навсегда</b> усиливают тебя в батлах города. Платишь энергией — она из уроков.</p>${rows}
+      <p style="margin-top:8px">У тебя <b>${S.en} ⚡</b> · 2-й уровень — со звания «${BAL.ranks[BAL.cusRank[1]]}», 3-й — «${BAL.ranks[BAL.cusRank[2]]}»</p>
+      <button class="sec" id="g3cuL">🎬 К урокам — +${BAL.perMin} ⚡ за минуту</button>`);
+    $('#g3info').classList.add('cum');
+    document.querySelectorAll('#g3info [data-cu]').forEach(b => { b.onclick = () => sew(b.dataset.cu); });
+    $('#g3cuL').onclick = () => { location.href = './'; };
+  }
+  function sew(id) {
+    const c = CUS.find(x => x.id === id), n = S.cus[id] || 0; if (!c || n >= 3) return;
+    if (rankOf(S.rep) < BAL.cusRank[n]) { toast('🔒 Игла шьёт это только для звания «' + BAL.ranks[BAL.cusRank[n]] + '»'); return; }
+    if (S.en < BAL.cusCost[n]) { toast('⚡ Не хватает энергии: нужно ' + BAL.cusCost[n] + ', у тебя ' + S.en + '. Минута урока = +' + BAL.perMin + ' ⚡'); return; }
+    S.en -= BAL.cusCost[n]; S.cus[id] = n + 1; save(); paintHud(); ctx.rewear && ctx.rewear(); sfx('win');
+    if (atP) { atP.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => atP.play('Breakdance_Ready', { fade: .5, speed: .6 }), 2600); }
+    if (A && A.kind === 'atelier') { A.spin = id === 'top' && n + 1 === 3 ? Math.PI : id === 'kicks' || id === 'pants' ? .6 : 0; A.ty = 0; }
+    toast('🧵 Игла пришила: ' + c.lv[n] + ' · ' + c.v(n + 1) + ' ' + c.un); sheetAtelier();
+  }
   function actTick(dt) {
     const H = W.hero;
+    if (A.kind === 'atelier') { A.t += dt; const k = ease(clamp(A.t / .7, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
+      // a slow turntable: front → back → front (a fresh back patch is shown from behind first)
+      A.ty = (A.ty || 0) + dt; H.root.rotation.y = (A.spin || 0) + Math.sin(A.ty * .55) * 1.9;
+      H.tick(dt); if (!$('#g3info').classList.contains('on')) { $('#g3info').classList.remove('cum'); endAct(); } return; }
     if (A.kind === 'warm') { A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
       if (A.t > .8 && !A.p) { A.p = true; H.play('Breakdance_Footwork_1', { fade: .3 }); toast('🤸 Разминка…'); }
       if (A.t > 4.6) { H.play('Breakdance_Ready', { fade: .4 }); sfx('hit'); toast('🤸 Размялся! Сегодня срывов в батлах меньше на ' + Math.round(BAL.warm * 100) + '%'); endAct(); }
@@ -582,17 +668,20 @@ export function initGame(ctx) {
   // ---------- the battle ----------
   let B = null;
   // today's buffs from the DJ and the practice mat (only for me)
-  const buff = () => ({ fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0) + (S.warmDay === today() ? BAL.warm : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) });
+  const buff = () => { const c = S.cus || {};
+    return { fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0) + (S.warmDay === today() ? BAL.warm : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) + (c.top || 0) * BAL.cusStyle,
+      // custom (the tailor): sneakers → steps, knees → freezes, spin pad → power and headspins
+      step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
   function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
     // a set: toprock → down → footwork → power → freeze, each step with an outcome
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
-    const top = pick(TOP, r); push(top, 2.3, r() * .5, { nm: TOPNM[top], pts: 1, kind: 'top' });
+    const st = Math.round((bf.step || 0) * 100) / 100, top = pick(TOP, r); push(top, 2.3, r() * .5, { nm: TOPNM[top], pts: 1 + st, kind: 'top' });
     push('Breakdance_Uprock_To_Ground', clipLen('Breakdance_Uprock_To_Ground') - .05, 0, { kind: 'down' });
-    push(pick(FOOT, r), 2.4, r() * .8, { nm: 'FOOTWORK', pts: 1.5, kind: 'foot' });
+    push(pick(FOOT, r), 2.4, r() * .8, { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' });
     const pw = POWER.filter(p => p.lv <= lv), P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
-    const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall, .03, .32);
+    const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
     const pFail = r() < failP;
     if (P.pre) push(P.pre, 1.6, 1.0, { kind: 'pre' });
     const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
@@ -600,7 +689,7 @@ export function initGame(ctx) {
     if (pFail) push(null, 2.2, 0, { kind: 'fall' });
     else {
       if (P.post) push(P.post, 1.4, 0, { kind: 'post' });
-      const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall, .03, .2);
+      const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0), .03, .2);
       push(F.c, F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 });
       if (fFail) push(null, 1.6, 0, { kind: 'fall', soft: true });
     }
@@ -747,7 +836,8 @@ export function initGame(ctx) {
     if (P) paintTick(dt);
     if (A) actTick(dt);
     if (Y) { recs.forEach(r => r.rotation.y += dt * 3.5); strip.material.emissiveIntensity = 1 + Math.sin(performance.now() / 160) * .6; djP.tick(dt);
-      chain.visible = rankOf(S.rep) < BAL.gateRank; matLab.visible = djLab.visible = !A && !B && !P; }
+      chain.visible = rankOf(S.rep) < BAL.gateRank; matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
+      atP.tick(dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) { PZ.gateClub.chain.visible = true; }
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
