@@ -66,6 +66,11 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City 3D bodies are ONE skinned mesh per person (`skinGeo` in city3d-mocap.js) — don't hang new limb pieces on bones; dancers leave the floor on foot (`W.walk`); fixture brightness = `LAMP_K` / `FILL_K` in city3d.js (owner 16.11: «слишком ярко»).
 - City 3D GLARE (17.11): clothes never pass HDR .8 (`tame()` in city3d-mocap.js — use `M()`/`tame()` for new clothing materials; only `glowOf` glows), bloom has a soft knee.
 - City 3D MIRRORED moves «<clip>_M» (`MIRROR` in city3d-mocap.js); battle footwork = random COMBO of phrases (`FW`, `makeTurn`, turns via `spinTick`/`turnBy` round the hips).
+- City 3D HEAD (17.11) = `headGeo(girl)` in city3d-mocap.js: a sculpted shape from slices (jaw, chin, nose, brows, lips; beard = a shell of it), ONE shared
+  geometry per variant, vertex colours (`MV`). Hair caps / hats are narrowed by `HX` .9 to match — scale new head pieces the same. SHOULDERS: the torso
+  rises over the arm joint (rings around `js`) and its outer part is re-weighted to the collarbones (`G.rew`); don't bring back the big shoulder ball.
+- City 3D MUSIC (17.11, iPhone silent until the 🎵 button was toggled): on a phone no sound before the first real touch (touchend / pointerup / click),
+  the loop restarts once `RB.audioState()` is running, after the background the next touch makes a new context (`RB.fresh`). Zoom tip `#ztip`: once ever (`fedoskin-city3d-ztip`).
 - City 3D WALK / RUN = real mocap (Mixamo «Walking» + «Running» in anim/bboy.json, `gaitPose` in city3d-mocap.js) blended by speed in `stride()` (city3d.js) for
   everyone who walks; phase driven by distance (no skating). Hero top speed `HERO_SPD` 5.2 m/s. Never go back to the hand-made sine gait. Hands and sneakers are part of the skinned body.
 - City 3D CUSTOM (17.11): tailor «Игла» in the yard (city3d-game.js `CUS`, save `S.cus` {kicks, top, pants, head} 0…3, paid with ⚡, levels 2/3 gated by rank);

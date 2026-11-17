@@ -1498,3 +1498,35 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Versions: city3d-mocap `?v=12`, city3d-game `?v=20`, city3d.js `?v=21`. Tested headless: battles with Совы / Золотые зубы and the cypher
   show (clip trace, no errors), 3 other districts load clean. NOT seen on a real iPhone (swiftshader runs ~1 fps, so the smoothness of the
   combos' joins is checked only frame by frame).
+### City 3D — a human head, shoulders without a hinge, a one-time zoom tip, the background music on iPhone (17.11.2026, owner «Продолжи город, сделай форму головы не круглой, сделай похожей всё-таки на человека так или иначе. На плечах постарайся убрать видимую шарнирность. Добавь подсказку о зуме карты небольшую прозрачную 1 раз при входе в город. Пофикси фоновую музыку (сейчас не играет сразу, пришлось выкл и вкл кнопку на экране, чтобы появилась фоновая музыка)»)
+- HEAD (city3d-mocap.js `?v=12`): the head was a ball scaled (1, 1.12, 1.05). Now `headGeo(girl)`: 31 horizontal slices × 48 points from the chin
+  (y −.045) to the crown (.2405), head-group space. Each slice = front / back reach, half-width, z of the widest point and a front taper (`HEAD_SL`
+  below the brow; above y .13 an ellipse that keeps the old ball's height and depth). The face (chin … brow) is flatter (`ef` .78), the forehead
+  round again (it must stay under the hair's fringe). `headFeat` pushes a nose (tip y .06, 2.1 cm), brow ridge (y .12), eye sockets (±.04, .103),
+  cheekbones, lips (y .029) and a chin; vertex colours darken the lips, the sockets and the underside of the jaw (`MV` = cached vertexColors material).
+  Woman variant: narrower jaw, smaller chin, fuller lips, softer brow. BEARD = a shell of the same mesh 7 mm out whose edge sinks under the skin
+  (smooth border, lips left open), men only. Built once per variant and shared by everyone. Eyes / brows (hair colour, capsules) / ears placed with
+  `headFront(x, y)`. Ground contact = `userData.balls` (4 balls) instead of one big sphere: headspin rests 0.6–1.2 cm off the floor.
+  The skull is 10% narrower (half-width .107 vs .12) ⇒ `HX` .9 on hair caps (`cap()` x .93, z 1.085 bare / 1.065 under a hat — the bandana showed hair
+  through at 1.085), top / buns / braids / dreads, cap, beanie, bandana, custom band and glow ring; bucket .94; headphones moved onto the ears.
+  Hair cap segments 16 → 30 (the 16-sided cap let the forehead show through in stripes). Gotcha found on the way: the slice rings were wound
+  inside-out (we saw the inside of the back of the skull) — the index order is (a, c, b, b, c, d).
+- SHOULDERS: the torso's top ring sat at the height of the arm joint, so the arm's top and the joint ball (r .058·A) stuck out 3–5 cm above it — a pad
+  on a hinge (worst on athl / big with thick arms). Now torso rings around the joint height `js`: widest (jx + .044·ak) at js − .006, a cap
+  (jx + .022·ak) at js + .03·ak, the slope to the neck (jx·.8); their outer vertices are re-weighted up to 60% to Left/RightShoulder (`G.rew`) so a
+  shrug lifts them. Arm: thinner start inside the torso (s −.06), blend zone at the joint .045 → .058, ball .058 → .05·A. Painted brightness of the
+  shoulder rings 1.06–1.08 → 1.02–1.05 (the brighter torso vs the arm drew a line where they meet).
+- ZOOM TIP (city3d.html `#ztip`, city3d.js `zoomTip` / `ztipOff`): a small see-through pill with two orange «fingers» sliding apart, top 34%, two lines,
+  pointer-events none. Once ever (`fedoskin-city3d-ztip`), on the first entry, after the alpha notice is closed, 1.2 s in, ~5 s; removed at once on a
+  pinch / wheel; computer text «Колёсико мыши — …». The 2nd line of the bottom hint is gone (it said the same).
+- MUSIC (city3d.js, rhythm.js `?v=21` — index.html bumped too): the page made the sound context 600 ms after load and the first touch only resumed it.
+  On iPhone a context resumed by a touch seconds after the page opened can stay silent while reporting `running` (WebKit bug 190410 — the city takes
+  several seconds to load), and after the background it can stay silent for good (bug 276016); turning 🎵 off/on built a new loop, so it played. Now:
+  phones (`pointer: coarse`) make no sound before the first real touch (touchend / pointerup / click / keydown — pointerdown is not a user gesture on
+  iPhone), `audioOn` plays one silent sample inside the touch, `startMusic` restarts the loop once `RB.audioState()` says running (poll 300 ms, not
+  while hidden), hidden → loop stopped + `musicStale`, the next touch calls `RB.fresh()` (closes the context, a new one is made inside the touch).
+  Computers: start at 600 ms as before. `CITY3D.music()` = {on, live, stale} for tests.
+- Tested headless (390×844, touch): all 4 districts + `?cus=3333` load clean; alpha → OK tap → sound running, tip shown after the notice, gone after
+  ~5 s, not again after reload; background → back → touch = fresh context running; 🎵 off/on. Heads of all hair styles, hats, beards, headphones,
+  custom pieces checked close up; shoulders standing / running / uprock / freeze. NOT on a real iPhone (the music fix above can only be confirmed there).
+

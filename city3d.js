@@ -8,9 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=12';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=13';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=20';
+import { initGame } from './city3d-game.js?v=21';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -771,9 +771,9 @@ function setupInput(cv, camera) {
   const fingers = new Map(), gap = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
   const pinchEnd = () => { if (!W.pinch) return; W.pinch = null; saveZoom(); };
   cv.addEventListener('pointerdown', e => {
-    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) {} startMusic();
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     if (fingers.size >= 2) {   // the second finger: from now on it is a pinch
-      if (fingers.size === 2) { W.pinch = { d0: gap(), z0: W.uZoom }; hintOff(); }
+      if (fingers.size === 2) { W.pinch = { d0: gap(), z0: W.uZoom }; hintOff(); ztipOff(); }
       if (ctl.down) { if (ctl.joy) W.hero.st.tgt = null; ctl.down = false; ctl.joy = false; joy.classList.remove('on'); knob.style.transform = ''; }
       return; }
     if (ctl.down || W.pinch) return; ctl.down = true; ctl.id = e.pointerId; ctl.sx = ctl.x = e.clientX; ctl.sy = ctl.y = e.clientY; ctl.t = performance.now(); ctl.joy = false; });
@@ -781,7 +781,7 @@ function setupInput(cv, camera) {
   cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
   cv.addEventListener('pointermove', e => { const f = fingers.get(e.pointerId); if (f) { f.x = e.clientX; f.y = e.clientY; }
     if (W.pinch && fingers.size >= 2) { setZoom(W.pinch.z0 * W.pinch.d0 / gap()); return; } });
-  cv.addEventListener('wheel', e => { e.preventDefault(); setZoom(W.uZoom * Math.exp(clamp(e.deltaY, -120, 120) * .0016)); clearTimeout(cv._wz); cv._wz = setTimeout(saveZoom, 400); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); ztipOff(); setZoom(W.uZoom * Math.exp(clamp(e.deltaY, -120, 120) * .0016)); clearTimeout(cv._wz); cv._wz = setTimeout(saveZoom, 400); }, { passive: false });
   // Safari's own page pinch (it ignores user-scalable=no): off, the pinch belongs to the map
   ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
   cv.addEventListener('pointermove', e => { if (!ctl.down || e.pointerId !== ctl.id) return; ctl.x = e.clientX; ctl.y = e.clientY;
@@ -794,10 +794,22 @@ function setupInput(cv, camera) {
     }
     ctl.joy = false; };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  const keys = {}; addEventListener('keydown', e => { keys[e.key] = 1; startMusic(); }); addEventListener('keyup', e => { keys[e.key] = 0; });
+  const keys = {}; addEventListener('keydown', e => { keys[e.key] = 1; }); addEventListener('keyup', e => { keys[e.key] = 0; });
   ctl.keys = keys;
 }
 let hintGone = false; function hintOff() { if (hintGone) return; hintGone = true; $('#hint').classList.add('off'); }
+// the zoom tip (city3d.html #ztip): once ever — on the first entry after the alpha notice is closed, 1.2 s in, for ~5 s; gone at once when
+// the player zooms. A computer gets «колёсико мыши» instead of two fingers.
+let ztipT = 0;
+function zoomTip() {
+  const el = $('#ztip'); let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-ztip') === '1'; } catch (_) {}
+  if (!el || seen) { if (el) el.remove(); return; }
+  if (!matchMedia('(pointer: coarse)').matches) el.querySelector('span').textContent = 'Колёсико мыши — отдалить или приблизить карту';
+  const go = () => { const a = $('#alpha'); if (a && !a.hidden) { setTimeout(go, 400); return; }
+    ztipT = setTimeout(() => { try { localStorage.setItem('fedoskin-city3d-ztip', '1'); } catch (_) {} el.classList.add('on'); ztipT = setTimeout(ztipOff, 5200); }, 1200); };
+  go();
+}
+function ztipOff() { clearTimeout(ztipT); const el = $('#ztip'); if (!el) return; el.classList.remove('on'); setTimeout(() => el.remove(), 700); }
 let tapRing;
 function tapMark(v) { if (!tapRing) return; tapRing.position.set(v.x, .03, v.z); tapRing.userData.t = 0; tapRing.visible = true; }
 function collide(x, z, r) {
@@ -895,13 +907,34 @@ W.walk = { start: walkStart, move: walkMove, pose: walkPose };
 const GALL = GAIT_BONES;
 
 // ---------- music ----------
-let musicOn = false, musicT0 = 0;
-function startMusic() { try { window.RB && RB.unlock && RB.unlock(); } catch (_) {} if (musicOn || localStorage.getItem('fedoskin-city-music') === '0') return; try { if (window.RB && RB.bgm) { RB.bgm(true); musicOn = true; musicT0 = performance.now() + 150; paintMus(); } } catch (_) {} }
-function paintMus() { $('#mus').textContent = musicOn ? '🎵' : '🔇'; }
-$('#mus').addEventListener('click', e => { e.stopPropagation(); if (musicOn) { RB.bgm(false); musicOn = false; localStorage.setItem('fedoskin-city-music', '0'); } else { localStorage.removeItem('fedoskin-city-music'); startMusic(); } paintMus(); });
-['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => startMusic(), { capture: true, passive: true }));
-setTimeout(startMusic, 600);   // desktop browsers often allow it straight away
-document.addEventListener('visibilitychange', () => { if (!window.RB) return; if (document.hidden && musicOn) RB.bgm(false); else if (!document.hidden && musicOn) RB.bgm(true); });
+// iPhone (owner 17.11.2026 «фоновая музыка не играет сразу, пришлось выкл и вкл кнопку на экране»): Safari keeps a sound context silent
+// when it was made before any touch and woken by a touch seconds later (WebKit bug 190410 — the city loads for several seconds), and after
+// the app was in the background it may stay silent for good (bug 276016). His fix by hand — off and on = a new loop — now happens by itself:
+// on a phone nothing sounds before the first real touch (touchend / click — pointerdown doesn't count on iPhone), the loop is started again
+// as soon as the sound really runs, and after the background the next touch makes a brand-new sound context.
+let musicOn = false, musicT0 = 0, musicLive = false, musicStale = false;
+const coarse = matchMedia('(pointer: coarse)').matches, musicWanted = () => localStorage.getItem('fedoskin-city-music') !== '0';
+function startMusic(touch) {
+  if (!window.RB || !RB.bgm) return;
+  try {
+    if (musicStale && touch) { musicStale = false; RB.bgm(false); if (RB.fresh) RB.fresh(); musicOn = musicLive = false; }
+    if (RB.unlock) RB.unlock();
+    if (!musicWanted()) return;
+    const run = !RB.audioState || RB.audioState() === 'running';
+    if (musicOn && (musicLive || !run)) return;   // playing for real, or still waiting for the phone to let the sound in
+    if (musicOn) RB.bgm(false);                    // it was started before the sound ran: start the loop again (= the owner's off/on)
+    RB.bgm(true); musicOn = true; musicLive = run; musicT0 = performance.now() + 150; paintMus();
+  } catch (_) {}
+}
+function paintMus() { $('#mus').textContent = musicOn || (musicWanted() && coarse) ? '🎵' : '🔇'; }
+$('#mus').addEventListener('click', e => { e.stopPropagation(); if (musicOn) { RB.bgm(false); musicOn = musicLive = false; localStorage.setItem('fedoskin-city-music', '0'); } else { localStorage.removeItem('fedoskin-city-music'); startMusic(true); } paintMus(); });
+['touchend', 'pointerup', 'click', 'keydown'].concat(coarse ? [] : ['pointerdown']).forEach(ev => document.addEventListener(ev, () => startMusic(true), { capture: true, passive: true }));
+if (!coarse) setTimeout(() => startMusic(false), 600);   // computers often allow it straight away; a phone waits for the first touch
+setInterval(() => { if (musicOn && !musicLive && !musicStale && !document.hidden && window.RB && RB.audioState && RB.audioState() === 'running') startMusic(false); }, 300);
+document.addEventListener('visibilitychange', () => { if (!window.RB || !musicOn) return;
+  if (document.hidden) { RB.bgm(false); musicLive = false; if (coarse) musicStale = true; }
+  else if (!coarse) { musicOn = false; startMusic(false); } });
+paintMus();
 
 // ---------- boot ----------
 async function boot() {
@@ -1049,6 +1082,7 @@ async function boot() {
       fpsN = 0; fpsT = 0; worst = 0; }
   };
   requestAnimationFrame(frame);
-  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ };
+  zoomTip();
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale }) };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });
