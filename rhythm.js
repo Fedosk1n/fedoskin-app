@@ -615,6 +615,9 @@
       else if (kind === 'crash') { tone(o, t, 'sine', 140, 45, .55, .32); hiss(o, t, 'lowpass', 500, .7, .4, .18); hiss(o, t + .12, 'bandpass', 700, .6, .16, .8); }
       else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => tone(o, t + i * .09, 'square', f, 0, .1, .2 + i * .05)); hiss(o, t + .1, 'bandpass', 1300, .5, .22, 1.6); }
       else if (kind === 'lose') { [392, 330, 262].forEach((f, i) => tone(o, t + i * .14, 'triangle', f, f * .97, .14, .22)); hiss(o, t + .2, 'bandpass', 600, .6, .08, .6); }
+      // the drawn power move (city3d-power.js, 17.11.2026): a whoosh for every turn the finger completes, a bright chime + the crowd's «ooh» for a perfect one
+      else if (kind === 'whoosh') { hiss(o, t, 'bandpass', 520, 1.4, .16, .12); hiss(o, t + .05, 'bandpass', 1250, 1.6, .12, .1); }
+      else if (kind === 'perfect') { [1568, 2093, 2637, 3136].forEach((f, i) => tone(o, t + i * .055, 'sine', f, 0, .09, .28)); tone(o, t, 'triangle', 784, 1175, .07, .2); hiss(o, t + .08, 'bandpass', 900, .5, .2, 1.3); }
       else { hiss(o, t, 'bandpass', 1400, 1.5, .35, .06); hiss(o, t + .05, 'bandpass', 900, 1.5, .25, .07); tone(o, t + .1, 'sine', 660, 990, .08, .12); }
       setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 2500);
     } catch (_) {}

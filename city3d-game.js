@@ -3,9 +3,12 @@
 // Crews stand around the yard; walk up → «Батл» → an automatic dance-off on motion capture: each dancer's turn is a random
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
+// 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
+// (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=13';   // v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { initPower } from './city3d-power.js?v=1';   // the hero's power move is DRAWN by the finger (17.11)
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
@@ -23,6 +26,8 @@ export const BAL = {
   // the tailor «Игла» in the yard: custom details for the clothes, paid with energy (= lesson minutes); level 2 needs the rank «Свой»,
   // level 3 «Авторитет». Per level: toprock/footwork +.15 pts, style +.15, freezes −2% falls, power −2% falls (headspin another −2%)
   cusCost: [25, 50, 80], cusRank: [0, 1, 3], cusStep: .15, cusStyle: .15, cusFreeze: .02, cusPower: .02, cusSpin: .02,
+  // the drawn power move (city3d-power.js): ИДЕАЛЬНО = the move's points ×1.5; the first perfect one of each move = +5 ★ once
+  perfMul: 1.5, perfFirst: 5,
 };
 // ---------- CUSTOM (owner 16.11.2026 «добавь механику улучшения одежды (продумай что именно улучшать, может быть какие нашивки)») ----------
 // Four parts of the hero's outfit, three details each. Every detail is SEEN on the hero (city3d-mocap.js look.cus) and gives a small
@@ -134,7 +139,7 @@ const GOALS = [
   { id: 'win', t: 'Выиграй батл', n: 1 }, { id: 'win2', t: 'Выиграй 2 батла', n: 2, k: 'win' }, { id: 'clean', t: 'Выиграй батл без срывов', n: 1 },
   { id: 'paint', t: 'Закрась стену банды своим граффити', n: 1 }, { id: 'lesson', t: 'Посмотри урок 3 минуты (энергия)', n: 3 },
   { id: 'cypher', t: 'Посмотри выход в сайфере (постой у круга)', n: 1 }, { id: 'strong', t: 'Победи банду 2 уровня или выше', n: 1 },
-  { id: 'show', t: 'Выйди сам в круг сайфера', n: 1 }, { id: 'train', t: 'Потренируйся на мате 2 раза', n: 2 }, { id: 'dj', t: 'Закажи бит у диджея', n: 1 },
+  { id: 'show', t: 'Выйди сам в круг сайфера', n: 1 }, { id: 'perf', t: 'Нарисуй пауэрмув в батле идеально', n: 1 }, { id: 'train', t: 'Потренируйся на мате 2 раза', n: 2 }, { id: 'dj', t: 'Закажи бит у диджея', n: 1 },
   // only after the Centre has been visited
   { id: 'mall', t: 'Станцуй шоу у ТЦ и не попадись охраннику', n: 1, c: 1 }, { id: 'cwin', t: 'Победи банду Центра', n: 1, c: 1 },
   // only after the Park has been visited
@@ -306,6 +311,7 @@ export function initGame(ctx) {
   if (S.where !== D) { S.where = D; save(); }
   NHERE = HERE.length; IDS = HERE.map(c => c.id);
   const W = ctx.W, scene = ctx.scene, notes = refill();
+  const PM = initPower({ W, camera: ctx.camera, sfx });
   if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых'); }
   if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов'); }
   if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники'); }
@@ -758,19 +764,20 @@ export function initGame(ctx) {
         : { kind: 'foot2', yaw: turn * (.2 + r() * .5), yt: .5 }));
       tot += len; first = false;
     }
-    const pw = POWER.filter(p => p.lv <= lv), P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
+    const pw = POWER.filter(p => p.lv <= lv); let P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
+    if (who === 'me' && W.forcePM) P = POWER.find(p => p.nm === W.forcePM) || P;   // tests: ?pm=FLARE
     const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
     const pFail = r() < failP;
     if (P.pre) push(P.pre, 1.6, 1.0, { kind: 'pre' });
     const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
-    push(P.c, reps * clipLen(P.c), 0, { nm: P.nm, pts: P.pts, kind: 'power', fail: pFail, failAt: .45 + r() * .35 });
-    if (pFail) push(null, 2.2, 0, { kind: 'fall' });
-    else {
-      if (P.post) push(P.post, 1.4, 0, { kind: 'post' });
-      const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0), .03, .2);
-      push(side(F.c, r() < .5), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 });
-      if (fFail) push(null, 1.6, 0, { kind: 'fall', soft: true });
-    }
+    push(P.c, reps * clipLen(P.c), 0, { nm: P.nm, pts: P.pts, kind: 'power', fail: pFail, failAt: .45 + r() * .35, lv: P.lv });
+    // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
+    const pwS = seq[seq.length - 1], mk = (c, len, at, o = {}) => Object.assign({ c, len, at: at || 0 }, o), ok = [], bad = [mk(null, 2.2, 0, { kind: 'fall' })];
+    if (P.post) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
+    const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0), .03, .2);
+    ok.push(mk(side(F.c, r() < .5), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 }));
+    if (fFail) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
+    seq.push(...(pFail ? bad : ok)); pwS.tails = { ok, bad };
     let t = .9; seq.forEach(s => { s.a = t; t += s.len; s.b = t; });   // .9 s to step into the middle
     return { J, who, seq, len: t + OUT, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
@@ -816,24 +823,32 @@ export function initGame(ctx) {
       B.opp.root.position.set(lerp(B.fromOp.x, B.opSpot.x, k), 0, lerp(B.fromOp.z, B.opSpot.z, k)); face(B.opp, B.cx, B.cz);
       if (k >= 1) { B.phase = 'turn'; B.i = -1; nextTurn(); }
     } else if (B.phase === 'turn') {
+      if (B.skip) { PM.cancel(); finishSkip(); return; }
+      // the battle's clock STANDS while the hero hangs in the air waiting for the finger, while it is drawn, and during the replay
+      if (PM.holds()) B.t0 += now - (B.ln || now);
+      // while the swipe winds up towards the drawn part the clock keeps the dancer's time (a slow frame doesn't cut the wind-up short)
+      else if (PM.state() === 'arm') B.t0 += Math.max(0, now - (B.ln || now) - dt);
+      B.ln = now;
       const T = B.turns[B.i], J = T.J, t = now - B.t0, home = T.who === 'me' ? B.meSpot : B.opSpot;
-      if (B.skip) { finishSkip(); return; }
       // step into the middle, then the set, then back
       const kin = ease(clamp(t / .9, 0, 1)), kout = ease(clamp((t - (T.len - OUT)) / OUTW, 0, 1));
       if (J.ws) W.walk.move(J, dt, home.x, home.z, kout, Math.atan2(B.cx - home.x, B.cz - home.z)); else J.root.position.set(lerp(home.x, B.cx, kin), 0, lerp(home.z, B.cz, kin));
       const other = T.who === 'me' ? B.opp : H; face(other, J.root.position.x, J.root.position.z);
       if (t < .9) face(J, B.cx, B.cz);
       let si = T.seq.findIndex(s => t < s.b);
+      if (si >= 0 && si < T.si) si = T.si;   // a set never steps back (the clock is moved around a drawn power move)
       if (t >= .9 && si >= 0 && si !== T.si) {
         const s = T.seq[si]; T.si = si;
         if (s.c) { J.play(s.c, { fade: s.fade ?? (s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4), at: s.at }); if (J.act) J.act.timeScale = s.sp || 1; }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
         else if (s.kind === 'power' || s.kind === 'freeze') mvText(s);
         paintScore(T);
+        // MY power move: drawn by the finger (the old random outcome only if nobody draws)
+        if (s.kind === 'power' && T.who === 'me' && !s.done && PM.can(s.c)) { s.pm = true; armDraw(T, s); }
       }
       const s = si >= 0 ? T.seq[si] : null;
       if (si >= 0) spinTick(J, T, t);
-      if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
+      if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
         if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? 'Срыв! +0.5 за попытку' : 'Не удержал! 0']); if (T.who === 'me') B.clean = false; }
         else { T.score += s.pts; mvText(s, ['ok', 'Чисто! +' + s.pts]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
@@ -841,11 +856,55 @@ export function initGame(ctx) {
       }
       if (J.fall) fallTick(J, dt, s && s.soft);
       if (s && s.kind !== 'fall' && J.fall && J.fall.up) fallEnd(J);
-      if (si < 0 && !T.back) { T.back = true; if (J.fall) fallEnd(J); W.walk.start(J); $('#g3mv').innerHTML = ''; }
+      if (si < 0 && !T.back) {
+        // a drawn move that came out clean: first a replay at the real tempo (city3d-power.js), then he walks back
+        if (T.rec) { const rec = T.rec; T.rec = null; if (J.fall) fallEnd(J); PM.replay(J, rec); }
+        else if (!PM.holds()) { T.back = true; if (J.fall) fallEnd(J); W.walk.start(J); $('#g3mv').innerHTML = ''; }
+      }
       if (t >= T.len) { if (J.fall) fallEnd(J); T.score += T.style; paintScore(T); nextTurn(); }
-      W.camT.x = lerp(W.camT.x, J.root.position.x, 1 - Math.exp(-dt * 2)); W.camT.z = lerp(W.camT.z, J.root.position.z + .3, 1 - Math.exp(-dt * 2));
+      if (!PM.holds()) { W.camT.x = lerp(W.camT.x, J.root.position.x, 1 - Math.exp(-dt * 2)); W.camT.z = lerp(W.camT.z, J.root.position.z + .3, 1 - Math.exp(-dt * 2)); }
+      PM.tick(dt);   // sets the speed of the drawn clip just before the dancer moves
     }
     H.tick(dt); B.opp.tick(dt); if (B) [H, B.opp].forEach(J => { if (J.ws) W.walk.pose(J, dt); });
+  }
+  // ---------- the drawn power move (city3d-power.js) ----------
+  function armDraw(T, s) {
+    const lv = ctx.heroLevel(), bf = buff(), up = Math.max(0, lv - (s.lv || 1));
+    // the clock starts the step together with the clip (a long frame must not eat the wind-up)
+    const nw = performance.now() / 1000; B.t0 = nw - (s.a + .002 + Math.max(0, T.J.act ? T.J.act.time - (s.at || 0) : 0)); B.ln = nw;
+    PM.arm(T.J, s, {
+      first: (S.drawN || 0) < 2,
+      // what makes it easier: the levels from lessons above the move's own (+1 px, +.3 s each), the tailor's spin pad, the warm-up, the DJ, the mat
+      tolAdd: Math.min(3, up) + Math.min(6, 30 * (bf.fall + (bf.pw || 0) + (s.c === 'Head_Spinning' ? bf.spin || 0 : 0))),
+      timeAdd: Math.min(1.2, .3 * up),
+      onEnd: res => drawn(T, s, res) });
+  }
+  function drawn(T, s, res) {
+    if (!B) return;
+    if (res.grade === 'auto') {   // nobody drew: the old random outcome goes on
+      s.pm = false;
+      if (res.late && !s.done) { s.done = true; T.score += s.fail ? .5 : s.pts; if (s.fail) B.clean = false; paintScore(T); }
+      return;
+    }
+    const J = T.J, i = T.seq.indexOf(s), ok = res.grade !== 'miss', now = performance.now() / 1000;
+    S.drawN = (S.drawN || 0) + 1; s.done = true; s.pm = false;
+    // the finger picked the ending: the set is re-timed from where the power move ended
+    T.seq = T.seq.slice(0, i + 1).concat(ok ? s.tails.ok : s.tails.bad);
+    s.len = res.len; s.b = s.a + s.len; let tt = s.b; for (let k = i + 1; k < T.seq.length; k++) { const x = T.seq[k]; x.a = tt; tt += x.len; x.b = tt; }
+    T.len = tt + OUT; B.t0 = now - (s.a + res.rel + .001); B.ln = now;
+    const pts = res.grade === 'perfect' ? Math.round(s.pts * BAL.perfMul * 10) / 10 : ok ? s.pts : .5;
+    T.score += pts; paintScore(T);
+    B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade });
+    if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', 'Срыв! +0.5 за попытку']); B.clean = false; }
+    else {
+      T.rec = res.rec;
+      if (res.grade === 'perfect') {
+        mvText(s, ['gold', 'Идеально! +' + pts]); sfx('perfect');
+        S.perf = S.perf || {}; if (!S.perf[s.nm]) B.perfFirst = (B.perfFirst || []).concat(s.nm); S.perf[s.nm] = (S.perf[s.nm] || 0) + 1;
+        bumpGoal('perf');
+      } else { mvText(s, ['ok', 'Чисто! +' + pts]); sfx('hit'); }
+    }
+    save();
   }
   function paintScore(T) {
     const me = B.turns.filter(x => x.who === 'me').reduce((a, x) => a + x.score, 0), op = B.turns.filter(x => x.who === 'op').reduce((a, x) => a + x.score, 0);
@@ -875,9 +934,11 @@ export function initGame(ctx) {
     const votes = [0, 1, 2].map(() => (diff + (Math.random() - .5) * 2.4 > 0 ? 'me' : 'op')), myV = votes.filter(v => v === 'me').length, win = myV >= 2;
     H.play(win ? 'Breakdance_Ending_1' : 'Breakdance_Ready', { fade: .4 }); B.opp.play(win ? 'Breakdance_Ready' : 'Bboy_Uprock', { fade: .4 });
     let lines = [];
+    const rkP = rankOf(S.rep), pf = B.perfFirst || [];
+    if (pf.length) S.rep += pf.length * BAL.perfFirst;
     if (c.tour) lines = c.ringB ? ringResult(win) : jamResult(win);
     else if (win) {
-      const was = S.wins[c.id] || 0, rk0 = rankOf(S.rep), rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
+      const was = S.wins[c.id] || 0, rk0 = rkP, rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
       S.rep += rep; S.wins[c.id] = was + 1; S.beat[c.id] = today();
       lines.push(`<span class="rw">+${rep} ★ уважения</span>${B.clean ? ' (чистый батл без срывов)' : ''}`);
       const gi = was === 0 ? 0 : was === 2 ? 1 : -1, gid = gi >= 0 ? c.gear[gi] : null;
@@ -890,6 +951,10 @@ export function initGame(ctx) {
     } else {
       lines.push(B.lv < c.lv ? 'Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.' : 'Не повезло со срывами. Попробуй ещё раз.');
     }
+    // the drawn power moves of this battle
+    pf.forEach(nm => lines.unshift(`<span class="rw">✨ Первый идеальный ${nm}! +${BAL.perfFirst} ★</span>`));
+    (B.pm || []).filter(x => x.g === 'perfect' && !pf.includes(x.nm)).forEach(x => lines.push(`<span class="rw">✨ ${x.nm} — идеально (всего ${S.perf[x.nm]})</span>`));
+    if (!win && (B.pm || []).some(x => x.g === 'miss')) lines.push('Пауэрмув: веди палец ровно по линии и не останавливайся — тогда герой не сорвётся.');
     save(); paintHud();
     const res = $('#g3res'); res.style.setProperty('--oc', c.col);
     res.innerHTML = `<div style="font:600 12px Inter;letter-spacing:.14em;color:#9a968e">СУДЬИ</div><div class="jd">${votes.map(v => `<i class="${v}">${v === 'me' ? 'ТЫ' : 'ОНИ'}</i>`).join('')}</div>
@@ -901,6 +966,7 @@ export function initGame(ctx) {
     $('#g3ok').onclick = endBattle; const L = $('#g3les'); if (L) L.onclick = () => (location.href = './');
   }
   function endBattle() {
+    PM.cancel();
     if (ctx.music) ctx.music(null);   // the background comes back (the next jam round asks for its beat again at once — no double switch)
     $('#g3res').classList.remove('on'); $('#g3bt').classList.remove('on');
     const g = B.g; B.opp.root.position.set(B.opp.home.x, 0, B.opp.home.z); B.opp.play('Breakdance_Ready', { fade: .3 });
@@ -936,5 +1002,5 @@ export function initGame(ctx) {
       if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
     }
   }
-  return { update, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post: dt => PM.post(dt), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

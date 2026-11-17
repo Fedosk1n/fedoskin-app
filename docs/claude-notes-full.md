@@ -1550,3 +1550,42 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   A listening file of all 16 loops (4 bars each) was sent to the owner. Claude has never heard them — the owner judges by ear.
 - Versions: rhythm.js ?v=22 (index.html + city3d.html), city3d.js ?v=23, city3d-game.js ?v=22.
 
+
+### City 3D — DRAWN POWER MOVE in battles (17.11.2026, evening)
+- Owner: «Так же добавь вырисовывание powermove элемента во время батла с бандой (подумал, что авто скучно, но и в бит тапать не надо).
+  Интерес будет подогревать возможность идеально сделать какой-то элемент его нарисовав. Продумай механику так, чтобы человек и нарисовал
+  и увидел не отвлекаясь на рисовку как он сделает элемент или параллельно.»
+- New file `city3d-power.js` (`initPower({ W, camera, sfx })`, own canvas `#g3pm` over the 3D picture, z 6, under the battle panel).
+  Only the HERO's power step in battles (crews, jam, ring — everything through `startBattle`); the opponent and the street shows stay automatic.
+- The idea («и параллельно, и потом»): (1) PARALLEL — the line is drawn AROUND the dancer and the finger LEADS HIS LEGS: the clip's time is
+  driven by how far the finger got (`drive()` sets `J.act.timeScale = Δ/dt`, so root motion still works); finger at the left of the circle =
+  legs at the left. Slow finger = slow motion, off the line = the body wobbles (`J.rig.rotation` x/z), no progress .6 s (stop or finger lifted)
+  = he loses momentum → fall. (2) AFTER — a replay of the drawn part at the REAL tempo from a lower orbiting camera (`W.camT.off`, cut with
+  `W.camSnap`), a light trail from the feet (gold = perfect, blue = clean), the wobble where the finger was sloppy; tap skips; panel hidden (`body.g3rep`).
+- The line is MEASURED from the mocap (`table()`: a hidden plain probe body, 120 samples/s): the angle round the hips of a foot / the middle of
+  the feet / the hips' turn (`DRAW` per clip: Swipes = hips' yaw, only 1.9–2.8 s is drawn, the wind-up plays by itself; Head_Spinning = right
+  foot ×2 loops = 4 turns; Flair = middle of the feet ×3; 1990 = right foot ×4). Back-swings flattened → `timeAt()` maps any point of the line
+  to one moment of the clip. On screen: an ellipse (camera tilt) round the hips at the legs' mean height, radius .24–.35 of the short side,
+  a slow spiral (.94→1.06) so laps don't overlap; the camera centres it a bit above the middle (`z - .555·h + .25`, zoom .34).
+- Flow: the step starts → `PM.arm` (s.pm blocks the old outcome; the battle clock re-synced to the clip) → the clip reaches the drawn part →
+  HOLD: time stops, he hangs in the air, a pulsing yellow dot + ring that runs out (2.6 s; first two times 7 s + a hint) → no touch = «САМ
+  КРУТИТ», the old random outcome → touch within ~2.6 corridors of the dot = DRAW → end. The battle clock stands during hold/draw/replay
+  (`PM.holds()`: `B.t0 += elapsed`). `drawn()` in city3d-game.js picks the set's ending: `makeTurn` now builds BOTH tails on the power step
+  (`tails.ok` = post + freeze (+ its own fall), `tails.bad` = fall), re-times the rest, jumps the clock to where the drawn part ended.
+- Scoring (`feed()` like the rhythm battle's trajectory: points 6 px apart, window idx−3…idx+6, finger samples every 5 px): within .42 of the
+  corridor = 1, within the corridor = .5, off = 0. Done + average ≥ .82 → ИДЕАЛЬНО (move points ×1.5, `BAL.perfMul`), done → ЧИСТО (points),
+  timeout / stall with ≥85 % → ЧИСТО, else СРЫВ (+.5, fall). Corridor px (390-wide phone, scaled .9…1.5): Swipes 30, Headspin 26, Flare 24,
+  1990 21. Time = real tempo ÷ .5 + .7 s. Easier with: levels from lessons above the move's (+1 px and +.3 s each, max +3 / +1.2), the tailor's
+  spin pad, DJ, mat, warm-up (`tolAdd` ≤ 6 px).
+- Hooks: first perfect of each move = +5 ★ once (`BAL.perfFirst`, `S.perf[nm]` counts), result lines «✨ Первый идеальный FLARE! +5 ★» /
+  «✨ FLARE — идеально (всего N)», daily goal `perf` «Нарисуй пауэрмув в батле идеально», a loss after a fall adds a tip. `S.drawN` = drawn moves.
+- Sounds: rhythm.js `sfx('whoosh')` per completed turn, `sfx('perfect')` (chime + crowd). Vibrate 8 ms per turn (Android only).
+- Tests: `?pm=FLARE` (SWIPES / HEADSPIN / FLARE / 1990) forces the hero's move; `GAME._pm()` (line, progress), `_pmState()`, `_pmLast()`
+  (grade, accuracy), `_b()` (the battle). Headless (in-page PointerEvents along the line): careful finger → perfect (acc 1.0) on swipes, headspin,
+  flare; a drifting finger (±.8 corridor) → clean (acc .71); stopping at 40 % → fall, no replay, tip on the result; no touch → auto after the
+  wait; «Пропустить» during the hold → results, overlay gone, rig straight; 390×844 and 375×667. NOT checked on a real phone (finger feel,
+  how hard ИДЕАЛЬНО is, sounds).
+- Pitfalls met: (1) the clock re-sync landed exactly on the step boundary and floating point sent the set back one step — now +2 ms and a
+  set never steps back (`si < T.si` guard); (2) a clean freeze's old «zoom pulse» timer fired during the replay and pulled the camera to .4 —
+  the replay / hold set their zoom every frame; (3) the headless browser runs ~1 fps, frames skip steps — that's the test, not the game.
+- Versions: city3d-power.js ?v=1 (new), city3d-game.js ?v=23, city3d.js ?v=24, rhythm.js ?v=23 (index.html + city3d.html).

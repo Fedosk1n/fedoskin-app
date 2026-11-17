@@ -10,7 +10,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=13';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=22';
+import { initGame } from './city3d-game.js?v=23';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -972,7 +972,8 @@ async function boot() {
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
     n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
-  const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
+  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
@@ -1055,8 +1056,11 @@ async function boot() {
     const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;
     look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
     if (W.camT) look.set(W.camT.x, 0, W.camT.z);
-    camLook.lerp(look, 1 - Math.exp(-dt * 4)); W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
-    camPos.copy(camLook).addScaledVector(off, W.zoom); camera.position.copy(camPos);
+    // W.camSnap: a replay's cut — the camera jumps instead of gliding
+    if (W.camSnap) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
+    W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
+    // W.camT.off: a battle's replay looks from another side (city3d-power.js), the normal view is `off`
+    camPos.copy(camLook).addScaledVector(W.camT && W.camT.off || off, W.zoom); camera.position.copy(camPos);
     scene.fog.density = fog0 / Math.max(1, W.zoom);
     // pulled far back: eyes, ears, laces, pins of every person (one draw each, invisible from up there) are hidden, and the moon's
     // shadow is redrawn every second frame — the overview of the whole district costs about what the normal view does
@@ -1066,6 +1070,8 @@ async function boot() {
     { const zb = zoomBucket(); if (zb !== fitZ) fitShadows(zb); }
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
     camera.lookAt(camLook);
+    // the line of a drawn power move is laid over the dancer AFTER the camera has moved (else it lags a frame behind him)
+    if (GAME.post) { camera.updateMatrixWorld(); GAME.post(dt); }
     moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
     // a lamp's shadow is redrawn only while the ground it lights is on screen (else it isn't seen anyway)
     { const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
