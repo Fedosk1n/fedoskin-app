@@ -8,8 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=9';
-import { initGame } from './city3d-game.js?v=17';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=10';
+import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
+import { initGame } from './city3d-game.js?v=18';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -889,7 +890,8 @@ async function boot() {
 
   // dusk light: cool sky + moon with long soft shadows
   scene.add(new THREE.HemisphereLight('#8a9cc8', '#3a2a1e', 1.55));
-  const moon = new THREE.DirectionalLight('#9db4e6', 1.1); moon.position.set(-9, 22, -6); moon.castShadow = true;
+  const MOON = new THREE.Vector3(-9, 22, -6);   // where the moon stands relative to the point the camera looks at
+  const moon = new THREE.DirectionalLight('#9db4e6', 1.1); moon.position.copy(MOON); moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048); moon.shadow.camera.left = -16; moon.shadow.camera.right = 16; moon.shadow.camera.top = 16; moon.shadow.camera.bottom = -16; moon.shadow.camera.near = 1; moon.shadow.camera.far = 60; moon.shadow.bias = -.0005; moon.shadow.normalBias = .03; moon.shadow.radius = 4;
   scene.add(moon, moon.target);
   // a tiny environment so metal and puddles have something to reflect
@@ -909,6 +911,18 @@ async function boot() {
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
+  // ---- SPEED (owner 17.11.2026 «на айфоне 17 про раз в 5 секунд притормаживает на 1-2 секунды… займись оптимизацией») ----
+  // Measured: the picture ≈ 180 draw calls, the shadows ≈ 780 more every frame. Now: tiny / flat things cast no shadow, everything that
+  // stands still casts it as a few merged pieces (city3d-perf.js), the moon's shadow covers what the screen shows (not 32×32 m), and a
+  // lamp's shadow is redrawn only while its light is on screen. The picture stays the same.
+  trimCasters(scene);
+  const SB = shadowBatcher(scene); SB.useFor(moon);
+  const spots = []; scene.updateMatrixWorld(true);
+  scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false; o.shadow.needsUpdate = true;
+    const lp = o.getWorldPosition(new THREE.Vector3()), tp = o.target.getWorldPosition(new THREE.Vector3());
+    spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2 }); });
+  const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
+
   // post: bloom on the bright bits, then vignette + grade + grain
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
   const comp = new EffectComposer(renderer, rt);
@@ -920,19 +934,35 @@ async function boot() {
     fragmentShader: 'uniform sampler2D tDiffuse; uniform float uT; uniform vec2 uR; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = (vUv - .5) * vec2(uR.x / uR.y, 1.); float v = smoothstep(1.05, .32, length(d) * 1.25); c.rgb *= mix(.42, 1., v); float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb += vec3(-.01, .0, .03) * (1. - l) * (1. - l); float n = fract(sin(dot(vUv * uR + fract(uT) * 91.7, vec2(12.9898, 78.233))) * 43758.5453); c.rgb += (n - .5) * .03; gl_FragColor = c; }' });
   comp.addPass(fin);
 
+  const off = new THREE.Vector3(0, 15.5, 8.6);   // ~61° down from the south: more volume
+  // fit the moon's shadow to the screen: the box (in the moon's view) around everything visible from the ground up to 12 m, + a margin;
+  // as many texels per metre as before (2048 over 32 m), so the shadows look the same — just fewer objects and pixels to draw
+  const fitShadows = () => {
+    const c = camera.clone(); c.position.copy(off); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+    const sc = new THREE.OrthographicCamera(); sc.position.copy(MOON); sc.lookAt(0, 0, 0); sc.updateMatrixWorld();
+    const lb = new THREE.Box3(), d = new THREE.Vector3(), q = new THREE.Vector3(); VIEW.x0 = VIEW.z0 = Infinity; VIEW.x1 = VIEW.z1 = -Infinity;
+    for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { d.set(nx, ny, .5).unproject(c).sub(c.position).normalize(); if (d.y > -.02) d.y = -.02;
+      for (const y of [0, 4, 12]) { q.copy(off).addScaledVector(d, (y - off.y) / d.y);
+        if (y <= 4) { VIEW.x0 = Math.min(VIEW.x0, q.x); VIEW.x1 = Math.max(VIEW.x1, q.x); VIEW.z0 = Math.min(VIEW.z0, q.z); VIEW.z1 = Math.max(VIEW.z1, q.z); }
+        lb.expandByPoint(q.applyMatrix4(sc.matrixWorldInverse)); } }
+    const sh = moon.shadow, cm = sh.camera, m = .8; cm.left = lb.min.x - m; cm.right = lb.max.x + m; cm.bottom = lb.min.y - m; cm.top = lb.max.y + m; cm.updateProjectionMatrix();
+    const tx = 2048 / 32, w = Math.min(2048, Math.ceil((cm.right - cm.left) * tx / 64) * 64), h = Math.min(2048, Math.ceil((cm.top - cm.bottom) * tx / 64) * 64);
+    if (sh.mapSize.x !== w || sh.mapSize.y !== h) { sh.mapSize.set(w, h); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+  };
   const resize = () => { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(PR); renderer.setSize(w, h, false); comp.setPixelRatio(PR); comp.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
-    camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); };
+    camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
 
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
-  const off = new THREE.Vector3(0, 15.5, 8.6);   // ~61° down from the south: more volume
   const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - 2.2); camPos.copy(camLook).add(off);
-  let last = performance.now(), fpsN = 0, fpsT = 0, slow = 0, tier = 0;
-  const showFps = Q.has('fps');
+  let last = performance.now(), fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
+  // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
+  const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
   const frame = now => {
     requestAnimationFrame(frame);
-    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    const dt = Math.min(.05, (now - last) / 1000); worst = Math.max(worst, now - last); last = now;
+    if (showFps) renderer.info.reset();
     const tb = ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
     updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction
@@ -942,7 +972,10 @@ async function boot() {
     camPos.copy(camLook).addScaledVector(off, W.zoom); camera.position.copy(camPos);
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
     camera.lookAt(camLook);
-    moon.position.set(camLook.x - 9, 22, camLook.z - 6); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
+    moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
+    // a lamp's shadow is redrawn only while the ground it lights is on screen (else it isn't seen anyway)
+    { const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
+      for (const S of spots) { const dx = Math.max(x0 - S.x, 0, S.x - x1), dz = Math.max(z0 - S.z, 0, S.z - z1); if (dx * dx + dz * dz < S.r * S.r) S.l.shadow.needsUpdate = true; } }
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
     (W.speakers || []).forEach(sp => sp.userData.cones.forEach(c => { c.cone.position.z = .251 + beat * .03; c.ring.material.color.setRGB(1.75 * (.6 + beat), .45 * (.6 + beat), .12 * (.6 + beat)); }));
@@ -952,12 +985,13 @@ async function boot() {
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
     comp.render(dt);
+    SB.tick();
     // quality guard: a phone that can't keep up gets fewer pixels, then no bloom
-    fpsN++; fpsT += dt; if (fpsT > 2) { const fps = fpsN / fpsT; if (showFps) $('#fps').textContent = fps.toFixed(0) + ' fps · ' + PR.toFixed(2);
+    fpsN++; fpsT += dt; if (fpsT > 2) { const fps = fpsN / fpsT; if (showFps) $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ' + renderer.info.render.calls + ' выз. · ' + PR.toFixed(2);
       if (fps < 40 && now > 6000) { slow++; if (slow >= 2 && tier < 3) { tier++; slow = 0; if (tier === 1) PR = Math.max(1, PR * .8); else if (tier === 2) PR = Math.max(1, PR * .8); else bloom.enabled = false; resize(); } } else slow = 0;
-      fpsN = 0; fpsT = 0; }
+      fpsN = 0; fpsT = 0; worst = 0; }
   };
   requestAnimationFrame(frame);
-  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom };
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });

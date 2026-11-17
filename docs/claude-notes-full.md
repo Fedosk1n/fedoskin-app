@@ -1409,3 +1409,36 @@ Owner: «Продолжи работу над городом, а так же у�
   in `#city`, which city.js owns — never put markup there). `?city=play` and the shop's «get it in the city» go to `#cityhub`. city3d.html: first-visit
   alpha notice (`fedoskin-city3d-alpha`), 9 languages inline (same language rule as the app), HUD tag «α АЛЬФА-ВЕРСИЯ», «←» = history.back() to the app
   when we came from it, else ./?city=play; the no-WebGL message links back. Inside the city texts are still Russian only.
+
+### City 3D — SPEED: shadows were 80% of the work (17.11.2026, owner «Вероятно стоит снизить графику или оптимизировать лучше, но у меня на айфоне 17про раз в 5 секунд притормаживает на 1-2 секунды (снижается фпс)… Займись оптимизацией»)
+- MEASURED headless (draw calls per frame, renderer.info): yard 975 (picture ≈ 180, shadows ≈ 780: moon 568 + 3 lamp spots ~70 each),
+  centre 693, park 559, prom 595. Game logic on the CPU was light and flat (~0.4 ms/frame in V8, no periodic spikes over 30 s, no runtime
+  creation of people/materials/textures), so the stutter is the render load sitting at the edge of the frame budget on Safari (each
+  draw call is costly there), not one periodic job. The exact «every 5 s» pattern was NOT reproduced (no real iPhone here) — ask the owner
+  to open `city3d.html?fps` (shows fps, the WORST frame of the last 2 s, draw calls, pixel ratio) if it still happens.
+- NOW (same spots, same picture — screenshots old vs new identical, mean diff ≈ 0.01/255): yard 963/1047/824/662/983 → 465/534/348/234/459
+  (before the per-bone person pieces; after them the yard spawn view is ~300), centre 605…788 → 257…379, park 300…620 → 126…345,
+  prom 551…851 → 179…449.
+- What changed (new file `city3d-perf.js?v=1`, imported by city3d.js AND city3d-mocap.js with the same `?v` — keep them equal):
+  1. SHADOW BATCHING `shadowBatcher(scene)`: after 40 frames of settling, every static caster (plain material, plain geometry, not under a
+     person) stops casting; its shadow is drawn by merged depth-only pieces (one per 8×8 m cell × shadow side) on LAYER 1. Shadow cameras get
+     layer 1 via `SB.useFor(light)` (three r187 uses the shadow camera's layers if it has any besides 0); the main camera never sees layer 1.
+     A watcher (¼ of the items per frame) compares matrixWorld / visibility / geometry: anything that moved, hid, left the scene or changed
+     shape casts its own shadow again and its cell is rebuilt (one per frame). NOTHING needs marking by hand; `userData.dyn = true` forces
+     an object out of batching. `SB.stats()` in the console via `CITY3D.SB`.
+  2. `trimCasters(scene)`: static meshes with radius < 6 cm or flat on the ground (< 6 cm tall, top < 10 cm) cast no shadow.
+  3. PEOPLE (city3d-mocap.js): parts with radius < 5 cm (eyes, ears, laces, pins) and CircleGeometry patches cast nothing; the other rigid
+     parts on one bone cast through ONE merged piece hung on that bone (`personShadows(root)`, head + hair + cap = 1 draw). The skinned body
+     is now frustum-culled with a fixed sphere (centre (0,.8,0), r 1.8 in rest space — enough for any pose: hips x/z are stripped from the
+     clips, root motion moves the rig); before, every body was skinned and drawn in every shadow map even far off screen. `root.userData.person = true`.
+  4. MOON: the ortho shadow frustum is fitted to what the screen shows (camera frustum ∩ y 0…12 m, in the moon's view, + .8 m), recomputed
+     in resize() (`fitShadows`); the map size keeps the old texel density (2048 / 32 m) → ~1536², sharper-or-same, fewer objects inside.
+     Moon offset is `MOON` (−9, 22, −6) from the camera's look point. Camera zoom is always ≤ 1, so the fit for zoom 1 covers battles too.
+  5. LAMP SPOTS with shadows: `shadow.autoUpdate = false`; the map is redrawn only while the ground the lamp lights (circle of
+     height·tan(angle) + 1.2 m) touches the visible area `VIEW` (ground up to 4 m, from fitShadows). Off-screen lamps keep a stale map.
+  6. HUD on phones (city3d.html, `@media (pointer: coarse)`): no backdrop-filter blur on .hb and the #g3hud / #g3hud2 chips (Safari re-blurred
+     the moving canvas under each panel every frame); background .8 instead.
+  7. `?fps` readout: «N fps · худший кадр X мс · N выз. · PR».
+- Not changed: lights (15 in the yard, all per pixel), bloom, MSAA, pixel ratio and the quality guard (fps < 40 twice → fewer pixels → no bloom).
+  If the phone is still not smooth, next levers: fewer fill PointLights per district, pixel ratio 1.75 on phones, main-pass batching of
+  static meshes by material (only ~48 static draws in view vs ~90 person parts — people parts by bone+material would be the bigger win).

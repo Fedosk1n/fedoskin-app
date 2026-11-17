@@ -70,6 +70,9 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   details drawn on the hero from `look.cus` (city3d-mocap.js, `?cus=3333` = test look); bonuses go through `buff()` → `makeTurn` (step pts, style, freeze / power falls).
 - City 3D PEOPLE have BODIES: `bodyOf(seed, {type, girl, old, …})` → `mocapPerson(look, { body })` (city3d-mocap.js: BODY_TYPES avg / slim / lanky /
   athl / stocky / heavy / big / small, skin, hair colour + style, beard, backpack, coat). Every new person gets a body; the hero keeps the plain one.
+- City 3D SPEED (17.11): shadows were ~80% of the draw calls. `city3d-perf.js` merges the shadows of everything static (layer 1, self-healing
+  watcher), people's parts on one bone cast one merged piece, tiny parts cast nothing, bodies are frustum-culled, the moon's shadow is fitted
+  to the screen, lamp shadows redraw only when on screen. New casters need nothing special; `userData.dyn = true` keeps one out. `?fps` shows the worst frame.
 - City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit, texts inside Russian only).
   Standing = `Stand` / `Stand_Calm` loops (`makeStand`, never loop raw «Breakdance_Ready» — it is a sidestep); clips with a big seam play once (`userData.once`). Owner's direction 14.11: top-down 3D like his
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;

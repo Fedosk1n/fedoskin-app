@@ -3,6 +3,7 @@
 // so the moves play exactly as recorded — no hand-posed angles. Look = HERO.topDown(level, acc).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { personShadows } from './city3d-perf.js?v=1';
 
 let DATA = null;
 const CLIPS = {};
@@ -355,7 +356,10 @@ export function mocapPerson(look, opt = {}) {
       if (cus.kicks >= 3) { const gm = glowOf(look.acc || '#E2611A'); for (const k of [-1, 1]) addW(s + 'Foot', new THREE.BoxGeometry(.007, .013, len * .34), gm, new THREE.Vector3(x0 + k * (.052 * bigS * 1.08 + .001), yB + .022, zH + len * .4));
         addW(s + 'Foot', new THREE.BoxGeometry(.03, .03, .006), gm, new THREE.Vector3(x0, .075 + highT, zH + .004)); } }
   }
-  const bones = names.map(n => B[n]), body = new THREE.SkinnedMesh(G.build(), SKIN_MAT); body.frustumCulled = false; rig.add(body); body.bind(new THREE.Skeleton(bones)); rig.scale.setScalar(scale);
+  const bones = names.map(n => B[n]), body = new THREE.SkinnedMesh(G.build(), SKIN_MAT);
+  // culled like everything else, with a sphere big enough for any pose (lying, handstand, arms out: the hips never leave the rig's centre,
+  // root motion moves the rig). It was never culled: every body was skinned and drawn in every shadow map even far off screen (17.11.2026)
+  body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, .8, 0), 1.8); rig.add(body); body.bind(new THREE.Skeleton(bones)); rig.scale.setScalar(scale);
   if (bd.belly > .12) { const s = add(B.Spine, new THREE.SphereGeometry(.15 + .035 * bd.belly, 16, 12), top, 0, .05, .015 + .04 * bd.belly); s.scale.set(1.08 * ww / (1 + bd.belly * .1), 1.2, 1); }
   if (bd.coat) { const c = add(B.Hips, new THREE.CylinderGeometry(.165 * bd.hip, .215 * bd.hip, .36, 12, 1, true), M(C.top, .8), 0, -.2, 0); c.scale.z = .78 * dp; c.material.side = THREE.DoubleSide; }
   if (look.top === 'teeTeam') add(B.Spine2, new THREE.CircleGeometry(.062, 16), M('#E2611A', .7), 0, .062, .119 * dp);
@@ -413,7 +417,12 @@ export function mocapPerson(look, opt = {}) {
       add(B[s + 'UpLeg'], new RoundedBoxGeometry(.03, .125, .1, 2, .012), M(pc, .85), k * (.086 * L + .008), .27, 0); add(B[s + 'UpLeg'], new RoundedBoxGeometry(.036, .036, .106, 2, .012), M(mixOf(C.pants, '#9aa0ab', .36), .85), k * (.086 * L + .009), .212, 0); }
     if (cus.pants >= 3) { const ch = add(B.Hips, new THREE.TorusGeometry(.085, .0075, 6, 20, Math.PI), M('#C9CED6', .28, 1), -(.153 * bd.hip + .012), -.005, .005); ch.rotation.set(0, Math.PI / 2, Math.PI); ch.scale.y = 1.25; }
   }
-  root.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  // shadows: the body, the head, hair, hats, bags cast them; eyes, ears, laces, pins, patches don't (invisible from above, but each was one
+  // more draw call in every shadow map every frame — owner 17.11.2026 «…притормаживает… займись оптимизацией»)
+  root.userData.person = true;
+  root.traverse(m => { if (!m.isMesh) return; m.receiveShadow = true; if (m.isSkinnedMesh) { m.castShadow = true; return; }
+    const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); m.castShadow = g.type !== 'CircleGeometry' && g.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z) * scale >= .05; });
+  personShadows(root);   // the rest: one merged shadow piece per bone (head + hair + cap = one draw instead of five)
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
   root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
     if (g.type === 'CapsuleGeometry') { const h = P.height / 2; PTS.push({ m, p: new THREE.Vector3(0, h, 0), r: P.radius * sc }, { m, p: new THREE.Vector3(0, -h, 0), r: P.radius * sc }); }
