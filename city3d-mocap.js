@@ -14,6 +14,7 @@ const RM = {};
 export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   DATA = await (await fetch(url)).json();
+  for (const n of MIRROR) if (DATA.clips[n]) DATA.clips[n + '_M'] = mirrorClip(DATA.clips[n]);
   for (const [name, c] of Object.entries(DATA.clips)) {
     // how far the last frame is from the first: degrees of the most-turned bone (hips height: 1 cm ≈ .6°)
     const n = c.n, hp = c.t['Hips.p'], L = (n - 1) * 4;
@@ -46,6 +47,21 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   makeStand('Stand', 'Bboy_Uprock', { a: .2, al: .07, sp: 1 });
   makeStand('Stand_Calm', 'Walking', { a: .28, al: .07, sp: .45 });
   return DATA;
+}
+// MIRRORED MOVES «<name>_M» (owner 17.11.2026 «добавь вариаций футворка во время батлов (слишком однообразно начинают и делают всё)»):
+// the same recording danced to the other side. The skeleton is symmetric (the rest pose of every Left bone = its Right bone reflected
+// through the body's middle plane), so the reflection is exact: Left/Right tracks swap, each rotation (x, y, z, w) → (x, −y, −z, w), the
+// hips go to −x. Checked in node: every joint of the copy = the original's joint on the other side reflected, error 0.0000 m.
+// The names keep their stem, so TRAVEL / power / freeze tests and clipLen work as before.
+const MIRROR = ['Breakdance_Footwork_1', 'Breakdance_Footwork_2', 'Breakdance_Footwork_3', 'Breakdance_Footwork_To_Freeze', 'Breakdance_Uprock_To_Ground',
+  'Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Breakdance_Uprock_Var_2', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Crossleg_Freeze'];
+function mirrorClip(c) {
+  const t = {};
+  for (const [k, v] of Object.entries(c.t)) {
+    const [bone, kind] = k.split('.'), to = bone.replace(/^(Left|Right)/, s => (s === 'Left' ? 'Right' : 'Left')) + '.' + kind;
+    t[to] = kind === 'q' ? v.map((x, i) => (i % 4 === 1 || i % 4 === 2 ? -x : x)) : v.map((x, i) => (i % 3 === 0 ? -x : x));
+  }
+  return { n: c.n, fps: c.fps, t };
 }
 // spread the difference between the last and the first frame over the clip: q'(i) = slerp(1, q0·q_last⁻¹, i/(n-1)) · q(i); hips height likewise
 function closeLoop(c) {
@@ -148,10 +164,18 @@ const _v = new THREE.Vector3(), lerpTo = (a, b, dt, k) => a + (b - a) * (1 - Mat
 const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending/;
 
 const mats = new Map();
-const M = (c, r = .8, m = 0) => { const k = c + r + m; if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m })); return mats.get(k); };
+// NO GLARE ON PEOPLE (owner 17.11.2026 «снизь отблик от фонарей… сильный пересвет, будто зеркало на кроссовках отражает полностью»).
+// Under a lamp plus the crew's fill light a white tee / white sole came out at 1.2–1.6 (HDR) — burnt white after the tone curve, and over
+// the bloom threshold (.84), so it grew a halo like a mirror catching the lamp. Now the brightness of everything a PERSON wears is
+// rolled off softly above .5 and can never pass .8: mid and dark colours are untouched, light ones keep their folds and shading,
+// nothing on a person blooms. The glowing custom details (glowOf) are left out on purpose — they are meant to glow.
+const TAME_FN = 'vec3 tameHi(vec3 c){ float l = dot(c, vec3(.299, .587, .114)); if (l <= .5) return c; return c * ((.5 + (l - .5) / (1. + (l - .5) / .3)) / l); }\n';
+const tameShader = sh => { sh.fragmentShader = sh.fragmentShader.replace('void main() {', TAME_FN + 'void main() {').replace('#include <opaque_fragment>', 'outgoingLight = tameHi(outgoingLight);\n  #include <opaque_fragment>'); };
+const tame = m => { m.onBeforeCompile = tameShader; return m; };
+const M = (c, r = .8, m = 0) => { const k = c + r + m; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m }))); return mats.get(k); };
 const UP = new THREE.Vector3(0, 1, 0);
 // two-sided cloth (a brim seen from below, an open band): its own cached material, the one-sided M() ones stay as they are
-const M2 = (c, r = .8) => { const k = 'd' + c + r; if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, side: THREE.DoubleSide })); return mats.get(k); };
+const M2 = (c, r = .8) => { const k = 'd' + c + r; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, side: THREE.DoubleSide }))); return mats.get(k); };
 // a limb piece from the bone's origin to its child's rest position
 function seg(bone, to, r, mat, r2) {
   const len = to.length(), m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(.01, len - r * 1.4), 3, 10), mat);
@@ -167,9 +191,11 @@ function seg(bone, to, r, mat, r2) {
 // accessories stay rigid pieces on their bones. The skeleton and the moves are untouched.
 const _p = new THREE.Vector3(), _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const SKIN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .82 });
-// a soft rim of light on the edges of the body: a figure reads as one shape against the dark asphalt when seen from above
-SKIN_MAT.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
-  'float rimK = pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), 2.4);\n  outgoingLight += diffuseColor.rgb * rimK * vec3(.62, .68, .86) * .5;\n  #include <opaque_fragment>'); };
+// a soft rim of light on the edges of the body: a figure reads as one shape against the dark asphalt when seen from above.
+// 17.11.2026: the rim is mostly for DARK clothes — on white (soles seen edge-on from above, a white tee) it only added glare,
+// so it fades to 30 % on light colours; then the same soft roll-off as every other piece of clothing (tameHi above).
+SKIN_MAT.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('void main() {', TAME_FN + 'void main() {').replace('#include <opaque_fragment>',
+  'float rimK = pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), 2.4) * (1. - .7 * smoothstep(.15, .6, dot(diffuseColor.rgb, vec3(.299, .587, .114))));\n  outgoingLight += diffuseColor.rgb * rimK * vec3(.62, .68, .86) * .5;\n  outgoingLight = tameHi(outgoingLight);\n  #include <opaque_fragment>'); };
 const shadeOf = (c, k) => '#' + _c1.set(c).multiplyScalar(k).getHexString(), mixOf = (c, c2, k) => '#' + _c1.set(c).lerp(_c2.set(c2), k).getHexString();
 function skinGeo() {
   const pos = [], col = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
@@ -220,7 +246,7 @@ function patchMat(kind, c) {
   else if (kind === 'arm') { x.strokeStyle = '#15161a'; x.lineWidth = 13; x.lineJoin = 'miter'; for (const y of [50, 78]) { x.beginPath(); x.moveTo(30, y + 16); x.lineTo(64, y - 12); x.lineTo(98, y + 16); x.stroke(); } }
   else { x.fillStyle = '#15161a'; star(64, 67, 38); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  const m = new THREE.MeshStandardMaterial({ map: t, roughness: .9 }); PATCH.set(k, m); return m;
+  const m = tame(new THREE.MeshStandardMaterial({ map: t, roughness: .9 })); PATCH.set(k, m); return m;
 }
 // ---------- BODIES (owner 16.11.2026 «улучши визуал человечков, добавь разнообразия: разный вес, рост, типаж») ----------
 // A body = numbers that reshape our own low-poly figure on the same mocap skeleton: h height (whole rig), limb / arm thickness,

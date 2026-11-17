@@ -1470,3 +1470,31 @@ Owner: «Продолжи работу над городом, а так же у�
 - MEASURED headless, yard spawn: draw calls 376 → 386 (people), zoom 3: ~680 / ~520 alternating frames (814 without the far-out savings).
   Tested: all 4 districts load clean, battle with Ржавые (skip → win → bandana put on → rewear) + walking 12 m: hero stays at screen centre;
   pinch in/out via CDP touch; line-ups of all 13 crews. NOT on a real iPhone (pinch feel, speed when zoomed out).
+
+### 17.11.2026 — glare on people + footwork variety (City 3D)
+Owner (screenshot of a battle with «Ночные совы»): «Снизь отблик от фонарей, посмотри какой сильный пересвет (будто зеркало на кроссовках
+отражает полностью). Добавь вариаций футворка во время батлов (слишком однообразно начинают и делают все)».
+- GLARE, cause (measured: HDR luminance before tone mapping, read from a float render target in a battle frame): white soles / a white tee
+  under a lamp + the crew's fill light reached 1.2–1.6 (lamp strips ≈ 1.4). The bloom threshold is .84 with a hard edge, so anything just over
+  it bloomed at full strength ⇒ white sneakers grew a halo like a mirror. The body's rim light (SKIN_MAT) was ×albedo, so it added most on
+  WHITE edges (soles seen edge-on from above).
+- GLARE, fix (city3d-mocap.js `tameHi` / `tame()`): everything a person wears (SKIN_MAT, `M()`, `M2()`, patches; NOT `glowOf` — custom
+  glowing details stay glowing) rolls brightness off softly above .5 and never passes .8 (below the bloom threshold); colours keep their hue.
+  The rim fades to 30 % on light colours. Bloom (city3d.js): soft knee `highPassUniforms.smoothWidth = .36` (glow fades in over .84…1.2).
+  Lamps / LAMP_K / exposure untouched — the yard is as bright as before. After: max luminance on people .80, no halos on shoes; the yard
+  overview, the cypher ring and speaker rings look the same.
+- MIRRORED MOVES (city3d-mocap.js `MIRROR`, `mirrorClip`): «<name>_M» copies of the 3 footwork recordings, Footwork_To_Freeze, the drop,
+  the 5 toprocks and Crossleg_Freeze — Left/Right tracks swapped, quats (x, −y, −z, w), hips x negated. The rest skeleton is symmetric,
+  checked in node (all joints of the copy = reflected original, error 0.0000 m) and by eye (pairs side by side).
+- FOOTWORK COMBOS (city3d-game.js `FW`, `makeTurn`): the drop goes left or right at speed .95–1.15 and lands turned 15–65°; then 2–3
+  phrases (FW: Footwork_1 0–1.5 / 1.5–3.17, Footwork_2, Footwork_3 0–2.3 / 2.3–4.57, the first 1.25 s of Footwork_To_Freeze), 2.7–3.5 s,
+  never the same phrase twice in a row, each at speed ~.9–1.2, the side switches with p .35 (fade .45, else .32), and the dancer keeps turning
+  round 11–40° per phrase change (mostly one way). Turns pivot on the HIPS (`turnBy`: root.rotation.y + dx/dz rotated back), applied frame by
+  frame by `spinTick` (battles and the cypher/mall shows). All footwork recordings start/end in the same crouch (= the end of the drop) and
+  Footwork_1 passes it at 1.5 s — measured mean bone angle to that crouch per frame. Score unchanged: the first phrase is `kind:'foot'`
+  (FOOTWORK +1.5), the rest `foot2` (no points, no label). Toprock: either side, 1.9–2.7 s from a random point; freezes either side; the
+  next dancer's walk-in toprock either side. Steps carry `sp` (speed) and `fade`. Sets are ~1 s longer.
+- Yard cypher (city3d.js `planSet`): each round danced to a random side, a plain footwork = any of the three.
+- Versions: city3d-mocap `?v=12`, city3d-game `?v=20`, city3d.js `?v=21`. Tested headless: battles with Совы / Золотые зубы and the cypher
+  show (clip trace, no errors), 3 other districts load clean. NOT seen on a real iPhone (swiftshader runs ~1 fps, so the smoothness of the
+  combos' joins is checked only frame by frame).

@@ -8,9 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=11';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=12';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=19';
+import { initGame } from './city3d-game.js?v=20';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -730,8 +730,11 @@ const SETS = [
   [['Breakdance_Uprock_Var_2', 1, 4], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_To_Freeze', 1]],
 ];
 const POWER = /Swipes|1990|Flair|Head_Spinning/, FRZ = /Freeze/;
-function planSet(n) { const s = SETS[n % SETS.length], out = []; let t = 0;
-  s.forEach(([c, rep, cut]) => { const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
+// 17.11.2026 (owner «слишком однообразно»): every round the set is danced to the left or to the right at random (mirrored copies
+// «_M» of toprocks, the drop, footwork and floor freezes — city3d-mocap.js), and a plain footwork is any of the three recordings
+function planSet(n) { const s = SETS[n % SETS.length], out = [], m = Math.random() < .5; let t = 0;
+  s.forEach(([c, rep, cut]) => { if (/^Breakdance_Footwork_\d$/.test(c)) c = 'Breakdance_Footwork_' + (1 + Math.floor(Math.random() * 3)); if (m && clipLen(c + '_M')) c += '_M';
+    const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
 function updateCrew(_tb, dt) {
   if (!W.crew.length || !W.cyph) return;
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
@@ -953,6 +956,9 @@ async function boot() {
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84); comp.addPass(bloom);
+  // a soft knee (17.11.2026, «пересвет»): a surface just over the threshold used to bloom at full strength — any lit light thing grew a
+  // halo; now the glow fades in over .84…1.2, so only real light sources (lamp strips ≈ 1.4+, signs, LEDs) glow in full
+  bloom.highPassUniforms.smoothWidth.value = .36;
   comp.addPass(new OutputPass());
   const fin = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',

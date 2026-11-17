@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=11';   // v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=12';   // v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
@@ -143,7 +143,17 @@ const GOALS = [
   { id: 'pwin', t: 'Победи банду Парка', n: 1, p: 1 }, { id: 'jam', t: 'Выиграй хотя бы один раунд джема на эстраде', n: 1, p: 1 }, { id: 'og', t: 'Покажи Маятнику, что учился сегодня', n: 1, p: 1 },
 ];
 const TOP = ['Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Breakdance_Uprock_Var_2'];
-const FOOT = ['Breakdance_Footwork_1', 'Breakdance_Footwork_2', 'Breakdance_Footwork_3'];
+// FOOTWORK VARIETY (owner 17.11.2026 «добавь вариаций футворка во время батлов (слишком однообразно начинают и делают всё)»).
+// Was: everyone went down with the same drop and played one of three whole recordings. Now a dancer's footwork is a COMBO of
+// phrases cut from the real capture, each danced to the left or to the right (mirrored copies «_M», city3d-mocap.js), at his own
+// speed, and the body turns as footwork does — the drop lands facing a new way, every phrase change turns him further round.
+// All three recordings start and end in the same crouch (the end of the drop); Footwork_1 passes it again at 1.5 s — those are the
+// clean joints. The other cuts (Footwork_3 in two halves, the first steps of the chair-freeze recording) are covered by the cross-fade.
+const FW = [
+  { c: 'Breakdance_Footwork_1', a: 0, b: 1.5 }, { c: 'Breakdance_Footwork_1', a: 1.5, b: 3.17 }, { c: 'Breakdance_Footwork_2', a: 0, b: 1.6 },
+  { c: 'Breakdance_Footwork_3', a: 0, b: 2.3 }, { c: 'Breakdance_Footwork_3', a: 2.3, b: 4.57 }, { c: 'Breakdance_Footwork_To_Freeze', a: 0, b: 1.25 },
+];
+const side = (c, m) => (m ? c + '_M' : c);
 // power: level needed, points, how risky (adds to the fall chance), display name
 const POWER = [
   { c: 'Breakdance_Swipes', lv: 1, pts: 2, risk: 0, nm: 'SWIPES' },
@@ -156,6 +166,11 @@ const FREEZE = [
   { c: 'Crossleg_Freeze', at: 0, len: 2.0, nm: 'CROSSLEG FREEZE' },
 ];
 const TOPNM = { Breakdance_Uprock: 'CROSS STEP', Breakdance_Uprock_Var_1: 'KICK STEP', Bboy_Uprock: 'TOPROCK', Brooklyn_Uprock: 'BROOKLYN ROCK', Breakdance_Uprock_Var_2: 'INDIAN STEP' };
+// turn a dancer by d (rad) round his HIPS: the body turns in place instead of swinging round the middle of the circle
+const _yv = new THREE.Vector3(), _UP = new THREE.Vector3(0, 1, 0);
+function turnBy(J, d) { if (!d) return; J.root.rotation.y += d; _yv.set(J.dx || 0, 0, J.dz || 0).applyAxisAngle(_UP, -d); J.dx = _yv.x; J.dz = _yv.z; }
+// the turns written into a set (s.yaw rad over s.yt s from the start of the step), applied bit by bit every frame
+function spinTick(J, T, t) { for (const s of T.seq) if (s.yaw && t >= s.a && (s.yk || 0) < 1) { const k = ease(clamp((t - s.a) / s.yt, 0, 1)); turnBy(J, s.yaw * (k - (s.yk || 0))); s.yk = k; } }
 
 const $ = s => document.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -673,8 +688,9 @@ export function initGame(ctx) {
       if (H.ws) W.walk.move(H, dt, A.from.x, A.from.z, kout, Math.atan2(C1.x - A.from.x, C1.z - A.from.z)); else H.root.position.set(lerp(A.from.x, C1.x, kin), 0, lerp(A.from.z, C1.z, kin));
       if (t < .9) H.root.rotation.y = Math.atan2(C1.x - A.from.x, C1.z - A.from.z);
       const si = T.seq.findIndex(s => t < s.b);
-      if (t >= .9 && si >= 0 && si !== T.si) { const s = T.seq[si]; T.si = si; if (s.c) { H.play(s.c, { fade: .35, at: s.at }); if (H.act) H.act.timeScale = 1; } if (s.nm) mvText(s); }
+      if (t >= .9 && si >= 0 && si !== T.si) { const s = T.seq[si]; T.si = si; if (s.c) { H.play(s.c, { fade: s.fade ?? .35, at: s.at }); if (H.act) H.act.timeScale = s.sp || 1; } if (s.nm) mvText(s); }
       const s = si >= 0 ? T.seq[si] : null;
+      if (si >= 0) spinTick(H, T, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) { s.done = true;
         if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', 'Срыв!']); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', 'Чисто!']); } }
       if (H.fall) fallTick(H, dt, s && s.soft); if (s && s.kind !== 'fall' && H.fall && H.fall.up) fallEnd(H);
@@ -724,9 +740,24 @@ export function initGame(ctx) {
   function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
     // a set: toprock → down → footwork → power → freeze, each step with an outcome
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
-    const st = Math.round((bf.step || 0) * 100) / 100, top = pick(TOP, r); push(top, 2.3, r() * .5, { nm: TOPNM[top], pts: 1 + st, kind: 'top' });
-    push('Breakdance_Uprock_To_Ground', clipLen('Breakdance_Uprock_To_Ground') - .05, 0, { kind: 'down' });
-    push(pick(FOOT, r), 2.4, r() * .8, { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' });
+    const st = Math.round((bf.step || 0) * 100) / 100, top = pick(TOP, r), topM = side(top, r() < .5);
+    push(topM, 1.9 + r() * .8, r() * clipLen(top), { nm: TOPNM[top], pts: 1 + st, kind: 'top' });
+    // the drop: to the left or to the right, a bit faster or slower, landing turned 15…65° one way (the way the footwork then goes round)
+    let m = r() < .5; const dir = r() < .5 ? -1 : 1, dsp = .95 + r() * .2, DOWN = 'Breakdance_Uprock_To_Ground';
+    push(side(DOWN, m), clipLen(DOWN) / dsp - .05, 0, { kind: 'down', sp: dsp, yaw: dir * (.26 + r() * .87), yt: clipLen(DOWN) / dsp });
+    // the footwork combo: 2–3 phrases, ~2.7–3.5 s, never the same phrase twice in a row; the side switches now and then (a slower
+    // cross-fade, the weight goes over); between phrases he keeps turning round (mostly the same way)
+    const fsp = .92 + r() * .24, want = 2.7 + r() * .8; let tot = 0, prev = -1, first = true, turn = dir;
+    while (tot < want - .6) {
+      let i = Math.floor(r() * FW.length); if (i === prev) i = (i + 1 + Math.floor(r() * (FW.length - 1))) % FW.length; prev = i;
+      const P = FW[i], sw = !first && r() < .35; if (sw) m = !m;
+      // a phrase is cut to what is left of the combo, but never shorter than .9 s (no flicks) and not cut for the last half second
+      const sp = fsp * (.95 + r() * .1), full = (P.b - P.a) / sp, rest = want - tot, len = full - rest < .5 ? full : Math.max(.9, rest);
+      if (!first && r() < .25) turn = -turn;
+      push(side(P.c, m), len, P.a, Object.assign({ sp, fade: sw ? .45 : .32 }, first ? { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' }
+        : { kind: 'foot2', yaw: turn * (.2 + r() * .5), yt: .5 }));
+      tot += len; first = false;
+    }
     const pw = POWER.filter(p => p.lv <= lv), P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
     const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
     const pFail = r() < failP;
@@ -737,7 +768,7 @@ export function initGame(ctx) {
     else {
       if (P.post) push(P.post, 1.4, 0, { kind: 'post' });
       const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0), .03, .2);
-      push(F.c, F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 });
+      push(side(F.c, r() < .5), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 });
       if (fFail) push(null, 1.6, 0, { kind: 'fall', soft: true });
     }
     let t = .9; seq.forEach(s => { s.a = t; t += s.len; s.b = t; });   // .9 s to step into the middle
@@ -793,12 +824,13 @@ export function initGame(ctx) {
       let si = T.seq.findIndex(s => t < s.b);
       if (t >= .9 && si >= 0 && si !== T.si) {
         const s = T.seq[si]; T.si = si;
-        if (s.c) { J.play(s.c, { fade: s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4, at: s.at }); if (J.act) J.act.timeScale = 1; }
+        if (s.c) { J.play(s.c, { fade: s.fade ?? (s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4), at: s.at }); if (J.act) J.act.timeScale = s.sp || 1; }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
         else if (s.kind === 'power' || s.kind === 'freeze') mvText(s);
         paintScore(T);
       }
       const s = si >= 0 ? T.seq[si] : null;
+      if (si >= 0) spinTick(J, T, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
         if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? 'Срыв! +0.5 за попытку' : 'Не удержал! 0']); if (T.who === 'me') B.clean = false; }
@@ -822,7 +854,7 @@ export function initGame(ctx) {
     if (B.i >= B.turns.length) { judge(); return; }
     const T = B.turns[B.i]; B.t0 = performance.now() / 1000; T.si = -1;
     const other = T.who === 'me' ? B.opp : H; other.play('Breakdance_Ready', { fade: .4, speed: 1.05 });
-    T.J.play(pick(TOP, Math.random), { fade: .3 });
+    T.J.play(side(pick(TOP, Math.random), Math.random() < .5), { fade: .3 });
     $('#g3turn').textContent = (T.who === 'me' ? 'Твой выход' : 'Выход: ' + B.g.c.name) + ' · раунд ' + (Math.floor(B.i / 2) + 1);
     $('#g3mv').innerHTML = '';
   }
