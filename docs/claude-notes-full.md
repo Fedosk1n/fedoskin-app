@@ -1530,3 +1530,23 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   ~5 s, not again after reload; background → back → touch = fresh context running; 🎵 off/on. Heads of all hair styles, hats, beards, headphones,
   custom pieces checked close up; shoulders standing / running / uprock / freeze. NOT on a real iPhone (the music fix above can only be confirmed there).
 
+### City 3D — every crew battles to its own beat (17.11.2026, owner «Добавь разные биты под батлы с разными бандами, сделай по типу как фоновая музыка (мне понравилось)»)
+- rhythm.js: `bgm(on, id)` plays one of `LOOPS` (synth loops built like the yard background: drums + bass + keys, scheduled bar by bar 0.6 s ahead).
+  `yard` = the 14.11 background, unchanged note for note. New voices (prefixed `v…`, never reuse a helper name): clap, cowbell, metal clank, anvil, 808,
+  zap, shaker, bongo, gritty bass, upright pluck, chime, record crackle, swelling pad, 303 acid note, G-funk whining lead, wobble bass, owl hoot.
+  Loops: rusty 84 lo-fi + crackle (Em) · acid 100 acid breaks, filter opens over 4 bars (Am) · owls 80 dark, pads, owl hoot (Cm) · gold 94 G-funk, whine
+  lead (Gm) · stencil 92 NY boom-bap, horn stab, DJ cuts (Dm) · turn 108 metro: rail hats, turnstile clank, station chime (Em) · chrome 118 electro: 808,
+  cowbell, robot bass, orchestra hit (Am) · funk 110 ghost snares, slap bass, brass, guitar scratches (E) · roots 90 jazzy: walking bass, e-piano,
+  Dm7–G7–Cmaj7–A7 · wave 122 breakbeat + swelling pad (C#m) · rebar 96 industrial: clanks, steam (E) · volt 126 wobble bass, zaps (Am) · forge 132
+  double kicks, anvil, distorted riff, alarm chords, tom fill (Em) · jam 112 bongo b-boy break (Am) · ring 104 dark half-time (F#m). All original notes.
+- Switching: a different id while one plays → the old loop drops (.05 s), three scratches, the new one comes in hard .34 s later; same id → nothing.
+  city3d.js `setMusic(id)` (passed to initGame as `ctx.music`) keeps `musicId` (used by startMusic, the 🎵 button, coming back from the background)
+  and asks RB 40 ms later, so endBattle's «back to yard» + the next jam round's «jam» in one tick = no change. Music off (🎵) → battles silent as before.
+- `RB.bgmBeat()` = beats since the loop's first bar as heard; the frame loop uses it for `tb` (speakers pump in each loop's tempo), else 88 BPM as before.
+- `vol` per loop: offline render (`RB._bgmRender(id, 4)` → OfflineAudioContext) — RMS after a 150 Hz highpass (≈ a phone speaker) set to ≈ yard +1 dB
+  for all crew loops (±0.3 dB). Raw: chrome/forge were +4 dB, rusty −1.8 dB. Peaks ≤ .61.
+- Tested headless: all 13 crews (yard, ?d=center, ?d=park, ?d=prom) switch to their loop at battle start and back to yard after «Дальше»; the jam stays on
+  `jam` through its 3 rounds (one switch), the ring → `ring`; index.html loads, the flat city's `RB.bgm(true)` = yard. No page errors.
+  A listening file of all 16 loops (4 bars each) was sent to the owner. Claude has never heard them — the owner judges by ear.
+- Versions: rhythm.js ?v=22 (index.html + city3d.html), city3d.js ?v=23, city3d-game.js ?v=22.
+

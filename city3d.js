@@ -10,7 +10,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=13';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=21';
+import { initGame } from './city3d-game.js?v=22';
 import { buildProm } from './city3d-prom.js?v=2';
 import { buildCenter } from './city3d-center.js?v=4';
 import { buildPark } from './city3d-park.js?v=3';
@@ -913,6 +913,11 @@ const GALL = GAIT_BONES;
 // on a phone nothing sounds before the first real touch (touchend / click — pointerdown doesn't count on iPhone), the loop is started again
 // as soon as the sound really runs, and after the background the next touch makes a brand-new sound context.
 let musicOn = false, musicT0 = 0, musicLive = false, musicStale = false;
+// which loop plays (owner 17.11.2026 «разные биты под батлы с разными бандами»): 'yard' = the background; a battle asks for its crew's loop
+// (rhythm.js LOOPS) and gives the background back at its end. Asked for a few ms late so that «back to the yard» + «the next jam round»
+// in the same moment stay on the jam's beat instead of scratching twice.
+let musicId = 'yard', musicAsk = 0;
+function setMusic(id) { musicId = id || 'yard'; clearTimeout(musicAsk); musicAsk = setTimeout(() => { try { if (musicOn && window.RB && RB.bgm) RB.bgm(true, musicId); } catch (_) {} }, 40); }
 const coarse = matchMedia('(pointer: coarse)').matches, musicWanted = () => localStorage.getItem('fedoskin-city-music') !== '0';
 function startMusic(touch) {
   if (!window.RB || !RB.bgm) return;
@@ -923,7 +928,7 @@ function startMusic(touch) {
     const run = !RB.audioState || RB.audioState() === 'running';
     if (musicOn && (musicLive || !run)) return;   // playing for real, or still waiting for the phone to let the sound in
     if (musicOn) RB.bgm(false);                    // it was started before the sound ran: start the loop again (= the owner's off/on)
-    RB.bgm(true); musicOn = true; musicLive = run; musicT0 = performance.now() + 150; paintMus();
+    RB.bgm(true, musicId); musicOn = true; musicLive = run; musicT0 = performance.now() + 150; paintMus();
   } catch (_) {}
 }
 function paintMus() { $('#mus').textContent = musicOn || (musicWanted() && coarse) ? '🎵' : '🔇'; }
@@ -967,7 +972,7 @@ async function boot() {
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
     n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
-  const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
@@ -1041,7 +1046,9 @@ async function boot() {
     requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); worst = Math.max(worst, now - last); last = now;
     if (showFps) renderer.info.reset();
-    const tb = ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
+    // the beat count of what is heard (each crew loop has its own tempo); no sound yet — the yard's 88 BPM by the page clock
+    const hb = musicOn && musicLive && window.RB && RB.bgmBeat ? RB.bgmBeat() : null;
+    const tb = hb != null && hb >= 0 ? hb : ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
     updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
     // battles take over with their own close-ups (W.camT) and give it back afterwards
@@ -1083,6 +1090,6 @@ async function boot() {
   };
   requestAnimationFrame(frame);
   zoomTip();
-  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale }) };
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale, id: musicId, playing: window.RB && RB.bgmId ? RB.bgmId() : null }) };
 }
 boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });

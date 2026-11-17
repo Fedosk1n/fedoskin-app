@@ -69,6 +69,10 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City 3D HEAD (17.11) = `headGeo(girl)` in city3d-mocap.js: a sculpted shape from slices (jaw, chin, nose, brows, lips; beard = a shell of it), ONE shared
   geometry per variant, vertex colours (`MV`). Hair caps / hats are narrowed by `HX` .9 to match — scale new head pieces the same. SHOULDERS: the torso
   rises over the arm joint (rings around `js`) and its outer part is re-weighted to the collarbones (`G.rew`); don't bring back the big shoulder ball.
+- City 3D CREW BEATS (17.11, owner «разные биты под батлы с разными бандами… как фоновая музыка»): rhythm.js `LOOPS` (yard = the old background,
+  13 crews by `c.id`, `jam`, `ring`; each `{name, bpm, vol, play()}`, 16-step pattern strings). `startBattle` → `ctx.music(id)`, `endBattle` → `ctx.music(null)`
+  (city3d.js `setMusic`, 40 ms debounce so jam rounds don't re-scratch); `RB.bgm(true, id)` swaps with a DJ scratch; speakers pump on `RB.bgmBeat()`.
+  `vol` levelled with `RB._bgmRender(id, bars)` (offline render) — re-measure when a loop changes.
 - City 3D MUSIC (17.11, iPhone silent until the 🎵 button was toggled): on a phone no sound before the first real touch (touchend / pointerup / click),
   the loop restarts once `RB.audioState()` is running, after the background the next touch makes a new context (`RB.fresh`). Zoom tip `#ztip`: once ever (`fedoskin-city3d-ztip`).
 - City 3D WALK / RUN = real mocap (Mixamo «Walking» + «Running» in anim/bboy.json, `gaitPose` in city3d-mocap.js) blended by speed in `stride()` (city3d.js) for

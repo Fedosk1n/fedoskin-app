@@ -776,6 +776,8 @@ export function initGame(ctx) {
   }
   function startBattle(g) {
     if (!g.c.tour) S.en -= BAL.battle; S.fights++; save(); paintHud();
+    // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
+    if (ctx.music) ctx.music(g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id);
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
     const opp = g.people[0], cx = g.x, cz = g.z;
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
@@ -899,6 +901,7 @@ export function initGame(ctx) {
     $('#g3ok').onclick = endBattle; const L = $('#g3les'); if (L) L.onclick = () => (location.href = './');
   }
   function endBattle() {
+    if (ctx.music) ctx.music(null);   // the background comes back (the next jam round asks for its beat again at once — no double switch)
     $('#g3res').classList.remove('on'); $('#g3bt').classList.remove('on');
     const g = B.g; B.opp.root.position.set(B.opp.home.x, 0, B.opp.home.z); B.opp.play('Breakdance_Ready', { fade: .3 });
     B.opp.root.rotation.y = Math.atan2(g.x - B.opp.home.x, g.z - B.opp.home.z);
