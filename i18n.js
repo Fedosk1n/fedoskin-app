@@ -1049,7 +1049,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Warmed up by a lesson: +{e} energy and +{r}% respect until the end of the day",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Train with the lessons for {m} minutes today and your hero is warmed up: +{e} energy and +{r}% respect.",
  "К урокам": "Go to lessons",
- "Разогрет уроком: респект +{r} %": "Warmed up by a lesson: respect +{r}%"
+ "Разогрет уроком: респект +{r} %": "Warmed up by a lesson: respect +{r}%",
+ "3D-город": "3D City",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "Explore the districts, out-dance the street crews, paint over their walls with your graffiti and collect unique gear — it works in battles too. Your lessons give you energy for the city.",
+ "Войти в город": "Enter the city",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "The city is an early alpha — we are building it right now. Expect bugs and some lag on older phones; balance and rewards will change, and your city progress may be reset after big updates.",
+ "Пока в городе всё на русском — переводы появятся позже.": "For now, everything inside the city is in Russian — translations are coming later.",
+ "Сообщить об ошибке": "Report a bug",
+ "Простой 2D-город": "Simple 2D city",
+ "Ошибка в 3D-городе: ": "Bug in the 3D city: "
  },
  "es": {
  "Главная": "Inicio",
@@ -2098,7 +2106,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "En calor por una lección: +{e} de energía y +{r} % de respeto hasta el final del día",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Entrena hoy {m} minutos con las lecciones y tu héroe entra en calor: +{e} de energía y +{r} % de respeto.",
  "К урокам": "Ir a las lecciones",
- "Разогрет уроком: респект +{r} %": "En calor por una lección: respeto +{r} %"
+ "Разогрет уроком: респект +{r} %": "En calor por una lección: respeto +{r} %",
+ "3D-город": "Ciudad 3D",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "Recorre los barrios, gánales en el baile a las crews de la calle, pinta sus muros con tu grafiti y consigue ropa única: también sirve en las batallas. Tus lecciones te dan energía para la ciudad.",
+ "Войти в город": "Entrar en la ciudad",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "La ciudad es una alfa temprana: la estamos construyendo ahora mismo. Puede haber errores y tirones en móviles antiguos; el equilibrio y los premios cambiarán, y tu progreso en la ciudad podría reiniciarse tras grandes actualizaciones.",
+ "Пока в городе всё на русском — переводы появятся позже.": "Por ahora todo dentro de la ciudad está en ruso; las traducciones llegarán más adelante.",
+ "Сообщить об ошибке": "Informar de un error",
+ "Простой 2D-город": "Ciudad 2D sencilla",
+ "Ошибка в 3D-городе: ": "Error en la ciudad 3D: "
  },
  "pt": {
  "Главная": "Início",
@@ -3147,7 +3163,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Aquecido por uma aula: +{e} de energia e +{r}% de respeito até o fim do dia",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Treine hoje {m} minutos com as aulas e seu herói fica aquecido: +{e} de energia e +{r}% de respeito.",
  "К урокам": "Ir para as aulas",
- "Разогрет уроком: респект +{r} %": "Aquecido por uma aula: respeito +{r}%"
+ "Разогрет уроком: респект +{r} %": "Aquecido por uma aula: respeito +{r}%",
+ "3D-город": "Cidade 3D",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "Explore os bairros, vença as crews de rua na dança, pinte por cima dos muros delas com o seu grafite e junte roupas únicas — elas valem nas batalhas também. Suas aulas dão energia para a cidade.",
+ "Войти в город": "Entrar na cidade",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "A cidade é uma versão alfa inicial — estamos construindo agora mesmo. Pode haver erros e travadas em celulares mais fracos; o equilíbrio e as recompensas vão mudar, e o seu progresso na cidade pode ser zerado depois de grandes atualizações.",
+ "Пока в городе всё на русском — переводы появятся позже.": "Por enquanto, tudo dentro da cidade está em russo — as traduções vêm depois.",
+ "Сообщить об ошибке": "Relatar um erro",
+ "Простой 2D-город": "Cidade 2D simples",
+ "Ошибка в 3D-городе: ": "Erro na cidade 3D: "
  },
  "fr": {
  "Главная": "Accueil",
@@ -4196,7 +4220,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Échauffé par une leçon : +{e} d’énergie et +{r} % de respect jusqu’à la fin de la journée",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Entraîne-toi {m} minutes avec les leçons aujourd’hui et ton héros est échauffé : +{e} d’énergie et +{r} % de respect.",
  "К урокам": "Aller aux leçons",
- "Разогрет уроком: респект +{r} %": "Échauffé par une leçon : respect +{r} %"
+ "Разогрет уроком: респект +{r} %": "Échauffé par une leçon : respect +{r} %",
+ "3D-город": "Ville 3D",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "Parcours les quartiers, bats les crews de rue en danse, recouvre leurs murs de ton graffiti et récupère du matos unique — il compte aussi en battle. Tes leçons te donnent de l’énergie pour la ville.",
+ "Войти в город": "Entrer en ville",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "La ville est une alpha précoce : on la construit en ce moment. Il peut y avoir des bugs et des ralentissements sur les téléphones peu puissants ; l’équilibrage et les récompenses vont changer, et ta progression en ville peut être remise à zéro après de grosses mises à jour.",
+ "Пока в городе всё на русском — переводы появятся позже.": "Pour l’instant, tout dans la ville est en russe — les traductions arrivent plus tard.",
+ "Сообщить об ошибке": "Signaler un bug",
+ "Простой 2D-город": "Ville 2D simple",
+ "Ошибка в 3D-городе: ": "Bug dans la ville 3D : "
  },
  "de": {
  "Главная": "Start",
@@ -5245,7 +5277,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "Durch eine Lektion aufgewärmt: +{e} Energie und +{r} % Respekt bis zum Tagesende",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "Trainiere heute {m} Minuten mit den Lektionen, dann ist dein Held aufgewärmt: +{e} Energie und +{r} % Respekt.",
  "К урокам": "Zu den Lektionen",
- "Разогрет уроком: респект +{r} %": "Durch eine Lektion aufgewärmt: Respekt +{r} %"
+ "Разогрет уроком: респект +{r} %": "Durch eine Lektion aufgewärmt: Respekt +{r} %",
+ "3D-город": "3D-Stadt",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "Erkunde die Viertel, tanz die Street-Crews aus, übermale ihre Wände mit deinem Graffiti und sammle einzigartige Klamotten — sie helfen auch in Battles. Deine Lektionen geben dir Energie für die Stadt.",
+ "Войти в город": "Stadt betreten",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "Die Stadt ist eine frühe Alpha — wir bauen sie gerade. Fehler und Ruckler auf schwächeren Handys sind möglich; Balance und Belohnungen ändern sich noch, und dein Fortschritt in der Stadt kann nach großen Updates zurückgesetzt werden.",
+ "Пока в городе всё на русском — переводы появятся позже.": "Im Moment ist in der Stadt alles auf Russisch — Übersetzungen kommen später.",
+ "Сообщить об ошибке": "Fehler melden",
+ "Простой 2D-город": "Einfache 2D-Stadt",
+ "Ошибка в 3D-городе: ": "Fehler in der 3D-Stadt: "
  },
  "ja": {
  "Главная": "ホーム",
@@ -6294,7 +6334,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "レッスンでウォームアップ：今日中はエナジー+{e}、リスペクト+{r}%",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "今日レッスンで{m}分練習するとヒーローがウォームアップ：エナジー+{e}、リスペクト+{r}%。",
  "К урокам": "レッスンへ",
- "Разогрет уроком: респект +{r} %": "レッスンでウォームアップ：リスペクト+{r}%"
+ "Разогрет уроком: респект +{r} %": "レッスンでウォームアップ：リスペクト+{r}%",
+ "3D-город": "3Dシティ",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "街の地区をめぐり、ストリートのクルーにダンスで勝ち、壁を自分のグラフィティで塗り替え、限定アイテムを集めよう。アイテムはバトルでも効く。街のエネルギーはレッスンでたまる。",
+ "Войти в город": "街に入る",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "街は初期のアルファ版で、いまも作っている最中。バグや、性能の低いスマホでのカクつきがあるかもしれない。バランスや報酬は変わるし、大きなアップデートの後で街の進行状況がリセットされることもある。",
+ "Пока в городе всё на русском — переводы появятся позже.": "今のところ街の中はすべてロシア語。翻訳はあとで追加される。",
+ "Сообщить об ошибке": "バグを報告",
+ "Простой 2D-город": "シンプルな2Dの街",
+ "Ошибка в 3D-городе: ": "3Dシティのバグ："
  },
  "ko": {
  "Главная": "홈",
@@ -7343,7 +7391,15 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "레슨으로 워밍업: 오늘 하루 에너지 +{e}, 리스펙트 +{r}%",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "오늘 레슨으로 {m}분 연습하면 히어로가 워밍업된다: 에너지 +{e}, 리스펙트 +{r}%.",
  "К урокам": "레슨으로",
- "Разогрет уроком: респект +{r} %": "레슨으로 워밍업: 리스펙트 +{r}%"
+ "Разогрет уроком: респект +{r} %": "레슨으로 워밍업: 리스펙트 +{r}%",
+ "3D-город": "3D 도시",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "구역을 돌아다니며 거리 크루를 춤으로 이기고, 그들의 벽을 네 그래피티로 덮고, 특별한 아이템을 모아 봐. 아이템은 배틀에서도 효과가 있어. 도시 에너지는 레슨으로 채워져.",
+ "Войти в город": "도시 입장",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "도시는 초기 알파 버전이고 지금 만들고 있는 중이야. 버그가 있거나 사양이 낮은 폰에서 끊길 수 있어. 밸런스와 보상은 바뀔 거고, 큰 업데이트 후에는 도시 진행 상황이 초기화될 수도 있어.",
+ "Пока в городе всё на русском — переводы появятся позже.": "지금은 도시 안의 모든 내용이 러시아어야. 번역은 나중에 추가돼.",
+ "Сообщить об ошибке": "버그 신고",
+ "Простой 2D-город": "간단한 2D 도시",
+ "Ошибка в 3D-городе: ": "3D 도시 버그: "
  },
  "zh": {
  "Главная": "首页",
@@ -8392,6 +8448,14 @@ window.I18N = {
  "Разогрет уроком: +{e} энергии и +{r} % респекта до конца дня": "上课热身：今天之内体力 +{e}、尊重 +{r}%",
  "Позанимайся сегодня в уроках {m} минут — герой будет разогрет: +{e} энергии и +{r} % респекта.": "今天跟着课程练 {m} 分钟，角色就会热身：体力 +{e}、尊重 +{r}%。",
  "К урокам": "去上课",
- "Разогрет уроком: респект +{r} %": "上课热身：尊重 +{r}%"
+ "Разогрет уроком: респект +{r} %": "上课热身：尊重 +{r}%",
+ "3D-город": "3D 城市",
+ "Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.": "逛遍各个街区，用舞蹈打败街头团伙，用你的涂鸦盖掉他们的墙，收集独一无二的装备——对战里也有用。城市的能量来自你的课程。",
+ "Войти в город": "进入城市",
+ "Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.": "城市是早期内测版，我们正在建设中。可能会有错误，低配手机上可能会卡顿；平衡和奖励还会调整，大更新后城市进度可能会被重置。",
+ "Пока в городе всё на русском — переводы появятся позже.": "目前城市里的内容都是俄语，翻译稍后上线。",
+ "Сообщить об ошибке": "报告问题",
+ "Простой 2D-город": "简易 2D 城市",
+ "Ошибка в 3D-городе: ": "3D 城市问题："
  }
 };

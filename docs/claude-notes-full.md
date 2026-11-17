@@ -1383,3 +1383,29 @@ Owner: «Продолжи работу над городом, а так же у�
   headspin another −2%). Cost 25 / 50 / 80 ⚡, level 2 from «Свой», level 3 from «Авторитет». While the sheet is open the hero stands by the stall and turns
   slowly (turntable) under a close camera. Headless note: full-page screenshots with a transparent full-screen overlay sometimes show the page colour instead
   of the canvas — the renderer's own output is fine (checked by reading the composer output); not a game bug.
+
+### City 3D — standing people without jerks, one-shot moves, texture check, open to everyone with an alpha warning (17.11.2026, owner «улучши движения фигурок пока те находятся на месте (сейчас они глючат слегка), проверь текстуры… добавь город в открытый доступ для пользователей, предупреди ещё раз, что это альфа»)
+- WHY THEY JERKED: everybody standing looped «Breakdance_Ready», but that recording is a 1-second SIDESTEP into the stance (hips travel 43 cm, left hand 52°),
+  not an idle — looped, every standing person snapped back by up to 38° (hand 12 cm in one frame) once a second.
+- STANDING LOOPS (city3d-mocap.js `makeStand`): built at load from real looping mocap, played softly over the calm first frame of Ready
+  (q = slerp(start pose, recorded frame, a); a = upper body, al = hips + legs so the feet don't skate). «Stand» = from Bboy_Uprock (a .2, al .07) — b-boys
+  bobbing to the beat (crews, the hero, DJ, jam/ring dancers, the old-timer); «Stand_Calm» = from Walking slowed to .45 (a .28) — weight shift for
+  passers-by, the guard, workers, the tailor (`J.setIdle('Stand_Calm')` or `mocapPerson(look, { idle })`). `J.play('Breakdance_Ready')` now means
+  «this person's standing loop» (`{ raw: true }` for the real recording); replaying the loop that is already on does nothing (no restart from frame 0).
+  The first clip of a new person starts at full weight (it used to fade in from the T-pose: a flash at load and after changing clothes).
+- GAIT over the loop: `standPose` no longer PAUSES Ready on a frame (walkers stopped as statues, then jerked); `stride` takes its base from `standAt(loop,
+  action time)` (or the mixer's live pose while a crossfade into the loop runs), so a step ends exactly on what the mixer plays next; the hero's
+  idle/toprock switch waits for the step to settle (wk < .004). walkStart plays the loop instead of pausing Ready. rewear keeps the clip and its time.
+- ONE-SHOT clips: a recording whose last frame is far from its first (seam > 15°: going down, freezes, Swipes, Headspin start/end, Ending, Footwork_To_Freeze)
+  plays LoopOnce + clamp — a frame late it used to wrap to its first frame (the cypher dancer jumped up from the floor for one frame, ~1 m, between going
+  down and footwork). Almost-loops (seam .3…15°: Indian step 9.5°, Uprock_Var_1, Footwork_3…) are closed at load (`closeLoop`: the difference spread over
+  the clip). Measured headless (limbs relative to the person, per frame): standing ≤ 2.5 cm/frame everywhere, no spikes in walk → stop → stand → toprock → walk.
+- TEXTURES / LIGHT (checked all 4 districts, 3×3 views + close-ups): Centre tea kiosk — the light sat at the awning's edge and burnt a white blot into the
+  stripes → under the awning, power 12, stripes off-white; yard atelier — spot 46 → 20 (table and cloth were white), neon «КАСТОМ» raised (was behind
+  the place's name); Промзона — the roof sign stood inside the saw-tooth roof (dark wedge through the letters) → moved in front (z FZ + .45); ground paint
+  fonts got `Impact, sans-serif` fallbacks (if Google Fonts fail, canvases fell back to a serif font). Note: headless has no Anton — screenshots show fallbacks.
+- OPEN ACCESS: the app's «Город» tab now opens the screen `#cityhub` (index.html): cover `img/city3d.jpg`, «Войти в город» → city3d.html, the alpha card,
+  «Пока в городе всё на русском…» for non-ru, «Сообщить об ошибке» (coach chat with a prefill, svc 'city'), «Простой 2D-город» (the old flat city stays
+  in `#city`, which city.js owns — never put markup there). `?city=play` and the shop's «get it in the city» go to `#cityhub`. city3d.html: first-visit
+  alpha notice (`fedoskin-city3d-alpha`), 9 languages inline (same language rule as the app), HUD tag «α АЛЬФА-ВЕРСИЯ», «←» = history.back() to the app
+  when we came from it, else ./?city=play; the no-WebGL message links back. Inside the city texts are still Russian only.

@@ -14,6 +14,14 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   DATA = await (await fetch(url)).json();
   for (const [name, c] of Object.entries(DATA.clips)) {
+    // how far the last frame is from the first: degrees of the most-turned bone (hips height: 1 cm ≈ .6°)
+    const n = c.n, hp = c.t['Hips.p'], L = (n - 1) * 4;
+    let seam = hp ? Math.abs(hp[(n - 1) * 3 + 1] - hp[1]) * .6 : 0;
+    for (const [k, v] of Object.entries(c.t)) if (k.endsWith('.q')) { const d = Math.abs(v[0] * v[L] + v[1] * v[L + 1] + v[2] * v[L + 2] + v[3] * v[L + 3]) / (Math.hypot(v[0], v[1], v[2], v[3]) * Math.hypot(v[L], v[L + 1], v[L + 2], v[L + 3]) || 1);
+      seam = Math.max(seam, 2 * Math.acos(Math.min(1, d)) * 180 / Math.PI); }
+    // ALMOST-LOOPS (a toprock that ends a few degrees off its start, e.g. the Indian step 9.5°) are closed: the small difference is
+    // spread over the whole clip (~0.1° a frame, invisible), so the loop no longer clicks once per round
+    if (seam > .3 && seam <= 15) closeLoop(c);
     const times = Float32Array.from({ length: c.n }, (_, i) => i / c.fps), tracks = [];
     for (const [k, v] of Object.entries(c.t)) {
       const [bone, kind] = k.split('.');
@@ -26,9 +34,28 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
       else tracks.push(new THREE.QuaternionKeyframeTrack(bone + '.quaternion', times, Float32Array.from(v, x => x / 1000)));
     }
     CLIPS[name] = new THREE.AnimationClip(name, (c.n - 1) / c.fps, tracks);
+    // ONE-SHOT clips: a recording whose last frame is far from its first (going down, a freeze, a transition) must never wrap
+    // around — a frame late, it flashed back to its first pose for one frame (the cypher's dancer «jumped» up from the floor
+    // between going down and footwork, 1 m in one frame). Played once, it holds its last frame until the next move fades in.
+    CLIPS[name].userData = { seam, once: seam > 15 };
   }
   gaitPrep();
+  // the two standing loops (see makeStand): «Stand» = a b-boy bobbing to the beat (from «Bboy_Uprock»), «Stand_Calm» = an ordinary
+  // person shifting the weight from foot to foot (from «Walking», slowed down) — passers-by, the guard, workers, the tailor
+  makeStand('Stand', 'Bboy_Uprock', { a: .2, al: .07, sp: 1 });
+  makeStand('Stand_Calm', 'Walking', { a: .28, al: .07, sp: .45 });
   return DATA;
+}
+// spread the difference between the last and the first frame over the clip: q'(i) = slerp(1, q0·q_last⁻¹, i/(n-1)) · q(i); hips height likewise
+function closeLoop(c) {
+  const n = c.n, q0 = new THREE.Quaternion(), ql = new THREE.Quaternion(), d = new THREE.Quaternion(), di = new THREE.Quaternion(), q = new THREE.Quaternion(), I = new THREE.Quaternion();
+  for (const [k, v] of Object.entries(c.t)) {
+    if (k.endsWith('.q')) { const L = (n - 1) * 4, out = new Array(v.length);
+      q0.fromArray(v, 0).normalize(); ql.fromArray(v, L).normalize(); if (q0.dot(ql) < 0) ql.set(-ql.x, -ql.y, -ql.z, -ql.w); d.copy(q0).multiply(ql.invert());
+      for (let i = 0; i < n; i++) { q.fromArray(v, i * 4).normalize(); di.copy(I).slerp(d, i / (n - 1)); di.multiply(q); out[i * 4] = di.x * 1000; out[i * 4 + 1] = di.y * 1000; out[i * 4 + 2] = di.z * 1000; out[i * 4 + 3] = di.w * 1000; }
+      c.t[k] = out; }
+    else if (k === 'Hips.p') { const e = v[(n - 1) * 3 + 1] - v[1]; c.t[k] = v.map((x, j) => (j % 3 === 1 ? x - e * Math.floor(j / 3) / (n - 1) : x)); }
+  }
 }
 // ---------- WALK / RUN from real motion capture (owner 16.11.2026 «улучши бег (выглядит не естественно)») ----------
 // Mixamo «Walking» (1.78 m/s, 1.84 m per loop) and «Running» (5.92 m/s, 3.75 m per loop); one loop = two steps. The owner
@@ -53,6 +80,38 @@ function gaitPrep() {
   GAIT.ok = true;
 }
 export const gaitInfo = () => (GAIT.ok ? { walk: GAIT.Walking, run: GAIT.Running } : null);
+// ---------- STANDING (owner 17.11.2026 «улучши движения фигурок пока те находятся на месте (сейчас они глючат слегка)») ----------
+// Everybody who stood still used to loop «Breakdance_Ready» — but that recording is not an idle: it is a one-second SIDESTEP into the
+// ready stance (the hips travel 43 cm, the left hand turns 52°). Looped, every standing person jerked back by up to 38° once a second.
+// Now a standing person plays a seamless loop made from a REAL looping recording, played softly on top of the calm start of «Ready»:
+// q = slerp(start pose, recorded frame, a) — the timing, the weight shift and the rhythm stay recorded, only the size is smaller (no
+// hand-posed angles). makeStand(name, src, { a, al, legs }) builds it as a normal clip (CLIPS[name], loops seamlessly because the source
+// does) + a table for standAt() (the walking gait blends over it). a = upper body, al = hips and legs (small, or the feet would skate).
+const STANDS = {}, LEG_B = /Hips|UpLeg|Leg$|Foot|ToeBase/;
+export function makeStand(name, src, o = {}) {
+  const c = DATA && DATA.clips[src], r = DATA && DATA.clips.Breakdance_Ready; if (!c || !r) return null;
+  const n = c.n, base = poseOf('Breakdance_Ready', .05), hp = c.t['Hips.p'], a = o.a ?? .2, al = o.al ?? .06, S = { n, fps: c.fps, q: {}, x: new Float32Array(n), y: new Float32Array(n), z: new Float32Array(n) };
+  const ex = hp[(n - 1) * 3] - hp[0], ez = hp[(n - 1) * 3 + 2] - hp[2]; let mx = 0, mz = 0;
+  for (let i = 0; i < n; i++) { const u = i / (n - 1); S.x[i] = (hp[i * 3] - hp[0] - ex * u) / 100; S.z[i] = (hp[i * 3 + 2] - hp[2] - ez * u) / 100; mx += S.x[i] / n; mz += S.z[i] / n; }
+  for (let i = 0; i < n; i++) { S.x[i] = (S.x[i] - mx) * al; S.z[i] = (S.z[i] - mz) * al; S.y[i] = base.y + (hp[i * 3 + 1] / 100 - base.y) * al; }
+  const times = Float32Array.from({ length: n }, (_, i) => i / c.fps), tracks = [], q = new THREE.Quaternion(), b0 = new THREE.Quaternion();
+  for (const bn of GAIT_BONES) { const v = c.t[bn + '.q']; if (!v || !base.q[bn]) continue; const k = LEG_B.test(bn) ? al : a, out = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { q.set(v[i * 4], v[i * 4 + 1], v[i * 4 + 2], v[i * 4 + 3]).normalize(); b0.copy(base.q[bn]); if (b0.dot(q) < 0) q.set(-q.x, -q.y, -q.z, -q.w); b0.slerp(q, k).toArray(out, i * 4); }
+    S.q[bn] = out; tracks.push(new THREE.QuaternionKeyframeTrack(bn + '.quaternion', times, out)); }
+  // hips: the small sway stays IN the clip (no root motion — a standing person does not travel)
+  tracks.push(new THREE.VectorKeyframeTrack('Hips.position', times, Float32Array.from({ length: n * 3 }, (_, j) => [S.x, S.y, S.z][j % 3][Math.floor(j / 3)])));
+  S.sp = o.sp || 1; CLIPS[name] = new THREE.AnimationClip(name, (n - 1) / c.fps, tracks); STANDS[name] = S;
+  return S;
+}
+export const isStand = n => !!STANDS[n];
+// the standing pose of a stand clip at time t (seconds, loops): { q: {bone: Quaternion}, x, y, z } — the base under the walking gait
+const SP = { q: {}, x: 0, y: 1, z: 0 }, _sa = new Float32Array(4);
+export function standAt(name, t) {
+  const S = STANDS[name]; if (!S) return null;
+  const f = (((t * S.fps) % (S.n - 1)) + (S.n - 1)) % (S.n - 1), i = Math.min(S.n - 2, Math.floor(f)), k = f - i, lin = a => a[i] + (a[i + 1] - a[i]) * k;
+  for (const bn in S.q) { THREE.Quaternion.slerpFlat(_sa, 0, S.q[bn], i * 4, S.q[bn], i * 4 + 4, k); (SP.q[bn] || (SP.q[bn] = new THREE.Quaternion())).fromArray(_sa); }
+  SP.x = lin(S.x); SP.y = lin(S.y); SP.z = lin(S.z); return SP;
+}
 const _ga = new Float32Array(4), _gb = new Float32Array(4), _gc = new Float32Array(4), _gd = new Float32Array(4);
 const gFrame = (g, ph) => { const f = ((ph + g.ph0) % 1 + 1) % 1 * (g.n - 1), i = Math.min(g.n - 2, Math.floor(f)); return [i, f - i]; };
 export function gaitPose(ph, wr) {
@@ -365,7 +424,7 @@ export function mocapPerson(look, opt = {}) {
     pt('Hips', .1 * hd); pt('Spine', .1 * dp * wd + bd.belly * .05); pt('Spine1', .105 * dp); pt('Spine2', .116 * dp); pt('Neck', .07);
     for (const s of ['Left', 'Right']) { pt(s + 'Arm', .066 * A); pt(s + 'ForeArm', .05 * A); pt(s + 'Hand', .037 * A); pt(s + 'UpLeg', .092 * L); pt(s + 'Leg', .069 * L); pt(s + 'Foot', .06); } }
   const mixer = new THREE.AnimationMixer(rig);
-  const J = { root, rig, B, body, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95 };
+  const J = { root, rig, B, body, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95, idle: opt.idle || 'Stand' };
   // advance the animation and move the dancer by the clip's own travel
   J.tick = dt => {
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
@@ -392,14 +451,21 @@ export function mocapPerson(look, opt = {}) {
   };
   J.home0 = () => { J.dx = J.dz = 0; rig.position.x = rig.position.z = 0; };
   J.play = (name, o = {}) => {
-    J.rmLoop = !(o.travel ?? TRAVEL.test(name));   // loops stay in place; going down, footwork, freezes travel for real
+    // «Breakdance_Ready» used as «just stand there» = this person's standing loop (the raw recording is a sidestep, see makeStand)
+    if (name === 'Breakdance_Ready' && !o.raw && CLIPS[J.idle]) name = J.idle;
     const c = CLIPS[name]; if (!c) return;
-    const a = mixer.clipAction(c); a.reset(); a.setLoop(o.once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = !!o.once;
-    a.timeScale = o.speed || 1; if (o.at) a.time = o.at;
-    a.play(); if (J.act && J.act !== a) J.act.crossFadeTo(a, o.fade ?? .25, false); else if (J.act === a) a.setEffectiveWeight(1);   // the same clip again: keep its full weight (a fade-in from 0 would mix in the T-pose)
-    else a.fadeIn(o.fade ?? .2);
+    // already standing in this loop: keep going (a restart from frame 0 was a visible jump), only take the new speed
+    if (STANDS[name] && J.cur === name && J.act && J.act.enabled) { J.act.timeScale = (o.speed || 1) * STANDS[name].sp; return; }
+    J.rmLoop = !(o.travel ?? TRAVEL.test(name));   // loops stay in place; going down, footwork, freezes travel for real
+    const once = o.once ?? !!(c.userData && c.userData.once);
+    const a = mixer.clipAction(c); a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once;
+    a.timeScale = (o.speed || 1) * (STANDS[name] ? STANDS[name].sp : 1); if (o.at) a.time = o.at % c.duration;
+    // the very first clip starts at full weight: a fade-in from 0 showed the T-pose for a moment (new people, the hero after changing clothes)
+    a.play(); if (J.act && J.act !== a) J.act.crossFadeTo(a, o.fade ?? .25, false); else if (J.act === a || !J.act) a.setEffectiveWeight(1);
     J.act = a; J.cur = name;
   };
+  // a calmer (or another) standing loop for this person; switches at once if he is standing now
+  J.setIdle = name => { if (!CLIPS[name] || J.idle === name) return; const was = J.cur === J.idle; J.idle = name; if (was) J.play(name, { at: Math.random() * 2, fade: .01 }); };
   J.hipsWorld = new THREE.Vector3();
   return J;
 }

@@ -181,7 +181,7 @@ export async function buildPark(TK) {
     [6, [], plain('#E2611A', '#1b1d22', '#7cff4f', false), { type: 'athl', style: 'buzz' }, 3.0, .95, 1],                                           // another one, faster
     [1, [], plain('#ffd23f', '#3E5F8E', '#C8102E'), { type: 'small', style: 'curly', pack: '#2f7bff' }, 1.3, .55, 0],                              // a kid
   ].map(([lv, acc, fix, body, v, k, run], i) => { const J = person(lv, acc, fix, body), w = { J, u: TOT * i / 5 + i * 3, dir: run ? -1 : 1, v, k, mode: 'path', slot: null };
-    const p = at(w.u, w.dir * .45); J.root.position.set(p.x, 0, p.z); return w; });
+    const p = at(w.u, w.dir * .45); J.root.position.set(p.x, 0, p.z); J.setIdle('Stand_Calm'); return w; });
   let jam = false;
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;

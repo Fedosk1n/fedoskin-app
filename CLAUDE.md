@@ -52,6 +52,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 
 ## Main app map (grep the full notes for details)
 - Tabs: Главная / Коучинг / Батлы / Город (only if `cityEnabled` or `?city=play`) / Профиль (+ Курсы when a course has videos).
+  Город tab = screen `#cityhub` (launcher of city3d.html + alpha card); the old flat city lives in `#city` (city.js rewrites it — no markup there).
 - Lesson player: Kinescope HLS via our own <video> (hls.js; Apple: ManagedMediaSource, fallback native), R2 files with pass,
   intros, swipe between lessons, vertical full screen, scrubbing with strips + frame cache, 3-sec loop, repeat, mirror, speed
   (slow = silent), subtitles, saving to the phone (Cache Storage `fedoskin-video-1`, limit sheet), diagnostics `?diag=1`.
@@ -69,7 +70,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   details drawn on the hero from `look.cus` (city3d-mocap.js, `?cus=3333` = test look); bonuses go through `buff()` → `makeTurn` (step pts, style, freeze / power falls).
 - City 3D PEOPLE have BODIES: `bodyOf(seed, {type, girl, old, …})` → `mocapPerson(look, { body })` (city3d-mocap.js: BODY_TYPES avg / slim / lanky /
   athl / stocky / heavy / big / small, skin, hair colour + style, beard, backpack, coat). Every new person gets a body; the hero keeps the plain one.
-- City 3D (draft, separate page, not linked): see the last section of the full notes. Owner's direction 14.11: top-down 3D like his
+- City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit, texts inside Russian only).
+  Standing = `Stand` / `Stand_Calm` loops (`makeStand`, never loop raw «Breakdance_Ready» — it is a sidestep); clips with a big seam play once (`userData.once`). Owner's direction 14.11: top-down 3D like his
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
   missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Game layer `city3d-game.js`: crews, AUTO battles
   (random sets, falls, judges), energy from lessons, respect ranks; its save is separate from the flat city (merge gear later).

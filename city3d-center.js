@@ -198,10 +198,11 @@ export async function buildCenter(TK) {
     x.fillStyle = '#2a1a10'; [[40, 70, 26], [92, 76, 20], [150, 66, 30], [205, 74, 22]].forEach(([px, py, s]) => { x.fillRect(px - s / 2, py, s, 128 - py); x.beginPath(); x.arc(px, py, s / 2, PI, 0); x.fill(); });
     const win = mesh(new THREE.PlaneGeometry(1.9, .85), new THREE.MeshBasicMaterial({ map: tex(wc), toneMapped: false }), 0, 1.35, 1.06, g); win.castShadow = false;
     mesh(new THREE.BoxGeometry(2.1, .06, .35), M('#c9c4b8', .4, .5), 0, .9, 1.2, g);
-    const aw = mesh(new THREE.BoxGeometry(2.7, .05, 1), new THREE.MeshStandardMaterial({ map: stripeTex(256, 64, OR, '#f2efe8'), roughness: .8 }), 0, 2.05, 1.45, g); aw.rotation.x = .32;
+    const aw = mesh(new THREE.BoxGeometry(2.7, .05, 1), new THREE.MeshStandardMaterial({ map: stripeTex(256, 64, OR, '#d8d1c3'), roughness: .8 }), 0, 2.05, 1.45, g); aw.rotation.x = .32;
     const sc = can(512, 120), sx = sc.getContext('2d'); sx.shadowColor = '#ffd23f'; sx.shadowBlur = 14; text(sx, 'ЧАЙ · КОФЕ', 256, 64, '400 86px Anton, sans-serif', '#ffe08a');
     { const n = glowPlane(sc, 2.5, .6, KX, 2.56, KZ + .95, 0, 1.2); n.rotation.x = -.7; const b = mesh(new THREE.BoxGeometry(2.7, .68, .06), M('#15171b', .6, .4), KX, 2.54, KZ + .92); b.rotation.x = -.7; }
-    box(KX, KZ, 2.7, 2.2); point('#ffc27a', 16, KX, 2, KZ + 2, 7);
+    // the warm light of the counter sits UNDER the awning (17.11.2026: at the awning's very edge it burnt a white blot into its stripes)
+    box(KX, KZ, 2.7, 2.2); point('#ffc27a', 12, KX, 1.55, KZ + 1.45, 7);
     // a standing table
     mesh(new THREE.CylinderGeometry(.4, .4, .05, 16), M('#c9c4b8', .4, .5), KX - 2.1, 1.05, KZ + .9); mesh(new THREE.CylinderGeometry(.05, .05, 1.05, 8), M('#2c3038', .5, .6), KX - 2.1, .52, KZ + .9); circ(KX - 2.1, KZ + .9, .3);
   }
@@ -268,7 +269,7 @@ export async function buildCenter(TK) {
     const b = new THREE.Mesh(new THREE.PlaneGeometry(.3, .11), new THREE.MeshBasicMaterial({ map: tex(bc) })); b.position.set(0, .12, -.128); b.rotation.y = PI; guard.J.B.Spine2.add(b);
     const zc = paintCanvas(512, 512, (x) => { const g = x.createRadialGradient(256, 256, 120, 256, 256, 250); g.addColorStop(0, 'rgba(255,60,50,0)'); g.addColorStop(1, 'rgba(255,60,50,.22)'); x.fillStyle = g; x.beginPath(); x.arc(256, 256, 250, 0, 7); x.fill(); x.strokeStyle = 'rgba(255,90,79,.95)'; x.lineWidth = 9; x.setLineDash([30, 20]); x.beginPath(); x.arc(256, 256, 244, 0, 7); x.stroke(); }, 0, 1);
     guard.ring = new THREE.Mesh(new THREE.PlaneGeometry(SEE * 2, SEE * 2), new THREE.MeshBasicMaterial({ map: tex(zc), transparent: true, depthWrite: false, toneMapped: false })); guard.ring.rotation.x = -PI / 2; guard.ring.renderOrder = 3; scene.add(guard.ring);
-    guard.tag = tag('ОХРАНА', '#FF5A4F'); guard.J.root.position.set(guard.x, 0, guard.z); guard.J.root.rotation.y = PI / 2; }
+    guard.tag = tag('ОХРАНА', '#FF5A4F'); guard.J.setIdle('Stand_Calm'); guard.J.root.position.set(guard.x, 0, guard.z); guard.J.root.rotation.y = PI / 2; }
   W.tickers.push((dt, now) => { const G = guard, J = G.J, p = J.root.position;
     if (G.alert > 0) { G.alert -= dt; const h = W.hero.root.position; stand(J, dt, Math.atan2(h.x - p.x, h.z - p.z)); if (W.walkBase) J.B.RightArm.quaternion.copy(W.walkBase.q.RightArm).multiply(_qa); }
     else if (G.wait > 0) { G.wait -= dt; stand(J, dt, 0); }
@@ -282,9 +283,9 @@ export async function buildCenter(TK) {
   const plain = (top, pants, shoe) => l => { l.hat = null; l.chain = 0; l.phones = false; l.wrist = null; l.top = 'bomber'; Object.assign(l.col, { top, sleeve: top, cuff: null, trim: null, pants, stripe: null, shoe, shoe2: shoe, sole: '#d8d4c8', hat: null }); };
   const walkers = [[1, [], plain('#5b4a3a', '#2b2d33', '#3a2c22'), { type: 'heavy', old: true, coat: true, style: 'short', beard: true, skin: '#E3B088' }], [3, ['girl'], null, { type: 'small', pack: '#E2611A', style: 'buns' }], [5, [], null, { type: 'lanky', pack: '#2f4f8a', style: 'curly' }],
     [2, ['girl'], plain('#7a2f3a', '#1f2126', '#e9e4d8'), { type: 'avg', coat: true, style: 'long' }], [4, [], plain('#39424e', '#3E5F8E', '#f2efe8'), { type: 'big', style: 'short' }]].map(([lv, acc, fix, body], i) => { const J = person(lv, acc, fix, body), w = { J, u: TOT * i / 5 + i, dir: i % 2 ? -1 : 1, v: 1.15 + (i % 3) * .12, mode: 'path', slot: null };
-    const p = at(w.u, w.dir * .4); J.root.position.set(p.x, 0, p.z); return w; });
+    const p = at(w.u, w.dir * .4); J.root.position.set(p.x, 0, p.z); J.setIdle('Stand_Calm'); return w; });
   // two people hanging about at the mall's doors
-  const idlers = [[-4.9, -14.6, .5, 3, [], { type: 'stocky' }], [5.1, -14.5, -.6, 6, ['girl'], { type: 'slim', style: 'braids' }]].map(([x, z, ry, lv, acc, body]) => { const J = person(lv, acc, null, body); J.root.position.set(x, 0, z); J.root.rotation.y = ry; J.home = ry; circ(x, z, .3); return J; });
+  const idlers = [[-4.9, -14.6, .5, 3, [], { type: 'stocky' }], [5.1, -14.5, -.6, 6, ['girl'], { type: 'slim', style: 'braids' }]].map(([x, z, ry, lv, acc, body]) => { const J = person(lv, acc, null, body); J.root.position.set(x, 0, z); J.root.rotation.y = ry; J.home = ry; J.setIdle('Stand_Calm'); circ(x, z, .3); return J; });
   let showOn = false;
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;

@@ -73,7 +73,8 @@ export async function buildProm(TK) {
       pg.attributes.position.needsUpdate = true; });
     // the name of the plant on the roof, leaning back so that it reads from the camera
     const nc = can(2048, 160), nx = nc.getContext('2d'); nx.shadowColor = '#ff6a2a'; nx.shadowBlur = 16; text(nx, 'ЛИТЕЙНО-МЕХАНИЧЕСКИЙ ЗАВОД', 1024, 84, '400 112px Anton, sans-serif', '#ff9a5a');
-    const n = glowPlane(nc, 15, 1.17, 4.4, 7.95, FZ - .2, 0, 1.1); n.rotation.x = -.6;
+    // in front of the saw-tooth roof (17.11.2026: it stood inside it — the tilted roof boxes cut a dark wedge through the letters)
+    const n = glowPlane(nc, 15, 1.17, 4.4, 8.05, FZ + .45, 0, 1.1); n.rotation.x = -.6;
   }
   // the chimney with red lamps and slow smoke, pipes along the wall
   { const CX = 10.6, CZ = FZ - 4.2; mesh(new THREE.CylinderGeometry(.75, 1.15, 14, 16), M('#4a3128', .9), CX, 7, CZ);
@@ -218,7 +219,7 @@ export async function buildProm(TK) {
     [4, ['girl'], work('#FF7A1A', '#D9A43A'), { type: 'avg', style: 'bun' }, 1.3, .55, -1],
     [2, [], work('#3d4046', null), { type: 'heavy', style: 'bald', beard: true, pack: '#3a2c22' }, 1.05, .5, -1],
   ].map(([lv, acc, fix, body, v, k, dir], i) => { const J = person(lv, acc, fix, body), w = { J, u: TOT * i / 4 + i * 5, dir, v, k, mode: 'path', slot: null };
-    const p = at(w.u, w.dir * .5); J.root.position.set(p.x, 0, p.z); return w; });
+    const p = at(w.u, w.dir * .5); J.root.position.set(p.x, 0, p.z); J.setIdle('Stand_Calm'); return w; });
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;
       if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .5), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z; standPose(J); J.tick(dt); stride(J, J.st, w.v, true, w.k, dt); }

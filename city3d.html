@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0B0D12">
-<title>Fedoskin · Город 3D (черновик)</title>
+<title>Fedoskin · Город</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap">
 <style>
@@ -26,26 +26,66 @@
   #joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(226,97,26,.75); box-shadow: 0 0 18px rgba(226,97,26,.6); }
   #joy.on { opacity: 1; }
   #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font: 600 15px Inter, sans-serif; z-index: 9; }
+  /* alpha notice on the first visit (owner 17.11.2026 «добавь город в открытый доступ… предупреди ещё раз, что это альфа») */
+  #alpha { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(5,6,9,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #alpha[hidden] { display: none; }
+  #alpha .box { width: min(360px, 100%); background: #12141a; border: 1px solid rgba(226,97,26,.5); border-radius: 22px; padding: 20px 20px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  #alpha .tag { display: inline-block; font: 800 11px Inter, sans-serif; letter-spacing: .08em; padding: 5px 9px; border-radius: 6px; background: #E2611A; color: #0B0D12; }
+  #alpha h2 { margin: 12px 0 8px; font: 400 26px Anton, sans-serif; letter-spacing: .03em; }
+  #alpha p { margin: 0 0 10px; font: 500 14px/1.45 Inter, sans-serif; color: #c9c6bf; }
+  #alpha button { width: 100%; min-height: 50px; margin-top: 6px; border: 0; border-radius: 14px; background: #E2611A; color: #0B0D12; font: 800 15px Inter, sans-serif; cursor: pointer; }
+  #err a { color: #E2611A; }
   #fps { position: fixed; right: 12px; bottom: calc(8px + env(safe-area-inset-bottom)); font: 600 10px Inter, sans-serif; color: rgba(255,255,255,.35); z-index: 5; pointer-events: none; }
 </style>
 </head>
 <body>
 <canvas id="c3"></canvas>
 <div class="hud">
-  <a class="hb" href="./" aria-label="Назад">←</a>
-  <div class="ttl">ДВОР<small>НОВАЯ ГРАФИКА · ЧЕРНОВИК</small></div>
+  <a class="hb" href="./?city=play" id="back" aria-label="Назад">←</a>
+  <div class="ttl">ДВОР<small>α АЛЬФА-ВЕРСИЯ</small></div>
   <button class="hb" id="mus" type="button" aria-label="Музыка">🎵</button>
 </div>
 <div id="joy"><i></i></div>
 <div id="hint">Веди пальцем по экрану — герой пойдёт</div>
 <div id="err">Этот телефон не умеет показывать 3D-графику (WebGL).</div>
+<div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
+<script>
+// the app's language (same rule as index.html phoneLang): only the alpha notice, the back link and the no-3D message are translated here
+(function () {
+  const L = ['ru', 'en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh']; let lang = '';
+  try { lang = localStorage.getItem('fedoskin-lang') || ''; } catch (_) {}
+  if (!L.includes(lang)) { lang = 'en'; for (const l of (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'])) { const t = String(l).toLowerCase().replace('_', '-'), c = t.slice(0, 2);
+    if (L.includes(c)) { lang = c; break; } if (['uk', 'be', 'kk', 'uz', 'ky', 'tg', 'hy', 'az', 'ka', 'mo'].includes(c) || t === 'ro-md') { lang = 'ru'; break; } } }
+  const A = {
+    ru: ['Альфа-версия', 'Город только строится. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.', 'Нашёл ошибку — напиши об этом в чат приложения, поправлю.', '', 'Понятно, играть', 'Этот телефон не умеет показывать 3D-графику (WebGL).', 'Вернуться в приложение'],
+    en: ['Alpha version', 'The city is still being built. Expect bugs and some lag on older phones; balance and rewards will change, and your city progress may be reset after big updates.', 'Found a bug? Tell me in the app chat and I will fix it.', 'For now, everything inside the city is in Russian — translations are coming later.', 'Got it, let’s play', 'This phone can’t show 3D graphics (WebGL).', 'Back to the app'],
+    es: ['Versión alfa', 'La ciudad aún se está construyendo. Puede haber errores y tirones en móviles antiguos; el equilibrio y los premios cambiarán, y tu progreso en la ciudad podría reiniciarse tras grandes actualizaciones.', '¿Encontraste un error? Cuéntamelo en el chat de la app y lo arreglo.', 'Por ahora todo dentro de la ciudad está en ruso; las traducciones llegarán más adelante.', 'Entendido, a jugar', 'Este móvil no puede mostrar gráficos 3D (WebGL).', 'Volver a la app'],
+    pt: ['Versão alfa', 'A cidade ainda está sendo construída. Pode haver erros e travadas em celulares mais fracos; o equilíbrio e as recompensas vão mudar, e o seu progresso na cidade pode ser zerado depois de grandes atualizações.', 'Achou um erro? Me conte no chat do app que eu corrijo.', 'Por enquanto, tudo dentro da cidade está em russo — as traduções vêm depois.', 'Entendi, bora jogar', 'Este celular não consegue mostrar gráficos 3D (WebGL).', 'Voltar ao app'],
+    fr: ['Version alpha', 'La ville est encore en construction. Il peut y avoir des bugs et des ralentissements sur les téléphones peu puissants ; l’équilibrage et les récompenses vont changer, et ta progression en ville peut être remise à zéro après de grosses mises à jour.', 'Tu as trouvé un bug ? Dis-le-moi dans le chat de l’app, je corrige.', 'Pour l’instant, tout dans la ville est en russe — les traductions arrivent plus tard.', 'Compris, on joue', 'Ce téléphone ne peut pas afficher de 3D (WebGL).', 'Retour à l’app'],
+    de: ['Alpha-Version', 'Die Stadt wird noch gebaut. Fehler und Ruckler auf schwächeren Handys sind möglich; Balance und Belohnungen ändern sich noch, und dein Fortschritt in der Stadt kann nach großen Updates zurückgesetzt werden.', 'Einen Fehler gefunden? Schreib mir im App-Chat, ich behebe ihn.', 'Im Moment ist in der Stadt alles auf Russisch — Übersetzungen kommen später.', 'Verstanden, los geht’s', 'Dieses Handy kann keine 3D-Grafik anzeigen (WebGL).', 'Zurück zur App'],
+    ja: ['アルファ版', '街はまだ作っている途中。バグや、性能の低いスマホでのカクつきがあるかもしれない。バランスや報酬は変わるし、大きなアップデートの後で街の進行状況がリセットされることもある。', 'バグを見つけたらアプリのチャットで教えて。直すよ。', '今のところ街の中はすべてロシア語。翻訳はあとで追加される。', 'わかった、プレイする', 'このスマホは3Dグラフィック（WebGL）を表示できません。', 'アプリに戻る'],
+    ko: ['알파 버전', '도시는 아직 만드는 중이야. 버그가 있거나 사양이 낮은 폰에서 끊길 수 있어. 밸런스와 보상은 바뀔 거고, 큰 업데이트 후에는 도시 진행 상황이 초기화될 수도 있어.', '버그를 찾으면 앱 채팅으로 알려 줘. 고칠게.', '지금은 도시 안의 모든 내용이 러시아어야. 번역은 나중에 추가돼.', '알겠어, 시작', '이 폰은 3D 그래픽(WebGL)을 표시할 수 없어요.', '앱으로 돌아가기'],
+    zh: ['内测版', '城市还在建设中。可能会有错误，低配手机上可能会卡顿；平衡和奖励还会调整，大更新后城市进度可能会被重置。', '发现问题？在应用的聊天里告诉我，我来修。', '目前城市里的内容都是俄语，翻译稍后上线。', '明白，开始玩', '这部手机无法显示 3D 图形（WebGL）。', '返回应用'],
+  }[lang];
+  window.CITY_LANG = lang;
+  document.addEventListener('DOMContentLoaded', () => {
+    const $ = s => document.querySelector(s), box = $('#alpha');
+    $('.ttl small').textContent = 'α ' + A[0].toUpperCase(); $('#alpha h2').textContent = A[0]; $('#aP1').textContent = A[1]; $('#aP2').textContent = A[2]; if (A[3]) { $('#aP3').textContent = A[3]; $('#aP3').hidden = false; } $('#aOk').textContent = A[4];
+    $('#err').innerHTML = ''; $('#err').append(A[5], document.createElement('br'), document.createElement('br')); const a = document.createElement('a'); a.href = './?city=play'; a.textContent = A[6]; $('#err').append(a);
+    // back: to where the app was (its «Город» screen) if we came from it, else open the app on that screen
+    $('#back').addEventListener('click', e => { try { const r = new URL(document.referrer); if (r.origin === location.origin && r.pathname.replace(/index\.html$/, '') === location.pathname.replace(/city3d\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); } } catch (_) {} });
+    let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-alpha') === '1'; } catch (_) {}
+    if (!seen) { box.hidden = false; $('#aOk').addEventListener('click', e => { e.stopPropagation(); box.hidden = true; try { localStorage.setItem('fedoskin-city3d-alpha', '1'); } catch (_) {} }); }
+  });
+})();
+</script>
 <script src="hero.js?v=18"></script>
 <script src="city-gfx.js?v=8"></script>
 <script src="rhythm.js?v=20"></script>
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
-<script type="module" src="city3d.js?v=17"></script>
+<script type="module" src="city3d.js?v=18"></script>
 </body>
 </html>

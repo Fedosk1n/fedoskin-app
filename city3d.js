@@ -8,11 +8,11 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES } from './city3d-mocap.js?v=8';
-import { initGame } from './city3d-game.js?v=16';
-import { buildProm } from './city3d-prom.js?v=1';
-import { buildCenter } from './city3d-center.js?v=3';
-import { buildPark } from './city3d-park.js?v=2';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=9';
+import { initGame } from './city3d-game.js?v=17';
+import { buildProm } from './city3d-prom.js?v=2';
+import { buildCenter } from './city3d-center.js?v=4';
+import { buildPark } from './city3d-park.js?v=3';
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -625,12 +625,12 @@ async function buildYard(scene) {
   [[-11.4, 7.4, BARREL_K], [-10.6, 6.8, BARREL_O], [-11.5, 6.2, BARREL_K]].forEach(([x, z, k]) => { const b = barrel(k); put(b, x, z, Math.random() * 6); circ(x, z, .38); });
   put(pallet(), -7.6, 10.4, .3); box(-7.6, 10.4, 1.1, 1);
   put(tires(3), -11.3, 12.2); circ(-11.3, 12.2, .45);
-  decal(scene, paintCanvas(1024, 384, (x, w, h) => { x.strokeStyle = PAINT_W; x.lineWidth = 10; x.setLineDash([60, 30]); x.strokeRect(14, 14, w - 28, h - 28); x.setLineDash([]); x.fillStyle = PAINT_W; x.font = '400 150px Anton'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('STORAGE', w / 2, h / 2 + 6); }, .5, 21), 5, 1.9, -8.6, 12.9, 0, { op: .8 });
+  decal(scene, paintCanvas(1024, 384, (x, w, h) => { x.strokeStyle = PAINT_W; x.lineWidth = 10; x.setLineDash([60, 30]); x.strokeRect(14, 14, w - 28, h - 28); x.setLineDash([]); x.fillStyle = PAINT_W; x.font = '400 150px Anton, Impact, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('STORAGE', w / 2, h / 2 + 6); }, .5, 21), 5, 1.9, -8.6, 12.9, 0, { op: .8 });
   // the cypher (north middle)
   const cx = W.cyph.x, cz = W.cyph.z;
   [[0, 0, 0], [.9, .35, .5], [-.8, -.5, -.3], [.1, -1.1, 1.4]].forEach(([dx, dz, r]) => { const c = cardboard(1.2, 1.7); c.position.set(cx + dx, .011 + Math.abs(dx) * .003, cz + dz); c.rotation.y = r; scene.add(c); });
   decal(scene, paintCanvas(1024, 1024, (x, w, h) => { x.strokeStyle = OR; x.lineWidth = 26; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 30, 0, 7); x.stroke(); x.lineWidth = 8; x.setLineDash([40, 28]); x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 78, 0, 7); x.stroke(); }, .9, 23), 6.4, 6.4, cx, cz, 0, { op: .9 });
-  decal(scene, paintCanvas(1280, 300, (x, w, h) => { x.fillStyle = PAINT_Y; x.font = '400 190px Anton'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('CYPHER  ZONE', w / 2, h / 2 + 8); x.strokeStyle = PAINT_Y; x.lineWidth = 8; x.strokeRect(10, 10, w - 20, h - 20); }, .8, 24), 5.2, 1.22, cx, cz - 4.9, 0, { op: .85 });
+  decal(scene, paintCanvas(1280, 300, (x, w, h) => { x.fillStyle = PAINT_Y; x.font = '400 190px Anton, Impact, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('CYPHER  ZONE', w / 2, h / 2 + 8); x.strokeStyle = PAINT_Y; x.lineWidth = 8; x.strokeRect(10, 10, w - 20, h - 20); }, .8, 24), 5.2, 1.22, cx, cz - 4.9, 0, { op: .85 });
   const spk = speakers(); put(spk, cx - 3.9, cz - 1.6, .6); box(cx - 3.9, cz - 1.6, 1, .7); W.speakers = [spk];
   const spk2 = speakers(); put(spk2, cx + 3.9, cz - 1.7, -.6); box(cx + 3.9, cz - 1.7, 1, .7); W.speakers.push(spk2);
   { const c = crate(.6); c.position.set(cx - 3.2, .3, cz + 1.9); scene.add(c); box(cx - 3.2, cz + 1.9, .6, .6); const bb = boombox(); bb.position.set(cx - 3.2, .6, cz + 1.9); bb.rotation.y = .5; scene.add(bb); }
@@ -663,7 +663,7 @@ async function buildYard(scene) {
   arrow(-1.1, 9, 0); arrow(-1.1, -.5, 0); arrow(8.2, -4, -Math.PI / 2);
   decal(scene, paintCanvas(512, 128, (x, w, h) => { x.fillStyle = PAINT_W; for (let i = 0; i < 4; i++) { x.beginPath(); x.moveTo(30 + i * 120, h - 10); x.lineTo(90 + i * 120, h - 10); x.lineTo(140 + i * 120, 10); x.lineTo(80 + i * 120, 10); x.fill(); } }, .45, 29), 2.4, .6, -5.1, -5.2, 0, { op: .75 });
   // brand stencil near the gate
-  decal(scene, paintCanvas(1024, 256, (x, w, h) => { x.fillStyle = OR; x.font = '400 150px Anton'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('FEDOSKIN TEAM', w / 2, h / 2 + 6); }, .75, 30), 4.6, 1.15, .6, 13.6, 0, { op: .8 });
+  decal(scene, paintCanvas(1024, 256, (x, w, h) => { x.fillStyle = OR; x.font = '400 150px Anton, Impact, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('FEDOSKIN TEAM', w / 2, h / 2 + 6); }, .75, 30), 4.6, 1.15, .6, 13.6, 0, { op: .8 });
   // oil stains + puddles (shiny)
   const puddle = (x, z, s, rot) => decal(scene, paintCanvas(256, 256, (c, w, h, r) => { c.fillStyle = 'rgba(8,10,14,.85)'; c.beginPath(); for (let i = 0; i < 18; i++) { const a = i / 18 * 6.283, rr = w * (.32 + r() * .14); c.lineTo(w / 2 + Math.cos(a) * rr, h / 2 + Math.sin(a) * rr * .7); } c.closePath(); c.filter = 'blur(6px)'; c.fill(); }, 0, (x * 5) | 0), s, s, x, z, rot, { rough: .05 });
   puddle(3.4, 5.8, 2.4, .3); puddle(-7.3, -8.6, 2, 1.2); puddle(9.6, -6.5, 1.8, 2); puddle(-2.6, 11.4, 1.5, .4);
@@ -728,7 +728,7 @@ function updateCrew(_tb, dt) {
   if (!W.crew.length || !W.cyph) return;
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
-  if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (D.cur !== 'Breakdance_Ready') D.play('Breakdance_Ready', { fade: .4 }); else if (D.act && D.act.timeScale === 0) D.act.timeScale = 1; D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
+  if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (!isStand(D.cur)) D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
     D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
   if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; }
   const rel = now - T.start, walk = 2.2, back = 2.9, J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
@@ -799,12 +799,12 @@ function updateHero(dt, tb) {
   }
   H.root.rotation.y = s.face;
   const k = clamp(sp / SPD, 0, 1);
-  // base = motion capture (Ready / toprock near the cypher); moving = the recorded walk / run over a still frame of Ready (stride).
-  // The idle animation starts only once the last step has settled into the stance (no jump from the still frame).
+  // base = the standing loop (mocap, see makeStand) or a toprock near the cypher / after standing a while; moving = the recorded
+  // walk / run blended over the standing loop (stride). The toprock starts only once the last step has settled (s.wk).
   const nearC = !!W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .04;
-  if (moving || (s.wk || 0) > .03) { if (moving) s.idle = 0; standPose(H); }
-  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : 'Breakdance_Ready';
-    if (H.cur !== want) H.play(want, { fade: .35 }); else if (H.act && H.act.timeScale === 0) H.act.timeScale = 1; }
+  if (moving || (s.wk || 0) > .004) { if (moving) s.idle = 0; standPose(H); }
+  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : H.idle;
+    if (H.cur !== want) H.play(want, { fade: want === H.idle ? .35 : .6 }); }
   H.tick(dt);
   stride(H, s, sp, moving, k, dt);
 }
@@ -815,7 +815,18 @@ function updateHero(dt, tb) {
 // shorter steps when slow, so the feet don't skate. Shared by the hero, dancers walking off the floor and walking people of the
 // districts. s = { wk, wr, ph } kept by the caller; sp = speed m/s. Call AFTER H.tick(dt).
 const HERO_SPD = 5.2;   // top speed of the hero (m/s): the recorded run looks right from ~4.5 m/s
-function standPose(H) { if (H.cur !== 'Breakdance_Ready') H.play('Breakdance_Ready', { fade: .2 }); if (H.act) { H.act.timeScale = 0; H.act.time = .05; } }
+// standPose: make sure the person's standing loop plays (it is the base under the gait). It used to PAUSE «Ready» on one frame —
+// a walker who stopped stood like a statue and then jerked into the loop (owner 17.11 «пока те находятся на месте… глючат»).
+function standPose(H) { if (H.cur !== H.idle) H.play(H.idle, { fade: .25 }); }
+// the pose under the gait: the standing loop at the action's own time (so the end of a step lands exactly on what the mixer
+// plays next); while a crossfade into it runs (from a toprock, from a dance) — the mixer's blended pose itself
+const _bq = {}, BASE = { q: _bq, x: 0, y: 1, z: 0 };
+function baseOf(H, s) {
+  const a = H.act;
+  if (a && isStand(H.cur) && (s.from || a.getEffectiveWeight() > .995)) return standAt(H.cur, a.time);
+  for (const n of GALL) (_bq[n] || (_bq[n] = new THREE.Quaternion())).copy(H.B[n].quaternion);
+  const hp = H.B.Hips.position; BASE.x = hp.x; BASE.y = hp.y; BASE.z = hp.z; BASE.live = true; return BASE;
+}
 function stride(H, s, sp, moving, _k, dt) {
   const G = gaitInfo(); if (!G) return;
   s.wk = lerp(s.wk || 0, moving ? clamp(.5 + .5 * sp / G.walk.v, 0, 1) : 0, 1 - Math.exp(-dt * (moving ? 9 : 7)));
@@ -823,16 +834,16 @@ function stride(H, s, sp, moving, _k, dt) {
   if (s.wk < .004 && !s.from) return;
   const w = s.wk, wr = s.wr || 0, L = lerp(G.walk.len, G.run.len, wr) * Math.max(.5, w);
   s.ph = ((s.ph || 0) + (moving ? sp * dt / L : dt * .8 * w)) % 1;     // stopping: the step finishes slowly while the body settles
-  // start every frame from the SAME still pose (a paused clip is not re-applied by the mixer — adding onto last frame's bones
-  // used to pile up into somersaults, owner 14.11 «кувырками передвигается»), then blend into the recorded step
+  // start every frame from a pose computed afresh (a clip value that did not change is not re-applied by the mixer — adding onto
+  // last frame's bones used to pile up into somersaults, owner 14.11 «кувырками передвигается»), then blend into the recorded step
   if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
-  const WB = W.walkBase, B = H.B, P = gaitPose(s.ph, wr); let by = WB.y;
+  const BS = baseOf(H, s), B = H.B, P = gaitPose(s.ph, wr); let bx = BS.x, by = BS.y, bz = BS.z;
   if (s.from) {   // walking off the floor: rise from the pose the dance ended in (walkStart) instead of snapping upright
-    s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GALL) if (WB.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(WB.q[n], kb);
-    by = lerp(s.from.y, WB.y, kb); if (kb >= 1) s.from = null;
-  } else for (const n of GALL) if (WB.q[n]) B[n].quaternion.copy(WB.q[n]);
+    s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GALL) if (BS.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(BS.q[n], kb);
+    bx *= kb; by = lerp(s.from.y, BS.y, kb); bz *= kb; if (kb >= 1) s.from = null;
+  } else if (!BS.live) for (const n of GALL) if (BS.q[n]) B[n].quaternion.copy(BS.q[n]);
   for (const n of GALL) B[n].quaternion.slerp(P.q[n], w);
-  B.Hips.position.set(P.x * w, lerp(by, P.y, w), P.z * w);
+  B.Hips.position.set(lerp(bx, P.x, w), lerp(by, P.y, w), lerp(bz, P.z, w));
 }
 // LEAVING THE FLOOR ON FOOT (owner 16.11.2026 «проработай уход человечка с танцпола (можно просто шагами, не надо танцем)»).
 // A dancer used to slide back to his place while toprocking, face still to the middle. Now: walkStart(J) once (takes the body's
@@ -843,7 +854,7 @@ function walkStart(J) {
   if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
   const q = {}; for (const n of GALL) q[n] = J.B[n].quaternion.clone();
   J.ws = { wk: 0, wr: 0, ph: 0, from: { q, y: J.B.Hips.position.y }, bt: 0, x0: p.x, z0: p.z, sp: 0, mv: false };
-  J.rest = false; J.play('Breakdance_Ready', { fade: .4 }); if (J.act) { J.act.timeScale = 0; J.act.time = .05; }
+  J.rest = false; J.play(J.idle, { fade: .4 });
 }
 function walkMove(J, dt, tx, tz, k, endFace) {
   const s = J.ws, p = J.root.position, nx = lerp(s.x0, tx, k), nz = lerp(s.z0, tz, k), dx = nx - p.x, dz = nz - p.z, sp = dt > 0 ? Math.hypot(dx, dz) / dt : 0;
@@ -892,7 +903,7 @@ async function boot() {
   { const t = $('.ttl'); if (t && t.firstChild) t.firstChild.nodeValue = DISTS[DIST].name; document.title = 'Fedoskin · ' + DISTS[DIST].name; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
-    n.st = o.st; n.play('Breakdance_Ready'); scene.remove(o.root); scene.add(n.root); W.hero = n;
+    n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
   const GAME = initGame({ scene, W, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped

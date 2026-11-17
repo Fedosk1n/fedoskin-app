@@ -962,6 +962,32 @@ t('К урокам', 'Go to lessons', 'Ir a las lecciones', 'Ir para as aulas', 
 t('Разогрет уроком: респект +{r} %', 'Warmed up by a lesson: respect +{r}%', 'En calor por una lección: respeto +{r} %', 'Aquecido por uma aula: respeito +{r}%', 'Échauffé par une leçon : respect +{r} %', 'Durch eine Lektion aufgewärmt: Respekt +{r} %', 'レッスンでウォームアップ：リスペクト+{r}%', '레슨으로 워밍업: 리스펙트 +{r}%', '上课热身：尊重 +{r}%')
 
 
+# ---- «Город»: экран-вход в 3D-город с предупреждением об альфе (17.11.2026) ----
+t('3D-город', '3D City', 'Ciudad 3D', 'Cidade 3D', 'Ville 3D', '3D-Stadt', '3Dシティ', '3D 도시', '3D 城市')
+t('Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.',
+  'Explore the districts, out-dance the street crews, paint over their walls with your graffiti and collect unique gear — it works in battles too. Your lessons give you energy for the city.',
+  'Recorre los barrios, gánales en el baile a las crews de la calle, pinta sus muros con tu grafiti y consigue ropa única: también sirve en las batallas. Tus lecciones te dan energía para la ciudad.',
+  'Explore os bairros, vença as crews de rua na dança, pinte por cima dos muros delas com o seu grafite e junte roupas únicas — elas valem nas batalhas também. Suas aulas dão energia para a cidade.',
+  'Parcours les quartiers, bats les crews de rue en danse, recouvre leurs murs de ton graffiti et récupère du matos unique — il compte aussi en battle. Tes leçons te donnent de l’énergie pour la ville.',
+  'Erkunde die Viertel, tanz die Street-Crews aus, übermale ihre Wände mit deinem Graffiti und sammle einzigartige Klamotten — sie helfen auch in Battles. Deine Lektionen geben dir Energie für die Stadt.',
+  '街の地区をめぐり、ストリートのクルーにダンスで勝ち、壁を自分のグラフィティで塗り替え、限定アイテムを集めよう。アイテムはバトルでも効く。街のエネルギーはレッスンでたまる。',
+  '구역을 돌아다니며 거리 크루를 춤으로 이기고, 그들의 벽을 네 그래피티로 덮고, 특별한 아이템을 모아 봐. 아이템은 배틀에서도 효과가 있어. 도시 에너지는 레슨으로 채워져.',
+  '逛遍各个街区，用舞蹈打败街头团伙，用你的涂鸦盖掉他们的墙，收集独一无二的装备——对战里也有用。城市的能量来自你的课程。')
+t('Войти в город', 'Enter the city', 'Entrar en la ciudad', 'Entrar na cidade', 'Entrer en ville', 'Stadt betreten', '街に入る', '도시 입장', '进入城市')
+t('Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.',
+  'The city is an early alpha — we are building it right now. Expect bugs and some lag on older phones; balance and rewards will change, and your city progress may be reset after big updates.',
+  'La ciudad es una alfa temprana: la estamos construyendo ahora mismo. Puede haber errores y tirones en móviles antiguos; el equilibrio y los premios cambiarán, y tu progreso en la ciudad podría reiniciarse tras grandes actualizaciones.',
+  'A cidade é uma versão alfa inicial — estamos construindo agora mesmo. Pode haver erros e travadas em celulares mais fracos; o equilíbrio e as recompensas vão mudar, e o seu progresso na cidade pode ser zerado depois de grandes atualizações.',
+  'La ville est une alpha précoce : on la construit en ce moment. Il peut y avoir des bugs et des ralentissements sur les téléphones peu puissants ; l’équilibrage et les récompenses vont changer, et ta progression en ville peut être remise à zéro après de grosses mises à jour.',
+  'Die Stadt ist eine frühe Alpha — wir bauen sie gerade. Fehler und Ruckler auf schwächeren Handys sind möglich; Balance und Belohnungen ändern sich noch, und dein Fortschritt in der Stadt kann nach großen Updates zurückgesetzt werden.',
+  '街は初期のアルファ版で、いまも作っている最中。バグや、性能の低いスマホでのカクつきがあるかもしれない。バランスや報酬は変わるし、大きなアップデートの後で街の進行状況がリセットされることもある。',
+  '도시는 초기 알파 버전이고 지금 만들고 있는 중이야. 버그가 있거나 사양이 낮은 폰에서 끊길 수 있어. 밸런스와 보상은 바뀔 거고, 큰 업데이트 후에는 도시 진행 상황이 초기화될 수도 있어.',
+  '城市是早期内测版，我们正在建设中。可能会有错误，低配手机上可能会卡顿；平衡和奖励还会调整，大更新后城市进度可能会被重置。')
+t('Пока в городе всё на русском — переводы появятся позже.', 'For now, everything inside the city is in Russian — translations are coming later.', 'Por ahora todo dentro de la ciudad está en ruso; las traducciones llegarán más adelante.', 'Por enquanto, tudo dentro da cidade está em russo — as traduções vêm depois.', 'Pour l’instant, tout dans la ville est en russe — les traductions arrivent plus tard.', 'Im Moment ist in der Stadt alles auf Russisch — Übersetzungen kommen später.', '今のところ街の中はすべてロシア語。翻訳はあとで追加される。', '지금은 도시 안의 모든 내용이 러시아어야. 번역은 나중에 추가돼.', '目前城市里的内容都是俄语，翻译稍后上线。')
+t('Сообщить об ошибке', 'Report a bug', 'Informar de un error', 'Relatar um erro', 'Signaler un bug', 'Fehler melden', 'バグを報告', '버그 신고', '报告问题')
+t('Простой 2D-город', 'Simple 2D city', 'Ciudad 2D sencilla', 'Cidade 2D simples', 'Ville 2D simple', 'Einfache 2D-Stadt', 'シンプルな2Dの街', '간단한 2D 도시', '简易 2D 城市')
+t('Ошибка в 3D-городе: ', 'Bug in the 3D city: ', 'Error en la ciudad 3D: ', 'Erro na cidade 3D: ', 'Bug dans la ville 3D : ', 'Fehler in der 3D-Stadt: ', '3Dシティのバグ：', '3D 도시 버그: ', '3D 城市问题：')
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'

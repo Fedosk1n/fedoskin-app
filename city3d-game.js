@@ -4,7 +4,7 @@
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
 // Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=8';   // v=12: districts (Центр)
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=9';   // v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const KEY = 'fedoskin-city3d';
@@ -408,13 +408,13 @@ export function initGame(ctx) {
     const bp = new THREE.Mesh(new THREE.CircleGeometry(.14, 26), M('#F2EFE8', .8)); bp.position.set(0, .04, -.125); bp.rotation.y = Math.PI; tor.add(bp);
     const bp2 = new THREE.Mesh(new THREE.CircleGeometry(.12, 26), M('#E2611A', .8, 0, '#E2611A')); bp2.material.emissiveIntensity = .25; bp2.position.set(0, .04, -.127); bp2.rotation.y = Math.PI; tor.add(bp2); }
   const sg = document.createElement('canvas'); sg.width = 512; sg.height = 128; { const x = sg.getContext('2d'); x.font = '400 92px Anton, sans-serif'; x.textAlign = 'center'; x.shadowColor = '#FF4FD8'; x.shadowBlur = 18; x.fillStyle = '#FFB3F0'; x.fillText('КАСТОМ', 256, 102); }
-  const atSign = mk(at, new THREE.PlaneGeometry(1.5, .37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sg), transparent: true, toneMapped: false, color: new THREE.Color(.8, .8, .8) }), -.35, 2.05, -.9);
-  [-1.05, .35].forEach(x => mk(at, new THREE.CylinderGeometry(.02, .02, 2.1, 6), M('#2a2c31', .5, .5), x, 1.05, -.92));
-  const atP = mocapPerson(HERO.topDown(5, []), { body: bodyOf(77, { girl: true, type: 'slim', style: 'bun' }) }); atP.root.position.set(0, 0, -.55); at.add(atP.root); atP.play('Breakdance_Ready', { speed: .6 });
+  const atSign = mk(at, new THREE.PlaneGeometry(1.5, .37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sg), transparent: true, toneMapped: false, color: new THREE.Color(.8, .8, .8) }), -.35, 2.5, -.9);   // 2.05 → 2.5: was hidden behind the place's name
+  [-1.05, .35].forEach(x => mk(at, new THREE.CylinderGeometry(.02, .02, 2.55, 6), M('#2a2c31', .5, .5), x, 1.27, -.92));
+  const atP = mocapPerson(HERO.topDown(5, []), { body: bodyOf(77, { girl: true, type: 'slim', style: 'bun' }), idle: 'Stand_Calm' }); atP.root.position.set(0, 0, -.55); at.add(atP.root); atP.play('Breakdance_Ready');
   ctx.circ && ctx.circ(atAt.x, atAt.z, .95); ctx.box && ctx.box(atAt.x + .2, atAt.z - .9, 1.8, .3); ctx.circ && ctx.circ(atAt.x + 1.25, atAt.z - .4, .3);
   { // a bare bulb on a wire over the table and its warm light on the stall (the corner was dark)
     mk(at, new THREE.CylinderGeometry(.006, .006, .7, 4), M('#111', .9), .05, 2.55, .1); const bulb = mk(at, new THREE.SphereGeometry(.07, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.35, 1.1, .75), toneMapped: false }), .05, 2.17, .1); bulb.castShadow = false;
-    const sp = new THREE.SpotLight('#ffcf9a', 46, 0, 1.05, .85, 2); sp.position.set(atAt.x + .05, 2.12, atAt.z + .1); sp.target.position.set(atAt.x + .1, 0, atAt.z + .75); scene.add(sp, sp.target); }
+    const sp = new THREE.SpotLight('#ffcf9a', 20, 0, 1.05, .85, 2); /* 46 → 20 (17.11.2026): the table and the cloth burnt out white */ sp.position.set(atAt.x + .05, 2.12, atAt.z + .1); sp.target.position.set(atAt.x + .1, 0, atAt.z + .75); scene.add(sp, sp.target); }
   const atLab = label('АТЕЛЬЕ «ИГЛА»', '#FFB3F0', atAt.x, atAt.z, 2.7);
   const atFront = { x: atAt.x, z: atAt.z + 1.25 };
   // the gate to the next district: an arch with a lit sign, closed by a chain until the right rank
@@ -589,7 +589,7 @@ export function initGame(ctx) {
     if (rankOf(S.rep) < BAL.cusRank[n]) { toast('🔒 Игла шьёт это только для звания «' + BAL.ranks[BAL.cusRank[n]] + '»'); return; }
     if (S.en < BAL.cusCost[n]) { toast('⚡ Не хватает энергии: нужно ' + BAL.cusCost[n] + ', у тебя ' + S.en + '. Минута урока = +' + BAL.perMin + ' ⚡'); return; }
     S.en -= BAL.cusCost[n]; S.cus[id] = n + 1; save(); paintHud(); ctx.rewear && ctx.rewear(); sfx('win');
-    if (atP) { atP.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => atP.play('Breakdance_Ready', { fade: .5, speed: .6 }), 2600); }
+    if (atP) { atP.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => atP.play('Breakdance_Ready', { fade: .5 }), 2600); }
     if (A && A.kind === 'atelier') { A.spin = id === 'top' && n + 1 === 3 ? Math.PI : id === 'kicks' || id === 'pants' ? .6 : 0; A.ty = 0; }
     toast('🧵 Игла пришила: ' + c.lv[n] + ' · ' + c.v(n + 1) + ' ' + c.un); sheetAtelier();
   }
