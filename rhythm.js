@@ -681,6 +681,8 @@
   const each = (o, t, st, list, fn) => list.forEach(n => fn(t + n[0] * st, n));
   // play(out, t = start of the bar, b = bar number since the loop started, st = a 16th, bar = a bar), all in seconds. vol = the loop's level,
   // evened out by an offline render (17.11.2026): every crew loop ≈ the yard's loudness on a phone speaker (bass below 150 Hz not counted) +1 dB
+  // BATTLE TEMPOS sped up 17.11.2026 (owner «ускорь биты на батлах и оставь скорость бита на фоновой музыке»): new = 110 + (old − 80) × .54,
+  // the order kept (was 80…132 → now 110…138, breaking tempo); the yard background stays 88. vol re-levelled at the new tempos.
   const LOOPS = {
     // the yard / background (owner 14.11.2026) — exactly as it was
     yard: { name: 'Двор', bpm: 88, play(o, t, b, st, bar) {
@@ -696,7 +698,7 @@
       chord(o, t, CH[B][0], CH[B][1], 'triangle', 1100, .035, bar * .9);
     } },
     // Ржавые (lv 1): dusty lo-fi boom-bap, a lazy swing, crackle of an old record; E minor
-    rusty: { name: 'Ржавый лоу-фай', bpm: 84, vol: .47, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .22);
+    rusty: { name: 'Ржавый лоу-фай', bpm: 112, vol: .419, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .22);
       L(['X......x..x.....', 'X..x......x..o..'][B], (u, a) => kick(o, u, .9 * a));
       L('....X.......X...', u => snare(o, u, .5));
       L('x.o.x.o.x.o.x.oo', (u, a) => hat(o, u, .12 * a));
@@ -705,7 +707,7 @@
       vCrackle(o, t, bar, 10);
     } },
     // Кислотные (lv 2): acid breaks — a squelchy 303 line whose filter opens and closes over 4 bars; A minor
-    acid: { name: 'Кислотный брейк', bpm: 100, vol: .33, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0), cut = 380 + 700 * (.5 - .5 * Math.cos(b / 4 * Math.PI * 2));
+    acid: { name: 'Кислотный брейк', bpm: 121, vol: .31, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0), cut = 380 + 700 * (.5 - .5 * Math.cos(b / 4 * Math.PI * 2));
       L(['X.....x...X.....', 'X.....x...X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { vClap(o, u, .8); snare(o, u, .3); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .1 * a));
@@ -714,7 +716,7 @@
         (u, [, m, ac]) => vAcid(o, u, mf(m), st * 1.6, .11, ac, cut));
     } },
     // Ночные совы (lv 3, out only at night): slow and dark — deep bass, rimshots, minor pads, an owl hoots now and then; C minor
-    owls: { name: 'Ночной', bpm: 80, vol: .44, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .18);
+    owls: { name: 'Ночной', bpm: 110, vol: .391, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .18);
       L(['X.........X.....', 'X......x..X.....'][b % 2], (u, a) => kick(o, u, .95 * a));
       L('........X.......', u => snare(o, u, .6));
       L('...x......x....x', u => rim(o, u));
@@ -725,7 +727,7 @@
       if (B === 1) vHoot(o, t + 6 * st, 1);
     } },
     // Золотые зубы (lv 4): West-coast G-funk — claps, a fat synth bass, warm chords, a whining lead every other bar, a bling; G minor
-    gold: { name: 'Золотой джи-фанк', bpm: 94, vol: .36, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .14);
+    gold: { name: 'Золотой джи-фанк', bpm: 118, vol: .324, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .14);
       L(['X......x.xX.....', 'X..x...x..X.....'][b % 2], (u, a) => kick(o, u, .95 * a));
       L('....X.......X...', u => { vClap(o, u, .9); snare(o, u, .25); });
       L('x.x.x.x.x.x.x.xo', (u, a) => hat(o, u, .1 * a));
@@ -735,7 +737,7 @@
       if (B === 3) { each(o, t, st, [[2, 72, 74, 3], [6, 77, 79, 4], [11, 79, 77, 4]], (u, [, a0, a1, d]) => vWhine(o, u, mf(a0), mf(a1), d * st, .055)); tone(o, t + 15 * st, 'triangle', 2637, 0, .05, .5); }
     } },
     // Трафареты (lv 3): New York boom-bap — a hard snare, a horn stab, the DJ cuts at the end of every second bar; D minor
-    stencil: { name: 'Нью-йоркский бум-бэп', bpm: 92, vol: .38, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .2);
+    stencil: { name: 'Нью-йоркский бум-бэп', bpm: 116, vol: .341, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .2);
       L(['X.......x.X.....', 'X..x......X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { snare(o, u, .75); vClap(o, u, .3); });
       L('x.x.x.x.x.x.x.xo', (u, a) => hat(o, u, .11 * a));
@@ -744,7 +746,7 @@
       else { chord(o, t, mf(65), [1, 1.26, 1.498], 'sawtooth', 1800, .045, st * 2.5); L('.............xox', (u, a, k) => scratch(o, u, k === 14, .35)); }
     } },
     // Турникеты (lv 4): the metro — hats roll like wheels on rails, the turnstile clanks, a station chime every 4th bar; E minor
-    turn: { name: 'Метро', bpm: 108, vol: .35, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .08), R = [40, 40, 36, 38][B];
+    turn: { name: 'Метро', bpm: 125, vol: .321, play(o, t, b, st) { const B = b % 4, L = grid(t, st, .08), R = [40, 40, 36, 38][B];
       L(['X.........X.....', 'X.X.......X..x..'][b % 2], (u, a) => kick(o, u, a));
       L('....X..o....X...', (u, a) => snare(o, u, .7 * a));
       L('x.xxx.xxx.xxx.xx', (u, a, k) => hat(o, u, k % 4 === 0 ? .13 : .07));
@@ -753,7 +755,7 @@
       if (B === 3) vChime(o, t + 8 * st, [76, 72, 67], st * 2, 1);
     } },
     // Хромированные (lv 5, boss Хромосома): electro — a booming 808, claps, a cowbell, a robot bass in eighths, an orchestra hit; A minor
-    chrome: { name: 'Хромовое электро', bpm: 118, vol: .25, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
+    chrome: { name: 'Хромовое электро', bpm: 131, vol: .266, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
       L(['X.....X...X.....', 'X.....X..X..X...'][B], (u, a) => v808(o, u, .9 * a));
       L('....X.......X...', u => vClap(o, u, 1));
       L('..x...x.....x..x', u => vCow(o, u, 1));
@@ -763,7 +765,7 @@
       if (!B) chord(o, t, mf(57), [1, 1.189, 1.498, 2], 'sawtooth', 2600, .04, .3); else vZap(o, t + 15 * st, 1);
     } },
     // Фанк-бригада (lv 5): a funk break — ghost notes on the snare, a slap bass jumping octaves, short brass stabs, guitar scratches; E
-    funk: { name: 'Фанк-брейк', bpm: 110, vol: .35, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .12);
+    funk: { name: 'Фанк-брейк', bpm: 126, vol: .323, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .12);
       L(['X.x.......x..x..', 'X.....x.x.....x.'][B], (u, a) => kick(o, u, a));
       L('....X..o.o..X..o', (u, a) => snare(o, u, .7 * a));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .1 * a)); L('......x.......x.', u => ohat(o, u, .1));
@@ -773,7 +775,7 @@
       (B ? [6, 8] : [10]).forEach(k => chord(o, t + k * st, mf(52), [1, 1.26, 1.498, 1.782, 2.245], 'sawtooth', 2300, .03, st * 1.4));
     } },
     // Корни (lv 6): jazzy roots — a walking upright bass, electric-piano chords, shaker and rim; Dm7 – G7 – Cmaj7 – A7
-    roots: { name: 'Джазовые корни', bpm: 90, vol: .41, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .24);
+    roots: { name: 'Джазовые корни', bpm: 115, vol: .372, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, .24);
       L(['X......x..X.....', 'X.x.......X.....'][b % 2], (u, a) => kick(o, u, .9 * a));
       L('....x.......x...', u => { rim(o, u); snare(o, u, .3); });
       L('.o.o.o.o.o.o.o.o', u => vShake(o, u, .8)); L('x...x...x...x...', u => hat(o, u, .07));
@@ -782,7 +784,7 @@
       chord(o, t, mf(C[0]), C[1], 'sine', 2200, .03, bar * .55); chord(o, t + 10 * st, mf(C[0]), C[1], 'sine', 2200, .02, st * 4);
     } },
     // Волна (lv 7, boss Кюрасао): a fast breakbeat under a pad that swells like a wave, a rolling bass; C# minor
-    wave: { name: 'Волна', bpm: 122, vol: .32, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, 0), R = [37, 33, 40, 35][B];
+    wave: { name: 'Волна', bpm: 133, vol: .3, play(o, t, b, st, bar) { const B = b % 4, L = grid(t, st, 0), R = [37, 33, 40, 35][B];
       L(['X.........X.X...', 'X.X.......X.....'][b % 2], (u, a) => kick(o, u, a));
       L('....X..o....X..o', (u, a) => { snare(o, u, .7 * a); if (a > .5) vClap(o, u, .4); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .08 * a)); if (B === 0) ohat(o, t, .14);
@@ -791,7 +793,7 @@
       vPad(o, t, mf(P[0]), P[1], bar, .02, 400, 2600);
     } },
     // Арматура (lv 6): industrial boom-bap — a heavy kick, metal clanks on the snare, hammer hits, a gritty bass, a burst of steam; E
-    rebar: { name: 'Индастриал', bpm: 96, vol: .3, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
+    rebar: { name: 'Индастриал', bpm: 119, vol: .274, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
       L(['X.....X...X.....', 'X..X..X...X..X..'][B], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 70, 40, .5 * a, .45); });
       L('....X.......X...', u => { snare(o, u, .7); vClank(o, u, .7); });
       L('..x...........x.', u => vClank(o, u, .35));
@@ -800,7 +802,7 @@
       if (B) hiss(o, t + 8 * st, 'highpass', 3000, .5, .07, .5);
     } },
     // Высоковольтные (lv 7): electro buzz — a wobbling bass, electric zaps; A minor
-    volt: { name: 'Высокое напряжение', bpm: 126, vol: .3, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
+    volt: { name: 'Высокое напряжение', bpm: 135, vol: .29, play(o, t, b, st) { const B = b % 2, L = grid(t, st, 0);
       L(['X.....x...X.....', 'X.....x...X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => { snare(o, u, .65); vClap(o, u, .5); });
       L('xoxoxoxoxoxoxoxo', (u, a) => hat(o, u, .08 * a));
@@ -808,7 +810,7 @@
       if (B) { vZap(o, t + 14 * st, 1); vZap(o, t + 15 * st, .8); } else vZap(o, t + 7 * st, .6);
     } },
     // Литейка (lv 8, boss Коготь): the hardest — fast double kicks, an anvil rings, a distorted riff in eighths, alarm chords, a tom fill every 4th bar; E minor
-    forge: { name: 'Литейный цех', bpm: 132, vol: .26, play(o, t, b, st) { const B = b % 4, L = grid(t, st, 0);
+    forge: { name: 'Литейный цех', bpm: 138, vol: .247, play(o, t, b, st) { const B = b % 4, L = grid(t, st, 0);
       L(['X.X.......X.X...', 'X.X...X...X.....'][b % 2], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 70, 40, .4, .3); });
       L('....X.......X...', u => snare(o, u, .85));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .09 * a)); if (B !== 3) ohat(o, t + 14 * st, .09);
@@ -818,7 +820,7 @@
       if (B === 3) [13, 14, 15].forEach((k, i) => tom(o, t + k * st, 190 - i * 35));
     } },
     // Джем на эстраде (Парк): the classic b-boy break — bongos over the drums, a tambourine, an organ stab; A minor
-    jam: { name: 'Би-бой брейк с бонгами', bpm: 112, vol: .31, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
+    jam: { name: 'Би-бой брейк с бонгами', bpm: 127, vol: .3, play(o, t, b, st) { const B = b % 2, L = grid(t, st, .1);
       L(['X.........X.....', 'X.x.......X..x..'][B], (u, a) => kick(o, u, a));
       L('....X.......X...', u => snare(o, u, .7));
       L('x.x.x.x.x.x.x.x.', (u, a) => hat(o, u, .08 * a));
@@ -828,7 +830,7 @@
       chord(o, t, mf(B ? 55 : 57), B ? [1, 1.26, 1.498] : [1, 1.189, 1.498], 'square', 1300, .025, st * 6);
     } },
     // Подпольный ринг (Промзона): dark and heavy — a half-time snare, a rumbling bass, low minor stabs; F# minor
-    ring: { name: 'Подпольный', bpm: 104, vol: .32, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .16);
+    ring: { name: 'Подпольный', bpm: 123, vol: .304, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .16);
       L(['X.......X.X.....', 'X..X....X.......'][B], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 65, 38, .45 * a, .5); });
       L('........X.......', u => { snare(o, u, .9); vClap(o, u, .6); });
       L('....x.......x..x', u => rim(o, u));

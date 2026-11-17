@@ -1439,7 +1439,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <p class="muted" id="c3Lang" hidden>Пока в городе всё на русском — переводы появятся позже.</p>
   <div class="c3row">
     <button class="btn btn-ghost" id="c3Bug" type="button">Сообщить об ошибке</button>
-    <button class="btn btn-ghost" id="c3Old" type="button" hidden>Простой 2D-город</button>
+    <button class="btn btn-ghost" id="c3Old" type="button" hidden data-later="flat 2D city — hidden 17.11.2026 (owner «убери 2д город»)">Простой 2D-город</button>
   </div>
 </section>
 <section class="screen" id="promo" aria-label="Акции" hidden>
@@ -1803,7 +1803,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="hero.js?v=18"></script>
-<script src="rhythm.js?v=23"></script>
+<script src="rhythm.js?v=24"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=8"></script>
@@ -4214,8 +4214,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let CITY_ON = !!CFG.cityEnabled;
   try { if (new URLSearchParams(location.search).get('city') === 'play') sessionStorage.setItem('fedoskin-city-on', '1'); if (sessionStorage.getItem('fedoskin-city-on') === '1') CITY_ON = true; } catch (_) {}
   // 17.11.2026 (owner «добавь город в открытый доступ для пользователей, предупреди ещё раз, что это альфа»): the tab is a launcher of the
-  // 3D city (city3d.html, its own page) with the alpha warning (screen #cityhub); the old flat city (screen #city, city.js owns it) stays
-  // behind a small button for phones without 3D
+  // 3D city (city3d.html, its own page) with the alpha warning (screen #cityhub); the old flat city (screen #city, city.js owns it) was kept
+  // behind a small button for phones without 3D — hidden since 17.11.2026 (see below)
   if (CITY_ON) TABS.splice(TABS.length - 1, 0, ['city', 'Город', '<path d="M3 21V9l6-3v15M9 21V4l6 3v14M15 21v-9l6 2v7M2 21h20"/><path d="M5.5 12h1M5.5 15.5h1M11.5 10h1M11.5 13.5h1M11.5 17h1M17.5 16h1" stroke-width="1.6"/>']);
   TABS.forEach(([id, label, icon]) => {
     const b = document.createElement('button');
@@ -4230,11 +4230,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     tabsEl.appendChild(b);
   });
 
-  // «Город» screen: the 3D city is a link (its own page); a bug report goes to the coach chat; the flat city for phones without 3D
+  // «Город» screen: the 3D city is a link (its own page); a bug report goes to the coach chat.
+  // The flat 2D city is HIDDEN since 17.11.2026 (owner «Убери 2д город (скрой и убери его выбор)»): its button #c3Old stays hidden, nothing
+  // opens #city. city.js still loads (CITY.init) only so that street gear already won there stays in the wardrobe (CITY.owned).
   if (CITY_ON) {
     $('#c3Lang').hidden = LANG === 'ru';
-    $('#c3Old').hidden = !window.CITY;
-    $('#c3Old').addEventListener('click', () => go('city'));
     $('#c3Bug').addEventListener('click', () => { const t = T('Ошибка в 3D-городе: '); if (CHAT.on) openChat(t, 'city'); else openContact(t); });
   }
   function go(id){
@@ -5722,7 +5722,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#shopPts').textContent = nfmt(w.pts);
     box.innerHTML = '';
     HERO.SHOP.slice().sort((a, b) => (b.sub ? 1 : 0) - (a.sub ? 1 : 0)).forEach(it => box.appendChild(itemCard(it)));
-    const cg = $('#cityGrid'), G = HERO.GEAR || {}, ids = Object.keys(G); cg.innerHTML = '';
+    // gear only the hidden flat 2D city gives (MC, DJ, walls — not in the 3D city) is listed only for those who already have it
+    const own2d = cityOwned(), G = HERO.GEAR || {}, ids = Object.keys(G).filter(id => !['mc', 'dj', 'walls'].includes(G[id].src) || own2d.includes(id)), cg = $('#cityGrid'); cg.innerHTML = '';
     $('#cityShop').hidden = !ids.length;
     ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg')));
   }

@@ -52,7 +52,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 
 ## Main app map (grep the full notes for details)
 - Tabs: Главная / Коучинг / Батлы / Город (only if `cityEnabled` or `?city=play`) / Профиль (+ Курсы when a course has videos).
-  Город tab = screen `#cityhub` (launcher of city3d.html + alpha card); the old flat city lives in `#city` (city.js rewrites it — no markup there).
+  Город tab = screen `#cityhub` (launcher of city3d.html + alpha card); the old flat city lives in `#city` (city.js rewrites it — no markup there) — HIDDEN since 17.11 (owner «убери 2д город»): button `#c3Old` stays hidden, city.js still loads only for gear already won there; 2D-only gear (src mc / dj / walls) is listed in the wardrobe only if owned.
 - Lesson player: Kinescope HLS via our own <video> (hls.js; Apple: ManagedMediaSource, fallback native), R2 files with pass,
   intros, swipe between lessons, vertical full screen, scrubbing with strips + frame cache, 3-sec loop, repeat, mirror, speed
   (slow = silent), subtitles, saving to the phone (Cache Storage `fedoskin-video-1`, limit sheet), diagnostics `?diag=1`.
@@ -73,6 +73,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   13 crews by `c.id`, `jam`, `ring`; each `{name, bpm, vol, play()}`, 16-step pattern strings). `startBattle` → `ctx.music(id)`, `endBattle` → `ctx.music(null)`
   (city3d.js `setMusic`, 40 ms debounce so jam rounds don't re-scratch); `RB.bgm(true, id)` swaps with a DJ scratch; speakers pump on `RB.bgmBeat()`.
   `vol` levelled with `RB._bgmRender(id, bars)` (offline render) — re-measure when a loop changes.
+  BATTLE TEMPOS sped up 17.11 (owner «ускорь биты на батлах, фон оставь»): crews/jam/ring 110…138 BPM (= 110 + (old − 80) × .54), yard stays 88.
 - City 3D DRAWN POWER (17.11, owner «авто скучно, но и в бит тапать не надо… идеально сделать элемент, нарисовав»): `city3d-power.js` — the hero's
   power step in battles hangs (clock stops), the finger leads his legs round a line MEASURED from the mocap (`DRAW` per clip, `table()`/`timeAt()`),
   the clip's time follows the finger; perfect ×1.5 / clean / fall; no touch → old auto outcome; replay at real tempo after. `makeTurn` builds both

@@ -1589,3 +1589,18 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   set never steps back (`si < T.si` guard); (2) a clean freeze's old «zoom pulse» timer fired during the replay and pulled the camera to .4 —
   the replay / hold set their zoom every frame; (3) the headless browser runs ~1 fps, frames skip steps — that's the test, not the game.
 - Versions: city3d-power.js ?v=1 (new), city3d-game.js ?v=23, city3d.js ?v=24, rhythm.js ?v=23 (index.html + city3d.html).
+
+### Flat 2D city hidden + faster crew beats (17.11.2026, late evening)
+- Owner: «Убери 2д город (скрой и убери его выбор). В 3д городе ускорь биты на батлах и оставь скорость бита на фоновой музыке.»
+- 2D city: the «Простой 2D-город» button `#c3Old` on the Город screen stays hidden (`hidden data-later`, the code that showed it and its click
+  handler removed). Nothing else opens `#city`. city.js / city-*.js still load and `CITY.init` still runs (it draws nothing until `show()`) —
+  only so that gear already won in the flat city stays in the wardrobe (`CITY.owned` → `cityOwned()`). Wardrobe «Только в городе»: gear only
+  the flat city gave (src `mc` = Бомбер Сайфера, `dj` = Перчатки диджея, `walls` = Кеды райтера) is listed only for those who own it.
+- Beats: every crew loop + jam + ring sped up, order kept: new = round(110 + (old − 80) × .54) → owls 110, rusty 112, roots 115, stencil 116,
+  gold 118, rebar 119, acid 121, ring 123, turn 125, funk 126, jam 127, chrome 131, wave 133, volt 135, forge 138 (were 80…132). `yard` (the
+  background) stays 88. Faster = more hits per second = louder (+0.4…+1.1 dB), so `vol` was re-levelled the same way as before (8 bars
+  offline, 150 Hz highpass RMS) back to yard +1.0 dB (±0.02) for all; peaks ≤ .64. Speakers / dancers follow automatically (`RB.bgmBeat`).
+- Tested headless: app ru 390×844 — Город tab = hub, no 2D button, no errors; wardrobe (mocked wallet) 20 street items for a new player,
+  21 with djGloves owned in the flat save. city3d.html: RB.LOOPS = new tempos, yard plays before, `GAME._start('rusty')` / `('forge')` switch to
+  the crew loop. A listening file (yard + 15 battle loops, ~8 s each) was sent to the owner. Not heard by Claude, not on a real iPhone.
+- Versions: rhythm.js ?v=24 (index.html + city3d.html).
