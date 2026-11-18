@@ -8,13 +8,16 @@
 import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=13';   // v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=1';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=2';   // the hero's power move is DRAWN by the finger (17.11)
+// TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
+// the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
   enMax: 100, enStart: 60, battle: 20, perMin: 5, daily: 40,
   rep: [0, 30, 90, 200, 400, 700, 1100, 1700],
-  ranks: ['Новичок двора', 'Свой', 'Уважаемый', 'Авторитет', 'Хозяин двора', 'Легенда района', 'Голос улиц', 'Имя города'],
+  ranks: ['Новичок двора', 'Свой', 'Уважаемый', 'Авторитет', 'Хозяин двора', 'Легенда района', 'Голос улиц', 'Имя города'].map(s => _t(s)),
   repWin: 12, repClean: 6, paint: 10, repPaint: 8, turfRep: 3, hold: 3,
   dj: 5, train: 8, trainMax: 3, show: 0, repShow: 4, repShowClean: 3, gateRank: 2,
   // the Centre: a street show on the mall's tiles (the guard!), tea for those whose pieces are on the Centre's walls
@@ -34,48 +37,51 @@ export const BAL = {
 // permanent plus in the city's battles where it makes sense for breaking: sneakers → steps, patches → style, knees → freezes,
 // a spin pad → power / headspins. Kept in the save as S.cus = { kicks, top, pants, head } (0…3).
 export const CUS = [
-  { id: 'kicks', ico: '👟', nm: 'Кроссы', lv: ['Толстые шнурки', 'Каучуковая подошва', 'Светящийся кант'], v: n => '+' + +(n * BAL.cusStep).toFixed(2), un: 'очка за топрок и футворк' },
-  { id: 'top', ico: '🧥', nm: 'Верх', lv: ['Нашивка на грудь', 'Нашивки на рукава', 'Большой патч на спину'], v: n => '+' + +(n * BAL.cusStyle).toFixed(2), un: 'к стилю у судей' },
-  { id: 'pants', ico: '👖', nm: 'Штаны', lv: ['Усиленные колени', 'Карманы-карго', 'Цепь на пояс'], v: n => '−' + Math.round(n * BAL.cusFreeze * 100) + '%', un: 'срывов во фризах' },
-  { id: 'head', ico: '🧢', nm: 'Голова', lv: ['Значок на шапку или повязка', 'Спин-пад на макушку', 'Светящийся обод'], v: n => '−' + Math.round(n * BAL.cusPower * 100) + '%', un: 'срывов в пауэре, на хедспине вдвое' },
+  { id: 'kicks', ico: '👟', nm: _t('Кроссы'), lv: ['Толстые шнурки', 'Каучуковая подошва', 'Светящийся кант'].map(s => _t(s)), v: n => '+' + +(n * BAL.cusStep).toFixed(2), un: _t('{v} очка за топрок и футворк') },
+  { id: 'top', ico: '🧥', nm: _t('Верх'), lv: ['Нашивка на грудь', 'Нашивки на рукава', 'Большой патч на спину'].map(s => _t(s)), v: n => '+' + +(n * BAL.cusStyle).toFixed(2), un: _t('{v} к стилю у судей') },
+  { id: 'pants', ico: '👖', nm: _t('Штаны'), lv: ['Усиленные колени', 'Карманы-карго', 'Цепь на пояс'].map(s => _t(s)), v: n => '−' + Math.round(n * BAL.cusFreeze * 100) + '%', un: _t('{v} срывов во фризах') },
+  { id: 'head', ico: '🧢', nm: _t('Голова'), lv: ['Значок на шапку или повязка', 'Спин-пад на макушку', 'Светящийся обод'].map(s => _t(s)), v: n => '−' + Math.round(n * BAL.cusPower * 100) + '%', un: _t('{v} срывов в пауэре, на хедспине вдвое') },
 ];
+// a custom detail's effect in words: c.un is a translated template with {v} = the value (+0.15 / −2% / «+0.15 → +0.3»)
+const cusFx = (c, v) => c.un.replace('{v}', v);
 // the crews; d = district ('yard' when absent); gear = HERO.GEAR pieces (1st win → 1st piece, 3rd win → 2nd piece);
 // wall = [x, z] where the crew's wall stands (the yard's walls find a free spot themselves); boss = the owners of the district
 export const CREWS = [
-  { id: 'rusty', bodies: ['stocky', 'slim', 'avg'], name: 'Ржавые', lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
-  { id: 'acid', bodies: ['lanky', 'small', 'slim'], name: 'Кислотные', lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
-  { id: 'owls', bodies: ['athl', 'slim', 'small'], name: 'Ночные совы', lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
-  { id: 'gold', bodies: ['heavy', 'big', 'avg', 'stocky'], name: 'Золотые зубы', lv: 4, col: '#FFD23F', at: [4.6, 9.2], looks: [['c:goldChain'], ['c:goldCap'], ['c:goldChain', 'girl'], []], gear: ['goldChain', 'goldCap'] },
+  { id: 'rusty', bodies: ['stocky', 'slim', 'avg'], name: _t('Ржавые'), lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
+  { id: 'acid', bodies: ['lanky', 'small', 'slim'], name: _t('Кислотные'), lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
+  { id: 'owls', bodies: ['athl', 'slim', 'small'], name: _t('Ночные совы'), lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
+  { id: 'gold', bodies: ['heavy', 'big', 'avg', 'stocky'], name: _t('Золотые зубы'), lv: 4, col: '#FFD23F', at: [4.6, 9.2], looks: [['c:goldChain'], ['c:goldCap'], ['c:goldChain', 'girl'], []], gear: ['goldChain', 'goldCap'] },
   // ЦЕНТР (16.11.2026)
-  { id: 'stencil', bodies: ['slim', 'athl', 'small'], d: 'center', name: 'Трафареты', lv: 3, col: '#FF6B5E', at: [-8, 10.2], wall: [-8, 7.3], base: 3, fix: l => { if (l.col.hat) l.col.hat = l.hat === 'bandana' ? l.col.hat : ['#18181B', '#C8202A']; if (l.top !== 'bomber') l.col.top = '#18181B'; l.col.pants = '#232327'; }, looks: [['c:stencilBandana'], ['c:stencilBomber'], ['c:stencilBandana', 'girl']], gear: ['stencilBandana', 'stencilBomber'] },
-  { id: 'turn', bodies: ['avg', 'heavy', 'slim', 'lanky'], d: 'center', name: 'Турникеты', lv: 4, col: '#5FA4FF', at: [-8.2, 3.2], wall: [-8.2, .3], base: 4, fix: l => { if (l.col.hat && l.hat !== 'bucket') l.col.hat = ['#2F7BFF', '#F2EFE8']; l.col.top = '#1c2c4a'; if (l.col.sleeve) l.col.sleeve = '#1c2c4a'; }, looks: [['c:turnBucket'], ['c:turnKicks'], ['c:turnBucket', 'girl'], ['c:turnKicks']], gear: ['turnBucket', 'turnKicks'] },
-  { id: 'chrome', bodies: ['athl', 'big', 'lanky', 'stocky'], d: 'center', name: 'Хромированные', lv: 5, col: '#DCE6F2', at: [7.6, 3.6], wall: [7.6, .7], boss: 'Хромосома', base: 6, fix: l => { if (l.col.hat) l.col.hat = ['#D9DEE6', '#3F8FD8']; l.col.gold = '#D9DEE6'; if (l.top !== 'track') { l.col.top = '#18181B'; if (l.col.sleeve) l.col.sleeve = '#18181B'; l.col.cuff = '#D9DEE6'; l.col.trim = '#D9DEE6'; } }, looks: [['c:chromeTrack', 'c:chromeKicks'], ['c:chromeKicks'], ['c:chromeTrack', 'girl'], ['c:chromeKicks']], gear: ['chromeKicks', 'chromeTrack'] },
+  { id: 'stencil', bodies: ['slim', 'athl', 'small'], d: 'center', name: _t('Трафареты'), lv: 3, col: '#FF6B5E', at: [-8, 10.2], wall: [-8, 7.3], base: 3, fix: l => { if (l.col.hat) l.col.hat = l.hat === 'bandana' ? l.col.hat : ['#18181B', '#C8202A']; if (l.top !== 'bomber') l.col.top = '#18181B'; l.col.pants = '#232327'; }, looks: [['c:stencilBandana'], ['c:stencilBomber'], ['c:stencilBandana', 'girl']], gear: ['stencilBandana', 'stencilBomber'] },
+  { id: 'turn', bodies: ['avg', 'heavy', 'slim', 'lanky'], d: 'center', name: _t('Турникеты'), lv: 4, col: '#5FA4FF', at: [-8.2, 3.2], wall: [-8.2, .3], base: 4, fix: l => { if (l.col.hat && l.hat !== 'bucket') l.col.hat = ['#2F7BFF', '#F2EFE8']; l.col.top = '#1c2c4a'; if (l.col.sleeve) l.col.sleeve = '#1c2c4a'; }, looks: [['c:turnBucket'], ['c:turnKicks'], ['c:turnBucket', 'girl'], ['c:turnKicks']], gear: ['turnBucket', 'turnKicks'] },
+  { id: 'chrome', bodies: ['athl', 'big', 'lanky', 'stocky'], d: 'center', name: _t('Хромированные'), lv: 5, col: '#DCE6F2', at: [7.6, 3.6], wall: [7.6, .7], boss: _t('Хромосома'), base: 6, fix: l => { if (l.col.hat) l.col.hat = ['#D9DEE6', '#3F8FD8']; l.col.gold = '#D9DEE6'; if (l.top !== 'track') { l.col.top = '#18181B'; if (l.col.sleeve) l.col.sleeve = '#18181B'; l.col.cuff = '#D9DEE6'; l.col.trim = '#D9DEE6'; } }, looks: [['c:chromeTrack', 'c:chromeKicks'], ['c:chromeKicks'], ['c:chromeTrack', 'girl'], ['c:chromeKicks']], gear: ['chromeKicks', 'chromeTrack'] },
 ];
 // the Park's crews (16.11.2026): Фанк-бригада lv 5 (old-school funk, tracksuits), Корни lv 6 (dreads, green-gold-red), Волна lv 7 —
 // the owners of the embankment, boss «Кюрасао» (a nickname from the owner's list). bodies = builds of the members (type or a full body)
 CREWS.push(
-  { id: 'funk', d: 'park', name: 'Фанк-бригада', lv: 5, col: '#FF7AD9', at: [-8.2, 8.4], wall: [-8.2, 5.5], base: 5, bodies: [{ type: 'stocky', style: 'afro' }, { type: 'heavy', style: 'top', beard: true }, { type: 'slim', style: 'afro' }],
+  { id: 'funk', d: 'park', name: _t('Фанк-бригада'), lv: 5, col: '#FF7AD9', at: [-8.2, 8.4], wall: [-8.2, 5.5], base: 5, bodies: [{ type: 'stocky', style: 'afro' }, { type: 'heavy', style: 'top', beard: true }, { type: 'slim', style: 'afro' }],
     fix: l => { l.top = 'track'; Object.assign(l.col, { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F', pants: '#7A2FB8', stripe: '#FFD23F' }); if (l.col.hat) l.col.hat = ['#FFD23F', '#7A2FB8']; }, looks: [['c:funkTrack'], [], ['girl']], gear: ['funkTrack'] },
-  { id: 'roots', d: 'park', name: 'Корни', lv: 6, col: '#7CD957', at: [8.2, 2.4], wall: [8.2, -.5], base: 5, bodies: [{ type: 'lanky', style: 'dreads' }, { type: 'slim', style: 'braids' }, { type: 'athl', style: 'dreads', beard: true }, { type: 'small', style: 'dreads' }],
+  { id: 'roots', d: 'park', name: _t('Корни'), lv: 6, col: '#7CD957', at: [8.2, 2.4], wall: [8.2, -.5], base: 5, bodies: [{ type: 'lanky', style: 'dreads' }, { type: 'slim', style: 'braids' }, { type: 'athl', style: 'dreads', beard: true }, { type: 'small', style: 'dreads' }],
     fix: l => { if (l.top !== 'tee') { l.col.top = '#1f3d24'; if (l.col.sleeve) l.col.sleeve = '#1f3d24'; l.col.cuff = '#FFD23F'; l.col.trim = '#C8202A'; } else l.col.top = '#2F8F3A'; l.col.pants = '#3a3226'; l.col.stripe = null; if (l.col.hat) l.col.hat = ['#2F8F3A', '#FFD23F']; },
     looks: [['c:rootsBeanie'], ['c:rootsBeanie', 'girl'], [], ['c:rootsBeanie']], gear: ['rootsBeanie'] },
-  { id: 'wave', d: 'park', name: 'Волна', lv: 7, col: '#3FD6E0', at: [4.2, -5.4], wall: [4.2, -8.3], boss: 'Кюрасао', base: 7, bodies: [{ type: 'athl', h: 1.12, style: 'mohawk', dye: '#3FD6E0' }, { type: 'slim', style: 'buns' }, { type: 'big', style: 'buzz', beard: true }, { type: 'lanky', style: 'curly' }],
+  { id: 'wave', d: 'park', name: _t('Волна'), lv: 7, col: '#3FD6E0', at: [4.2, -5.4], wall: [4.2, -8.3], boss: _t('Кюрасао'), base: 7, bodies: [{ type: 'athl', h: 1.12, style: 'mohawk', dye: '#3FD6E0' }, { type: 'slim', style: 'buns' }, { type: 'big', style: 'buzz', beard: true }, { type: 'lanky', style: 'curly' }],
     fix: l => { l.col.top = l.top === 'tee' ? '#F2EFE8' : '#0f3a44'; if (l.col.sleeve) l.col.sleeve = '#0f3a44'; l.col.cuff = '#3FD6E0'; l.col.trim = '#3FD6E0'; l.col.pants = '#12262c'; if (l.col.stripe) l.col.stripe = '#3FD6E0'; if (l.col.hat) l.col.hat = ['#19B8C4', '#F2EFE8']; l.col.gold = '#D9DEE6'; },
     looks: [['c:waveKicks'], ['c:waveKicks', 'girl'], [], ['c:waveKicks']], gear: ['waveKicks'] },
 );
 // the industrial zone's crews (16.11.2026): Арматура lv 6 (hi-vis orange, hard caps), Высоковольтные lv 7 (black and electric yellow),
 // Литейка lv 8 — the owners of the zone, boss «Коготь» (a nickname from the owner's list)
 CREWS.push(
-  { id: 'rebar', d: 'prom', name: 'Арматура', lv: 6, col: '#FF7A1A', at: [6.6, 9.4], wall: [6.6, 6.5], base: 6, bodies: [{ type: 'big', style: 'buzz', beard: true }, { type: 'stocky', style: 'short' }, { type: 'athl', style: 'tail' }],
+  { id: 'rebar', d: 'prom', name: _t('Арматура'), lv: 6, col: '#FF7A1A', at: [6.6, 9.4], wall: [6.6, 6.5], base: 6, bodies: [{ type: 'big', style: 'buzz', beard: true }, { type: 'stocky', style: 'short' }, { type: 'athl', style: 'tail' }],
     fix: l => { l.top = 'bomber'; Object.assign(l.col, { top: '#FF7A1A', sleeve: '#2b2d33', cuff: '#D9DEE6', trim: '#D9DEE6', pants: '#23303f', stripe: null }); if (l.col.hat) l.col.hat = ['#18181B', '#FF7A1A']; }, looks: [['c:rebarCap'], [], ['girl', 'c:rebarCap']], gear: ['rebarCap'] },
-  { id: 'volt', d: 'prom', name: 'Высоковольтные', lv: 7, col: '#FFE23F', at: [7.6, -3.6], wall: [7.6, -6.5], base: 7, bodies: [{ type: 'lanky', style: 'mohawk', dye: '#FFE23F' }, { type: 'slim', style: 'buns' }, { type: 'athl', style: 'top' }, { type: 'small', style: 'curly' }],
+  { id: 'volt', d: 'prom', name: _t('Высоковольтные'), lv: 7, col: '#FFE23F', at: [7.6, -3.6], wall: [7.6, -6.5], base: 7, bodies: [{ type: 'lanky', style: 'mohawk', dye: '#FFE23F' }, { type: 'slim', style: 'buns' }, { type: 'athl', style: 'top' }, { type: 'small', style: 'curly' }],
     fix: l => { if (l.top !== 'tee') { l.col.top = '#141518'; if (l.col.sleeve) l.col.sleeve = '#141518'; l.col.cuff = '#FFE23F'; l.col.trim = '#FFE23F'; } else l.col.top = '#FFE23F'; l.col.pants = '#141518'; l.col.stripe = '#FFE23F'; if (l.col.hat) l.col.hat = ['#141518', '#FFE23F']; },
     looks: [['c:voltKicks'], ['c:voltKicks', 'girl'], [], ['c:voltKicks']], gear: ['voltKicks'] },
-  { id: 'forge', d: 'prom', name: 'Литейка', lv: 8, col: '#FF4A2A', at: [-5.6, 6.6], wall: [-5.6, 3.7], boss: 'Коготь', base: 7, bodies: [{ type: 'big', h: 1.16, style: 'bald', beard: true }, { type: 'athl', style: 'braids' }, { type: 'heavy', style: 'buzz', beard: true }, { type: 'stocky', style: 'mohawk', dye: '#FF4A2A' }],
+  { id: 'forge', d: 'prom', name: _t('Литейка'), lv: 8, col: '#FF4A2A', at: [-5.6, 6.6], wall: [-5.6, 3.7], boss: _t('Коготь'), base: 7, bodies: [{ type: 'big', h: 1.16, style: 'bald', beard: true }, { type: 'athl', style: 'braids' }, { type: 'heavy', style: 'buzz', beard: true }, { type: 'stocky', style: 'mohawk', dye: '#FF4A2A' }],
     fix: l => { l.col.top = l.top === 'tee' ? '#2a1512' : '#3a1a14'; if (l.col.sleeve) l.col.sleeve = '#3a1a14'; l.col.cuff = '#FF7A1A'; l.col.trim = '#FF7A1A'; l.col.pants = '#1c1a1a'; if (l.col.stripe) l.col.stripe = '#FF4A2A'; if (l.col.hat) l.col.hat = ['#3a1a14', '#FF7A1A']; l.col.gold = '#8b9099'; },
     looks: [['c:forgeChain'], ['c:forgeChain', 'girl'], [], ['c:forgeChain']], gear: ['forgeChain'] },
 );
-const DNAME = { yard: 'двор', center: 'Центр', park: 'Парк', prom: 'Промзона' };
+// «the whole district is in your graffiti» — one sentence per district (Russian gender: «Весь двор», but «Вся Промзона»)
+const ALLMINE = { yard: '👑 Весь двор в твоих граффити!', center: '👑 Весь Центр в твоих граффити!', park: '👑 Весь Парк в твоих граффити!', prom: '👑 Вся Промзона в твоих граффити!' };
 // ---- OUTFITS OF CREW MEMBERS (owner 17.11.2026 «улучши визуал других человечков») ----
 // Every member used to wear the hero's outfit of his level — the team's black and orange — so the yard was full of clones of one
 // kit, told apart only by the one prize item. Now each member is dressed on his own: a top of his own cut (hoodie / tee / big tee /
@@ -125,9 +131,9 @@ export function crewLook(c, ci, i, D = c.d || 'yard') {
 // after the district's own colours (c.fix): a hoodie is one colour with darker rib cuffs, whatever the fix did to the sleeves
 function tidy(l) { if (l.top === 'hoodie') { l.col.sleeve = l.col.top; l.col.cuff = tint(l.col.top, .8); l.col.trim = null; l.col.yoke = null; } }
 // the regulars of the underground ring in the industrial zone (nicknames from the reserve list)
-const RING = [{ name: 'Штопор', col: '#FFB547' }, { name: 'Гвоздь', col: '#C9D4E6' }, { name: 'Магнит', col: '#FF5A4F' }, { name: 'Вихрь', col: '#7CC4FF' }, { name: 'Пружина', col: '#7CFF4F' }, { name: 'Компас', col: '#FFD23F' }];
+const RING = [{ name: _t('Штопор'), col: '#FFB547' }, { name: _t('Гвоздь'), col: '#C9D4E6' }, { name: _t('Магнит'), col: '#FF5A4F' }, { name: _t('Вихрь'), col: '#7CC4FF' }, { name: _t('Пружина'), col: '#7CFF4F' }, { name: _t('Компас'), col: '#FFD23F' }];
 // the three dancers of the daily jam on the Park's stage (nicknames from the reserve list)
-const JAM = [{ name: 'Шуруп', col: '#7CFF4F' }, { name: 'Ртуть', col: '#C9D4E6' }, { name: 'Кобра', col: '#FFB547' }];
+const JAM = [{ name: _t('Шуруп'), col: '#7CFF4F' }, { name: _t('Ртуть'), col: '#C9D4E6' }, { name: _t('Кобра'), col: '#FFB547' }];
 const ART = { rusty: { word: 'RUST', style: 'block', pal: 'rusty', extra: 'cog' }, acid: { word: 'ACID', style: 'bubble', pal: 'acid', extra: 'slime' },
   owls: { word: 'OWLS', style: 'wild', pal: 'owls', extra: 'owl' }, gold: { word: 'GOLD', style: 'd3', pal: 'gold', extra: 'tooth' },
   stencil: { word: 'STENCIL', style: 'stencil', pal: 'stencil', extra: 'can' }, turn: { word: 'METRO', style: 'tile', pal: 'metro', extra: 'token' }, chrome: { word: 'CHROME', style: 'chrome', pal: 'chrome', extra: 'chromo' },
@@ -147,6 +153,7 @@ const GOALS = [
   { id: 'zwin', t: 'Победи банду Промзоны', n: 1, z: 1 }, { id: 'ring', t: 'Выиграй батл на подпольном ринге', n: 1, z: 1 }, { id: 'stash', t: 'Найди 2 тайника в Промзоне', n: 2, z: 1 },
   { id: 'pwin', t: 'Победи банду Парка', n: 1, p: 1 }, { id: 'jam', t: 'Выиграй хотя бы один раунд джема на эстраде', n: 1, p: 1 }, { id: 'og', t: 'Покажи Маятнику, что учился сегодня', n: 1, p: 1 },
 ];
+GOALS.forEach(g => (g.t = _t(g.t)));
 const TOP = ['Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Breakdance_Uprock_Var_2'];
 // FOOTWORK VARIETY (owner 17.11.2026 «добавь вариаций футворка во время батлов (слишком однообразно начинают и делают всё)»).
 // Was: everyone went down with the same drop and played one of three whole recordings. Now a dancer's footwork is a COMBO of
@@ -204,16 +211,16 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch
 function refill() {
   const notes = [];
   const sec = lessonSec(), d = sec - (S.lsec || 0);
-  if (d >= 60) { const add = Math.min(BAL.enMax - S.en, Math.floor(d / 60) * BAL.perMin); S.lsec += Math.floor(d / 60) * 60; if (add > 0) { S.en += add; notes.push('🎬 Уроки: +' + add + ' ⚡'); } }
+  if (d >= 60) { const add = Math.min(BAL.enMax - S.en, Math.floor(d / 60) * BAL.perMin); S.lsec += Math.floor(d / 60) * 60; if (add > 0) { S.en += add; notes.push(_t('🎬 Уроки: +{n} ⚡', { n: add })); } }
   else if (d < 0) S.lsec = sec;
   if (S.day !== today()) {
     const days = dayDiff(S.day, today()); S.day = today(); S.beat = {}; S.goals = null;
-    if (S.en < BAL.daily) { notes.push('☀️ Новый день: энергия до ' + BAL.daily + ' ⚡'); S.en = BAL.daily; }
+    if (S.en < BAL.daily) { notes.push(_t('☀️ Новый день: энергия до {n} ⚡', { n: BAL.daily })); S.en = BAL.daily; }
     // walls: each of my walls gives respect every new day; a crew not beaten for 3 days paints its wall back
     let rep = 0, lost = [];
     for (const id of Object.keys(S.turf)) { if (dayDiff(S.last[id] || S.turf[id], today()) > BAL.hold) { delete S.turf[id]; lost.push(CREWS.find(c => c.id === id).name); } else rep += BAL.turfRep * Math.min(days, 3); }
-    if (rep) { S.rep += rep; notes.push('🎨 Твои стены: +' + rep + ' ★'); }
-    if (lost.length) notes.push('⚠️ ' + lost.join(', ') + ' закрасили свою стену обратно');
+    if (rep) { S.rep += rep; notes.push(_t('🎨 Твои стены: +{n} ★', { n: rep })); }
+    if (lost.length) notes.push(_t('⚠️ {x} закрасили свою стену обратно', { x: lost.join(', ') }));
   }
   if (!S.goals) { const r = rng(today()); const pool = GOALS.filter(g => (!g.c || S.seen.center) && (!g.p || S.seen.park) && (!g.z || S.seen.prom)); S.goals = [];
     while (S.goals.length < 3) { const g = pool.splice(Math.floor(r() * pool.length), 1)[0]; if (S.goals.some(x => (x.k || x.id) === (g.k || g.id))) continue; S.goals.push({ id: g.id, n: 0, done: false }); }
@@ -227,14 +234,14 @@ function bumpGoal(id, by = 1, abs = false) {
   if (!S.goals) return; let changed = false;
   for (const g of S.goals) { const G = GOALS.find(x => x.id === g.id); if ((G.k || G.id) !== id || g.done) continue;
     g.n = abs ? Math.max(g.n, by) : g.n + by; if (g.n >= G.n) { g.n = G.n; g.done = true; S.rep += 5; onGoal('✅ ' + G.t + ' · +5 ★'); } changed = true; }
-  if (changed && !S.goalsPaid && S.goals.every(g => g.done)) { S.goalsPaid = true; S.en = Math.min(BAL.enMax, S.en + 15); onGoal('🎉 Все задания дня! +15 ⚡'); }
+  if (changed && !S.goalsPaid && S.goals.every(g => g.done)) { S.goalsPaid = true; S.en = Math.min(BAL.enMax, S.en + 15); onGoal(_t('🎉 Все задания дня! +15 ⚡')); }
   if (changed) save();
 }
 const rankOf = rep => { let i = 0; while (i + 1 < BAL.rep.length && rep >= BAL.rep[i + 1]) i++; return i; };
 
 // ---------- ui ----------
 const CSS = `
-#g3hud{position:fixed;left:10px;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 50px);display:flex;gap:8px;z-index:5;pointer-events:none;font:600 12px Inter,sans-serif;color:#F2EFE8}
+#g3hud{position:fixed;left:10px;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 50px);display:flex;gap:8px;z-index:5;pointer-events:none;font:600 12px Inter,sans-serif;color:#F2EFE8;word-break:keep-all;overflow-wrap:anywhere}
 #g3hud .chip{pointer-events:auto;background:rgba(12,14,19,.66);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px 10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer}
 #g3en{flex:1;max-width:190px}#g3en .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden}#g3en .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFB547,#E2611A);border-radius:3px;transition:width .5s}
 #g3rk{flex:1}#g3rk b{color:#FFD23F}#g3rk .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden}#g3rk .bar i{display:block;height:100%;background:#FFD23F;border-radius:3px;transition:width .6s}
@@ -243,7 +250,7 @@ const CSS = `
 #g3gl.all{border-color:#3BD16F;color:#3BD16F}body.g3fight #g3hud2{opacity:0;pointer-events:none}
 #g3info .gl{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}#g3info .gl i{font-style:normal;font-size:18px}#g3info .gl .p{margin-left:auto;color:#9a968e;font-weight:700}
 #g3info .gl.d{color:#3BD16F}#g3info .gl.d .p{color:#3BD16F}
-#g3act{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.25s;z-index:6;border:0;border-radius:26px;padding:15px 22px;font:800 15px Inter,sans-serif;color:#0B0D12;background:#E2611A;box-shadow:0 8px 24px rgba(226,97,26,.45);white-space:nowrap}
+#g3act{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.25s;z-index:6;border:0;border-radius:26px;padding:15px 22px;font:800 15px Inter,sans-serif;color:#0B0D12;background:#E2611A;box-shadow:0 8px 24px rgba(226,97,26,.45);width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;text-align:center;line-height:1.25}
 #g3act.on{opacity:1;transform:translateX(-50%);pointer-events:auto}#g3act.low{background:#2a2d33;color:#F2EFE8;box-shadow:none;border:1px solid rgba(255,255,255,.18);font-weight:700}
 #g3act small{display:block;font:600 11px Inter,sans-serif;opacity:.75}
 #g3bt{position:fixed;inset:0;z-index:7;pointer-events:none;font-family:Inter,sans-serif;color:#F2EFE8;display:none}
@@ -251,7 +258,7 @@ const CSS = `
 body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-events:none}#g3hud,#hint{transition:opacity .3s}
 #g3sc{position:absolute;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 54px);transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(10,11,15,.78);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:8px 14px;font:400 18px Anton,sans-serif;letter-spacing:.04em;white-space:nowrap}
 #g3sc .me{color:#E2611A}#g3sc .op{color:var(--oc,#7CFF4F)}#g3sc .n{font-size:24px;min-width:40px;text-align:center;color:#F2EFE8}
-#g3turn{position:absolute;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 106px);transform:translateX(-50%);font:600 12px Inter,sans-serif;letter-spacing:.16em;color:#C9C5BC;text-transform:uppercase}
+#g3turn{position:absolute;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 106px);transform:translateX(-50%);font:600 12px Inter,sans-serif;letter-spacing:.16em;color:#C9C5BC;text-transform:uppercase;width:max-content;max-width:calc(100vw - 32px);text-align:center}
 #g3mv{position:absolute;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translateX(-50%);font:400 30px Anton,sans-serif;letter-spacing:.05em;text-shadow:0 3px 14px #000;white-space:nowrap;transition:transform .2s}
 #g3mv.pop{transform:translateX(-50%) scale(1.15)}
 #g3mv small{display:block;text-align:center;font:700 14px Inter,sans-serif;letter-spacing:.04em}
@@ -265,7 +272,7 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 #g3res p{margin:6px 0;font-size:14px;line-height:1.4;color:#D9D4CA}#g3res .rw{color:#FFD23F;font-weight:700}
 #g3res button{margin-top:10px;width:100%;border:0;border-radius:14px;padding:13px;font:800 15px Inter,sans-serif;background:#E2611A;color:#0B0D12}
 #g3res button.sec{background:#2a2d33;color:#F2EFE8;font-weight:700}
-#g3toast{position:fixed;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 104px);transform:translateX(-50%);background:rgba(12,14,19,.88);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:9px 14px;font:600 13px Inter,sans-serif;color:#F2EFE8;z-index:9;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#g3toast{position:fixed;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 104px);transform:translateX(-50%);background:rgba(12,14,19,.88);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:9px 14px;font:600 13px Inter,sans-serif;color:#F2EFE8;z-index:9;opacity:0;transition:opacity .3s;pointer-events:none;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;text-align:center;line-height:1.35}
 #g3toast.on{opacity:1}
 #g3info{position:fixed;inset:0;background:rgba(5,6,9,.6);z-index:9;display:none;align-items:flex-end;justify-content:center}#g3info.on{display:flex}
 #g3info>div{width:min(460px,100%);background:#14161b;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));font:500 14px/1.45 Inter,sans-serif;color:#D9D4CA;max-height:80vh;overflow:auto}
@@ -282,11 +289,11 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 function ui() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const h = document.createElement('div'); h.innerHTML = `
-<div id="g3hud"><div class="chip" id="g3en"><span>⚡ <b id="g3enN"></b> энергии</span><div class="bar"><i></i></div></div>
+<div id="g3hud"><div class="chip" id="g3en"><span>⚡ <b id="g3enN"></b> ${_t('энергии')}</span><div class="bar"><i></i></div></div>
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
 <div id="g3hud2"><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
 <button id="g3act" type="button"></button>
-<div id="g3bt"><div id="g3sc"><span class="me">ТЫ</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3mv"></div><button id="g3skip" type="button">Пропустить ⏭</button></div>
+<div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button></div>
 <div id="g3res"></div><div id="g3toast"></div><div id="g3info"><div></div></div>`;
   [...h.children].forEach(c => document.body.appendChild(c));
 }
@@ -296,7 +303,7 @@ let NHERE = 4, IDS = [];
 function paintHud() {
   $('#g3enN').textContent = S.en + ' / ' + BAL.enMax; $('#g3en .bar i').style.width = (S.en / BAL.enMax * 100) + '%';
   const r = rankOf(S.rep), a = BAL.rep[r], b = BAL.rep[r + 1];
-  $('#g3rkN').textContent = BAL.ranks[r]; $('#g3rkC').textContent = b ? S.rep + ' / ' + b + ' уважения' : S.rep + ' уважения';
+  $('#g3rkN').textContent = BAL.ranks[r]; $('#g3rkC').textContent = b ? _t('{a} / {b} уважения', { a: S.rep, b }) : _t('{a} уважения', { a: S.rep });
   $('#g3rk .bar i').style.width = (b ? (S.rep - a) / (b - a) * 100 : 100) + '%';
   const gd = S.goals ? S.goals.filter(g => g.done).length : 0; $('#g3glN').textContent = gd + ' / 3'; $('#g3gl').classList.toggle('all', gd === 3);
   $('#g3tfN').textContent = IDS.filter(id => S.turf[id]).length + ' / ' + NHERE;
@@ -312,28 +319,28 @@ export function initGame(ctx) {
   NHERE = HERE.length; IDS = HERE.map(c => c.id);
   const W = ctx.W, scene = ctx.scene, notes = refill();
   const PM = initPower({ W, camera: ctx.camera, sfx });
-  if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых'); }
-  if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов'); }
-  if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники'); }
+  if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
+  if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
+  if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
   addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
-  $('#g3en').onclick = () => info(`<h4>⚡ Энергия</h4><p>Каждый батл с бандой стоит <b>${BAL.battle} ⚡</b>. Максимум ${BAL.enMax}.</p>
-    <p>Энергия пополняется <b>уроками</b>: каждая минута урока = <b>+${BAL.perMin} ⚡</b>. Каждый новый день — бесплатно до ${BAL.daily} ⚡.</p>
-    <p>Сила твоего би-боя тоже из уроков: чем выше уровень героя, тем сложнее пауэр он крутит и тем реже падает.</p><button onclick="location.href='./'">🎬 К урокам</button>`);
+  $('#g3en').onclick = () => info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Максимум {m}.', { n: BAL.battle, m: BAL.enMax })}</p>
+    <p>${_t('Энергия пополняется <b>уроками</b>: каждая минута урока = <b>+{n} ⚡</b>. Каждый новый день — бесплатно до {d} ⚡.', { n: BAL.perMin, d: BAL.daily })}</p>
+    <p>${_t('Сила твоего би-боя тоже из уроков: чем выше уровень героя, тем сложнее пауэр он крутит и тем реже падает.')}</p><button onclick="location.href='./'">${_t('🎬 К урокам')}</button>`);
   $('#g3info').onclick = e => { if (e.target.id === 'g3info') e.currentTarget.classList.remove('on'); };
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
-    info(`<h4>★ Прогресс</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
-    <p style="margin-top:10px">Побеждай банды — получай уважение и их шмотки (они видны на тебе и помогают в батлах).</p>
-    ${HERE.map(c => `<div class="row"><span style="color:${c.col}">${c.name} · ур. ${c.lv}${c.boss ? ' · хозяева района' : ''}</span><span>${S.wins[c.id] ? '🏆 ' + S.wins[c.id] : (lv >= c.lv ? 'по силам' : 'сильнее тебя')}</span></div>`).join('')}
-    <p>Твой уровень: <b>${lv}</b> — растёт от минут уроков.</p><button onclick="this.closest('#g3info').classList.remove('on')">Понятно</button>`); };
+    info(`<h4>${_t('★ Прогресс')}</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
+    <p style="margin-top:10px">${_t('Побеждай банды — получай уважение и их шмотки (они видны на тебе и помогают в батлах).')}</p>
+    ${HERE.map(c => `<div class="row"><span style="color:${c.col}">${c.name} · ${_t('ур. {n}', { n: c.lv })}${c.boss ? ' · ' + _t('хозяева района') : ''}</span><span>${S.wins[c.id] ? '🏆 ' + S.wins[c.id] : (lv >= c.lv ? _t('по силам') : _t('сильнее тебя'))}</span></div>`).join('')}
+    <p>${_t('Твой уровень: <b>{n}</b> — растёт от минут уроков.', { n: lv })}</p><button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`); };
 
-  $('#g3gl').onclick = () => info(`<h4>📋 Задания на сегодня</h4>${S.goals.map(g => { const G = GOALS.find(x => x.id === g.id);
+  $('#g3gl').onclick = () => info(`<h4>${_t('📋 Задания на сегодня')}</h4>${S.goals.map(g => { const G = GOALS.find(x => x.id === g.id);
       return `<div class="gl ${g.done ? 'd' : ''}"><i>${g.done ? '✅' : '⬜'}</i><span>${G.t}</span><span class="p">${g.n} / ${G.n}</span></div>`; }).join('')}
-    <p style="margin-top:10px">За каждое задание <b>+5 ★</b>. Все три — <b>+15 ⚡</b>${S.goalsPaid ? ' (уже получено ✓)' : ''}. Завтра будут новые.</p><button onclick="this.closest('#g3info').classList.remove('on')">Понятно</button>`);
-  $('#g3tf').onclick = () => info(`<h4>🎨 Стены района</h4><p>У каждой банды своя стена с граффити. <b>Победи банду</b> — и в тот же день можешь закрасить её стену своим куском (−${BAL.paint} ⚡).</p>
-    <p>Каждая твоя стена даёт <b>+${BAL.turfRep} ★ каждый день</b>. Если банду не побеждать ${BAL.hold} дня, она закрасит стену обратно.</p>
-    ${HERE.map(c => `<div class="row"><span style="color:${c.col}">${c.name}</span><span>${S.turf[c.id] ? '🎨 твоя' : S.beat[c.id] === today() ? '🟢 можно закрасить' : '—'}</span></div>`).join('')}
-    <button onclick="this.closest('#g3info').classList.remove('on')">Понятно</button>`);
+    <p style="margin-top:10px">${_t('За каждое задание <b>+5 ★</b>. Все три — <b>+15 ⚡</b>{x}. Завтра будут новые.', { x: S.goalsPaid ? _t(' (уже получено ✓)') : '' })}</p><button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
+  $('#g3tf').onclick = () => info(`<h4>${_t('🎨 Стены района')}</h4><p>${_t('У каждой банды своя стена с граффити. <b>Победи банду</b> — и в тот же день можешь закрасить её стену своим куском (−{n} ⚡).', { n: BAL.paint })}</p>
+    <p>${_t('Каждая твоя стена даёт <b>+{n} ★ каждый день</b>. Если банду не побеждать {d} дня, она закрасит стену обратно.', { n: BAL.turfRep, d: BAL.hold })}</p>
+    ${HERE.map(c => `<div class="row"><span style="color:${c.col}">${c.name}</span><span>${S.turf[c.id] ? _t('🎨 твоя') : S.beat[c.id] === today() ? _t('🟢 можно закрасить') : '—'}</span></div>`).join('')}
+    <button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
 
   // crews of this district
   const crews = HERE.map((c, ci) => {
@@ -396,7 +403,7 @@ export function initGame(ctx) {
   const canPaint = g => S.beat[g.c.id] === today() && !S.turf[g.c.id];
   let P = null;   // painting in progress
   function startPaint(g) {
-    if (S.en < BAL.paint) { toast('Нужно ' + BAL.paint + ' ⚡ — посмотри урок'); return; }
+    if (S.en < BAL.paint) { toast(_t('Нужно {n} ⚡ — посмотри урок', { n: BAL.paint })); return; }
     S.en -= BAL.paint; save(); paintHud();
     const H = W.hero, w = g.wall; P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, old: artCanvas('crew', g.c), neu: artCanvas('me', g.c) };
     W.lock = true; W.camT = { x: w.at.x, z: w.at.z + .6, zoom: .5 }; document.body.classList.add('g3fight');
@@ -418,8 +425,8 @@ export function initGame(ctx) {
     const g = P.g; P = null; try { window.RB && RB.hiss && RB.hiss(false); } catch (_) {}
     S.turf[g.c.id] = today(); S.last[g.c.id] = today(); S.rep += BAL.repPaint; bumpGoal('paint'); save(); paintHud();
     W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); W.hero.play('Bboy_Uprock', { fade: .3 });
-    toast('🎨 Стена «' + g.c.name + '» теперь твоя! +' + BAL.repPaint + ' ★, и +' + BAL.turfRep + ' ★ каждый день');
-    if (IDS.every(id => S.turf[id])) setTimeout(() => toast('👑 Весь ' + DNAME[D] + ' в твоих граффити!'), 2800);
+    toast(_t('🎨 Стена «{x}» теперь твоя! +{a} ★, и +{b} ★ каждый день', { x: g.c.name, a: BAL.repPaint, b: BAL.turfRep }));
+    if (IDS.every(id => S.turf[id])) setTimeout(() => toast(_t(ALLMINE[D] || ALLMINE.yard)), 2800);
     near = null; paintAct();
   }
   // put the won piece of street gear on at once (shared wardrobe: fedoskin-eq, one item per slot)
@@ -435,8 +442,8 @@ export function initGame(ctx) {
     return { x: px, z: pz }; };
   const M = (c, r = .7, m = 0, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m, emissive: e || '#000', emissiveIntensity: e ? 1.6 : 0 });
   const mk = (g, geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
-  const label = (txt, col, x, z, y = 2.5) => { const lc = document.createElement('canvas'); lc.width = 512; lc.height = 128; const lx = lc.getContext('2d');
-    lx.font = '400 60px Anton, sans-serif'; lx.textAlign = 'center'; const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill();
+  const label = (txt, col, x, z, y = 2.5) => { txt = _t(txt); const lc = document.createElement('canvas'); lc.width = 512; lc.height = 128; const lx = lc.getContext('2d');
+    lx.font = '400 60px Anton, sans-serif'; lx.textAlign = 'center'; { const m = lx.measureText(txt).width; if (m > 430) lx.font = '400 ' + Math.floor(60 * 430 / m) + 'px Anton, sans-serif'; } const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill();
     lx.fillStyle = col; lx.fillText(txt, 256, 86); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(lc), depthTest: false, toneMapped: false }));
     sp.scale.set(2.4, .6, 1); sp.position.set(x, y, z); sp.renderOrder = 10; scene.add(sp); return sp; };
   const C0 = W.cyph || { x: 1.5, z: -7.2 };
@@ -475,7 +482,7 @@ export function initGame(ctx) {
     const tor = mk(dm, new RoundedBoxGeometry(.42, .55, .24, 3, .1), M('#18181B', .8), 0, 1.3, 0);
     const bp = new THREE.Mesh(new THREE.CircleGeometry(.14, 26), M('#F2EFE8', .8)); bp.position.set(0, .04, -.125); bp.rotation.y = Math.PI; tor.add(bp);
     const bp2 = new THREE.Mesh(new THREE.CircleGeometry(.12, 26), M('#E2611A', .8, 0, '#E2611A')); bp2.material.emissiveIntensity = .25; bp2.position.set(0, .04, -.127); bp2.rotation.y = Math.PI; tor.add(bp2); }
-  const sg = document.createElement('canvas'); sg.width = 512; sg.height = 128; { const x = sg.getContext('2d'); x.font = '400 92px Anton, sans-serif'; x.textAlign = 'center'; x.shadowColor = '#FF4FD8'; x.shadowBlur = 18; x.fillStyle = '#FFB3F0'; x.fillText('КАСТОМ', 256, 102); }
+  const sg = document.createElement('canvas'); sg.width = 512; sg.height = 128; { const x = sg.getContext('2d'); x.font = '400 92px Anton, sans-serif'; x.textAlign = 'center'; x.shadowColor = '#FF4FD8'; x.shadowBlur = 18; x.fillStyle = '#FFB3F0'; const s = _t('КАСТОМ'), m = x.measureText(s).width; if (m > 490) x.font = '400 ' + Math.floor(92 * 490 / m) + 'px Anton, sans-serif'; x.fillText(s, 256, 102); }
   const atSign = mk(at, new THREE.PlaneGeometry(1.5, .37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sg), transparent: true, toneMapped: false, color: new THREE.Color(.8, .8, .8) }), -.35, 2.5, -.9);   // 2.05 → 2.5: was hidden behind the place's name
   [-1.05, .35].forEach(x => mk(at, new THREE.CylinderGeometry(.02, .02, 2.55, 6), M('#2a2c31', .5, .5), x, 1.27, -.92));
   const atP = mocapPerson(HERO.topDown(5, []), { body: bodyOf(77, { girl: true, type: 'slim', style: 'bun' }), idle: 'Stand_Calm' }); atP.root.position.set(0, 0, -.55); at.add(atP.root); atP.play('Breakdance_Ready');
@@ -489,7 +496,7 @@ export function initGame(ctx) {
   const gAt = freeNear(-1.2, -14.2, 1.4), gate = new THREE.Group(); gate.position.set(gAt.x, 0, gAt.z); scene.add(gate);
   [-1.4, 1.4].forEach(x => mk(gate, new THREE.BoxGeometry(.35, 3, .35), M('#3a3c42', .8), x, 1.5, 0));
   mk(gate, new THREE.BoxGeometry(3.2, .45, .4), M('#2a2c31', .7), 0, 3.1, 0);
-  const gSign = document.createElement('canvas'); gSign.width = 512; gSign.height = 64; const gx = gSign.getContext('2d'); gx.fillStyle = '#E2611A'; gx.font = '400 46px Anton, sans-serif'; gx.textAlign = 'center'; gx.fillText('ЦЕНТР  →', 256, 50);
+  const gSign = document.createElement('canvas'); gSign.width = 512; gSign.height = 64; const gx = gSign.getContext('2d'); gx.fillStyle = '#E2611A'; gx.font = '400 46px Anton, sans-serif'; gx.textAlign = 'center'; { const s = _t('ЦЕНТР  →'), m = gx.measureText(s).width; if (m > 496) gx.font = '400 ' + Math.floor(46 * 496 / m) + 'px Anton, sans-serif'; gx.fillText(s, 256, 50); }
   mk(gate, new THREE.PlaneGeometry(2.9, .36), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gSign), transparent: true, toneMapped: false }), 0, 3.1, .21);
   const chain = mk(gate, new THREE.BoxGeometry(2.5, .06, .06), M('#c9c4b8', .3, .9), 0, 1.1, 0);
   ctx.circ && ctx.circ(gAt.x - 1.4, gAt.z, .3); ctx.circ && ctx.circ(gAt.x + 1.4, gAt.z, .3); ctx.box && ctx.box(gAt.x, gAt.z, 2.4, .2);
@@ -522,58 +529,58 @@ export function initGame(ctx) {
     const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;background:#0B0D12;opacity:0;transition:opacity .35s;z-index:20'; document.body.appendChild(f); requestAnimationFrame(() => (f.style.opacity = 1));
     setTimeout(() => { const u = new URL(location.href); u.searchParams.delete('d'); location.replace(u.toString()); }, 400); }
   function metroMap() { const boss = S.wins.chrome || S.seen.park;
-    info(`<h4>🚇 Метро — карта города</h4>
-      <div class="row"><span>🏠 Двор</span><span>открыт</span></div><div class="row"><span>🏙 <b>Центр</b></span><span>ты здесь</span></div>
-      <div class="row"><span>🌳 Парк и набережная</span><span>${boss ? 'открыт' : '🔒 победи «Хромированных»'}</span></div>
-      <div class="row"><span>🏭 Промзона</span><span>${S.wins.wave || S.seen.prom ? 'открыта — вход из Парка' : '🔒 победи «Волну» в Парке'}</span></div><div class="row"><span>🪩 Клуб</span><span>${S.wins.forge ? '🚧 строится' : '🔒 победи «Литейку» в Промзоне'}</span></div>
-      <p style="margin-top:10px">Новые районы открываются, когда побеждаешь хозяев предыдущего. Диджей, тренировочный мат и сайфер ждут во дворе — их бонусы действуют весь день и здесь.</p>
-      ${boss ? '<button id="g3gp">🌳 Поехать в Парк</button>' : ''}<button id="g3go" class="sec">🏠 Поехать во двор</button>`); $('#g3go').onclick = () => travel('yard'); if ($('#g3gp')) $('#g3gp').onclick = () => travel('park'); }
+    info(`<h4>${_t('🚇 Метро — карта города')}</h4>
+      <div class="row"><span>${_t('🏠 Двор')}</span><span>${_t('открыт')}</span></div><div class="row"><span>${_t('🏙 <b>Центр</b>')}</span><span>${_t('ты здесь')}</span></div>
+      <div class="row"><span>${_t('🌳 Парк и набережная')}</span><span>${boss ? _t('открыт') : _t('🔒 победи «Хромированных»')}</span></div>
+      <div class="row"><span>${_t('🏭 Промзона')}</span><span>${S.wins.wave || S.seen.prom ? _t('открыта — вход из Парка') : _t('🔒 победи «Волну» в Парке')}</span></div><div class="row"><span>${_t('🪩 Клуб')}</span><span>${S.wins.forge ? _t('🚧 строится') : _t('🔒 победи «Литейку» в Промзоне')}</span></div>
+      <p style="margin-top:10px">${_t('Новые районы открываются, когда побеждаешь хозяев предыдущего. Диджей, тренировочный мат и сайфер ждут во дворе — их бонусы действуют весь день и здесь.')}</p>
+      ${boss ? `<button id="g3gp">${_t('🌳 Поехать в Парк')}</button>` : ''}<button id="g3go" class="sec">${_t('🏠 Поехать во двор')}</button>`); $('#g3go').onclick = () => travel('yard'); if ($('#g3gp')) $('#g3gp').onclick = () => travel('park'); }
   // what each place offers right now (button text) and what it does
   function placeBtn(pl) {
     const t = today();
-    if (pl.id === 'show') return S.showDay === t ? { off: true, h: '🔥 Ты уже выходил в круг сегодня', s: 'Завтра снова — а пока батлы с бандами' } : { h: '🔥 Выйти в круг сайфера', s: 'Бесплатно раз в день · до +' + (BAL.repShow + BAL.repShowClean) + ' ★' };
-    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: '🎧 Бит качает до конца дня', s: 'Меньше срывов и больше стиля в батлах' } : { h: '🎧 Заказать бит · −' + BAL.dj + ' ⚡', s: 'На весь день: меньше срывов, больше стиля', low: S.en < BAL.dj };
-    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: '💪 Форма на максимуме сегодня', s: 'Срывов в батлах меньше на ' + 3 * n + '%' } : { h: '💪 Тренировать пауэр · −' + BAL.train + ' ⚡', s: 'Форма ' + n + ' / ' + BAL.trainMax + ' — каждая: −3% срывов сегодня', low: S.en < BAL.train }; }
+    if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
+    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: _t('🎧 Бит качает до конца дня'), s: _t('Меньше срывов и больше стиля в батлах') } : { h: _t('🎧 Заказать бит · −{n} ⚡', { n: BAL.dj }), s: _t('На весь день: меньше срывов, больше стиля'), low: S.en < BAL.dj };
+    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: _t('💪 Форма на максимуме сегодня'), s: _t('Срывов в батлах меньше на {n}%', { n: 3 * n }) } : { h: _t('💪 Тренировать пауэр · −{n} ⚡', { n: BAL.train }), s: _t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax }), low: S.en < BAL.train }; }
     if (pl.id === 'atelier') { const left = CUS.reduce((a, c) => a + 3 - (S.cus[c.id] || 0), 0);
-      return { h: '🧵 Ателье «Игла» — кастом шмота', s: left ? 'Нашивки, шнурки, спин-пад: вещи становятся сильнее в батлах' : 'Весь кастом сделан — зайди полюбоваться' }; }
-    if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: '🔒 Центр — со звания «' + BAL.ranks[BAL.gateRank] + '»', s: 'Сейчас: ' + BAL.ranks[rk] + ' · ' + S.rep + ' / ' + BAL.rep[BAL.gateRank] + ' ★' } : { h: '🚪 Войти в Центр', s: 'Банды 3–5 уровня · ТЦ · метро' }; }
+      return { h: _t('🧵 Ателье «Игла» — кастом шмота'), s: left ? _t('Нашивки, шнурки, спин-пад: вещи становятся сильнее в батлах') : _t('Весь кастом сделан — зайди полюбоваться') }; }
+    if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: _t('🔒 Центр — со звания «{r}»', { r: BAL.ranks[BAL.gateRank] }), s: _t('Сейчас: {r} · {a} / {b} ★', { r: BAL.ranks[rk], a: S.rep, b: BAL.rep[BAL.gateRank] }) } : { h: _t('🚪 Войти в Центр'), s: _t('Банды 3–5 уровня · ТЦ · метро') }; }
     // ---- the Centre ----
-    if (pl.id === 'yard') return { h: '🚪 Вернуться во двор', s: 'Диджей, мат и сайфер — там' };
-    if (pl.id === 'metro') return { h: '🚇 Метро — карта города', s: 'Какие районы открыты и что дальше' };
-    if (pl.id === 'park') return S.wins.chrome || S.seen.park ? { h: '🚪 Войти в Парк', s: 'Банды 5–7 уровня · джем на эстраде · набережная' } : { off: true, h: '🔒 Парк — победи «Хромированных»', s: 'Хозяева Центра · ур. 5 · главарь Хромосома' };
-    if (pl.id === 'tea') { const n = myWalls(); return S.teaDay === t ? { off: true, h: '🥤 Чай на сегодня выпит', s: 'Завтра нальют ещё' } : !n ? { off: true, h: '🥤 Ларёк угощает только своих', s: 'Закрась стену банды в Центре: +' + BAL.tea + ' ⚡ за каждую в день' } : { h: '🥤 Чай для своих · +' + n * BAL.tea + ' ⚡', s: 'Раз в день: +' + BAL.tea + ' ⚡ за каждую твою стену в Центре' }; }
+    if (pl.id === 'yard') return { h: _t('🚪 Вернуться во двор'), s: _t('Диджей, мат и сайфер — там') };
+    if (pl.id === 'metro') return { h: _t('🚇 Метро — карта города'), s: _t('Какие районы открыты и что дальше') };
+    if (pl.id === 'park') return S.wins.chrome || S.seen.park ? { h: _t('🚪 Войти в Парк'), s: _t('Банды 5–7 уровня · джем на эстраде · набережная') } : { off: true, h: _t('🔒 Парк — победи «Хромированных»'), s: _t('Хозяева Центра · ур. 5 · главарь Хромосома') };
+    if (pl.id === 'tea') { const n = myWalls(); return S.teaDay === t ? { off: true, h: _t('🥤 Чай на сегодня выпит'), s: _t('Завтра нальют ещё') } : !n ? { off: true, h: _t('🥤 Ларёк угощает только своих'), s: _t('Закрась стену банды в Центре: +{n} ⚡ за каждую в день', { n: BAL.tea }) } : { h: _t('🥤 Чай для своих · +{n} ⚡', { n: n * BAL.tea }), s: _t('Раз в день: +{n} ⚡ за каждую твою стену в Центре', { n: BAL.tea }) }; }
     // ---- the Park ----
-    if (pl.id === 'pcenter') return { h: '🚪 Вернуться в Центр', s: 'ТЦ, метро и ларёк — там' };
-    if (pl.id === 'prom') return S.wins.wave || S.seen.prom ? { h: '🚪 Войти в Промзону', s: 'Банды 6–8 уровня · подпольный ринг · тайники' } : { off: true, h: '🔒 Промзона — победи «Волну»', s: 'Хозяева набережной · ур. 7 · главарь Кюрасао' };
+    if (pl.id === 'pcenter') return { h: _t('🚪 Вернуться в Центр'), s: _t('ТЦ, метро и ларёк — там') };
+    if (pl.id === 'prom') return S.wins.wave || S.seen.prom ? { h: _t('🚪 Войти в Промзону'), s: _t('Банды 6–8 уровня · подпольный ринг · тайники') } : { off: true, h: _t('🔒 Промзона — победи «Волну»'), s: _t('Хозяева набережной · ур. 7 · главарь Кюрасао') };
     // ---- the industrial zone ----
-    if (pl.id === 'zpark') return { h: '🚪 Вернуться в Парк', s: 'Эстрада, Маятник и площадка — там' };
-    if (pl.id === 'club') return S.wins.forge ? { off: true, h: '🚧 Клуб — скоро', s: 'Ты победил хозяев Промзоны. Район строится' } : { off: true, h: '🔒 Клуб — победи «Литейку»', s: 'Хозяева Промзоны · ур. 8 · главарь Коготь' };
-    if (pl.id === 'stash') return S.stash.got.includes(pl.i) ? { off: true, h: '📦 Тайник уже пуст', s: '' } : { h: '📦 Вскрыть тайник', s: 'Сегодня найдено ' + S.stash.got.length + ' из ' + BAL.stashN + ' · внутри ⚡ или ★' };
+    if (pl.id === 'zpark') return { h: _t('🚪 Вернуться в Парк'), s: _t('Эстрада, Маятник и площадка — там') };
+    if (pl.id === 'club') return S.wins.forge ? { off: true, h: _t('🚧 Клуб — скоро'), s: _t('Ты победил хозяев Промзоны. Район строится') } : { off: true, h: _t('🔒 Клуб — победи «Литейку»'), s: _t('Хозяева Промзоны · ур. 8 · главарь Коготь') };
+    if (pl.id === 'stash') return S.stash.got.includes(pl.i) ? { off: true, h: _t('📦 Тайник уже пуст'), s: '' } : { h: _t('📦 Вскрыть тайник'), s: _t('Сегодня найдено {n} из {m} · внутри ⚡ или ★', { n: S.stash.got.length, m: BAL.stashN }) };
     if (pl.id === 'ring') { const n = S.ringDay.day === t ? S.ringDay.n : 0, next = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep;
-      return n >= BAL.ringMax ? { off: true, h: '🥊 Ринг закрыт до завтра', s: 'Серия побед: ' + S.streak + ' · она не сгорает за ночь' }
-        : { h: '🥊 Подпольный ринг · −' + BAL.ring + ' ⚡', s: 'Серия побед: ' + S.streak + ' · победа даст +' + next + ' ★ · проиграл — серия с нуля', low: S.en < BAL.ring }; }
-    if (pl.id === 'bars') return S.warmDay === t ? { off: true, h: '🤸 Ты размят до конца дня', s: 'Срывов в батлах меньше на ' + Math.round(BAL.warm * 100) + '%' } : { h: '🤸 Размяться на площадке', s: 'Бесплатно раз в день: −' + Math.round(BAL.warm * 100) + '% срывов сегодня' };
-    if (pl.id === 'og') { const m = lesMin(); return S.ogDay === t ? { off: true, h: '🧓 Маятник: «На сегодня всё. Завтра приходи»', s: 'Старый би-бой проверяет тебя раз в день' }
-      : m < BAL.ogMin ? { go: true, h: '🧓 Маятник: «Сначала поучись»', s: BAL.ogMin + ' мин уроков сегодня (сейчас ' + m + ') → +' + BAL.ogRep + ' ★ и +' + BAL.ogEn + ' ⚡' }
-      : { h: '🧓 Показать Маятнику, чему научился', s: 'Ты учился сегодня ' + m + ' мин: +' + BAL.ogRep + ' ★ и +' + BAL.ogEn + ' ⚡' }; }
-    if (pl.id === 'jam') return S.jamDay === t ? { off: true, h: '🏆 Джем на сегодня сыгран', s: 'Завтра эстрада ждёт снова' } : { h: '🏆 Джем на эстраде · −' + BAL.jam + ' ⚡', s: 'Три соперника подряд: ур. ' + BAL.jamLv.join(', ') + ' · до +' + (BAL.jamRep.reduce((a, b) => a + b, 0) + BAL.jamChamp) + ' ★', low: S.en < BAL.jam };
-    if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: '🕺 Толпа устала — приходи завтра', s: 'Шоу у ТЦ: ' + BAL.mallMax + ' раза в день' } : { h: '🕺 Шоу у ТЦ · −' + BAL.mall + ' ⚡', s: 'Начинай, когда охранник далеко: красный круг — его зона', low: S.en < BAL.mall }; }
+      return n >= BAL.ringMax ? { off: true, h: _t('🥊 Ринг закрыт до завтра'), s: _t('Серия побед: {n} · она не сгорает за ночь', { n: S.streak }) }
+        : { h: _t('🥊 Подпольный ринг · −{n} ⚡', { n: BAL.ring }), s: _t('Серия побед: {n} · победа даст +{r} ★ · проиграл — серия с нуля', { n: S.streak, r: next }), low: S.en < BAL.ring }; }
+    if (pl.id === 'bars') return S.warmDay === t ? { off: true, h: _t('🤸 Ты размят до конца дня'), s: _t('Срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) }) } : { h: _t('🤸 Размяться на площадке'), s: _t('Бесплатно раз в день: −{n}% срывов сегодня', { n: Math.round(BAL.warm * 100) }) };
+    if (pl.id === 'og') { const m = lesMin(); return S.ogDay === t ? { off: true, h: _t('🧓 Маятник: «На сегодня всё. Завтра приходи»'), s: _t('Старый би-бой проверяет тебя раз в день') }
+      : m < BAL.ogMin ? { go: true, h: _t('🧓 Маятник: «Сначала поучись»'), s: _t('{n} мин уроков сегодня (сейчас {m}) → +{r} ★ и +{e} ⚡', { n: BAL.ogMin, m, r: BAL.ogRep, e: BAL.ogEn }) }
+      : { h: _t('🧓 Показать Маятнику, чему научился'), s: _t('Ты учился сегодня {m} мин: +{r} ★ и +{e} ⚡', { m, r: BAL.ogRep, e: BAL.ogEn }) }; }
+    if (pl.id === 'jam') return S.jamDay === t ? { off: true, h: _t('🏆 Джем на сегодня сыгран'), s: _t('Завтра эстрада ждёт снова') } : { h: _t('🏆 Джем на эстраде · −{n} ⚡', { n: BAL.jam }), s: _t('Три соперника подряд: ур. {l} · до +{r} ★', { l: BAL.jamLv.join(', '), r: BAL.jamRep.reduce((a, b) => a + b, 0) + BAL.jamChamp }), low: S.en < BAL.jam };
+    if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: _t('🕺 Толпа устала — приходи завтра'), s: _t('Шоу у ТЦ: {n} раза в день', { n: BAL.mallMax }) } : { h: _t('🕺 Шоу у ТЦ · −{n} ⚡', { n: BAL.mall }), s: _t('Начинай, когда охранник далеко: красный круг — его зона'), low: S.en < BAL.mall }; }
   }
   function placeRun(pl) {
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
-    if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'); paintAct(); }
+    if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля')); paintAct(); }
     if (pl.id === 'mat') startTrain();
     if (pl.id === 'atelier') startAtelier();
     if (pl.id === 'show') startShow();
     if (pl.id === 'gate') travel('center');
     if (pl.id === 'yard') travel('yard');
     if (pl.id === 'metro') metroMap();
-    if (pl.id === 'tea') { const add = Math.min(BAL.enMax - S.en, myWalls() * BAL.tea); S.en += add; S.teaDay = today(); save(); paintHud(); sfx('hit'); toast('🥤 Горячий чай: +' + add + ' ⚡. Твои стены в Центре кормят тебя каждый день'); paintAct(); }
+    if (pl.id === 'tea') { const add = Math.min(BAL.enMax - S.en, myWalls() * BAL.tea); S.en += add; S.teaDay = today(); save(); paintHud(); sfx('hit'); toast(_t('🥤 Горячий чай: +{n} ⚡. Твои стены в Центре кормят тебя каждый день', { n: add })); paintAct(); }
     if (pl.id === 'mall') startMall();
     if (pl.id === 'park') travel('park');
     if (pl.id === 'pcenter') travel('center');
     if (pl.id === 'og') { const add = Math.min(BAL.enMax - S.en, BAL.ogEn); S.en += add; S.rep += BAL.ogRep; S.ogDay = today(); save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
-      toast('🧓 Маятник: «Вижу, работаешь. Так и растут» · +' + BAL.ogRep + ' ★ и +' + add + ' ⚡'); paintAct(); }
+      toast(_t('🧓 Маятник: «Вижу, работаешь. Так и растут» · +{r} ★ и +{e} ⚡', { r: BAL.ogRep, e: add })); paintAct(); }
     if (pl.id === 'bars') { const H = W.hero; S.warmDay = today(); save(); A = { kind: 'warm', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: PK.bars.x, z: PK.bars.z } }; W.lock = true; W.camT = { x: PK.bars.x, z: PK.bars.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); paintAct(); }
     if (pl.id === 'jam') startJam();
     if (pl.id === 'prom') travel('prom');
@@ -581,7 +588,7 @@ export function initGame(ctx) {
     if (pl.id === 'ring') startRing();
     if (pl.id === 'stash') { const s = PZ.stash[pl.i], big = rng(today() * 13 + pl.i)() < .34; S.stash.got.push(pl.i); s.g.visible = false; PLACES.splice(PLACES.indexOf(pl), 1);
       if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.min(BAL.enMax, S.en + BAL.stashEn); S.rep += BAL.stashRep; }
-      save(); paintHud(); bumpGoal('stash'); sfx('hit'); toast(big ? '📦 Старая кассета с брейкбитами! +' + BAL.stashRep * 2 + ' ★' : '📦 Термос и бутерброды: +' + BAL.stashEn + ' ⚡ и +' + BAL.stashRep + ' ★'); near = null; paintAct(); }
+      save(); paintHud(); bumpGoal('stash'); sfx('hit'); toast(big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep })); near = null; paintAct(); }
   }
   // THE UNDERGROUND RING of the industrial zone: one battle of one round against a random regular (lv 6–8). Every win in a row makes the
   // next win pay more (the streak is kept across days, up to streakMax steps); a loss resets it. Same battle engine, flag c.ringB.
@@ -590,9 +597,9 @@ export function initGame(ctx) {
     startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }); }
   function ringResult(win) { const lines = [], rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
-      lines.push(`<span class="rw">+${rep} ★ уважения</span>`, `🔥 Серия побед на ринге: <b>${S.streak}</b>${S.streak > 1 ? ' — каждая следующая стоит дороже' : ''}`); }
-    else { lines.push(S.streak ? `Серия из ${S.streak} побед оборвалась. Начинай новую.` : 'Ринг не прощает срывов. Уроки поднимают уровень героя — он реже падает и крутит сложнее.'); S.streak = 0; }
-    const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">🏅 Новое звание: ${BAL.ranks[rk]}</span>`);
+      lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>`, _t('🔥 Серия побед на ринге: <b>{n}</b>', { n: S.streak }) + (S.streak > 1 ? _t(' — каждая следующая стоит дороже') : '')); }
+    else { lines.push(S.streak ? _t('Серия из {n} побед оборвалась. Начинай новую.', { n: S.streak }) : _t('Ринг не прощает срывов. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); S.streak = 0; }
+    const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
     return lines; }
   // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
   // what was earned stays. Runs on the same battle engine as the crews — the «crew» is one dancer with the flag tour.
@@ -602,11 +609,11 @@ export function initGame(ctx) {
     startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
   function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
-      lines.push(`<span class="rw">+${rep} ★ уважения</span> · раунд ${i + 1} из 3`);
-      if (JM.i >= 3) { JM.over = true; S.jamWon = (S.jamWon || 0) + 1; lines.unshift(`<span class="rw">🏆 Ты выиграл джем на эстраде! Всего +${JM.rep} ★</span>`); }
-      else lines.push(`Дальше — <b>${JAM[JM.i].name}</b>, ур. ${BAL.jamLv[JM.i]}. Энергия уже оплачена`); }
-    else { JM.over = true; lines.push(i ? `Джем окончен на ${i + 1}-м раунде. За сегодня +${JM.rep} ★` : 'Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.'); }
-    const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">🏅 Новое звание: ${BAL.ranks[rk]}</span>`);
+      lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span> · ${_t('раунд {i} из 3', { i: i + 1 })}`);
+      if (JM.i >= 3) { JM.over = true; S.jamWon = (S.jamWon || 0) + 1; lines.unshift(`<span class="rw">${_t('🏆 Ты выиграл джем на эстраде! Всего +{n} ★', { n: JM.rep })}</span>`); }
+      else lines.push(_t('Дальше — <b>{x}</b>, ур. {l}. Энергия уже оплачена', { x: JAM[JM.i].name, l: BAL.jamLv[JM.i] })); }
+    else { JM.over = true; lines.push(i ? _t('Джем окончен на {i}-м раунде. За сегодня +{n} ★', { i: i + 1, n: JM.rep }) : _t('Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); }
+    const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
     return lines; }
   // practice: the hero runs one power move on the mat; the form point is given whatever happens
   function startTrain() {
@@ -621,7 +628,7 @@ export function initGame(ctx) {
     const H = W.hero, r = rng(Date.now() >>> 0), T = makeTurn(H, ctx.heroLevel(), r, 'me', buff());
     A = { kind: 'show', T, c: C0, t0: performance.now() / 1000, from: { x: H.root.position.x, z: H.root.position.z } };
     S.showDay = today(); save(); W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: .42 }; document.body.classList.add('g3fight');
-    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = 'Твой выход в сайфере'; paintAct();
+    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t('Твой выход в сайфере'); paintAct();
   }
   // a street show on the mall's tiles: my random set, passers-by come to watch — and the guard walks his round.
   // If he gets close while I dance (his red ring reaches me), the show is over and almost nothing is earned.
@@ -630,7 +637,7 @@ export function initGame(ctx) {
     S.en -= BAL.mall; if (S.mallDay.day !== today()) S.mallDay = { day: today(), n: 0 }; S.mallDay.n++; save(); paintHud();
     A = { kind: 'show', mall: true, T, c: CN.show, t0: performance.now() / 1000, from: { x: H.root.position.x, z: H.root.position.z } };
     W.lock = true; W.camT = { x: CN.show.x, z: CN.show.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); CN.crowd(true);
-    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = 'Шоу у ТЦ · следи за охранником'; paintAct();
+    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t('Шоу у ТЦ · следи за охранником'); paintAct();
   }
   let A = null;   // a place action in progress
   // ---- the tailor: the hero stands by the stall and turns slowly (front patch, then the back) while the sheet is open ----
@@ -641,25 +648,25 @@ export function initGame(ctx) {
   }
   function sheetAtelier() {
     const rk = rankOf(S.rep), rows = CUS.map(c => { const n = S.cus[c.id] || 0, max = n >= 3, cost = BAL.cusCost[n], need = BAL.cusRank[n], lock = !max && rk < need;
-      const btn = max ? '<button disabled>✓ Всё</button>' : lock ? `<button disabled>🔒 «${BAL.ranks[need]}»</button>` : `<button data-cu="${c.id}"${S.en < cost ? ' class="sec"' : ''}>Пришить · ${cost} ⚡</button>`;
-      const fx = max ? c.v(3) + ' ' + c.un : n ? c.v(n) + ' → ' + c.v(n + 1) + ' ' + c.un : 'Даст ' + c.v(1) + ' ' + c.un;
+      const btn = max ? `<button disabled>${_t('✓ Всё')}</button>` : lock ? `<button disabled>${_t('🔒 «{r}»', { r: BAL.ranks[need] })}</button>` : `<button data-cu="${c.id}"${S.en < cost ? ' class="sec"' : ''}>${_t('Пришить · {n} ⚡', { n: cost })}</button>`;
+      const fx = max ? cusFx(c, c.v(3)) : n ? cusFx(c, c.v(n) + ' → ' + c.v(n + 1)) : _t('Даст {x}', { x: cusFx(c, c.v(1)) });
       return `<div class="cu${max ? ' max' : ''}"><i>${c.ico}</i><div><b>${c.nm}</b><span class="dots">${'●'.repeat(n)}${'○'.repeat(3 - n)}</span>
-        <small class="n">${max ? 'Готово: ' + c.lv[2] : '→ ' + c.lv[n]}</small><small>${fx}</small></div>${btn}</div>`; }).join('');
-    info(`<h4>🧵 Ателье «Игла»</h4><p>Доработки видны на герое и <b>навсегда</b> усиливают тебя в батлах города. Платишь энергией — она из уроков.</p>${rows}
-      <p style="margin-top:8px">У тебя <b>${S.en} ⚡</b> · 2-й уровень — со звания «${BAL.ranks[BAL.cusRank[1]]}», 3-й — «${BAL.ranks[BAL.cusRank[2]]}»</p>
-      <button class="sec" id="g3cuL">🎬 К урокам — +${BAL.perMin} ⚡ за минуту</button>`);
+        <small class="n">${max ? _t('Готово: {x}', { x: c.lv[2] }) : '→ ' + c.lv[n]}</small><small>${fx}</small></div>${btn}</div>`; }).join('');
+    info(`<h4>${_t('🧵 Ателье «Игла»')}</h4><p>${_t('Доработки видны на герое и <b>навсегда</b> усиливают тебя в батлах города. Платишь энергией — она из уроков.')}</p>${rows}
+      <p style="margin-top:8px">${_t('У тебя <b>{n} ⚡</b> · 2-й уровень — со звания «{a}», 3-й — «{b}»', { n: S.en, a: BAL.ranks[BAL.cusRank[1]], b: BAL.ranks[BAL.cusRank[2]] })}</p>
+      <button class="sec" id="g3cuL">${_t('🎬 К урокам — +{n} ⚡ за минуту', { n: BAL.perMin })}</button>`);
     $('#g3info').classList.add('cum');
     document.querySelectorAll('#g3info [data-cu]').forEach(b => { b.onclick = () => sew(b.dataset.cu); });
     $('#g3cuL').onclick = () => { location.href = './'; };
   }
   function sew(id) {
     const c = CUS.find(x => x.id === id), n = S.cus[id] || 0; if (!c || n >= 3) return;
-    if (rankOf(S.rep) < BAL.cusRank[n]) { toast('🔒 Игла шьёт это только для звания «' + BAL.ranks[BAL.cusRank[n]] + '»'); return; }
-    if (S.en < BAL.cusCost[n]) { toast('⚡ Не хватает энергии: нужно ' + BAL.cusCost[n] + ', у тебя ' + S.en + '. Минута урока = +' + BAL.perMin + ' ⚡'); return; }
+    if (rankOf(S.rep) < BAL.cusRank[n]) { toast(_t('🔒 Игла шьёт это только для звания «{r}»', { r: BAL.ranks[BAL.cusRank[n]] })); return; }
+    if (S.en < BAL.cusCost[n]) { toast(_t('⚡ Не хватает энергии: нужно {n}, у тебя {a}. Минута урока = +{m} ⚡', { n: BAL.cusCost[n], a: S.en, m: BAL.perMin })); return; }
     S.en -= BAL.cusCost[n]; S.cus[id] = n + 1; save(); paintHud(); ctx.rewear && ctx.rewear(); sfx('win');
     if (atP) { atP.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => atP.play('Breakdance_Ready', { fade: .5 }), 2600); }
     if (A && A.kind === 'atelier') { A.spin = id === 'top' && n + 1 === 3 ? Math.PI : id === 'kicks' || id === 'pants' ? .6 : 0; A.ty = 0; }
-    toast('🧵 Игла пришила: ' + c.lv[n] + ' · ' + c.v(n + 1) + ' ' + c.un); sheetAtelier();
+    toast(_t('🧵 Игла пришила: {x}', { x: c.lv[n] + ' · ' + cusFx(c, c.v(n + 1)) })); sheetAtelier();
   }
   function actTick(dt) {
     const H = W.hero;
@@ -668,8 +675,8 @@ export function initGame(ctx) {
       A.ty = (A.ty || 0) + dt; H.root.rotation.y = (A.spin || 0) + Math.sin(A.ty * .55) * 1.9;
       H.tick(dt); if (!$('#g3info').classList.contains('on')) { $('#g3info').classList.remove('cum'); endAct(); } return; }
     if (A.kind === 'warm') { A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
-      if (A.t > .8 && !A.p) { A.p = true; H.play('Breakdance_Footwork_1', { fade: .3 }); toast('🤸 Разминка…'); }
-      if (A.t > 4.6) { H.play('Breakdance_Ready', { fade: .4 }); sfx('hit'); toast('🤸 Размялся! Сегодня срывов в батлах меньше на ' + Math.round(BAL.warm * 100) + '%'); endAct(); }
+      if (A.t > .8 && !A.p) { A.p = true; H.play('Breakdance_Footwork_1', { fade: .3 }); toast(_t('🤸 Разминка…')); }
+      if (A.t > 4.6) { H.play('Breakdance_Ready', { fade: .4 }); sfx('hit'); toast(_t('🤸 Размялся! Сегодня срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) })); endAct(); }
       H.tick(dt); return; }
     if (A.kind === 'train') {
       A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
@@ -677,7 +684,7 @@ export function initGame(ctx) {
       if (A.fail && A.t > 2.6 && !A.f) { A.f = true; fallStart(H); sfx('crash'); }
       if (H.fall) fallTick(H, dt, false);
       if (A.t > 4.4) { if (H.fall) fallEnd(H); H.play('Breakdance_Ready', { fade: .4 }); bumpGoal('train');
-        toast(A.fail ? '💪 Сорвался, но форма растёт: ' + S.form.n + ' / ' + BAL.trainMax + ' · −' + 3 * S.form.n + '% срывов сегодня' : '💪 Чисто! Форма ' + S.form.n + ' / ' + BAL.trainMax + ' · −' + 3 * S.form.n + '% срывов сегодня');
+        toast(_t(A.fail ? '💪 Сорвался, но форма растёт: {a} / {b} · −{c}% срывов сегодня' : '💪 Чисто! Форма {a} / {b} · −{c}% срывов сегодня', { a: S.form.n, b: BAL.trainMax, c: 3 * S.form.n }));
         if (!A.fail) sfx('hit'); endAct(); }
       H.tick(dt); return;
     }
@@ -686,10 +693,10 @@ export function initGame(ctx) {
       // the guard has come up: the show is cut short
       if (A.mall && !A.caught && t > 1 && Math.hypot(CN.guard.x - H.root.position.x, CN.guard.z - H.root.position.z) < CN.guard.see) {
         A.caught = t; CN.guard.alert = 3.2; sfx('lose'); ctx.shake && ctx.shake(.4); if (H.fall) fallEnd(H); H.play('Breakdance_Ready', { fade: .3 });
-        $('#g3mv').innerHTML = 'ОХРАНА!<small class="bad">«Здесь танцевать нельзя!»</small>'; }
+        $('#g3mv').innerHTML = _t('ОХРАНА!') + `<small class="bad">${_t('«Здесь танцевать нельзя!»')}</small>`; }
       if (A.caught) { H.root.rotation.y = Math.atan2(CN.guard.x - H.root.position.x, CN.guard.z - H.root.position.z); H.tick(dt);
         if (t - A.caught > 2.2) { S.rep += BAL.repMallCaught; save(); CN.crowd(false); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; $('#g3mv').innerHTML = '';
-          toast('👮 Охранник прогнал: +' + BAL.repMallCaught + ' ★. Начинай, когда он уходит от тебя'); endAct(); }
+          toast(_t('👮 Охранник прогнал: +{n} ★. Начинай, когда он уходит от тебя', { n: BAL.repMallCaught })); endAct(); }
         return; }
       if (H.ws) W.walk.move(H, dt, A.from.x, A.from.z, kout, Math.atan2(C1.x - A.from.x, C1.z - A.from.z)); else H.root.position.set(lerp(A.from.x, C1.x, kin), 0, lerp(A.from.z, C1.z, kin));
       if (t < .9) H.root.rotation.y = Math.atan2(C1.x - A.from.x, C1.z - A.from.z);
@@ -698,13 +705,13 @@ export function initGame(ctx) {
       const s = si >= 0 ? T.seq[si] : null;
       if (si >= 0) spinTick(H, T, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) { s.done = true;
-        if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', 'Срыв!']); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', 'Чисто!']); } }
+        if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', _t('Срыв!')]); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', _t('Чисто!')]); } }
       if (H.fall) fallTick(H, dt, s && s.soft); if (s && s.kind !== 'fall' && H.fall && H.fall.up) fallEnd(H);
       if (si < 0 && !A.back) { A.back = true; if (H.fall) fallEnd(H); W.walk.start(H); $('#g3mv').innerHTML = ''; }
       if (t >= T.len && A.mall) { const clean = A.clean !== false, rep = BAL.repMall + (clean ? BAL.repMallClean : 0); S.rep += rep; save(); bumpGoal('mall'); CN.crowd(false);
-        sfx('win'); toast('🕺 Толпа в восторге! +' + rep + ' ★' + (clean ? ' (чисто)' : '') + ' — и охранник не успел'); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); }
+        sfx('win'); toast(_t('🕺 Толпа в восторге! +{n} ★{c} — и охранник не успел', { n: rep, c: clean ? _t(' (чисто)') : '' })); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); }
       else if (t >= T.len) { const clean = A.clean !== false, rep = BAL.repShow + (clean ? BAL.repShowClean : 0); S.rep += rep; save(); bumpGoal('show');
-        sfx('win'); toast('🔥 Сайфер принял тебя! +' + rep + ' ★' + (clean ? ' (чисто)' : '')); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); W.cyBusy = false; }
+        sfx('win'); toast(_t('🔥 Сайфер принял тебя! +{n} ★{c}', { n: rep, c: clean ? _t(' (чисто)') : '' })); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); W.cyBusy = false; }
       H.tick(dt); if (!A) H.ws = null; else if (H.ws) W.walk.pose(H, dt); return;
     }
   }
@@ -725,13 +732,13 @@ export function initGame(ctx) {
   };
   function paintAct() {
     if (!near || B || P || A) { act.classList.remove('on'); return; }
-    if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? '🎬 Мало энергии — посмотри урок' : b.h) + `<small>${b.low ? '1 минута урока = +' + BAL.perMin + ' ⚡' : b.s}</small>`; return; }
+    if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? _t('🎬 Мало энергии — посмотри урок') : b.h) + `<small>${b.low ? _t('1 минута урока = +{n} ⚡', { n: BAL.perMin }) : b.s}</small>`; return; }
     if (near.paint) { const low = S.en < BAL.paint; act.className = 'on' + (low ? ' low' : '');
-      act.innerHTML = `🎨 Закрасить стену «${near.g.c.name}» · −${BAL.paint} ⚡<small>${low ? 'Мало энергии — посмотри урок' : 'Твой кусок + ' + BAL.turfRep + ' ★ каждый день'}</small>`; return; }
+      act.innerHTML = _t('🎨 Закрасить стену «{x}» · −{n} ⚡', { x: near.g.c.name, n: BAL.paint }) + `<small>${low ? _t('Мало энергии — посмотри урок') : _t('Твой кусок +{n} ★ каждый день', { n: BAL.turfRep })}</small>`; return; }
     const low = S.en < BAL.battle, lv = ctx.heroLevel(), c = near.c;
     act.className = 'on' + (low ? ' low' : '');
-    act.innerHTML = low ? `🎬 Мало энергии — посмотри урок<small>1 минута урока = +${BAL.perMin} ⚡</small>`
-      : `⚔️ Батл с «${c.name}»${c.boss ? ' 👑' : ''} · −${BAL.battle} ⚡<small>${lv > c.lv ? 'Ты сильнее — шансы хорошие' : lv === c.lv ? 'Равные силы' : 'Они сильнее — будет трудно'}</small>`;
+    act.innerHTML = low ? `${_t('🎬 Мало энергии — посмотри урок')}<small>${_t('1 минута урока = +{n} ⚡', { n: BAL.perMin })}</small>`
+      : `${_t('⚔️ Батл с «{x}»{b} · −{n} ⚡', { x: c.name, b: c.boss ? ' 👑' : '', n: BAL.battle })}<small>${lv > c.lv ? _t('Ты сильнее — шансы хорошие') : lv === c.lv ? _t('Равные силы') : _t('Они сильнее — будет трудно')}</small>`;
   }
 
   // ---------- the battle ----------
@@ -794,7 +801,7 @@ export function initGame(ctx) {
     B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, fromMe: { x: H.root.position.x, z: H.root.position.z }, fromOp: { x: opp.root.position.x, z: opp.root.position.z }, clean: true };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
-    $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = 'Выход в круг'; $('#g3mv').innerHTML = '';
+    $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
     H.play('Bboy_Uprock', { fade: .3 }); opp.play('Breakdance_Uprock', { fade: .3 });
     paintAct();
   }
@@ -850,8 +857,8 @@ export function initGame(ctx) {
       if (si >= 0) spinTick(J, T, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
-        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? 'Срыв! +0.5 за попытку' : 'Не удержал! 0']); if (T.who === 'me') B.clean = false; }
-        else { T.score += s.pts; mvText(s, ['ok', 'Чисто! +' + s.pts]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
+        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); if (T.who === 'me') B.clean = false; }
+        else { T.score += s.pts; mvText(s, ['ok', _t('Чисто! +{n}', { n: s.pts })]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
         paintScore(T);
       }
       if (J.fall) fallTick(J, dt, s && s.soft);
@@ -895,14 +902,14 @@ export function initGame(ctx) {
     const pts = res.grade === 'perfect' ? Math.round(s.pts * BAL.perfMul * 10) / 10 : ok ? s.pts : .5;
     T.score += pts; paintScore(T);
     B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade });
-    if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', 'Срыв! +0.5 за попытку']); B.clean = false; }
+    if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', _t('Срыв! +0.5 за попытку')]); B.clean = false; }
     else {
       T.rec = res.rec;
       if (res.grade === 'perfect') {
-        mvText(s, ['gold', 'Идеально! +' + pts]); sfx('perfect');
+        mvText(s, ['gold', _t('Идеально! +{n}', { n: pts })]); sfx('perfect');
         S.perf = S.perf || {}; if (!S.perf[s.nm]) B.perfFirst = (B.perfFirst || []).concat(s.nm); S.perf[s.nm] = (S.perf[s.nm] || 0) + 1;
         bumpGoal('perf');
-      } else { mvText(s, ['ok', 'Чисто! +' + pts]); sfx('hit'); }
+      } else { mvText(s, ['ok', _t('Чисто! +{n}', { n: pts })]); sfx('hit'); }
     }
     save();
   }
@@ -916,7 +923,7 @@ export function initGame(ctx) {
     const T = B.turns[B.i]; B.t0 = performance.now() / 1000; T.si = -1;
     const other = T.who === 'me' ? B.opp : H; other.play('Breakdance_Ready', { fade: .4, speed: 1.05 });
     T.J.play(side(pick(TOP, Math.random), Math.random() < .5), { fade: .3 });
-    $('#g3turn').textContent = (T.who === 'me' ? 'Твой выход' : 'Выход: ' + B.g.c.name) + ' · раунд ' + (Math.floor(B.i / 2) + 1);
+    $('#g3turn').textContent = (T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name })) + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });
     $('#g3mv').innerHTML = '';
   }
   function finishSkip() {
@@ -940,27 +947,27 @@ export function initGame(ctx) {
     else if (win) {
       const was = S.wins[c.id] || 0, rk0 = rkP, rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
       S.rep += rep; S.wins[c.id] = was + 1; S.beat[c.id] = today();
-      lines.push(`<span class="rw">+${rep} ★ уважения</span>${B.clean ? ' (чистый батл без срывов)' : ''}`);
+      lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>${B.clean ? _t(' (чистый батл без срывов)') : ''}`);
       const gi = was === 0 ? 0 : was === 2 ? 1 : -1, gid = gi >= 0 ? c.gear[gi] : null;
-      if (gid && !S.own.includes(gid) && HERO.GEAR && HERO.GEAR[gid]) { S.own.push(gid); B.wear = gid; const G = HERO.GEAR[gid]; lines.push(`<span class="rw">${G.ico} Новая шмотка: ${G.name} — уже на тебе</span>`); }
-      else if (c.gear[1] && was < 2 && !S.own.includes(c.gear[1])) lines.push(`Победи их ещё ${2 - was} раз — получишь ${HERO.GEAR[c.gear[1]] ? HERO.GEAR[c.gear[1]].name : 'шмотку'}`);
-      const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">🏅 Новое звание: ${BAL.ranks[rk]}</span>`);
+      if (gid && !S.own.includes(gid) && HERO.GEAR && HERO.GEAR[gid]) { S.own.push(gid); B.wear = gid; const G = HERO.GEAR[gid]; lines.push(`<span class="rw">${G.ico} ${_t('Новая шмотка: {x} — уже на тебе', { x: _t(G.name) })}</span>`); }
+      else if (c.gear[1] && was < 2 && !S.own.includes(c.gear[1])) lines.push(_t(2 - was === 1 ? 'Победи их ещё раз — получишь {x}' : 'Победи их ещё {n} раза — получишь {x}', { n: 2 - was, x: HERO.GEAR[c.gear[1]] ? _t(HERO.GEAR[c.gear[1]].name) : _t('шмотку') }));
+      const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
       S.last[c.id] = today(); bumpGoal('win'); if (B.clean) bumpGoal('clean'); if (c.lv >= 2) bumpGoal('strong'); if (c.d === 'center') bumpGoal('cwin'); if (c.d === 'park') bumpGoal('pwin'); if (c.d === 'prom') bumpGoal('zwin');
-      if (c.boss && was === 0) lines.unshift(`<span class="rw">👑 ${c.boss} и «${c.name}» признали тебя: ${c.d === 'prom' ? 'ты хозяин Промзоны! Остался Клуб' : c.d === 'park' ? 'ты хозяин Парка! Дорога в Промзону открыта' : 'ты хозяин Центра! Дорога в Парк открыта'}</span>`);
-      lines.push(S.turf[c.id] ? 'Банда ушла до завтра. Твоя стена под защитой ещё ' + BAL.hold + ' дня.' : 'Банда ушла до завтра — <b>закрась их стену</b> рядом!');
+      if (c.boss && was === 0) lines.unshift(`<span class="rw">${_t('👑 {b} и «{x}» признали тебя: {y}', { b: c.boss, x: c.name, y: c.d === 'prom' ? _t('ты хозяин Промзоны! Остался Клуб') : c.d === 'park' ? _t('ты хозяин Парка! Дорога в Промзону открыта') : _t('ты хозяин Центра! Дорога в Парк открыта') })}</span>`);
+      lines.push(S.turf[c.id] ? _t('Банда ушла до завтра. Твоя стена под защитой ещё {n} дня.', { n: BAL.hold }) : _t('Банда ушла до завтра — <b>закрась их стену</b> рядом!'));
     } else {
-      lines.push(B.lv < c.lv ? 'Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.' : 'Не повезло со срывами. Попробуй ещё раз.');
+      lines.push(B.lv < c.lv ? _t('Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.') : _t('Не повезло со срывами. Попробуй ещё раз.'));
     }
     // the drawn power moves of this battle
-    pf.forEach(nm => lines.unshift(`<span class="rw">✨ Первый идеальный ${nm}! +${BAL.perfFirst} ★</span>`));
-    (B.pm || []).filter(x => x.g === 'perfect' && !pf.includes(x.nm)).forEach(x => lines.push(`<span class="rw">✨ ${x.nm} — идеально (всего ${S.perf[x.nm]})</span>`));
-    if (!win && (B.pm || []).some(x => x.g === 'miss')) lines.push('Пауэрмув: веди палец ровно по линии и не останавливайся — тогда герой не сорвётся.');
+    pf.forEach(nm => lines.unshift(`<span class="rw">${_t('✨ Первый идеальный {x}! +{n} ★', { x: nm, n: BAL.perfFirst })}</span>`));
+    (B.pm || []).filter(x => x.g === 'perfect' && !pf.includes(x.nm)).forEach(x => lines.push(`<span class="rw">${_t('✨ {x} — идеально (всего {n})', { x: x.nm, n: S.perf[x.nm] })}</span>`));
+    if (!win && (B.pm || []).some(x => x.g === 'miss')) lines.push(_t('Пауэрмув: веди палец ровно по линии и не останавливайся — тогда герой не сорвётся.'));
     save(); paintHud();
     const res = $('#g3res'); res.style.setProperty('--oc', c.col);
-    res.innerHTML = `<div style="font:600 12px Inter;letter-spacing:.14em;color:#9a968e">СУДЬИ</div><div class="jd">${votes.map(v => `<i class="${v}">${v === 'me' ? 'ТЫ' : 'ОНИ'}</i>`).join('')}</div>
-      <h3 class="${win ? 'w' : 'l'}">${win ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}</h3><p>Счёт ${Math.round(B.me * 10) / 10} : ${Math.round(B.op * 10) / 10} · судьи ${myV} : ${3 - myV}</p>
+    res.innerHTML = `<div style="font:600 12px Inter;letter-spacing:.14em;color:#9a968e">${_t('СУДЬИ')}</div><div class="jd">${votes.map(v => `<i class="${v}">${v === 'me' ? _t('ТЫ') : _t('ОНИ')}</i>`).join('')}</div>
+      <h3 class="${win ? 'w' : 'l'}">${win ? _t('ПОБЕДА!') : _t('ПОРАЖЕНИЕ')}</h3><p>${_t('Счёт {a} : {b} · судьи {c} : {d}', { a: Math.round(B.me * 10) / 10, b: Math.round(B.op * 10) / 10, c: myV, d: 3 - myV })}</p>
       ${lines.map(l => `<p>${l}</p>`).join('')}
-      ${win ? '' : `<button class="sec" id="g3les">🎬 К урокам — стать сильнее</button>`}<button id="g3ok">Дальше</button>`;
+      ${win ? '' : `<button class="sec" id="g3les">${_t('🎬 К урокам — стать сильнее')}</button>`}<button id="g3ok">${_t('Дальше')}</button>`;
     res.querySelectorAll('.jd i').forEach((e, i) => setTimeout(() => e.classList.add('on'), 500 + i * 450));
     res.classList.add('on'); setTimeout(() => sfx(win ? 'win' : 'lose'), 500 + 3 * 450);
     $('#g3ok').onclick = endBattle; const L = $('#g3les'); if (L) L.onclick = () => (location.href = './');

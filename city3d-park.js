@@ -4,6 +4,7 @@
 // tables, a street-workout corner (warm-up), joggers and people out for a walk — all of different builds.
 // Built in code with the toolkit of city3d.js (TK). The game on top is in city3d-game.js; what it needs is left in
 // W.park: { stage, dancers, og, bars, gateCenter, gateProm, crowd(on) }.
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 export async function buildPark(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, OR, M, glowMat, tex, can, grain, blotch, rng, lerp, decal, paintCanvas, box, circ,
     lamps, dust, mocapPerson, bodyOf, stride, standPose, HERO } = TK;
@@ -12,7 +13,11 @@ export async function buildPark(TK) {
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m; };
   const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power * (TK.FILL_K || 1), dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
-  const text = (x, t, px, py, font, col, align = 'center') => { x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(t, px, py); };
+  // signs are translated (_t) and shrunk to fit: maxW = the room the sign has (default: what is left of the canvas around px)
+  const text = (x, t, px, py, font, col, align = 'center', maxW) => { t = _t(t); x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col;
+    const room = (maxW || (align === 'center' ? 2 * Math.min(px, x.canvas.width - px) : align === 'left' ? x.canvas.width - px : px)) - 8, w = x.measureText(t).width;
+    if (w > room) x.font = font.replace(/(\d+(?:\.\d+)?)px/, (m, n) => (n * room / w).toFixed(1) + 'px');
+    x.fillText(t, px, py); };
   const flat = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -PI / 2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); return m; };
 
   // a deep green-blue night: the park is darker than the Centre, lit by warm globes

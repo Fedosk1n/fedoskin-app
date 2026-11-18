@@ -19,7 +19,7 @@
   .ttl { flex: 1; text-align: center; font: 400 17px Anton, sans-serif; letter-spacing: .06em; text-shadow: 0 2px 8px #000; pointer-events: none; }
   .ttl small { display: block; font: 600 10px Inter, sans-serif; letter-spacing: .14em; color: #E2611A; opacity: .9; }
   #hint { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 10px 16px; border-radius: 22px;
-          background: rgba(12,14,19,.7); border: 1px solid rgba(226,97,26,.45); font: 600 13px Inter, sans-serif; white-space: nowrap; transition: opacity .6s; z-index: 5; pointer-events: none; }
+          background: rgba(12,14,19,.7); border: 1px solid rgba(226,97,26,.45); font: 600 13px/1.35 Inter, sans-serif; width: max-content; max-width: calc(100vw - 48px); box-sizing: border-box; text-align: center; transition: opacity .6s; z-index: 5; pointer-events: none; }
   #hint.off { opacity: 0; }
   /* zoom tip, ONCE on the first entry (owner 17.11.2026 «добавь подсказку о зуме карты небольшую прозрачную 1 раз при входе в город»):
      small, see-through, over the map above the hero; two fingers on the icon slide apart and back; doesn't catch touches */
@@ -66,8 +66,11 @@
 <div id="err">Этот телефон не умеет показывать 3D-графику (WebGL).</div>
 <div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
+<script src="city3d-i18n.js?v=1"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
 <script>
-// the app's language (same rule as index.html phoneLang): only the alpha notice, the back link and the no-3D message are translated here
+// the app's language (same rule as index.html phoneLang). Since 18.11.2026 (owner «переведи 3д город… на все языки») the WHOLE city is
+// translated: window._t('русский текст', {vars}) looks the text up in city3d-i18n.js (source: tools/i18n_city3d.py); a text with no
+// translation stays Russian and is noted in _t.miss (the tests check that it stays empty)
 (function () {
   const L = ['ru', 'en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh']; let lang = '';
   try { lang = localStorage.getItem('fedoskin-lang') || ''; } catch (_) {}
@@ -84,9 +87,19 @@
     ko: ['알파 버전', '도시는 아직 만드는 중이야. 버그가 있거나 사양이 낮은 폰에서 끊길 수 있어. 밸런스와 보상은 바뀔 거고, 큰 업데이트 후에는 도시 진행 상황이 초기화될 수도 있어.', '버그를 찾으면 앱 채팅으로 알려 줘. 고칠게.', '지금은 도시 안의 모든 내용이 러시아어야. 번역은 나중에 추가돼.', '알겠어, 시작', '이 폰은 3D 그래픽(WebGL)을 표시할 수 없어요.', '앱으로 돌아가기'],
     zh: ['内测版', '城市还在建设中。可能会有错误，低配手机上可能会卡顿；平衡和奖励还会调整，大更新后城市进度可能会被重置。', '发现问题？在应用的聊天里告诉我，我来修。', '目前城市里的内容都是俄语，翻译稍后上线。', '明白，开始玩', '这部手机无法显示 3D 图形（WebGL）。', '返回应用'],
   }[lang];
-  window.CITY_LANG = lang;
+  A[3] = '';   // «for now everything inside the city is in Russian» — not true any more (18.11.2026)
+  window.CITY_LANG = lang; document.documentElement.lang = lang;
+  const D = (window.I18N3 && I18N3[lang]) || null, miss = new Set();
+  window._t = (ru, v) => { let s = lang !== 'ru' && D && D[ru];
+    if (!s) { s = ru; if (lang !== 'ru' && /[А-Яа-яЁё]/.test(ru)) miss.add(ru); }
+    return v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s; };
+  window._t.miss = miss;
   document.addEventListener('DOMContentLoaded', () => {
     const $ = s => document.querySelector(s), box = $('#alpha');
+    // the fixed texts of the page
+    $('#hint').textContent = _t($('#hint').textContent); $('#ztip span').textContent = _t($('#ztip span').textContent);
+    $('#back').setAttribute('aria-label', _t('Назад')); $('#mus').setAttribute('aria-label', _t('Музыка'));
+    { const t = $('.ttl'); if (t.firstChild) t.firstChild.nodeValue = _t(t.firstChild.nodeValue); }
     $('.ttl small').textContent = 'α ' + A[0].toUpperCase(); $('#alpha h2').textContent = A[0]; $('#aP1').textContent = A[1]; $('#aP2').textContent = A[2]; if (A[3]) { $('#aP3').textContent = A[3]; $('#aP3').hidden = false; } $('#aOk').textContent = A[4];
     $('#err').innerHTML = ''; $('#err').append(A[5], document.createElement('br'), document.createElement('br')); const a = document.createElement('a'); a.href = './?city=play'; a.textContent = A[6]; $('#err').append(a);
     // back: to where the app was (its «Город» screen) if we came from it, else open the app on that screen
@@ -102,6 +115,6 @@
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
-<script type="module" src="city3d.js?v=24"></script>
+<script type="module" src="city3d.js?v=25"></script>
 </body>
 </html>

@@ -29,6 +29,10 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - ru source + en, es, pt, fr, de, ja, ko, zh. Russian strings in code go through `T('текст', {vars})`; fixed HTML by exact match
   (`translateDom`). Every new visible Russian string needs a key in `tools/i18n_src.py`, then `python3 tools/i18n_src.py i18n.js`.
 - App language = phone's (`phoneLang()`) unless picked (`fedoskin-lang`). Lesson speech is Russian; move names international.
+- 3D CITY has its OWN dictionary (18.11): every visible text in city3d*.js / city3d.html goes through `_t('русский текст', {vars})`; rows in
+  `tools/i18n_city3d.py` (ru + 8 langs, gear names reused from i18n.js) → `python3 tools/i18n_city3d.py` writes `city3d-i18n.js` (bump its ?v in
+  city3d.html). Canvas signs go through the district `text()` helpers (translate + shrink to fit, pass maxW when the sign has less room).
+  `_t.miss` lists texts with no translation — the Playwright test checks it stays empty in all 8 languages.
 
 ## Server (Cloudflare Worker `server/push-worker.js`, owner deploys BY HAND)
 - KV `PUSH`, D1 `DB`, R2 `VIDEOS`, Workers AI `AI`, secret `TG_TOKEN` (never ask the owner to send tokens). URL = `pushUrl` in config.
@@ -94,7 +98,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   to the screen, lamp shadows redraw only when on screen. New casters need nothing special; `userData.dyn = true` keeps one out. `?fps` shows the worst frame.
 - City 3D CAMERA reads `W.hero` every frame (rewear() replaces the hero object — never cache it); player zoom `W.uZoom` (pinch / wheel, .7…3,
   saved), W.camT overrides it in battles/actions. Crew members are dressed one by one (`dress` / `crewLook` in city3d-game.js, yard palettes `CSTY`).
-- City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit, texts inside Russian only).
+- City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit; ALL texts translated since 18.11 — see i18n).
   Standing = `Stand` / `Stand_Calm` loops (`makeStand`, never loop raw «Breakdance_Ready» — it is a sidestep); clips with a big seam play once (`userData.once`). Owner's direction 14.11: top-down 3D like his
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
   missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Game layer `city3d-game.js`: crews, AUTO battles

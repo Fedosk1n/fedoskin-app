@@ -4,6 +4,7 @@
 // fire barrels — and in the middle of it the underground battle floor «РИНГ» (plywood on pallets, chains, work lamps).
 // Built in code with the toolkit of city3d.js (TK). The game on top is in city3d-game.js; what it needs is left in
 // W.prom: { ring, fighters[2], stash[] (spots with a crate each), crowd(on), gatePark, gateClub }.
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 export async function buildProm(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, OR, M, glowMat, tex, can, grain, blotch, rng, lerp, decal, paintCanvas, box, circ,
     lamp, lamps, dust, crate, barrel, pallet, tires, jersey, concreteTex, mocapPerson, bodyOf, stride, standPose, HERO } = TK;
@@ -12,7 +13,11 @@ export async function buildProm(TK) {
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m; };
   const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power * K, dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
-  const text = (x, t, px, py, font, col, align = 'center') => { x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(t, px, py); };
+  // signs are translated (_t) and shrunk to fit: maxW = the room the sign has (default: what is left of the canvas around px)
+  const text = (x, t, px, py, font, col, align = 'center', maxW) => { t = _t(t); x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col;
+    const room = (maxW || (align === 'center' ? 2 * Math.min(px, x.canvas.width - px) : align === 'left' ? x.canvas.width - px : px)) - 8, w = x.measureText(t).width;
+    if (w > room) x.font = font.replace(/(\d+(?:\.\d+)?)px/, (m, n) => (n * room / w).toFixed(1) + 'px');
+    x.fillText(t, px, py); };
   const flat = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -PI / 2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); return m; };
   const put = (o, x, z, ry = 0) => { o.position.set(x, o.position.y, z); o.rotation.y = ry; scene.add(o); return o; };
 
@@ -45,7 +50,7 @@ export async function buildProm(TK) {
       for (let a = 0; a < 5; a++) for (let b = 0; b < 7; b++) { const lit = r() < .55; x.fillStyle = lit ? `hsla(${28 + r() * 14},${70 + r() * 20}%,${38 + r() * 26}%,${.75 + r() * .25})` : (r() < .3 ? '#07090c' : '#1d242b'); x.fillRect(wx + a * 32, 78 + b * 34, 28, 30); } }
     // soot above the gate, a painted number
     const gx = (GX + 17) / 34 * S; { const g = x.createRadialGradient(gx, 300, 20, gx, 300, 300); g.addColorStop(0, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(gx - 320, 0, 640, H); }
-    text(x, 'ЦЕХ  5', gx, 96, '400 86px Anton, sans-serif', 'rgba(233,228,216,.82)');
+    text(x, 'ЦЕХ  5', gx, 96, '400 86px Anton, sans-serif', 'rgba(233,228,216,.82)', 'center', 520);
     grain(c, 16, 4);
     const wall = new THREE.Mesh(new THREE.BoxGeometry(34, 7.2, 6), [M('#2a1d18', .9), M('#2a1d18', .9), M('#1c1512', .9), M('#1c1512', .9), new THREE.MeshStandardMaterial({ map: tex(c), roughness: .9, emissive: '#ffffff', emissiveMap: tex(c), emissiveIntensity: .22 }), M('#2a1d18', .9)]);
     wall.position.set(0, 3.6, FZ - 3); wall.castShadow = wall.receiveShadow = true; scene.add(wall); box(0, FZ - 3, 34, 6.2);

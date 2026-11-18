@@ -13,6 +13,7 @@
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
 import { mocapPerson, getClip } from './city3d-mocap.js?v=13';
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 // the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
 // recording is drawn (`a…b`, or `loops` whole loops), the corridor (px on a 390-px-wide phone; harder moves — narrower)
@@ -210,7 +211,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
       p.h += dt; J.act.timeScale = 0;
       if (p.h > p.wait) {   // nobody drew: he spins by himself, as before
         J.act.timeScale = p.s.sp || 1; restoreCam(); const cb = p.opt.onEnd; P = null; cv.classList.remove('on'); document.body.classList.remove('g3draw'); dirty = true;
-        FL = { txt: 'САМ КРУТИТ', col: '#c9c4bb', t: 0, small: true };
+        FL = { txt: _t('САМ КРУТИТ'), col: '#c9c4bb', t: 0, small: true };
         cb({ grade: 'auto' });
       }
       return;
@@ -258,7 +259,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
     const res = { grade: p.grade, acc: p.acc, cover: p.cover, nm: p.s.nm,
       rel: ok ? T.a0 + T.len : T.a0, len: ok ? T.a0 + T.len + (cfg.b ? T.L - cfg.b : 0) : T.a0 + .001,
       rec: ok ? { c: p.s.c, t0: T.a0, len: T.len, pre: cfg.pre || 0, ry: p.ry, dx: p.dx, dz: p.dz, cx: p.C.x, cz: p.C.z, grade: p.grade, bins, nm: p.s.nm } : null };
-    FL = p.grade === 'perfect' ? { txt: 'ИДЕАЛЬНО!', col: GOLD, t: 0 } : p.grade === 'good' ? { txt: 'ЧИСТО', col: GREEN, t: 0 } : { txt: 'СРЫВ', col: RED, t: 0 };
+    FL = p.grade === 'perfect' ? { txt: _t('ИДЕАЛЬНО!'), col: GOLD, t: 0 } : p.grade === 'good' ? { txt: _t('ЧИСТО'), col: GREEN, t: 0 } : { txt: _t('СРЫВ'), col: RED, t: 0 };
     last = { grade: res.grade, acc: +res.acc.toFixed(3), cover: +res.cover.toFixed(3), n: p.n, t: +p.t.toFixed(2), limit: p.limit };
     const cb = p.opt.onEnd; P = null; cb(res);
   }
@@ -328,6 +329,10 @@ export function initPower({ W, camera, sfx = () => {} }) {
   }
   function text(s, x, y, size, col, font = 'Anton', w = 400, al = 'center') {
     g.font = `${w} ${size}px ${font}, Inter, sans-serif`; g.textAlign = al; g.textBaseline = 'middle';
+    // longer languages (18.11.2026 translation): shrink a line that would not fit between the screen's edges
+    const tr = g.getTransform(), sc = tr.a / DPR, ax = tr.e / DPR + x * sc, m = g.measureText(s).width;
+    const room = ((al === 'center' ? 2 * Math.min(ax, CW - ax) : al === 'left' ? CW - ax : ax) - 12) / sc;
+    if (m > room && room > 40) g.font = `${w} ${(size * room / m).toFixed(1)}px ${font}, Inter, sans-serif`;
     g.lineWidth = 4; g.strokeStyle = 'rgba(5,6,9,.75)'; g.lineJoin = 'round'; g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
   }
   function word(f) {
@@ -378,9 +383,9 @@ export function initPower({ W, camera, sfx = () => {} }) {
       g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3; g.beginPath(); g.arc(dx, dy, 19, -Math.PI / 2, -Math.PI / 2 + TAU * left); g.stroke();
       const ring = (clock * 1.4) % 1; g.strokeStyle = `rgba(255,210,63,${1 - ring})`; g.lineWidth = 2; g.beginPath(); g.arc(dx, dy, 12 + 26 * ring, 0, TAU); g.stroke();
       text(p.s.nm, cx, bot + 8, 28, '#fff');
-      text(T.cfg.sig === 'yaw' ? 'Веди ноги пальцем · свайп' : `Веди ноги пальцем · ${T.turns} ${T.turns < 5 ? 'оборота' : 'оборотов'}`, cx, bot + 36, 14, '#e8e4dc', 'Inter', 600);
-      if (p.opt.first) { text('Положи палец на жёлтую точку', cx, bot + 64, 15, GOLD, 'Inter', 700); text('и веди по стрелкам — ноги пойдут за пальцем', cx, bot + 84, 13, '#e8e4dc', 'Inter', 600); }
-      if (p.nudge > 0) { p.nudge -= dt; text('Начни с жёлтой точки', dx, dy - 34, 14, GOLD, 'Inter', 700); }
+      text(T.cfg.sig === 'yaw' ? _t('Веди ноги пальцем · свайп') : _t(T.turns < 5 ? 'Веди ноги пальцем · {n} оборота' : 'Веди ноги пальцем · {n} оборотов', { n: T.turns }), cx, bot + 36, 14, '#e8e4dc', 'Inter', 600);
+      if (p.opt.first) { text(_t('Положи палец на жёлтую точку'), cx, bot + 64, 15, GOLD, 'Inter', 700); text(_t('и веди по стрелкам — ноги пойдут за пальцем'), cx, bot + 84, 13, '#e8e4dc', 'Inter', 600); }
+      if (p.nudge > 0) { p.nudge -= dt; text(_t('Начни с жёлтой точки'), dx, dy - 34, 14, GOLD, 'Inter', 700); }
     } else {
       // turns, time
       const left = clamp(1 - p.t / p.limit, 0, 1), bw = 150, bx = cx - bw / 2;
@@ -389,8 +394,8 @@ export function initPower({ W, camera, sfx = () => {} }) {
       if (T.turns > 1) text(`${Math.min(T.turns, p.lap + 1)} / ${T.turns}`, cx, bot + 28, 24 + 6 * p.pulse, p.pulse > 0 ? GOLD : '#fff');
       p.pulse = Math.max(0, p.pulse - dt * 3);
       if (p.st === 'draw') {
-        if (p.t - p.lastProg > .28) text('Не останавливайся!', cx, bot + 58, 15, RED, 'Inter', 700);
-        else if (p.q < .35) text('Держи линию!', cx, bot + 58, 15, '#FFB547', 'Inter', 700);
+        if (p.t - p.lastProg > .28) text(_t('Не останавливайся!'), cx, bot + 58, 15, RED, 'Inter', 700);
+        else if (p.q < .35) text(_t('Держи линию!'), cx, bot + 58, 15, '#FFB547', 'Inter', 700);
       }
     }
   }
@@ -412,9 +417,9 @@ export function initPower({ W, camera, sfx = () => {} }) {
     g.fillStyle = '#000'; g.fillRect(0, 0, CW, bar); g.fillRect(0, CH - bar, CW, bar);
     const y = bar + 26, blink = (clock * 2) % 1 < .6;
     if (blink) { g.fillStyle = RED; g.beginPath(); g.arc(22, y, 6, 0, TAU); g.fill(); }
-    text('ПОВТОР', 36, y, 20, '#fff', 'Anton', 400, 'left');
-    text(r.rec.nm + (gold ? ' · ИДЕАЛЬНО' : ' · ЧИСТО'), CW - 16, y, 16, gold ? GOLD : GREEN, 'Anton', 400, 'right');
-    text('нажми — дальше', CW / 2, CH - bar - 18, 12, 'rgba(255,255,255,.6)', 'Inter', 600);
+    text(_t('ПОВТОР'), 36, y, 20, '#fff', 'Anton', 400, 'left');
+    text(r.rec.nm + ' · ' + (gold ? _t('ИДЕАЛЬНО') : _t('ЧИСТО')), CW - 16, y, 16, gold ? GOLD : GREEN, 'Anton', 400, 'right');
+    text(_t('нажми — дальше'), CW / 2, CH - bar - 18, 12, 'rgba(255,255,255,.6)', 'Inter', 600);
   }
 
   return {

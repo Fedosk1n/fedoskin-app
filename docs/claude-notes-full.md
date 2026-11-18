@@ -1626,3 +1626,28 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   park) and in the app (incl. the rhythm-battle trial). A listening file (yard + 15 loops × 4 bars, so the crash and the roll are heard) was
   sent to the owner. Not heard by Claude, not on a real iPhone.
 - Versions: rhythm.js ?v=25 (index.html + city3d.html).
+
+## 18.11.2026 — 3D city translated into all 8 languages
+- Owner: «Переведи 3д город для все наших клиентов, на все языки, которые мы добавили».
+- Before: only the alpha window in city3d.html was translated; everything inside the city was Russian, and the app's Город tab showed
+  «Пока в городе всё на русском — переводы появятся позже» (#c3Lang) for non-Russian languages. Now #c3Lang stays hidden, the alpha window's
+  line about Russian is gone (A[3] = '').
+- How: every visible Russian text in city3d.js / city3d-game.js / city3d-center.js / city3d-park.js / city3d-prom.js / city3d-power.js /
+  city3d.html goes through `_t('русский текст', {vars})` (window._t, defined in city3d.html; each module has a fallback copy so a page without
+  it still works). Concatenated strings were turned into templates with {n}, {x}… so word order can change per language.
+  Data is translated where it is defined (crew names, bosses, ring / jam opponents, ranks, goals, the tailor's details); signs on canvases
+  go through each district's `text()` helper (translates, then shrinks the font to the room it has: default = the canvas around px,
+  explicit maxW for shop fronts, ad frames, МЕТРО, ШОУ, the mall's name next to its logo, ЦЕХ 5). `label()` in the yard and the power
+  overlay's `text()` shrink the same way.
+- Dictionary: `tools/i18n_city3d.py` — 338 rows (ru + en, es, pt, fr, de, ja, ko, zh) + 20 gear names reused from the app's i18n.js;
+  the script checks placeholders / <b> tags / no Cyrillic left and writes `city3d-i18n.js` (~230 KB, all languages; loaded only by the city).
+- Terms: crew = банда (ja クルー, ko 크루, zh 帮派), respect (zh 声望), energy (zh 能量), crash = срыв (es caída, pt queda, fr chute,
+  de Sturz, ja ミス, ko 실수, zh 失误); districts The Yard / Downtown / the Park / the Industrial Zone / the Club (same as the flat city);
+  nicknames translated by meaning (Хромосома = Chromosome, Коготь = Claw, Маятник = Pendulum…); ranks: Yard Rookie → One of Us →
+  Respected → Heavyweight → Yard Boss → Hood Legend → Voice of the Streets → City Icon; ТЦ «КРУГ» = Circle Mall; Ателье «Игла» = Needle.
+- Russian fixes on the way: «Вся Промзона в твоих граффити» (was «Весь Промзона»), «Победи их ещё 2 раза» (was «2 раз»).
+- Layout: the action button, the toast, the hint and the turn line may wrap now (width max-content, max-width = screen − 24 px) — the
+  Russian atelier button already ran 4 px off a 390 px screen; HUD chips use word-break: keep-all so Japanese / Korean don't break mid-word.
+- Not translated on purpose: the `?fps` counter (owner's tool), move names (FLARE, HEADSPIN… are international), BREAK BATTLE / FEDOSKIN TEAM.
+- Versions: city3d.js ?v=25, city3d-game.js ?v=24, city3d-power.js ?v=2, city3d-center.js ?v=5, city3d-park.js ?v=4, city3d-prom.js ?v=3,
+  city3d-i18n.js ?v=1.

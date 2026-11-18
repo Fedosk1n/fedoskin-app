@@ -10,10 +10,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=13';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=23';
-import { buildProm } from './city3d-prom.js?v=2';
-import { buildCenter } from './city3d-center.js?v=4';
-import { buildPark } from './city3d-park.js?v=3';
+import { initGame } from './city3d-game.js?v=24';
+import { buildProm } from './city3d-prom.js?v=3';
+import { buildCenter } from './city3d-center.js?v=5';
+import { buildPark } from './city3d-park.js?v=4';
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
 const Q = new URLSearchParams(location.search);
@@ -804,7 +805,7 @@ let ztipT = 0;
 function zoomTip() {
   const el = $('#ztip'); let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-ztip') === '1'; } catch (_) {}
   if (!el || seen) { if (el) el.remove(); return; }
-  if (!matchMedia('(pointer: coarse)').matches) el.querySelector('span').textContent = 'Колёсико мыши — отдалить или приблизить карту';
+  if (!matchMedia('(pointer: coarse)').matches) el.querySelector('span').textContent = _t('Колёсико мыши — отдалить или приблизить карту');
   const go = () => { const a = $('#alpha'); if (a && !a.hidden) { setTimeout(go, 400); return; }
     ztipT = setTimeout(() => { try { localStorage.setItem('fedoskin-city3d-ztip', '1'); } catch (_) {} el.classList.add('on'); ztipT = setTimeout(ztipOff, 5200); }, 1200); };
   go();
@@ -967,7 +968,7 @@ async function boot() {
 
   await loadMocap();
   await build(scene);
-  { const t = $('.ttl'); if (t && t.firstChild) t.firstChild.nodeValue = DISTS[DIST].name; document.title = 'Fedoskin · ' + DISTS[DIST].name; }
+  { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
     n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
@@ -1098,4 +1099,4 @@ async function boot() {
   zoomTip();
   window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale, id: musicId, playing: window.RB && RB.bgmId ? RB.bgmId() : null }) };
 }
-boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = 'Ошибка: ' + e.message; el.style.display = 'flex'; });
+boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = _t('Ошибка: ') + e.message; el.style.display = 'flex'; });

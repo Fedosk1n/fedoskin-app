@@ -4234,7 +4234,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // The flat 2D city is HIDDEN since 17.11.2026 (owner «Убери 2д город (скрой и убери его выбор)»): its button #c3Old stays hidden, nothing
   // opens #city. city.js still loads (CITY.init) only so that street gear already won there stays in the wardrobe (CITY.owned).
   if (CITY_ON) {
-    $('#c3Lang').hidden = LANG === 'ru';
+    // #c3Lang («Пока в городе всё на русском») stays hidden: the city is translated since 18.11.2026
     $('#c3Bug').addEventListener('click', () => { const t = T('Ошибка в 3D-городе: '); if (CHAT.on) openChat(t, 'city'); else openContact(t); });
   }
   function go(id){

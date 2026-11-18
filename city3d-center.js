@@ -3,6 +3,7 @@
 // a fountain with a bronze b-boy, the metro pavilion, a tea kiosk, a bus stop, a street with a passing car, passers-by.
 // Everything is built in code with the toolkit of city3d.js (TK). The game on top (crews, places, travel) is in city3d-game.js;
 // what it needs from here is left in W.center: { show, guard, crowd(on), kiosk, metro, gateYard, gatePark }.
+const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 export async function buildCenter(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, TOUCH, OR, PAINT_W, M, glowMat, tex, can, grain, blotch, rng, lerp, clamp, decal, paintCanvas, shadowAll, box, circ,
     lamp, lamps, dust, trashBag, car, asphaltTex, facadeTex, roofTex, stripeTex, mocapPerson, bodyOf, stride, standPose, HERO, GFX } = TK;
@@ -11,7 +12,11 @@ export async function buildCenter(TK) {
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const t = tex(c), m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m; };
   const point = (col, power, x, y, z, dist = 9) => { const l = new THREE.PointLight(col, power * (TK.FILL_K || 1), dist, 1.6); l.position.set(x, y, z); scene.add(l); return l; };
-  const text = (x, t, px, py, font, col, align = 'center') => { x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(t, px, py); };
+  // signs are translated (_t) and shrunk to fit: maxW = the room the sign has (default: what is left of the canvas around px)
+  const text = (x, t, px, py, font, col, align = 'center', maxW) => { t = _t(t); x.font = font; x.textAlign = align; x.textBaseline = 'middle'; x.fillStyle = col;
+    const room = (maxW || (align === 'center' ? 2 * Math.min(px, x.canvas.width - px) : align === 'left' ? x.canvas.width - px : px)) - 8, w = x.measureText(t).width;
+    if (w > room) x.font = font.replace(/(\d+(?:\.\d+)?)px/, (m, n) => (n * room / w).toFixed(1) + 'px');
+    x.fillText(t, px, py); };
 
   // a slightly lighter, bluer night than the yard: the centre is lit
   scene.background.set('#0b0e15'); scene.fog.color.set('#0b0e15'); scene.fog.density = .013;
@@ -82,7 +87,7 @@ export async function buildCenter(TK) {
           q.beginPath(); q.moveTo(dx - sh * .15, top + sh * .12); q.lineTo(dx + sh * .15, top + sh * .12); q.lineTo(dx + sh * .1, top + sh * .5); q.lineTo(dx + sh * .12, sy + sh); q.lineTo(dx - sh * .12, sy + sh); q.lineTo(dx - sh * .1, top + sh * .5); q.closePath(); q.fill(); }); }
       [x, ex].forEach(q => { q.fillStyle = q === x ? '#111' : 'rgba(0,0,0,.9)'; q.fillRect(X + w2 / 2 - 2, sy, 4, sh); });
       // the shop's little sign
-      const ny = sy - P * .36; x.fillStyle = '#101216'; x.fillRect(X, ny - P * .17, w2, P * .34); text(x, names[i], X + w2 / 2, ny + 1, `400 ${P * .3 | 0}px Anton, sans-serif`, col); text(ex, names[i], X + w2 / 2, ny + 1, `400 ${P * .3 | 0}px Anton, sans-serif`, col); });
+      const ny = sy - P * .36; x.fillStyle = '#101216'; x.fillRect(X, ny - P * .17, w2, P * .34); text(x, names[i], X + w2 / 2, ny + 1, `400 ${P * .3 | 0}px Anton, sans-serif`, col, 'center', w2 * .92); text(ex, names[i], X + w2 / 2, ny + 1, `400 ${P * .3 | 0}px Anton, sans-serif`, col, 'center', w2 * .92); });
     // the entrance: bright glass doors
     { const X = (-2.2 + MW / 2) * P, w2 = 4.4 * P, y = Hp - 3 * P, h2 = 3 * P - P * .1; x.fillStyle = '#0a0c10'; x.fillRect(X - 6, y - 6, w2 + 12, h2 + 6);
       const g = ex.createLinearGradient(0, y, 0, y + h2); g.addColorStop(0, 'rgba(255,246,228,1)'); g.addColorStop(1, 'rgba(255,224,180,.85)'); ex.fillStyle = g; ex.fillRect(X, y, w2, h2); x.fillStyle = '#f4ead6'; x.fillRect(X, y, w2, h2);
@@ -97,19 +102,19 @@ export async function buildCenter(TK) {
     mesh(new RoundedBoxGeometry(6, .22, 2.1, 2, .05), M('#1a1d23', .5, .4), 0, 3.25, MZ + 1.05);
     mesh(new THREE.BoxGeometry(5.6, .03, 1.7), glowMat('#fff0d4', 1.5), 0, 3.13, MZ + 1.05).castShadow = false;
     // the name on the canopy's edge, leaning back so that it reads from above
-    { const nc = can(1024, 128), nx = nc.getContext('2d'); nx.fillStyle = '#14161b'; nx.fillRect(0, 0, 1024, 128); nx.shadowColor = OR; nx.shadowBlur = 16; nx.strokeStyle = '#ffb27a'; nx.lineWidth = 9; nx.beginPath(); nx.arc(250, 64, 38, 0, 7); nx.stroke(); text(nx, 'ТЦ  КРУГ', 560, 68, '400 96px Anton, sans-serif', '#ffb27a');
+    { const nc = can(1024, 128), nx = nc.getContext('2d'); nx.fillStyle = '#14161b'; nx.fillRect(0, 0, 1024, 128); nx.shadowColor = OR; nx.shadowBlur = 16; nx.strokeStyle = '#ffb27a'; nx.lineWidth = 9; nx.beginPath(); nx.arc(250, 64, 38, 0, 7); nx.stroke(); text(nx, 'ТЦ  КРУГ', 560, 68, '400 96px Anton, sans-serif', '#ffb27a', 'center', 510);   // room: right of the ring logo (x 212…288)
       const n = glowPlane(nc, 5.8, .72, 0, 3.62, MZ + 2.0, 0, 1.15); n.rotation.x = -.62; }
     [-2.8, 2.8].forEach(px => { mesh(new THREE.CylinderGeometry(.07, .07, 3.2, 10), M('#8a8f96', .3, .8), px, 1.6, MZ + 1.95); circ(px, MZ + 1.95, .12); });
     // the big sign on the roof edge: a ring (the cypher) and the name
     const sc = can(1400, 300), sx = sc.getContext('2d');
     sx.shadowColor = OR; sx.shadowBlur = 26; sx.strokeStyle = '#ffb27a'; sx.lineWidth = 20; sx.beginPath(); sx.arc(150, 150, 96, 0, 7); sx.stroke(); sx.lineWidth = 9; sx.setLineDash([24, 16]); sx.beginPath(); sx.arc(150, 150, 60, 0, 7); sx.stroke(); sx.setLineDash([]);
-    text(sx, 'КРУГ', 300, 150, '400 250px Anton, sans-serif', '#ffb27a', 'left'); sx.shadowBlur = 8; text(sx, 'ТОРГОВЫЙ ЦЕНТР', 900, 240, '700 54px Inter, sans-serif', '#fff3e4', 'left'); text(sx, 'открыто для своих', 902, 170, '500 44px Inter, sans-serif', '#9fd2ff', 'left');
+    text(sx, 'КРУГ', 300, 150, '400 250px Anton, sans-serif', '#ffb27a', 'left', 590); sx.shadowBlur = 8; text(sx, 'ТОРГОВЫЙ ЦЕНТР', 900, 240, '700 54px Inter, sans-serif', '#fff3e4', 'left'); text(sx, 'открыто для своих', 902, 170, '500 44px Inter, sans-serif', '#9fd2ff', 'left');
     mesh(new THREE.BoxGeometry(9.8, .1, .12), M('#15171b', .6, .5), 0, MH + .12, MZ - .3); [-4.4, 0, 4.4].forEach(px => mesh(new THREE.BoxGeometry(.08, 2, .08), M('#15171b', .6, .5), px, MH + 1, MZ - .42));
     glowPlane(sc, 9.4, 2.02, 0, MH + 1.15, MZ - .3, 0, 1.25);
     // the screen on the right wing: three adverts in turn
     const ad = can(1536, 256), ax = ad.getContext('2d'), frames = [['#12203a', '#4fc0ff', 'BREAK BATTLE', 'каждую субботу · 19:00'], ['#2a0e06', '#ff8a3a', 'FEDOSKIN TEAM', 'онлайн-ведение · уроки'], ['#1a0a24', '#ff4f9a', 'КРУГ', 'всё для улицы · 2 этаж']];
     frames.forEach(([bg, col, a, b], i) => { const X = i * 512; ax.fillStyle = bg; ax.fillRect(X, 0, 512, 256); ax.fillStyle = col; ax.globalAlpha = .18; for (let k = 0; k < 9; k++) ax.fillRect(X + k * 64 - 20, 0, 26, 256); ax.globalAlpha = 1;
-      text(ax, a, X + 256, 104, '400 92px Anton, sans-serif', col); text(ax, b, X + 256, 196, '700 30px Inter, sans-serif', '#f2efe8'); });
+      text(ax, a, X + 256, 104, '400 92px Anton, sans-serif', col, 'center', 480); text(ax, b, X + 256, 196, '700 30px Inter, sans-serif', '#f2efe8', 'center', 480); });
     mesh(new THREE.BoxGeometry(5.5, 2.9, .2), M('#101216', .5, .4), 8.6, 5.6, MZ + .08);
     const scr = glowPlane(ad, 5.2, 2.6, 8.6, 5.6, MZ + .2, 0, 1.1); scr.material.map.repeat.set(1 / 3, 1); scr.material.map.wrapS = THREE.RepeatWrapping;
     let st = 0; W.tickers.push(dt => { st += dt; scr.material.map.offset.x = Math.floor(st / 4.5) % 3 / 3; });
@@ -184,7 +189,7 @@ export async function buildCenter(TK) {
     const sc = can(1024, 200), cx = sc.getContext('2d'); cx.fillStyle = '#123a8f'; cx.beginPath(); cx.roundRect(0, 0, 1024, 200, 26); cx.fill(); cx.strokeStyle = '#cfe6ff'; cx.lineWidth = 8; cx.beginPath(); cx.roundRect(10, 10, 1004, 180, 20); cx.stroke();
     // pictogram: steps going down with an arrow
     cx.strokeStyle = '#fff'; cx.lineWidth = 14; cx.lineJoin = 'miter'; cx.beginPath(); cx.moveTo(70, 60); cx.lineTo(110, 60); cx.lineTo(110, 95); cx.lineTo(150, 95); cx.lineTo(150, 130); cx.lineTo(190, 130); cx.lineTo(190, 160); cx.stroke();
-    text(cx, 'МЕТРО', 590, 106, '400 150px Anton, sans-serif', '#ffffff');
+    text(cx, 'МЕТРО', 590, 106, '400 150px Anton, sans-serif', '#ffffff', 'center', 740);
     { const n = glowPlane(sc, 4.4, .86, MX, 3.42, MZ2 + 2.3, 0, 1.15); n.rotation.x = -.5; const b = mesh(new THREE.BoxGeometry(4.6, 1, .1), M('#0d1524', .5, .4), MX, 3.4, MZ2 + 2.25); b.rotation.x = -.5; }
     box(MX, MZ2 - 1.8, 4.2, .3); box(MX - 2, MZ2, .3, 3.6); box(MX + 2, MZ2, .3, 3.6); box(MX, MZ2 - .4, 3.6, 2.6);
     point('#bfe4ff', 26, MX, 2.2, MZ2 + 1.2, 8);
@@ -234,7 +239,7 @@ export async function buildCenter(TK) {
 
   // ---------- the show spot on the mall's tiles ----------
   const SHOW = { x: 0, z: -11.5 };
-  { const c = paintCanvas(512, 512, (x, w) => { x.strokeStyle = OR; x.lineWidth = 16; x.setLineDash([44, 26]); x.beginPath(); x.arc(256, 256, 228, 0, 7); x.stroke(); x.setLineDash([]); x.lineWidth = 6; x.beginPath(); x.arc(256, 256, 180, 0, 7); x.stroke(); text(x, 'ШОУ', 256, 262, '400 120px Anton, sans-serif', OR); }, .25, 81);
+  { const c = paintCanvas(512, 512, (x, w) => { x.strokeStyle = OR; x.lineWidth = 16; x.setLineDash([44, 26]); x.beginPath(); x.arc(256, 256, 228, 0, 7); x.stroke(); x.setLineDash([]); x.lineWidth = 6; x.beginPath(); x.arc(256, 256, 180, 0, 7); x.stroke(); text(x, 'ШОУ', 256, 262, '400 120px Anton, sans-serif', OR, 'center', 330); }, .25, 81);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, depthWrite: false, opacity: .8 })); m.rotation.x = -PI / 2; m.position.set(SHOW.x, .03, SHOW.z); m.renderOrder = 2; scene.add(m); }
 
   // ---------- lights ----------
@@ -254,7 +259,7 @@ export async function buildCenter(TK) {
   // ---------- people: the guard, passers-by, two by the entrance ----------
   let pn = 0; const person = (lv, acc, fix, body) => { const look = HERO.topDown(lv, acc); if (fix) fix(look); const J = mocapPerson(look, { body: bodyOf(200 + (pn++) * 17, Object.assign({ girl: acc.includes('girl') }, body)) }); J.play('Breakdance_Ready', { at: Math.random() }); scene.add(J.root); J.st = { wk: 0, ph: Math.random() * 6 }; return J; };
   const turn = (J, a, dt, k = 8) => { let d = a - J.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * k)); };
-  const tag = (txt, col) => { const lc = can(512, 128), lx = lc.getContext('2d'); lx.font = '400 60px Anton, sans-serif'; const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill(); text(lx, txt, 256, 66, '400 60px Anton, sans-serif', col);
+  const tag = (txt, col) => { txt = _t(txt); const lc = can(512, 128), lx = lc.getContext('2d'); lx.font = '400 60px Anton, sans-serif'; const tw = Math.min(500, lx.measureText(txt).width + 70); lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill(); text(lx, txt, 256, 66, '400 60px Anton, sans-serif', col);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(lc), depthTest: false, toneMapped: false })); sp.scale.set(2.4, .6, 1); sp.renderOrder = 10; scene.add(sp); return sp; };
   // walk a person: straight to (tx, tz) at speed v; returns true when there
   const go = (J, tx, tz, v, dt) => { const p = J.root.position, dx = tx - p.x, dz = tz - p.z, l = Math.hypot(dx, dz); if (l < .12) { standPose(J); J.tick(dt); stride(J, J.st, 0, false, 0, dt); return true; }
