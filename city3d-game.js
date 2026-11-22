@@ -2,7 +2,7 @@
 // но красиво — случайные комбинации, случайные исходы, падения»). Tapping stays in the real-people battles tab.
 // Crews stand around the yard; walk up → «Батл» → an automatic dance-off on motion capture: each dancer's turn is a random
 // set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
-// Strength = hero level from lessons; energy = 20 per battle, refilled by lesson minutes (+5/min) and a small free daily top-up.
+// Strength = hero level from lessons; energy = 20 per battle, refilled to full every new day; lesson minutes (+5/min) and rewards stack above it.
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
@@ -15,7 +15,9 @@ const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] 
 
 const KEY = 'fedoskin-city3d';
 export const BAL = {
-  enMax: 100, enStart: 60, battle: 20, perMin: 5, daily: 40,
+  // ENERGY (owner 22.11.2026 «ежедневное восстановление энергии до полного… уроки и другие вещи добавляют энергии сверх 100»):
+  // every new day free up to enMax; lessons and every reward in the city stack ABOVE it up to enCap (the extra is never lost)
+  enMax: 100, enCap: 300, enStart: 60, battle: 20, perMin: 5, daily: 100,
   rep: [0, 30, 90, 200, 400, 700, 1100, 1700],
   ranks: ['Новичок двора', 'Свой', 'Уважаемый', 'Авторитет', 'Хозяин двора', 'Легенда района', 'Голос улиц', 'Имя города'].map(s => _t(s)),
   repWin: 12, repClean: 6, paint: 10, repPaint: 8, turfRep: 3, hold: 3,
@@ -207,12 +209,10 @@ function load() {
   return s;
 }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} };
-// energy comes from lessons (and a little every new day)
+// energy: every new day free up to full (enMax); lessons and rewards stack above it up to enCap
 function refill() {
   const notes = [];
   const sec = lessonSec(), d = sec - (S.lsec || 0);
-  if (d >= 60) { const add = Math.min(BAL.enMax - S.en, Math.floor(d / 60) * BAL.perMin); S.lsec += Math.floor(d / 60) * 60; if (add > 0) { S.en += add; notes.push(_t('🎬 Уроки: +{n} ⚡', { n: add })); } }
-  else if (d < 0) S.lsec = sec;
   if (S.day !== today()) {
     const days = dayDiff(S.day, today()); S.day = today(); S.beat = {}; S.goals = null;
     if (S.en < BAL.daily) { notes.push(_t('☀️ Новый день: энергия до {n} ⚡', { n: BAL.daily })); S.en = BAL.daily; }
@@ -222,6 +222,9 @@ function refill() {
     if (rep) { S.rep += rep; notes.push(_t('🎨 Твои стены: +{n} ★', { n: rep })); }
     if (lost.length) notes.push(_t('⚠️ {x} закрасили свою стену обратно', { x: lost.join(', ') }));
   }
+  // lessons AFTER the new-day top-up, so minutes watched before a new day are not swallowed by it
+  if (d >= 60) { const add = Math.max(0, Math.min(BAL.enCap - S.en, Math.floor(d / 60) * BAL.perMin)); S.lsec += Math.floor(d / 60) * 60; if (add > 0) { S.en += add; notes.push(_t('🎬 Уроки: +{n} ⚡', { n: add })); } }
+  else if (d < 0) S.lsec = sec;
   if (!S.goals) { const r = rng(today()); const pool = GOALS.filter(g => (!g.c || S.seen.center) && (!g.p || S.seen.park) && (!g.z || S.seen.prom)); S.goals = [];
     while (S.goals.length < 3) { const g = pool.splice(Math.floor(r() * pool.length), 1)[0]; if (S.goals.some(x => (x.k || x.id) === (g.k || g.id))) continue; S.goals.push({ id: g.id, n: 0, done: false }); }
     S.goalsDay = today(); S.goalsPaid = false; S.lday = sec; }
@@ -234,7 +237,7 @@ function bumpGoal(id, by = 1, abs = false) {
   if (!S.goals) return; let changed = false;
   for (const g of S.goals) { const G = GOALS.find(x => x.id === g.id); if ((G.k || G.id) !== id || g.done) continue;
     g.n = abs ? Math.max(g.n, by) : g.n + by; if (g.n >= G.n) { g.n = G.n; g.done = true; S.rep += 5; onGoal('✅ ' + G.t + ' · +5 ★'); } changed = true; }
-  if (changed && !S.goalsPaid && S.goals.every(g => g.done)) { S.goalsPaid = true; S.en = Math.min(BAL.enMax, S.en + 15); onGoal(_t('🎉 Все задания дня! +15 ⚡')); }
+  if (changed && !S.goalsPaid && S.goals.every(g => g.done)) { S.goalsPaid = true; S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + 15)); onGoal(_t('🎉 Все задания дня! +15 ⚡')); }
   if (changed) save();
 }
 const rankOf = rep => { let i = 0; while (i + 1 < BAL.rep.length && rep >= BAL.rep[i + 1]) i++; return i; };
@@ -243,7 +246,7 @@ const rankOf = rep => { let i = 0; while (i + 1 < BAL.rep.length && rep >= BAL.r
 const CSS = `
 #g3hud{position:fixed;left:10px;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 50px);display:flex;gap:8px;z-index:5;pointer-events:none;font:600 12px Inter,sans-serif;color:#F2EFE8;word-break:keep-all;overflow-wrap:anywhere}
 #g3hud .chip{pointer-events:auto;background:rgba(12,14,19,.66);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px 10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer}
-#g3en{flex:1;max-width:190px}#g3en .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden}#g3en .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFB547,#E2611A);border-radius:3px;transition:width .5s}
+#g3en{flex:1;max-width:190px}#g3en .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden}#g3en .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFB547,#E2611A);border-radius:3px;transition:width .5s}#g3en.over #g3enN{color:#FFD24A;text-shadow:0 0 8px rgba(255,210,74,.6)}#g3en.over .bar i{background:linear-gradient(90deg,#FFE27A,#FFB547);box-shadow:0 0 6px #FFD24A}
 #g3rk{flex:1}#g3rk b{color:#FFD23F}#g3rk .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden}#g3rk .bar i{display:block;height:100%;background:#FFD23F;border-radius:3px;transition:width .6s}
 #g3hud2{position:fixed;left:10px;top:calc(max(10px,env(safe-area-inset-top)) + 104px);display:flex;gap:8px;z-index:5;font:600 12px Inter,sans-serif;color:#F2EFE8}
 #g3hud2 .chip{background:rgba(12,14,19,.66);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px 10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer}
@@ -301,7 +304,7 @@ let toastT = 0;
 function toast(t) { const e = $('#g3toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2600); }
 let NHERE = 4, IDS = [];
 function paintHud() {
-  $('#g3enN').textContent = S.en + ' / ' + BAL.enMax; $('#g3en .bar i').style.width = (S.en / BAL.enMax * 100) + '%';
+  $('#g3enN').textContent = S.en + ' / ' + BAL.enMax; $('#g3en .bar i').style.width = Math.min(100, S.en / BAL.enMax * 100) + '%'; $('#g3en').classList.toggle('over', S.en > BAL.enMax);
   const r = rankOf(S.rep), a = BAL.rep[r], b = BAL.rep[r + 1];
   $('#g3rkN').textContent = BAL.ranks[r]; $('#g3rkC').textContent = b ? _t('{a} / {b} уважения', { a: S.rep, b }) : _t('{a} уважения', { a: S.rep });
   $('#g3rk .bar i').style.width = (b ? (S.rep - a) / (b - a) * 100 : 100) + '%';
@@ -324,8 +327,8 @@ export function initGame(ctx) {
   if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
   addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
-  $('#g3en').onclick = () => info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Максимум {m}.', { n: BAL.battle, m: BAL.enMax })}</p>
-    <p>${_t('Энергия пополняется <b>уроками</b>: каждая минута урока = <b>+{n} ⚡</b>. Каждый новый день — бесплатно до {d} ⚡.', { n: BAL.perMin, d: BAL.daily })}</p>
+  $('#g3en').onclick = () => info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Каждый новый день энергия бесплатно восстанавливается до <b>{m} ⚡</b>.', { n: BAL.battle, m: BAL.daily })}</p>
+    <p>${_t('<b>Уроки</b> и награды в городе добавляют энергию сверх {m}: каждая минута урока = <b>+{n} ⚡</b>. Запас копится до {c} ⚡ и не сгорает.', { n: BAL.perMin, m: BAL.enMax, c: BAL.enCap })}</p>
     <p>${_t('Сила твоего би-боя тоже из уроков: чем выше уровень героя, тем сложнее пауэр он крутит и тем реже падает.')}</p><button onclick="location.href='./'">${_t('🎬 К урокам')}</button>`);
   $('#g3info').onclick = e => { if (e.target.id === 'g3info') e.currentTarget.classList.remove('on'); };
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
@@ -575,11 +578,11 @@ export function initGame(ctx) {
     if (pl.id === 'gate') travel('center');
     if (pl.id === 'yard') travel('yard');
     if (pl.id === 'metro') metroMap();
-    if (pl.id === 'tea') { const add = Math.min(BAL.enMax - S.en, myWalls() * BAL.tea); S.en += add; S.teaDay = today(); save(); paintHud(); sfx('hit'); toast(_t('🥤 Горячий чай: +{n} ⚡. Твои стены в Центре кормят тебя каждый день', { n: add })); paintAct(); }
+    if (pl.id === 'tea') { const add = Math.max(0, Math.min(BAL.enCap - S.en, myWalls() * BAL.tea)); S.en += add; S.teaDay = today(); save(); paintHud(); sfx('hit'); toast(_t('🥤 Горячий чай: +{n} ⚡. Твои стены в Центре кормят тебя каждый день', { n: add })); paintAct(); }
     if (pl.id === 'mall') startMall();
     if (pl.id === 'park') travel('park');
     if (pl.id === 'pcenter') travel('center');
-    if (pl.id === 'og') { const add = Math.min(BAL.enMax - S.en, BAL.ogEn); S.en += add; S.rep += BAL.ogRep; S.ogDay = today(); save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
+    if (pl.id === 'og') { const add = Math.max(0, Math.min(BAL.enCap - S.en, BAL.ogEn)); S.en += add; S.rep += BAL.ogRep; S.ogDay = today(); save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
       toast(_t('🧓 Маятник: «Вижу, работаешь. Так и растут» · +{r} ★ и +{e} ⚡', { r: BAL.ogRep, e: add })); paintAct(); }
     if (pl.id === 'bars') { const H = W.hero; S.warmDay = today(); save(); A = { kind: 'warm', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: PK.bars.x, z: PK.bars.z } }; W.lock = true; W.camT = { x: PK.bars.x, z: PK.bars.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); paintAct(); }
     if (pl.id === 'jam') startJam();
@@ -587,7 +590,7 @@ export function initGame(ctx) {
     if (pl.id === 'zpark') travel('park');
     if (pl.id === 'ring') startRing();
     if (pl.id === 'stash') { const s = PZ.stash[pl.i], big = rng(today() * 13 + pl.i)() < .34; S.stash.got.push(pl.i); s.g.visible = false; PLACES.splice(PLACES.indexOf(pl), 1);
-      if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.min(BAL.enMax, S.en + BAL.stashEn); S.rep += BAL.stashRep; }
+      if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + BAL.stashEn)); S.rep += BAL.stashRep; }
       save(); paintHud(); bumpGoal('stash'); sfx('hit'); toast(big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep })); near = null; paintAct(); }
   }
   // THE UNDERGROUND RING of the industrial zone: one battle of one round against a random regular (lv 6–8). Every win in a row makes the

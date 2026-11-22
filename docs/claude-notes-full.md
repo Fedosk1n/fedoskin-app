@@ -1655,3 +1655,11 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   Whisper in the owner's Chrome as before, but the raw words could NOT be committed from the browser (using the admin token from a page was refused),
   so cues were read off the page and the work files written by hand; subs/raw has no file for these three. AIRBABY tail: Whisper lost the timing after
   ~346 s — the last three cues were timed by hand (344–355 s). In AIRBABY he calls the freeze «флажок»; translated as «this freeze».
+
+## 3D city — energy: full every day, lessons above 100 (22.11.2026)
+- Owner: «Сделай в городе ежедневное восстановление энергии до полного. Так же сделай, чтобы просмотр уроков и другие вещи добавляли энергии сверх 100».
+- city3d-game.js `BAL`: `daily` 40 → 100 (= `enMax`), new `enCap` 300. Every new day: if energy < 100 it becomes 100; a reserve above 100 is kept.
+- Lessons (+5 ⚡/min), all goals of the day (+15), tea in the Centre, the OG in the Park, stashes in the industrial zone add up to 300 (were capped at 100).
+- `refill()` now adds lesson minutes AFTER the new-day top-up (before, minutes watched yesterday evening were swallowed by the top-up).
+- HUD shows «180 / 100», the bar stays full and turns gold (`#g3en.over`). Info sheet texts rewritten, 8 languages (tools/i18n_city3d.py).
+- Tested headless 390×844 ru/en/de: 30 yesterday → 100; 180 yesterday → 180; 95 + 20 min → 195; 290 + 20 min → 300; 40 yesterday + 10 min → 150. No errors.

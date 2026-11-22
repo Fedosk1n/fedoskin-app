@@ -103,6 +103,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
   missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Game layer `city3d-game.js`: crews, AUTO battles
   (random sets, falls, judges), energy from lessons, respect ranks; its save is separate from the flat city (merge gear later).
+- City 3D ENERGY (22.11, owner): every new day free top-up to FULL (`BAL.daily` = `enMax` 100); lessons (+5/min) and every reward (goals, tea, OG, stash)
+  stack ABOVE 100 up to `BAL.enCap` 300 (gold HUD `#g3en.over`); lessons are added AFTER the new-day top-up in `refill()`.
 
 ## Testing habits
 - Local server: `python3 -m http.server 8765` in the repo; Playwright headless at 390×844 (iPhone) and 375×667, ru + en.
