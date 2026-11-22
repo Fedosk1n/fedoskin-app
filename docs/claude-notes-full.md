@@ -1651,3 +1651,7 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Not translated on purpose: the `?fps` counter (owner's tool), move names (FLARE, HEADSPIN… are international), BREAK BATTLE / FEDOSKIN TEAM.
 - Versions: city3d.js ?v=25, city3d-game.js ?v=24, city3d-power.js ?v=2, city3d-center.js ?v=5, city3d-park.js ?v=4, city3d-prom.js ?v=3,
   city3d-i18n.js ?v=1.
+- Subtitles 22.11.2026 (owner «субтитры для длинных видео, на которых ещё не делал»): fr-one-hand-freeze, fr-turtle-freeze-variations, fr-airbaby (R2).
+  Whisper in the owner's Chrome as before, but the raw words could NOT be committed from the browser (using the admin token from a page was refused),
+  so cues were read off the page and the work files written by hand; subs/raw has no file for these three. AIRBABY tail: Whisper lost the timing after
+  ~346 s — the last three cues were timed by hand (344–355 s). In AIRBABY he calls the freeze «флажок»; translated as «this freeze».

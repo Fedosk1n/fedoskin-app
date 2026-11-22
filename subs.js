@@ -1,6 +1,54 @@
 // Субтитры уроков: id урока → {ks: видео в Kinescope, langs: языки, v: версия}. Тексты — subs/<id>.json.
 // Делаются через Claude (tools/subs_build.py). Если видео урока заменили (другой ks) — субтитры не показываются.
 window.LESSON_SUBS = {
+ "fr-airbaby": {
+  "ks": "",
+  "r2": "fr-airbaby-to0b3ely.mp4",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
+ "fr-one-hand-freeze": {
+  "ks": "",
+  "r2": "fr-one-hand-freeze-psj6sn9b.mp4",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
+ "fr-turtle-freeze-variations": {
+  "ks": "",
+  "r2": "fr-turtle-freeze-variations-qwmri071.mp4",
+  "langs": [
+   "ru",
+   "en",
+   "es",
+   "pt",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "zh"
+  ],
+  "v": 1
+ },
  "gd-windmill-entry": {
   "ks": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
   "langs": [
