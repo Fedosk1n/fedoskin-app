@@ -27,6 +27,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "tr-side-kick": {
+  "src": "r2:tr-side-kick-u57gpgpy.mp4",
+  "every": 0.5,
+  "n": 83,
+  "w": 180,
+  "h": 320,
+  "cols": 10,
+  "v": 1
+ },
  "fw-6step": {
   "src": "r2:fw-6step-5iu2h0ii.mp4",
   "every": 0.5,
@@ -316,12 +325,12 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "tr-side-kick": {
-  "src": "r2:tr-side-kick-u57gpgpy.mp4",
-  "every": 0.5,
-  "n": 83,
-  "w": 180,
-  "h": 320,
+ "fr-airbaby": {
+  "src": "r2:fr-airbaby-to0b3ely.mp4",
+  "every": 3,
+  "n": 119,
+  "w": 320,
+  "h": 180,
   "cols": 10,
   "v": 1
  }
