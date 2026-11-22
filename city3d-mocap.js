@@ -3,7 +3,7 @@
 // so the moves play exactly as recorded — no hand-posed angles. Look = HERO.topDown(level, acc).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { personShadows } from './city3d-perf.js?v=1';
+import { personShadows } from './city3d-perf.js?v=2';
 
 let DATA = null;
 const CLIPS = {};
@@ -54,7 +54,9 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
 // hips go to −x. Checked in node: every joint of the copy = the original's joint on the other side reflected, error 0.0000 m.
 // The names keep their stem, so TRAVEL / power / freeze tests and clipLen work as before.
 const MIRROR = ['Breakdance_Footwork_1', 'Breakdance_Footwork_2', 'Breakdance_Footwork_3', 'Breakdance_Footwork_To_Freeze', 'Breakdance_Uprock_To_Ground',
-  'Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Breakdance_Uprock_Var_2', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Crossleg_Freeze'];
+  'Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Breakdance_Uprock_Var_2', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Crossleg_Freeze',
+  // 22.11.2026: the freeze recordings too — the hero's new air / baby freezes (city3d-game.js HFREEZE, FDROP) to either side
+  'Breakdance_Freeze_Var_1', 'Breakdance_Freeze_Var_2', 'Breakdance_Freeze_Var_3', 'Breakdance_Freeze_Var_4', 'Breakdance_Freezes'];
 function mirrorClip(c) {
   const t = {};
   for (const [k, v] of Object.entries(c.t)) {
@@ -194,9 +196,125 @@ const SKIN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness:
 // a soft rim of light on the edges of the body: a figure reads as one shape against the dark asphalt when seen from above.
 // 17.11.2026: the rim is mostly for DARK clothes — on white (soles seen edge-on from above, a white tee) it only added glare,
 // so it fades to 30 % on light colours; then the same soft roll-off as every other piece of clothing (tameHi above).
-SKIN_MAT.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('void main() {', TAME_FN + 'void main() {').replace('#include <opaque_fragment>',
-  'float rimK = pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), 2.4) * (1. - .7 * smoothstep(.15, .6, dot(diffuseColor.rgb, vec3(.299, .587, .114))));\n  outgoingLight += diffuseColor.rgb * rimK * vec3(.62, .68, .86) * .5;\n  outgoingLight = tameHi(outgoingLight);\n  #include <opaque_fragment>'); };
+// 22.11.2026: the body also carries the person's rigid pieces (mergeParts): per-vertex roughness / metalness (rm) and rim (1 = the body's
+// cloth, 0 = a rigid piece, which never had the rim) — so the whole person is ONE draw call
+SKIN_MAT.onBeforeCompile = sh => {
+  sh.vertexShader = sh.vertexShader.replace('void main() {', 'attribute vec2 rm;\nattribute float rim;\nvarying vec2 vRM;\nvarying float vRim;\nvoid main() {\n  vRM = rm; vRim = rim;');
+  sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'varying vec2 vRM;\nvarying float vRim;\n' + TAME_FN + 'void main() {')
+    .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vRM.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vRM.y;')
+    .replace('#include <opaque_fragment>',
+  'float rimK = vRim * pow(1. - clamp(dot(normalize(normal), normalize(vViewPosition)), 0., 1.), 2.4) * (1. - .7 * smoothstep(.15, .6, dot(diffuseColor.rgb, vec3(.299, .587, .114))));\n  outgoingLight += diffuseColor.rgb * rimK * vec3(.62, .68, .86) * .5;\n  outgoingLight = tameHi(outgoingLight);\n  #include <opaque_fragment>'); };
+SKIN_MAT.customProgramCacheKey = () => 'skin2';
 const shadeOf = (c, k) => '#' + _c1.set(c).multiplyScalar(k).getHexString(), mixOf = (c, c2, k) => '#' + _c1.set(c).lerp(_c2.set(c2), k).getHexString();
+// ---------- SPEED, 22.11.2026 (owner «проверь почему город притормаживает») ----------
+// 1) ONE shadow-depth material for every skinned piece. three.js draws all shadow casters with ONE shared depth material; each time it
+//    went from a skinned body to a rigid piece (head, cap, the merged shadow pieces on the bones) and back, it re-derived that material's
+//    program (a big parameter object + a long key string): ~50 times a frame in the yard, every frame — CPU time and ~100 KB of garbage
+//    a frame for the phone to collect. With their own depth material the skinned pieces never switch it.
+export const DEPTH_SKIN = new THREE.MeshDepthMaterial();
+// 2) A PERSON'S RIGID PIECES AS ONE SKINNED PIECE. Head, hair, cap, eyes, ears, brows, laces, chain… were ~14 separate meshes a person —
+//    ~14 draw calls each frame (+ their shadows); 21 people in the yard ≈ 300 of the ~400 draw calls. Now all of them that use the plain
+//    clothing materials (M / M2 / MV) are baked into one mesh on the SAME skeleton: every vertex follows the bone its piece hung on (weight
+//    1, so it moves exactly as before), the piece's colour / roughness / metalness ride on the vertices (PARTS). The originals stay in the
+//    tree (ground contact points use them) but are drawn nowhere (layers off). Glowing custom details and sewn patches stay separate.
+const PARTS_SHADER = sh => {
+  sh.vertexShader = sh.vertexShader.replace('void main() {', 'attribute vec2 rm;\nvarying vec2 vRM;\nvoid main() {\n  vRM = rm;');
+  sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'varying vec2 vRM;\n' + TAME_FN + 'void main() {')
+    .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vRM.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vRM.y;')
+    .replace('#include <opaque_fragment>', 'outgoingLight = tameHi(outgoingLight);\n  #include <opaque_fragment>');
+};
+const PARTS = [THREE.FrontSide, THREE.DoubleSide].map(side => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, side });
+  m.onBeforeCompile = PARTS_SHADER; m.customProgramCacheKey = () => 'parts1'; return m; });
+const _rel = new THREE.Matrix4(), _inv = new THREE.Matrix4(), _nm = new THREE.Matrix3(), _pv = new THREE.Vector3(), _pc = new THREE.Color();
+function mergeParts(rig, body) {
+  rig.updateMatrixWorld(true); _inv.copy(rig.matrixWorld).invert();
+  const bones = body.skeleton.bones, groups = [[], []];
+  const shown = o => { for (let q = o; q && q !== rig; q = q.parent) if (!q.visible) return false; return true; };
+  rig.traverse(o => {
+    if (!o.isMesh || o.isSkinnedMesh || o.userData.shadowBatch || !shown(o)) return;
+    const m = o.material, g = o.geometry;
+    if (!m || Array.isArray(m) || !m.isMeshStandardMaterial || m.onBeforeCompile !== tameShader || m.map || m.alphaMap || m.transparent || m.opacity < 1 || m.polygonOffset
+      || m.side === THREE.BackSide || (m.emissive && m.emissive.getHex())) return;
+    if (!g || !g.attributes.position || !g.attributes.normal || g.morphAttributes.position) return;
+    let b = o.parent; while (b && !b.isBone) b = b.parent; const bi = b ? bones.indexOf(b) : -1; if (bi < 0) return;
+    groups[m.side === THREE.DoubleSide ? 1 : 0].push({ o, g, m, bi });
+  });
+  // bake a list of pieces into flat arrays, `base` = the first vertex number they will get
+  const bake = (list, base) => {
+    let nv = 0, ni = 0; for (const { g } of list) { const n = g.attributes.position.count; nv += n; ni += g.index ? g.index.count : n; }
+    const A = { nv, ni, P: new Float32Array(nv * 3), N: new Float32Array(nv * 3), C: new Float32Array(nv * 3), RM: new Float32Array(nv * 2), RIM: new Float32Array(nv), SI: new Uint16Array(nv * 4), SW: new Float32Array(nv * 4), I: new Uint32Array(ni) };
+    let vo = 0, io = 0;
+    for (const { o, g, m, bi } of list) {
+      _rel.multiplyMatrices(_inv, o.matrixWorld); _nm.getNormalMatrix(_rel); const flip = _rel.determinant() < 0;
+      const pa = g.attributes.position, na = g.attributes.normal, ca = m.vertexColors ? g.attributes.color : null, n = pa.count;
+      for (let i = 0; i < n; i++) {
+        const j = vo + i;
+        _pv.fromBufferAttribute(pa, i).applyMatrix4(_rel); A.P[j * 3] = _pv.x; A.P[j * 3 + 1] = _pv.y; A.P[j * 3 + 2] = _pv.z;
+        _pv.fromBufferAttribute(na, i).applyMatrix3(_nm).normalize(); A.N[j * 3] = _pv.x; A.N[j * 3 + 1] = _pv.y; A.N[j * 3 + 2] = _pv.z;
+        _pc.copy(m.color); if (ca) { _pc.r *= ca.getX(i); _pc.g *= ca.getY(i); _pc.b *= ca.getZ(i); }
+        A.C[j * 3] = _pc.r; A.C[j * 3 + 1] = _pc.g; A.C[j * 3 + 2] = _pc.b; A.RM[j * 2] = m.roughness; A.RM[j * 2 + 1] = m.metalness; A.SI[j * 4] = bi; A.SW[j * 4] = 1;
+      }
+      const ix = g.index, cnt = ix ? ix.count : n;
+      for (let k = 0; k < cnt; k += 3) { const a = ix ? ix.getX(k) : k, b = ix ? ix.getX(k + 1) : k + 1, c = ix ? ix.getX(k + 2) : k + 2;
+        A.I[io++] = base + vo + a; if (flip) { A.I[io++] = base + vo + c; A.I[io++] = base + vo + b; } else { A.I[io++] = base + vo + b; A.I[io++] = base + vo + c; } }
+      vo += n;
+    }
+    return A;
+  };
+  const geoOf = (A, idx) => { const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(A.P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(A.N, 3)); g.setAttribute('color', new THREE.BufferAttribute(A.C, 3));
+    g.setAttribute('rm', new THREE.BufferAttribute(A.RM, 2)); g.setAttribute('rim', new THREE.BufferAttribute(A.RIM, 1)); g.setAttribute('skinIndex', new THREE.BufferAttribute(A.SI, 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(A.SW, 4));
+    const nv = A.P.length / 3; g.setIndex(new THREE.BufferAttribute(nv > 65535 ? idx : Uint16Array.from(idx), 1)); return g; };
+  const hide = list => { for (const { o } of list) { o.layers.disableAll(); o.castShadow = false; o.userData.merged = true; delete o.userData.tiny; } };
+  const out = [];
+  // one-sided pieces go INTO the body itself (one draw call for the whole person); the body's cloth keeps its rim (rim 1), the pieces don't
+  if (groups[0].length) {
+    const bg = body.geometry, nb = bg.attributes.position.count, A = bake(groups[0], nb), nv = nb + A.nv;
+    const cat = (name, k, T) => { const o = new T(nv * k), src = bg.attributes[name].array; o.set(src.subarray(0, nb * k)); o.set(A[name === 'position' ? 'P' : name === 'normal' ? 'N' : name === 'color' ? 'C' : name === 'rm' ? 'RM' : name === 'rim' ? 'RIM' : name === 'skinIndex' ? 'SI' : 'SW'], nb * k); return o; };
+    const M2 = { P: cat('position', 3, Float32Array), N: cat('normal', 3, Float32Array), C: cat('color', 3, Float32Array), RM: cat('rm', 2, Float32Array), RIM: cat('rim', 1, Float32Array), SI: cat('skinIndex', 4, Uint16Array), SW: cat('skinWeight', 4, Float32Array) };
+    const bi = bg.index.array, idx = new Uint32Array(bi.length + A.I.length); idx.set(bi); idx.set(A.I, bi.length);
+    const g = geoOf(M2, idx); bg.dispose(); body.geometry = g; body.userData.parts = groups[0].length; hide(groups[0]);
+  }
+  // two-sided pieces (a brim seen from below, an open band) — their own skinned piece on the same bones (cull off both ways)
+  if (groups[1].length >= 2) {
+    const A = bake(groups[1], 0), sm = new THREE.SkinnedMesh(geoOf(A, A.I), PARTS[1]); sm.name = 'parts2'; sm.boundingSphere = body.boundingSphere.clone();
+    sm.castShadow = sm.receiveShadow = true; sm.customDepthMaterial = DEPTH_SKIN; sm.userData.parts = groups[1].length;
+    rig.add(sm); sm.bind(body.skeleton, body.bindMatrix); hide(groups[1]); out.push(sm);
+  }
+  // what is left (glowing trims, sewn patches — special materials) is merged PER MATERIAL: the ~20 glowing strips of a fully tailored hero are
+  // one draw, the two sleeve patches one draw. Same material object, so they look exactly as before.
+  const left = new Map();
+  rig.traverse(o => {
+    if (!o.isMesh || o.isSkinnedMesh || o.userData.shadowBatch || o.userData.merged || !shown(o)) return;
+    const m = o.material, g = o.geometry; if (!m || Array.isArray(m) || m.transparent || m.polygonOffset || !g || !g.attributes.position || !g.attributes.normal || g.morphAttributes.position) return;
+    if (m.map && !g.attributes.uv) return;
+    let b = o.parent; while (b && !b.isBone) b = b.parent; const bi = b ? bones.indexOf(b) : -1; if (bi < 0) return;
+    let L = left.get(m); if (!L) left.set(m, L = []); L.push({ o, g, m, bi });
+  });
+  for (const [m, list] of left) {
+    if (list.length < 2) continue;
+    let nv = 0, ni = 0; for (const { g } of list) { const n = g.attributes.position.count; nv += n; ni += g.index ? g.index.count : n; }
+    const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), UV = m.map ? new Float32Array(nv * 2) : null, SI = new Uint16Array(nv * 4), SW = new Float32Array(nv * 4), I = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+    let vo = 0, io = 0;
+    for (const { o, g, bi } of list) {
+      _rel.multiplyMatrices(_inv, o.matrixWorld); _nm.getNormalMatrix(_rel); const flip = _rel.determinant() < 0, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv, n = pa.count;
+      for (let i = 0; i < n; i++) { const j = vo + i;
+        _pv.fromBufferAttribute(pa, i).applyMatrix4(_rel); P[j * 3] = _pv.x; P[j * 3 + 1] = _pv.y; P[j * 3 + 2] = _pv.z;
+        _pv.fromBufferAttribute(na, i).applyMatrix3(_nm).normalize(); N[j * 3] = _pv.x; N[j * 3 + 1] = _pv.y; N[j * 3 + 2] = _pv.z;
+        if (UV) { UV[j * 2] = ua.getX(i); UV[j * 2 + 1] = ua.getY(i); } SI[j * 4] = bi; SW[j * 4] = 1; }
+      const ix = g.index, cnt = ix ? ix.count : n;
+      for (let k = 0; k < cnt; k += 3) { const a = ix ? ix.getX(k) : k, b = ix ? ix.getX(k + 1) : k + 1, c = ix ? ix.getX(k + 2) : k + 2;
+        I[io++] = vo + a; if (flip) { I[io++] = vo + c; I[io++] = vo + b; } else { I[io++] = vo + b; I[io++] = vo + c; } }
+      vo += n;
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    if (UV) geo.setAttribute('uv', new THREE.BufferAttribute(UV, 2)); geo.setAttribute('skinIndex', new THREE.BufferAttribute(SI, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4)); geo.setIndex(new THREE.BufferAttribute(I, 1));
+    const sm = new THREE.SkinnedMesh(geo, m); sm.name = 'parts-' + (m.name || m.type); sm.boundingSphere = body.boundingSphere.clone();
+    sm.castShadow = list.some(x => x.o.castShadow); sm.receiveShadow = true; sm.customDepthMaterial = DEPTH_SKIN; sm.userData.parts = list.length;
+    rig.add(sm); sm.bind(body.skeleton, body.bindMatrix); hide(list); out.push(sm);
+  }
+  return out;
+}
 function skinGeo() {
   const pos = [], col = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
   // sh = brightness of the vertex colour (painted shade: darker under the arms, between the legs, under a hem)
@@ -231,6 +349,7 @@ function skinGeo() {
       if (prev) { if (seam === 1) G.seam(prev, R); else G.join(prev, R); } else G.pole(R, at(s0), color, wt(s0), true, sh * .9); prev = R; rings.push(R); });
     G.pole(prev, at(s1), st[st.length - 1][3], wt(s1), false, st[st.length - 1][5] || 1); rings.u = u; rings.v = v; rings.d = d; rings.at = at; rings.wt = wt; return rings; };
   G.build = () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    { const n = pos.length / 3, rm = new Float32Array(n * 2), rim = new Float32Array(n).fill(1); for (let i = 0; i < n; i++) rm[i * 2] = .82; g.setAttribute('rm', new THREE.BufferAttribute(rm, 2)); g.setAttribute('rim', new THREE.BufferAttribute(rim, 1)); }
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx); g.computeVertexNormals();
     const N = g.attributes.normal; seams.forEach(([A, B]) => { for (let i = 0; i < A.n; i++) { _p.set(N.getX(A.i0 + i) + N.getX(B.i0 + i), N.getY(A.i0 + i) + N.getY(B.i0 + i), N.getZ(A.i0 + i) + N.getZ(B.i0 + i)).normalize(); N.setXYZ(A.i0 + i, _p.x, _p.y, _p.z); N.setXYZ(B.i0 + i, _p.x, _p.y, _p.z); } });
     return g; };
@@ -552,10 +671,12 @@ export function mocapPerson(look, opt = {}) {
   // shadows: the body, the head, hair, hats, bags cast them; eyes, ears, laces, pins, patches don't (invisible from above, but each was one
   // more draw call in every shadow map every frame — owner 17.11.2026 «…притормаживает… займись оптимизацией»)
   root.userData.person = true;
-  root.traverse(m => { if (!m.isMesh) return; m.receiveShadow = true; if (m.isSkinnedMesh) { m.castShadow = true; return; }
+  root.traverse(m => { if (!m.isMesh) return; m.receiveShadow = true; if (m.isSkinnedMesh) { m.castShadow = true; m.customDepthMaterial = DEPTH_SKIN; return; }
     const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const rr = g.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
     m.castShadow = g.type !== 'CircleGeometry' && rr >= .05; if (rr < .045 && g.type !== 'CircleGeometry' && !(m.material.emissive && m.material.emissive.getHex())) m.userData.tiny = true; });   // tiny = hidden when the map is zoomed far out (city3d.js)
-  personShadows(root);   // the rest: one merged shadow piece per bone (head + hair + cap = one draw instead of five)
+  // the rigid pieces in plain clothing materials → one skinned piece on the same bones (22.11.2026, see mergeParts); opt.noMerge keeps them apart
+  const parts = opt.noMerge ? [] : mergeParts(rig, body);
+  personShadows(root);   // the rest (glowing details, patches): one merged shadow piece per bone
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
   root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
     if (m.userData.balls) { m.userData.balls.forEach(([x, y, z, r]) => PTS.push({ m, p: new THREE.Vector3(x, y, z), r: r * scale * bd.head })); return; }
@@ -567,7 +688,7 @@ export function mocapPerson(look, opt = {}) {
     pt('Hips', .1 * hd); pt('Spine', .1 * dp * wd + bd.belly * .05); pt('Spine1', .105 * dp); pt('Spine2', .116 * dp); pt('Neck', .07);
     for (const s of ['Left', 'Right']) { pt(s + 'Arm', .066 * A); pt(s + 'ForeArm', .05 * A); pt(s + 'Hand', .037 * A); pt(s + 'UpLeg', .092 * L); pt(s + 'Leg', .069 * L); pt(s + 'Foot', .06); } }
   const mixer = new THREE.AnimationMixer(rig);
-  const J = { root, rig, B, body, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95, idle: opt.idle || 'Stand' };
+  const J = { root, rig, B, body, parts, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95, idle: opt.idle || 'Stand' };
   // advance the animation and move the dancer by the clip's own travel
   J.tick = dt => {
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;

@@ -6,9 +6,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=13';   // v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=14';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=2';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=3';   // the hero's power move is DRAWN by the finger (17.11)
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -180,6 +180,35 @@ const FREEZE = [
   { c: 'Crossleg_Freeze', at: 0, len: 2.0, nm: 'CROSSLEG FREEZE' },
 ];
 const TOPNM = { Breakdance_Uprock: 'CROSS STEP', Breakdance_Uprock_Var_1: 'KICK STEP', Bboy_Uprock: 'TOPROCK', Brooklyn_Uprock: 'BROOKLYN ROCK', Breakdance_Uprock_Var_2: 'INDIAN STEP' };
+// THE HERO'S SETS (owner 22.11.2026 «добавь разнообразие танцевальных выходов человечку игрока»). Every set of the hero used to be the same
+// shape: toprock → drop → footwork → power → chair / crossleg freeze. Now it is one of four shapes (never the same one twice in a row):
+//   classic   — toprock → drop → footwork → power → freeze
+//   rock      — two toprock phrases (another step, the other side) → drop → shorter footwork → power → freeze
+//   drop      — toprock → straight down INTO a freeze (air / baby freeze, held) → footwork → power → freeze
+//   powerFirst— toprock → drop → a short footwork phrase → power → footwork again → freeze
+// and it ends in one of six freezes (not the last one again). The new freezes are real capture too — the four «Freeze_Var» recordings and
+// «Breakdance_Freezes», unused in battles until now: each goes from standing down into a freeze, HOLDS it (measured: the joints almost stop,
+// < 1°/frame) and comes back up. A = where the hero enters it after a power move (measured: 24–36° mean joint difference from the end of
+// the power moves — the old chair / crossleg entries are 34–48°), len = up to the end of the hold. Air freeze = one hand on the floor, body
+// upside down, legs up (hips ≈ 1.1 m, feet 1.5–2 m); baby freeze = head + both hands on the floor, legs off it (hips ≈ .5 m).
+// Opponents keep their sets (only footwork combos, 17.11.2026); the cypher and the mall show use the hero's sets too.
+const HFREEZE = [
+  { c: 'Breakdance_Footwork_To_Freeze', at: 1.3, len: 2.3, nm: 'CHAIR FREEZE' },
+  { c: 'Crossleg_Freeze', at: 0, len: 2.0, nm: 'CROSSLEG FREEZE' },
+  { c: 'Breakdance_Freeze_Var_2', at: 1.4, len: 1.75, nm: 'AIR FREEZE', lv: 2, risk: .03 },
+  { c: 'Breakdance_Freeze_Var_1', at: 1.5, len: 1.3, nm: 'AIR FREEZE', lv: 2, risk: .03 },
+  { c: 'Breakdance_Freeze_Var_4', at: 1.2, len: 1.8, nm: 'BABY FREEZE' },
+  { c: 'Breakdance_Freeze_Var_3', at: 1.2, len: 2.3, nm: 'BABY FREEZE' },
+];
+// straight down from the toprock into a held freeze (the «drop» shape): a = the last standing beat before the clip goes down, b = end of the hold
+const FDROP = [
+  { c: 'Breakdance_Freeze_Var_4', a: .8, b: 2.9, nm: 'BABY FREEZE' },
+  { c: 'Breakdance_Freeze_Var_3', a: .8, b: 3.5, nm: 'BABY FREEZE' },
+  { c: 'Breakdance_Freeze_Var_2', a: .9, b: 3.0, nm: 'AIR FREEZE', lv: 2 },
+  { c: 'Breakdance_Freezes', a: 1.6, b: 3.85, nm: 'AIR FREEZE', lv: 2 },
+];
+const SHAPES = ['classic', 'rock', 'drop', 'powerFirst'];
+let heroShape = -1, heroFz = '';
 // turn a dancer by d (rad) round his HIPS: the body turns in place instead of swinging round the middle of the circle
 const _yv = new THREE.Vector3(), _UP = new THREE.Vector3(0, 1, 0);
 function turnBy(J, d) { if (!d) return; J.root.rotation.y += d; _yv.set(J.dx || 0, 0, J.dz || 0).applyAxisAngle(_UP, -d); J.dx = _yv.x; J.dz = _yv.z; }
@@ -754,28 +783,44 @@ export function initGame(ctx) {
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
   function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
-    // a set: toprock → down → footwork → power → freeze, each step with an outcome
+    // a set: toprock → down → footwork → power → freeze, each step with an outcome; the HERO's sets come in four shapes (HFREEZE above)
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
+    const me = who === 'me';
+    let shape = 'classic';
+    if (me) { let k = Math.floor(r() * SHAPES.length); if (k === heroShape) k = (k + 1 + Math.floor(r() * (SHAPES.length - 1))) % SHAPES.length; heroShape = k; shape = SHAPES[k];
+      if (W.forceSet && SHAPES.includes(W.forceSet)) shape = W.forceSet;   // tests: ?set=drop
+      if (shape === 'drop' && !FDROP.some(f => (f.lv || 1) <= lv)) shape = 'classic'; }
     const st = Math.round((bf.step || 0) * 100) / 100, top = pick(TOP, r), topM = side(top, r() < .5);
-    push(topM, 1.9 + r() * .8, r() * clipLen(top), { nm: TOPNM[top], pts: 1 + st, kind: 'top' });
+    const topLen = shape === 'classic' || shape === 'powerFirst' ? 1.9 + r() * .8 : 1.5 + r() * .6;
+    push(topM, topLen, r() * clipLen(top), { nm: TOPNM[top], pts: 1 + st, kind: 'top' });
+    // «rock»: a second toprock phrase — another step, danced to the other side (shown by name, no extra points)
+    if (shape === 'rock') { const t2 = pick(TOP.filter(x => x !== top), r); push(side(t2, topM === top), 1.5 + r() * .6, r() * clipLen(t2), { nm: TOPNM[t2], kind: 'top2', fade: .4 }); }
     // the drop: to the left or to the right, a bit faster or slower, landing turned 15…65° one way (the way the footwork then goes round)
-    let m = r() < .5; const dir = r() < .5 ? -1 : 1, dsp = .95 + r() * .2, DOWN = 'Breakdance_Uprock_To_Ground';
-    push(side(DOWN, m), clipLen(DOWN) / dsp - .05, 0, { kind: 'down', sp: dsp, yaw: dir * (.26 + r() * .87), yt: clipLen(DOWN) / dsp });
+    let m = r() < .5, dropNm = ''; const dir = r() < .5 ? -1 : 1, dsp = .95 + r() * .2, DOWN = 'Breakdance_Uprock_To_Ground';
+    if (shape === 'drop') {
+      // «drop»: straight from the toprock down INTO a held freeze (no plain drop), then on into the footwork
+      const F = pick(FDROP.filter(f => (f.lv || 1) <= lv), r); dropNm = F.nm;
+      push(side(F.c, m), F.b - F.a, F.a, { nm: F.nm, pts: .5, kind: 'freeze', fail: false, fade: .4, yaw: dir * (.15 + r() * .35), yt: .9 });   // turns only while going down, the hold stays still
+    } else push(side(DOWN, m), clipLen(DOWN) / dsp - .05, 0, { kind: 'down', sp: dsp, yaw: dir * (.26 + r() * .87), yt: clipLen(DOWN) / dsp });
     // the footwork combo: 2–3 phrases, ~2.7–3.5 s, never the same phrase twice in a row; the side switches now and then (a slower
     // cross-fade, the weight goes over); between phrases he keeps turning round (mostly the same way)
-    const fsp = .92 + r() * .24, want = 2.7 + r() * .8; let tot = 0, prev = -1, first = true, turn = dir;
-    while (tot < want - .6) {
-      let i = Math.floor(r() * FW.length); if (i === prev) i = (i + 1 + Math.floor(r() * (FW.length - 1))) % FW.length; prev = i;
-      const P = FW[i], sw = !first && r() < .35; if (sw) m = !m;
-      // a phrase is cut to what is left of the combo, but never shorter than .9 s (no flicks) and not cut for the last half second
-      const sp = fsp * (.95 + r() * .1), full = (P.b - P.a) / sp, rest = want - tot, len = full - rest < .5 ? full : Math.max(.9, rest);
-      if (!first && r() < .25) turn = -turn;
-      push(side(P.c, m), len, P.a, Object.assign({ sp, fade: sw ? .45 : .32 }, first ? { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' }
-        : { kind: 'foot2', yaw: turn * (.2 + r() * .5), yt: .5 }));
-      tot += len; first = false;
-    }
+    let prev = -1, turn = dir;
+    const combo = (want, scored, out, fade0) => { let tot = 0, first = true;
+      while (tot < want - .6 || first) {
+        let i = Math.floor(r() * FW.length); if (i === prev) i = (i + 1 + Math.floor(r() * (FW.length - 1))) % FW.length; prev = i;
+        const P = FW[i], sw = !first && r() < .35; if (sw) m = !m;
+        // a phrase is cut to what is left of the combo, but never shorter than .9 s (no flicks) and not cut for the last half second
+        const sp = fsp * (.95 + r() * .1), full = (P.b - P.a) / sp, rest = want - tot, len = full - rest < .5 ? full : Math.max(.9, rest);
+        if (!first && r() < .25) turn = -turn;
+        out.push(Object.assign({ c: side(P.c, m), len, at: P.a, sp, fade: first && fade0 ? fade0 : sw ? .45 : .32 }, first && scored ? { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' }
+          : { kind: 'foot2', yaw: turn * (.2 + r() * .5), yt: .5 }));
+        tot += len; first = false;
+      } };
+    const fsp = .92 + r() * .24;
+    const fwWant = shape === 'classic' ? 2.7 + r() * .8 : shape === 'powerFirst' ? 1.2 + r() * .4 : 2.0 + r() * .6;
+    combo(fwWant, true, seq, shape === 'drop' ? .5 : 0);
     const pw = POWER.filter(p => p.lv <= lv); let P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
-    if (who === 'me' && W.forcePM) P = POWER.find(p => p.nm === W.forcePM) || P;   // tests: ?pm=FLARE
+    if (me && W.forcePM) P = POWER.find(p => p.nm === W.forcePM) || P;   // tests: ?pm=FLARE
     const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
     const pFail = r() < failP;
     if (P.pre) push(P.pre, 1.6, 1.0, { kind: 'pre' });
@@ -784,12 +829,17 @@ export function initGame(ctx) {
     // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
     const pwS = seq[seq.length - 1], mk = (c, len, at, o = {}) => Object.assign({ c, len, at: at || 0 }, o), ok = [], bad = [mk(null, 2.2, 0, { kind: 'fall' })];
     if (P.post) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
-    const F = pick(FREEZE, r), fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0), .03, .2);
+    // «powerFirst»: after the power move he goes back down into footwork (no extra points), then the freeze
+    if (shape === 'powerFirst') combo(1.6 + r() * .6, false, ok, .45);
+    // the freeze: the hero picks from six (not the same as last time; air freezes from level 2), opponents from the two old ones
+    let F = pick(FREEZE, r);
+    if (me) { const fz = HFREEZE.filter(f => (f.lv || 1) <= lv && f.nm !== heroFz && f.nm !== dropNm); F = pick(fz.length ? fz : HFREEZE, r); heroFz = F.nm; }   // not the last one, not the one he dropped into
+    const fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0) + (F.risk || 0), .03, .2);
     ok.push(mk(side(F.c, r() < .5), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 }));
     if (fFail) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
     seq.push(...(pFail ? bad : ok)); pwS.tails = { ok, bad };
     let t = .9; seq.forEach(s => { s.a = t; t += s.len; s.b = t; });   // .9 s to step into the middle
-    return { J, who, seq, len: t + OUT, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
+    return { J, who, seq, shape, len: t + OUT, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
   function startBattle(g) {
     if (!g.c.tour) S.en -= BAL.battle; S.fights++; save(); paintHud();
@@ -851,7 +901,7 @@ export function initGame(ctx) {
         const s = T.seq[si]; T.si = si;
         if (s.c) { J.play(s.c, { fade: s.fade ?? (s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4), at: s.at }); if (J.act) J.act.timeScale = s.sp || 1; }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
-        else if (s.kind === 'power' || s.kind === 'freeze') mvText(s);
+        else if (s.kind === 'power' || s.kind === 'freeze' || s.kind === 'top2') mvText(s);
         paintScore(T);
         // MY power move: drawn by the finger (the old random outcome only if nobody draws)
         if (s.kind === 'power' && T.who === 'me' && !s.done && PM.can(s.c)) { s.pm = true; armDraw(T, s); }

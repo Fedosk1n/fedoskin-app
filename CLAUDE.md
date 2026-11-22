@@ -96,6 +96,17 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City 3D SPEED (17.11): shadows were ~80% of the draw calls. `city3d-perf.js` merges the shadows of everything static (layer 1, self-healing
   watcher), people's parts on one bone cast one merged piece, tiny parts cast nothing, bodies are frustum-culled, the moon's shadow is fitted
   to the screen, lamp shadows redraw only when on screen. New casters need nothing special; `userData.dyn = true` keeps one out. `?fps` shows the worst frame.
+- City 3D SPEED 2 (22.11, owner «проверь почему город притормаживает»): a PERSON = ONE draw call — `mergeParts` (city3d-mocap.js) bakes every rigid
+  piece in plain clothing materials (M/M2/MV) INTO the skinned body (weight 1 to its bone; colour + roughness/metalness `rm` + `rim` per vertex,
+  SKIN_MAT reads them; two-sided pieces → one extra skinned `parts2`); the originals stay hidden (`layers.disableAll()`, `userData.merged`) for
+  ground contacts. New body attributes `rm`/`rim` are REQUIRED by SKIN_MAT (G.build adds them). All skinned meshes use `DEPTH_SKIN` as
+  customDepthMaterial (else three re-derived the shared depth program ~50×/frame). Boot WARM-UP compiles every shader (render target set, the
+  real variant) and uploads every texture. OutputPass + grade = one pass (`out`, old name `fin`). `?fps` shows ЦП ms, jerks/10 s and a frame strip.
+  Shadow batcher takes multi-material boxes. `?set=classic|rock|drop|powerFirst` forces the hero's set shape (tests).
+- City 3D HERO SETS (22.11, owner «разнообразие танцевальных выходов человечку игрока»): `makeTurn` for who 'me' picks a SHAPE (SHAPES, never
+  twice in a row) and a final freeze from HFREEZE (6: chair, crossleg, air ×2 from lv 2, baby ×2; not the last one, not the one he dropped
+  into); «drop» goes from toprock straight into a held freeze (FDROP, +0.5, can't fail); `top2` = 2nd toprock (name, no points). Freeze clips
+  are mirrored (`_M`). Opponents unchanged.
 - City 3D CAMERA reads `W.hero` every frame (rewear() replaces the hero object — never cache it); player zoom `W.uZoom` (pinch / wheel, .7…3,
   saved), W.camT overrides it in battles/actions. Crew members are dressed one by one (`dress` / `crewLook` in city3d-game.js, yard palettes `CSTY`).
 - City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit; ALL texts translated since 18.11 — see i18n).

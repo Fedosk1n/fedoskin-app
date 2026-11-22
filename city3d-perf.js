@@ -16,7 +16,7 @@ const SHADOW_SIDE = { [THREE.FrontSide]: THREE.BackSide, [THREE.BackSide]: THREE
 // the depth-only stand-ins share one invisible material per shadow side (only the shadow pass draws them: they are on layer 1)
 const _mats = new Map();
 export function shadowMat(side) { let m = _mats.get(side); if (!m) { m = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }); m.shadowSide = side; _mats.set(side, m); } return m; }
-export const shadowSideOf = mat => mat.shadowSide ?? SHADOW_SIDE[mat.side];
+export const shadowSideOf = mat => { if (Array.isArray(mat)) mat = mat[0]; return mat.shadowSide ?? SHADOW_SIDE[mat.side]; };
 // one geometry (positions only) from many: list = [{ geo, e: 16 numbers (matrix into the target space) }]
 export function mergePositions(list) {
   let nv = 0, ni = 0;
@@ -46,7 +46,11 @@ export function shadowPiece(geo, side, name) {
 export function mergeable(ob) {
   const m = ob.material, g = ob.geometry;
   if (!ob.isMesh || ob.isSkinnedMesh || ob.isInstancedMesh || ob.isBatchedMesh || ob.customDepthMaterial) return false;
-  if (Array.isArray(m) || !m || m.visible === false || m.isShaderMaterial || m.alphaTest > 0 || m.alphaToCoverage || m.alphaMap || m.displacementMap || m.wireframe) return false;
+  // a box with a material per side (the yard's buildings) is fine too (22.11.2026): for a shadow only the shape counts — it used to cast
+  // as 6 draws (one per material) in every shadow map, 48 draws a frame for the three buildings
+  const ms = Array.isArray(m) ? m : [m];
+  if (!ms.length || ms.some(x => !x || x.visible === false || x.isShaderMaterial || x.alphaTest > 0 || x.alphaToCoverage || x.alphaMap || x.displacementMap || x.wireframe)) return false;
+  if (ms.some(x => shadowSideOf(x) !== shadowSideOf(ms[0]))) return false;
   if (!g || !g.attributes.position || Object.keys(g.morphAttributes || {}).length || g.drawRange.start !== 0 || g.drawRange.count !== Infinity) return false;
   return (g.index ? g.index.count : g.attributes.position.count) % 3 === 0;
 }
@@ -76,7 +80,7 @@ export function shadowBatcher(scene, opt = {}) {
     const side = shadowSideOf(it.o.material);
     const key = Math.floor(_c.x / CELL) + ',' + Math.floor(_c.z / CELL) + ',' + side;
     let c = cells.get(key); if (!c) { c = { key, side, items: new Set(), mesh: null }; cells.set(key, c); }
-    c.items.add(it); it.cell = c; it.o.castShadow = false; dirty.add(c);
+    c.items.add(it); it.cell = c; dirty.add(c);   // it keeps casting its own shadow until its cell's merged piece exists (build)
   }
   function evict(it) {
     const c = it.cell; it.dyn = true; it.cell = null; it.o.castShadow = true;
@@ -87,6 +91,7 @@ export function shadowBatcher(scene, opt = {}) {
     if (!c.items.size) return;
     const m = shadowPiece(mergePositions([...c.items].map(it => ({ geo: it.o.geometry, e: it.m }))), c.side, 'shadow-batch ' + c.key);
     m.matrixAutoUpdate = false; scene.add(m); c.mesh = m;
+    for (const it of c.items) it.o.castShadow = false;
   }
   // call once per frame AFTER rendering (the renderer has just brought every matrixWorld up to date)
   function tick() {
@@ -94,12 +99,13 @@ export function shadowBatcher(scene, opt = {}) {
     if (!built) {
       // settling: whatever moves in the first frames (dancers' props, records, boats, the runner) is dynamic for good
       for (const it of items) if (!it.dyn && changed(it)) it.dyn = true;
-      if (frame >= SETTLE) { for (const it of items) if (!it.dyn) place(it); built = true; for (const c of dirty) build(c); dirty.clear(); nCells = cells.size; }
+      // 22.11.2026: the first build is spread over frames (4 cells a frame; it was all ~26 cells in ONE frame — a 20 ms hitch on load)
+      if (frame >= SETTLE) { for (const it of items) if (!it.dyn) place(it); built = true; nCells = cells.size; }
       return;
     }
     const n = Math.ceil(items.length / EVERY);
     for (let k = 0; k < n && items.length; k++) { rr = (rr + 1) % items.length; const it = items[rr]; if (it.cell && changed(it)) evict(it); }
-    if (dirty.size) { const c = dirty.values().next().value; dirty.delete(c); build(c); }
+    for (let k = 0; k < (frame < SETTLE + 30 ? 4 : 1) && dirty.size; k++) { const c = dirty.values().next().value; dirty.delete(c); build(c); }
   }
   // the lights' shadow cameras see the merged pieces (layer 1) as well as everything else (layer 0)
   function useFor(light) { light.shadow.camera.layers.enable(SHADOW_LAYER); }

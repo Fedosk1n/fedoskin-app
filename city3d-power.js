@@ -12,7 +12,7 @@
 // The line is not invented: it is MEASURED from the same motion capture (the angle of the legs round the hips, frame by frame), and
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
-import { mocapPerson, getClip } from './city3d-mocap.js?v=13';
+import { mocapPerson, getClip } from './city3d-mocap.js?v=14';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 // the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
@@ -43,7 +43,7 @@ export const canDraw = name => !!DRAW[name] && !!getClip(name);
 function table(name) {
   if (name in TR) return TR[name];
   const cfg = DRAW[name], clip = getClip(name); if (!cfg || !clip) return (TR[name] = null);
-  if (!probe) probe = mocapPerson(HERO.topDown(1, []));
+  if (!probe) probe = mocapPerson(HERO.topDown(1, []), { noMerge: true });
   const L = clip.duration, a0 = cfg.a ?? 0, b0 = Math.min(L, cfg.b ?? L), n = Math.max(40, Math.round((b0 - a0) * 120));
   const mx = probe.mixer; mx.stopAllAction();
   const act = mx.clipAction(clip); act.reset(); act.setLoop(THREE.LoopRepeat, Infinity); act.setEffectiveWeight(1); act.play();

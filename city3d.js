@@ -7,10 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=13';
-import { shadowBatcher, trimCasters } from './city3d-perf.js?v=1';
-import { initGame } from './city3d-game.js?v=25';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=14';
+import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
+import { initGame } from './city3d-game.js?v=26';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=5';
 import { buildPark } from './city3d-park.js?v=4';
@@ -974,6 +973,7 @@ async function boot() {
     n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
+  if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set (classic / rock / drop / powerFirst), city3d-game.js SHAPES
   const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
@@ -999,11 +999,15 @@ async function boot() {
   // a soft knee (17.11.2026, «пересвет»): a surface just over the threshold used to bloom at full strength — any lit light thing grew a
   // halo; now the glow fades in over .84…1.2, so only real light sources (lamp strips ≈ 1.4+, signs, LEDs) glow in full
   bloom.highPassUniforms.smoothWidth.value = .36;
-  comp.addPass(new OutputPass());
-  const fin = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-    fragmentShader: 'uniform sampler2D tDiffuse; uniform float uT; uniform vec2 uR; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = (vUv - .5) * vec2(uR.x / uR.y, 1.); float v = smoothstep(1.05, .32, length(d) * 1.25); c.rgb *= mix(.42, 1., v); float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb += vec3(-.01, .0, .03) * (1. - l) * (1. - l); float n = fract(sin(dot(vUv * uR + fract(uT) * 91.7, vec2(12.9898, 78.233))) * 43758.5453); c.rgb += (n - .5) * .03; gl_FragColor = c; }' });
-  comp.addPass(fin);
+  // the tone curve + sRGB (OutputPass) and the look (vignette, cool shadows, grain) are ONE full-screen pass since 22.11.2026: before, the
+  // tone-mapped picture was written to a full-size half-float buffer and read back by a second pass — one more full-screen write and read
+  // every frame (≈1.3 million pixels on a phone) for the same result. The grade runs on the same numbers in the same order.
+  const out = new OutputPass();
+  Object.assign(out.uniforms, { uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } });
+  out.material.fragmentShader = out.material.fragmentShader.replace('varying vec2 vUv;', 'uniform float uT; uniform vec2 uR;\nvarying vec2 vUv;')
+    .replace(/\}\s*$/, '  { vec4 c = gl_FragColor; vec2 d = (vUv - .5) * vec2(uR.x / uR.y, 1.); float v = smoothstep(1.05, .32, length(d) * 1.25); c.rgb *= mix(.42, 1., v); float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb += vec3(-.01, .0, .03) * (1. - l) * (1. - l); float n = fract(sin(dot(vUv * uR + fract(uT) * 91.7, vec2(12.9898, 78.233))) * 43758.5453); c.rgb += (n - .5) * .03; gl_FragColor = c; }\n}');
+  comp.addPass(out);
+  const fin = out;   // (the old name: fin.uniforms.uT / uR below)
 
   const off = new THREE.Vector3(0, 15.5, 8.6);   // ~61° down from the south: more volume
   // fit the moon's shadow to the screen: the box (in the moon's view) around everything visible from the ground up to 12 m, + a margin;
@@ -1031,6 +1035,16 @@ async function boot() {
     camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
+  // WARM-UP (22.11.2026, owner «проверь почему город притормаживает»): three.js prepares a shader and sends a texture to the graphics chip
+  // only the first time something comes on screen. Walking a lap of the yard did ~30 such uploads (signs, walls, decals, up to 2 MB each with
+  // their mipmaps) and compiled shaders on the way — on an iPhone each one can hold a frame for tens of milliseconds, so the city «caught»
+  // whenever a new corner came into view. Now every shader of the district is compiled (for the picture's own buffer, the variant really
+  // used) and every texture uploaded here, while the district loads.
+  { const texs = new Set(), add = v => { if (v && v.isTexture) texs.add(v); };
+    scene.traverse(o => { const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) { for (const k in m) add(m[k]); if (m.uniforms) for (const k in m.uniforms) add(m.uniforms[k] && m.uniforms[k].value); } });
+    try { renderer.setRenderTarget(rt); renderer.compile(scene, camera); } catch (e) { console.warn(e); } finally { renderer.setRenderTarget(null); }
+    texs.forEach(t => { try { if (!t.isRenderTargetTexture) renderer.initTexture(t); } catch (_) {} }); }
 
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
   // the hero is read EVERY frame: after a change of clothes (gear won in a battle, a detail from the tailor) W.hero is a NEW person —
@@ -1044,9 +1058,16 @@ async function boot() {
   let last = performance.now(), fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
+  // 22.11.2026: + how long the PHONE'S PROCESSOR worked on the frame («ЦП») — if the frames are slow while ЦП is small, the graphics chip is
+  // the limit; + a strip of the last ~5 s of frames (each bar = one frame, red = longer than 50 ms) and how many such jerks in 10 s, so one
+  // screenshot shows a periodic stutter
+  let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
+  const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
   const frame = now => {
     requestAnimationFrame(frame);
-    const dt = Math.min(.05, (now - last) / 1000); worst = Math.max(worst, now - last); last = now;
+    const c0 = performance.now(), iv = now - last;
+    const dt = Math.min(.05, iv / 1000); worst = Math.max(worst, iv); last = now;
+    if (showFps) { hist[histI] = iv; histI = (histI + 1) % hist.length; if (iv > 50) jerks.push(now); while (jerks.length && jerks[0] < now - 10000) jerks.shift(); }
     if (showFps) renderer.info.reset();
     // the beat count of what is heard (each crew loop has its own tempo); no sound yet — the yard's 88 BPM by the page clock
     const hb = musicOn && musicLive && window.RB && RB.bgmBeat ? RB.bgmBeat() : null;
@@ -1090,8 +1111,11 @@ async function boot() {
     fin.uniforms.uT.value = now * .001;
     comp.render(dt);
     SB.tick();
+    if (showFps) { cpuS += performance.now() - c0; cpuN++; }
     // quality guard: a phone that can't keep up gets fewer pixels, then no bloom
-    fpsN++; fpsT += dt; if (fpsT > 2) { const fps = fpsN / fpsT; if (showFps) $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ' + renderer.info.render.calls + ' выз. · ' + PR.toFixed(2);
+    fpsN++; fpsT += dt; if (fpsT > 2) { const fps = fpsN / fpsT;
+      if (showFps) { $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ЦП ' + (cpuS / Math.max(1, cpuN)).toFixed(1) + ' мс · рывков ' + jerks.length + ' · ' + renderer.info.render.calls + ' выз. · ' + PR.toFixed(2); cpuS = cpuN = 0;
+        const g = fpsG; g.clearRect(0, 0, 300, 40); for (let i = 0; i < 300; i++) { const v = hist[(histI + i) % 300]; if (!v) continue; g.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffb84d' : 'rgba(255,255,255,.55)'; const h = Math.min(40, v * .8); g.fillRect(i, 40 - h, 1, h); } }
       if (fps < 40 && now > 6000) { slow++; if (slow >= 2 && tier < 3) { tier++; slow = 0; if (tier === 1) PR = Math.max(1, PR * .8); else if (tier === 2) PR = Math.max(1, PR * .8); else bloom.enabled = false; resize(); } } else slow = 0;
       fpsN = 0; fpsT = 0; worst = 0; }
   };

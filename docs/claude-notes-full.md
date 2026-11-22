@@ -1663,3 +1663,58 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - `refill()` now adds lesson minutes AFTER the new-day top-up (before, minutes watched yesterday evening were swallowed by the top-up).
 - HUD shows «180 / 100», the bar stays full and turns gold (`#g3en.over`). Info sheet texts rewritten, 8 languages (tools/i18n_city3d.py).
 - Tested headless 390×844 ru/en/de: 30 yesterday → 100; 180 yesterday → 180; 95 + 20 min → 195; 290 + 20 min → 300; 40 yesterday + 10 min → 150. No errors.
+
+## 3D city — why it stutters + more varied hero sets (22.11.2026, late evening)
+- Owner: «проверь почему город притормаживает. Так же добавь разнообразие танцевальных выходов человечку игрока».
+- MEASURED (headless Chromium + swiftshader, virtual 60 fps clock, per-frame hooks on WebGL calls, CDP CPU + sampling-heap profiles;
+  scripts were in /home/claude/prof, not committed). Standing in the yard: ~7 ms CPU a frame, ~95 % of it three.js submitting draw calls
+  (~393 a frame; game logic ~0.5 ms). No periodic CPU spike in 20 s (the 17.11 «every 5 s» pattern still not reproducible without the phone).
+  Found:
+  1. PROGRAM THRASH in the shadow pass: three draws every caster with ONE shared MeshDepthMaterial; each skinned ↔ rigid switch (a body, then
+     its merged head/cap shadow piece, then the next body…) re-ran getProgram (getParameters + a long cache-key join): ~50 times a frame in the
+     yard, every frame — ~1 ms CPU and ~150 KB garbage a frame. Fix: all skinned meshes get `customDepthMaterial = DEPTH_SKIN` (city3d-mocap.js).
+  2. FIRST-SIGHT HITCHES: textures upload (with mipmaps) and shaders compile only when something first comes on screen. One lap of the yard
+     = 25 frames with uploads (12 MB in all, up to ~2 MB each) + a shader compile; on Safari each can hold a frame for tens of ms. Fix: boot
+     WARM-UP in city3d.js — `renderer.setRenderTarget(rt); renderer.compile(scene, camera)` (with the composer's buffer set, so the program
+     variant really used — no tone mapping, linear — is the one compiled) + `renderer.initTexture()` for every texture found on any material
+     (props + ShaderMaterial uniforms). After: 0 compiles, 0 uploads while walking.
+  3. PEOPLE = most draw calls: ~14 rigid pieces a person (head, hair, cap, eyes, ears, brows, laces, chain…), each a draw in the picture and
+     in the shadow maps; 21 people in the yard ≈ 200 of the 393 draws. Fix: `mergeParts(rig, body)` at the end of mocapPerson —
+     (a) pieces in plain clothing materials (tame M / M2 / MV, no map / emissive / transparency) are baked INTO the skinned body: each vertex
+     skinned to the bone its piece hung on with weight 1 (moves exactly as before), colour = material colour × vertex colour, roughness /
+     metalness per vertex (`rm`), `rim` = 1 for the body's cloth, 0 for the pieces (they never had the rim). SKIN_MAT reads rm / rim
+     (onBeforeCompile replaces roughnessmap_ / metalnessmap_fragment; customProgramCacheKey 'skin2'); G.build gives every body rm = (.82, 0),
+     rim = 1 — any SkinnedMesh with SKIN_MAT MUST have them. (b) two-sided pieces → one extra SkinnedMesh `parts2` (PARTS[1]); (c) the rest
+     (glowing trims, sewn patches) merged PER MATERIAL (same material object, uv kept if it has a map). The originals stay in the tree, hidden
+     everywhere by `layers.disableAll()` (not visible=false: children must still render), `castShadow=false`, `userData.merged`, no `tiny` —
+     J.tick's ground-contact points still use their matrixWorld. Pitfall met: Box / Cylinder / RoundedBox geometries carry `groups` even with
+     ONE material — a `groups.length > 1` filter wrongly skipped them (only matters for material arrays). `opt.noMerge` skips the merge
+     (city3d-power.js probe). Hero fully tailored (`?cus=3333`): 28 draws → 5. The bronze statue (Centre) still works (material swap).
+  4. The yard's three buildings (BoxGeometry with 6 materials) cast shadows as 6 draws each in every shadow map (48 a frame): city3d-perf.js
+     `mergeable` now takes material arrays (all with the same shadow side) → they go into the merged shadow cells.
+  5. OutputPass (tone curve + sRGB) and the grade (vignette, cool shadows, grain) were two full-screen passes with a half-float buffer between;
+     now ONE pass (`out` — OutputPass with the grade appended to its fragment shader; `fin` kept as an alias for the uniforms).
+  6. Shadow batcher: the first build was all ~26 cells in one frame (≈20 ms) — now 4 a frame; items keep casting until their cell exists.
+- RESULT (standing at the district's spawn, same frames, old → new): draws yard 393 → 203, centre 256 → 152, park 245 → 137, prom 259 → 135
+  (−40…−48 %); CPU per frame (median, headless desktop) yard 6.9 → 4.6 ms, centre 5.4 → 4.4, park 4.7 → 3.5, prom 4.7 → 3.7; the worst 5 %
+  of frames yard 11.9 → 8.7 ms; program re-checks 26–50 → 0 a frame; heap growth per frame about halved. Walking a lap of the yard: draws
+  323 → 195, 1 compile + 25 uploads → 0. Screenshots old vs new identical (yard, zoomed-out yard, Centre statue, prom, hero close-up incl.
+  `?cus=3333`; residual = grain noise once both poses are fully settled). On Safari every draw call costs more than in Chrome, so the
+  gain on the iPhone should be at least as large — NOT measured on a real iPhone.
+- `?fps` readout now: fps · worst frame · «ЦП X мс» (CPU time of the frame: small ЦП with slow frames = the graphics chip is the limit) ·
+  «рывков N» (frames > 50 ms in the last 10 s) · draw calls · pixel ratio, plus a strip of the last 300 frames (white, orange > 25 ms,
+  red > 50 ms) — one screenshot shows whether a stutter is periodic.
+- HERO SETS (city3d-game.js, `makeTurn` for who 'me'): SHAPES classic / rock (2nd toprock phrase, kind `top2`: name shown, no points) /
+  drop (toprock straight down into a held freeze from FDROP: kind 'freeze', fail false, +0.5, yaw only while going down) / powerFirst
+  (short scored footwork → power → `foot2` footwork in the power's ok-tail → freeze). Never the same shape twice in a row (`heroShape`).
+  Final freeze from HFREEZE (chair, crossleg, 2 × AIR FREEZE from lv 2, 2 × BABY FREEZE), not the same NAME as last time (`heroFz`) nor the
+  one he dropped into. New clips = the unused Mixamo «Breakdance_Freeze_Var_1…4» and «Breakdance_Freezes» (also added to MIRROR → `_M`).
+  Measured from the capture: Var_1/2/Freezes 3.3–3.9 s = one hand on the floor, upside down, feet 1.5–2 m → AIR FREEZE; Var_3/4 = head +
+  both hands on the floor, hips ~.5 m, legs off it → BABY FREEZE (names given by Claude from the poses — the owner may rename); holds
+  < 1°/frame; entry after power moves 24–36° mean joint difference (old chair/crossleg entries 34–48°). Opponents unchanged.
+  Sets 13–18 s (were ~13–17). Test switch `?set=classic|rock|drop|powerFirst` (W.forceSet), like `?pm=`.
+- Tested headless: 60 sets per level (lv 4: all shapes, never repeated, 4 freeze names, all clips exist incl. `_M`; lv 1: no air
+  freezes); full battles yard (rock, drop, powerFirst with a finger-DRAWN flare → perfect → footwork → mirrored baby freeze → replay → win),
+  Centre 2 rounds vs Chrome, Park jam, prom ring — all to the judges, no errors; cypher show filmed frame by frame (drop, powerFirst);
+  rewear (all tailor details) in German; `_t.miss` empty. NOT on a real iPhone (smoothness, the joins of the new freezes at full speed).
+- Versions: city3d.js ?v=27 (city3d.html), city3d-mocap.js ?v=14, city3d-perf.js ?v=2, city3d-game.js ?v=26, city3d-power.js ?v=3.
