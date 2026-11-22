@@ -271,6 +271,17 @@ window.LESSONS_DATA = [
   "cv": 1
  },
  {
+  "id": "fr-airbaby",
+  "sec": "Freezes",
+  "name": "AIRBABY",
+  "dur": 355,
+  "ru": "",
+  "added": "2026-11-22",
+  "at": 1795351155787,
+  "pv": true,
+  "r2": "fr-airbaby-to0b3ely.mp4"
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
