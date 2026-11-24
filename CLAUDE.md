@@ -90,7 +90,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City 3D MUSIC (17.11, iPhone silent until the 🎵 button was toggled): on a phone no sound before the first real touch (touchend / pointerup / click),
   the loop restarts once `RB.audioState()` is running, after the background the next touch makes a new context (`RB.fresh`). Zoom tip `#ztip`: once ever (`fedoskin-city3d-ztip`).
 - City 3D WALK / RUN = real mocap (Mixamo «Walking» + «Running» in anim/bboy.json, `gaitPose` in city3d-mocap.js) blended by speed in `stride()` (city3d.js) for
-  everyone who walks; phase driven by distance (no skating). Hero top speed `HERO_SPD` 5.2 m/s. Never go back to the hand-made sine gait. Hands and sneakers are part of the skinned body.
+  everyone who walks, including entries to the floor; phase driven by distance and scaled to the person's build. Hero top speed `HERO_SPD` 5.2 m/s.
+  Never go back to the hand-made sine gait. Hands and sneakers are part of the skinned body.
 - City 3D CUSTOM (17.11): tailor «Игла» in the yard (city3d-game.js `CUS`, save `S.cus` {kicks, top, pants, head} 0…3, paid with ⚡, levels 2/3 gated by rank);
   details drawn on the hero from `look.cus` (city3d-mocap.js, `?cus=3333` = test look); bonuses go through `buff()` → `makeTurn` (step pts, style, freeze / power falls).
 - City 3D PEOPLE have BODIES: `bodyOf(seed, {type, girl, old, …})` → `mocapPerson(look, { body })` (city3d-mocap.js: BODY_TYPES avg / slim / lanky /
@@ -105,14 +106,12 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   customDepthMaterial (else three re-derived the shared depth program ~50×/frame). Boot WARM-UP compiles every shader (render target set, the
   real variant) and uploads every texture. OutputPass + grade = one pass (`out`, old name `fin`). `?fps` shows ЦП ms, jerks/10 s and a frame strip.
   Shadow batcher takes multi-material boxes. `?set=classic|rock|drop|powerFirst` forces the hero's set shape (tests).
-- City 3D HERO SETS (22.11, owner «разнообразие танцевальных выходов человечку игрока»): `makeTurn` for who 'me' picks a SHAPE (SHAPES, never
-  twice in a row) and a final freeze from HFREEZE (6: chair, crossleg, air ×2 from lv 2, baby ×2; not the last one, not the one he dropped
-  into); «drop» goes from toprock straight into a held freeze (FDROP, +0.5, can't fail); `top2` = 2nd toprock (name, no points). Freeze clips
-  are mirrored (`_M`). Opponents unchanged.
+- City 3D SETS: `makeTurn` rotates through seven `SHAPES` and three `ENTRIES` independently for the hero and each opponent. Final holds
+  use mirrored clips from `FREEZE` (air from lv 2). `?set=<shape>` forces the hero's set for testing.
 - City 3D CAMERA reads `W.hero` every frame (rewear() replaces the hero object — never cache it); player zoom `W.uZoom` (pinch / wheel, .7…3,
   saved), W.camT overrides it in battles/actions. Crew members are dressed one by one (`dress` / `crewLook` in city3d-game.js, yard palettes `CSTY`).
 - City 3D: own page city3d.html, OPEN TO EVERYONE from the Город tab since 17.11 (alpha notice on the first visit; ALL texts translated since 18.11 — see i18n).
-  Standing = `Stand` / `Stand_Calm` loops (`makeStand`, never loop raw «Breakdance_Ready» — it is a sidestep); clips with a big seam play once (`userData.once`). Owner's direction 14.11: top-down 3D like his
+  Standing uses five loops from `makeStand` (never loop raw «Breakdance_Ready», a sidestep); clips with a big seam play once (`userData.once`). Owner's direction 14.11: top-down 3D like his
   reference video. Dancers now play REAL motion capture (Mixamo, `anim/bboy.json`, `city3d-mocap.js`) — never hand-pose dance moves again;
   missing moves (windmill, airflare, backspin, 2000) need mocap from a video-capture service. Game layer `city3d-game.js`: crews, AUTO battles
   (random sets, falls, judges), energy from lessons, respect ranks; its save is separate from the flat city (merge gear later).

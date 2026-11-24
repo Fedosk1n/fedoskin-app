@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=15';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=16';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=28';
+import { initGame } from './city3d-game.js?v=29';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=5';
 import { buildPark } from './city3d-park.js?v=4';
@@ -738,7 +738,7 @@ function myCustom() {
 }
 
 // ---------- the cypher: one dancer at a time goes into the middle (motion capture) ----------
-// a round = toprock while stepping in → drop to the floor → footwork → power → freeze → toprock back to the place
+// A dancer walks in, performs a set, then returns to their spot at the edge.
 const SETS = [
   [['Breakdance_Uprock', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_1', 1], ['Breakdance_Swipes', 1], ['Breakdance_Freeze_Var_1', 1, 3.6]],
   [['Brooklyn_Uprock', 1, 4.2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_2', 1], ['Breakdance_1990', 6], ['Breakdance_Freezes', 1, 4]],
@@ -758,14 +758,20 @@ function updateCrew(_tb, dt) {
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
   if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (!isStand(D.cur)) D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
     D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
-  if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; }
-  const rel = now - T.start, walk = 2.2, back = 2.9, J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
+  const J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
+  if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; walkStart(J); }
+  const bend = (T.who % 3 - 1) * .64, walk = 1.7 + Math.abs(bend) * .35, back = 2.9;
+  const rel = now - T.start - walk;
   let freezeNow = false;
-  if (rel < T.plan.len) {
+  if (rel < 0) {
+    walkMove(J, dt, cx, cz, ease(clamp((rel + walk) / walk, 0, 1)), toMid, bend);
+    W.power = false;
+  } else if (rel < T.plan.len) {
     const i = T.plan.list.findIndex(s => rel < s.b); const s = T.plan.list[i];
-    if (i !== T.seg) { T.seg = i; J.play(s.c, { fade: i ? .3 : .35 }); }
-    const k = ease(clamp(rel / walk, 0, 1)); J.root.position.set(lerp(c.slot.x, cx, k), 0, lerp(c.slot.z, cz, k));
-    J.root.rotation.y = Math.atan2(cx - c.slot.x, cz - c.slot.z);
+    if (i !== T.seg) {
+      if (J.ws) { walkMove(J, dt, cx, cz, 1, toMid, bend); J.ws = null; }
+      T.seg = i; J.play(s.c, { fade: i ? .3 : .35 });
+    }
     freezeNow = FRZ.test(s.c) && rel - s.a > .8; W.power = POWER.test(s.c);
   } else if (rel < T.plan.len + back) {
     // the set is over: he gets up and WALKS back to his place, then turns to the circle again
@@ -848,9 +854,12 @@ function updateHero(dt, tb) {
     if (l < .15) s.tgt = null; else { const kk = (s.tgt.run ? 1 : .36) * Math.min(1, l / (s.tgt.run ? 1.3 : .6)); ix = dx / l * kk; iz = dz / l * kk; } }
   const il = Math.hypot(ix, iz); if (il > 1) { ix /= il; iz /= il; }
   const SPD = HERO_SPD; s.vx = lerp(s.vx, ix * SPD, 1 - Math.exp(-dt * 12)); s.vz = lerp(s.vz, iz * SPD, 1 - Math.exp(-dt * 12));
-  const sp = Math.hypot(s.vx, s.vz);
-  if (sp > .05) {
-    const n = collide(p.x + s.vx * dt, p.z + s.vz * dt, .3); if (s.tgt && Math.hypot(n.x - p.x, n.z - p.z) < sp * dt * .25) s.tgt = null;
+  const speed = Math.hypot(s.vx, s.vz);
+  let sp = 0;
+  if (speed > .05 && dt > 0) {
+    const n = collide(p.x + s.vx * dt, p.z + s.vz * dt, .3);
+    sp = Math.hypot(n.x - p.x, n.z - p.z) / dt;
+    if (s.tgt && sp < speed * .25) s.tgt = null;
     p.x = n.x; p.z = n.z;
     const want = Math.atan2(s.vx, s.vz); let d = want - s.face; d = Math.atan2(S(d), Cc(d)); s.face += d * (1 - Math.exp(-dt * 14));
   }
@@ -859,9 +868,19 @@ function updateHero(dt, tb) {
   // base = the standing loop (mocap, see makeStand) or a toprock near the cypher / after standing a while; moving = the recorded
   // walk / run blended over the standing loop (stride). The toprock starts only once the last step has settled (s.wk).
   const nearC = !!W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5, moving = k > .04;
-  if (moving || (s.wk || 0) > .004) { if (moving) s.idle = 0; standPose(H); }
-  else { s.idle += dt; const want = (s.idle > 3 || nearC) && s.idle > .4 ? 'Bboy_Uprock' : H.idle;
-    if (H.cur !== want) H.play(want, { fade: want === H.idle ? .35 : .6 }); }
+  if (moving || (s.wk || 0) > .004) {
+    if (moving) { s.idle = 0; s.nextTop = null; s.topUntil = 0; }
+    standPose(H);
+  } else {
+    s.idle += dt;
+    if (s.idle >= (s.nextTop ?? (nearC ? .75 : 4))) {
+      const choices = IDLE_TOP.filter(c => c !== s.lastTop);
+      s.lastTop = choices[Math.floor(Math.random() * choices.length)];
+      s.topUntil = s.idle + Math.min(3.4, clipLen(s.lastTop));
+      s.nextTop = s.topUntil + (nearC ? 1.6 : 4) + Math.random() * 2;
+      H.play(s.lastTop + (Math.random() < .5 ? '_M' : ''), { fade: .5 });
+    } else if (s.idle >= (s.topUntil || 0)) standPose(H);
+  }
   H.tick(dt);
   stride(H, s, sp, moving, k, dt);
 }
@@ -872,6 +891,7 @@ function updateHero(dt, tb) {
 // shorter steps when slow, so the feet don't skate. Shared by the hero, dancers walking off the floor and walking people of the
 // districts. s = { wk, wr, ph } kept by the caller; sp = speed m/s. Call AFTER H.tick(dt).
 const HERO_SPD = 5.2;   // top speed of the hero (m/s): the recorded run looks right from ~4.5 m/s
+const IDLE_TOP = ['Bboy_Uprock', 'Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Breakdance_Uprock_Var_2', 'Brooklyn_Uprock'];
 // standPose: make sure the person's standing loop plays (it is the base under the gait). It used to PAUSE «Ready» on one frame —
 // a walker who stopped stood like a statue and then jerked into the loop (owner 17.11 «пока те находятся на месте… глючат»).
 function standPose(H) { if (H.cur !== H.idle) H.play(H.idle, { fade: .25 }); }
@@ -889,7 +909,7 @@ function stride(H, s, sp, moving, _k, dt) {
   s.wk = lerp(s.wk || 0, moving ? clamp(.5 + .5 * sp / G.walk.v, 0, 1) : 0, 1 - Math.exp(-dt * (moving ? 9 : 7)));
   if (moving) s.wr = lerp(s.wr || 0, clamp((sp - 2.1) / 2.2, 0, 1), 1 - Math.exp(-dt * 6));
   if (s.wk < .004 && !s.from) return;
-  const w = s.wk, wr = s.wr || 0, L = lerp(G.walk.len, G.run.len, wr) * Math.max(.5, w);
+  const w = s.wk, wr = s.wr || 0, L = lerp(G.walk.len, G.run.len, wr) * Math.max(.5, w) * H.stepScale;
   s.ph = ((s.ph || 0) + (moving ? sp * dt / L : dt * .8 * w)) % 1;     // stopping: the step finishes slowly while the body settles
   // start every frame from a pose computed afresh (a clip value that did not change is not re-applied by the mixer — adding onto
   // last frame's bones used to pile up into somersaults, owner 14.11 «кувырками передвигается»), then blend into the recorded step
@@ -899,7 +919,8 @@ function stride(H, s, sp, moving, _k, dt) {
     s.bt += dt; const kb = ease(clamp(s.bt / .5, 0, 1)); for (const n of GALL) if (BS.q[n]) B[n].quaternion.copy(s.from.q[n]).slerp(BS.q[n], kb);
     bx *= kb; by = lerp(s.from.y, BS.y, kb); bz *= kb; if (kb >= 1) s.from = null;
   } else if (!BS.live) for (const n of GALL) if (BS.q[n]) B[n].quaternion.copy(BS.q[n]);
-  for (const n of GALL) B[n].quaternion.slerp(P.q[n], w);
+  const arms = w * lerp(H.armSwing, 1, wr);
+  for (const n of GALL) B[n].quaternion.slerp(P.q[n], ARM_BONES.has(n) ? arms : w);
   B.Hips.position.set(lerp(bx, P.x, w), lerp(by, P.y, w), lerp(bz, P.z, w));
 }
 // LEAVING THE FLOOR ON FOOT (owner 16.11.2026 «проработай уход человечка с танцпола (можно просто шагами, не надо танцем)»).
@@ -911,17 +932,31 @@ function walkStart(J) {
   if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
   const q = {}; for (const n of GALL) q[n] = J.B[n].quaternion.clone();
   J.ws = { wk: 0, wr: 0, ph: 0, from: { q, y: J.B.Hips.position.y }, bt: 0, x0: p.x, z0: p.z, sp: 0, mv: false };
+  if (J === W.hero) {
+    J.st.vx = J.st.vz = J.st.wk = J.st.idle = J.st.topUntil = 0;
+    J.st.tgt = J.st.nextTop = null;
+  }
   J.rest = false; J.play(J.idle, { fade: .4 });
 }
-function walkMove(J, dt, tx, tz, k, endFace) {
-  const s = J.ws, p = J.root.position, nx = lerp(s.x0, tx, k), nz = lerp(s.z0, tz, k), dx = nx - p.x, dz = nz - p.z, sp = dt > 0 ? Math.hypot(dx, dz) / dt : 0;
-  p.x = nx; p.z = nz; s.mv = sp > .12 && k < 1; s.sp = Math.min(sp, 3);
-  const want = s.mv ? Math.atan2(dx, dz) : k >= 1 && endFace !== undefined ? endFace : null;
-  if (want !== null) { let d = want - J.root.rotation.y; d = Math.atan2(S(d), Cc(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * (s.mv ? 9 : 7))); }
+function walkMove(J, dt, tx, tz, k, endFace, curve = 0) {
+  const s = J.ws, p = J.root.position, ax = tx - s.x0, az = tz - s.z0, length = Math.hypot(ax, az);
+  const bow = curve * Math.min(1, length / 2) * S(Math.PI * k) / (length || 1);
+  const nx = s.x0 + ax * k + az * bow, nz = s.z0 + az * k - ax * bow, dx = nx - p.x, dz = nz - p.z;
+  const sp = dt > 0 ? Math.hypot(dx, dz) / dt : 0;
+  p.x = nx; p.z = nz; s.mv = sp > .1 && k < 1; s.sp = Math.min(sp, HERO_SPD);
+  let want = s.mv ? Math.atan2(dx, dz) : J.root.rotation.y;
+  if (endFace !== undefined) {
+    const d = endFace - want;
+    want += Math.atan2(S(d), Cc(d)) * ease(clamp((k - .72) / .28, 0, 1));
+  }
+  const d = want - J.root.rotation.y;
+  J.root.rotation.y += Math.atan2(S(d), Cc(d)) * (1 - Math.exp(-dt * (s.mv ? 10 : 8)));
+  if (J === W.hero) J.st.face = J.root.rotation.y;
 }
 function walkPose(J, dt) { const s = J.ws; if (s) stride(J, s, s.sp, s.mv, 0, dt); }
 W.walk = { start: walkStart, move: walkMove, pose: walkPose };
 const GALL = GAIT_BONES;
+const ARM_BONES = new Set(GALL.filter(n => /Shoulder|Arm|Hand/.test(n)));
 
 // ---------- music ----------
 // iPhone (owner 17.11.2026 «фоновая музыка не играет сразу, пришлось выкл и вкл кнопку на экране»): Safari keeps a sound context silent
@@ -990,7 +1025,7 @@ async function boot() {
     n.st = o.st; n.idle = o.idle; n.play(o.cur || 'Breakdance_Ready', { at: o.act ? o.act.time : 0 }); n.dx = o.dx; n.dz = o.dz; n.lift = o.lift; scene.remove(o.root); scene.add(n.root); W.hero = n;
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
-  if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set (classic / rock / drop / powerFirst), city3d-game.js SHAPES
+  if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, heroEq, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
