@@ -632,12 +632,12 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       </div>
     </div>
     <div data-pane="stats" hidden>
-      <div class="row" style="justify-content:space-between;align-items:baseline;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><span class="row" style="gap:6px"><button class="btn btn-sm" id="visCopyTop" type="button">Скопировать код сервера</button><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></span></div>
+      <div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><span class="row" style="flex-wrap:wrap;gap:6px"><button class="btn btn-sm" id="visCopyTop" type="button">Скопировать код сервера</button><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></span></div>
       <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
       <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
-        <b style="font-size:15px">Обновите код сервера — включатся новые функции (батлы человечков, очки, магазин аксессуаров, статистика)</b>
+        <b id="wkNewTitle" style="font-size:15px">Обновите код сервера</b>
         <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
-          <li>Нажмите <button class="btn btn-sm btn-accent" id="wkCopy" style="margin:2px 0;min-height:32px">Скопировать код сервера</button></li>
+          <li>Нажмите <button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button></li>
           <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
           <li>В окне с кодом выделите всё (на компьютере Ctrl+A, на телефоне — долгое нажатие → «Выбрать всё»), удалите и вставьте скопированное.</li>
           <li>Нажмите <b>Deploy</b> (справа вверху), вернитесь сюда и нажмите «Обновить». Эта плашка исчезнет.</li>
@@ -2677,8 +2677,18 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   if (store.get('fedoskin-noping') === null) store.set('fedoskin-noping', '1');
   $('#visMe').checked = store.get('fedoskin-noping') === '1';
   $('#visMe').addEventListener('change', () => store.set('fedoskin-noping', $('#visMe').checked ? '1' : '0'));
-  let workerCode = '';
-  setTimeout(() => { if (!workerCode) fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : '').then(t => { if (t) workerCode = t; }).catch(() => {}); }, 1500);
+  let workerCode = '', workerCodeRequest = null;
+  function loadWorkerCode(){
+    if (workerCode) return Promise.resolve(workerCode);
+    if (!workerCodeRequest) {
+      workerCodeRequest = fetch('server/push-worker.js?' + Date.now(), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error('Worker code HTTP ' + r.status); return r.text(); })
+        .then(code => { if (!code.trim()) throw new Error('Empty worker code'); workerCode = code; return code; })
+        .finally(() => { workerCodeRequest = null; });
+    }
+    return workerCodeRequest;
+  }
+  setTimeout(() => { loadWorkerCode().catch(() => {}); }, 1500);
   const nf = n => Number(n || 0).toLocaleString('ru-RU');
   const ccName = (() => { let dn = null; try { dn = new Intl.DisplayNames(['ru'], { type: 'region' }); } catch (_) {} const SHORT = { US: 'США', GB: 'Великобритания', AE: 'ОАЭ', KR: 'Южная Корея', CZ: 'Чехия' }; return cc => cc === 'XX' ? 'Неизвестно' : (SHORT[cc] || (dn && dn.of(cc)) || cc); })();
   const flag = cc => /^[A-Z]{2}$/.test(cc) && cc !== 'XX' ? String.fromCodePoint(...[...cc].map(c => 127397 + c.charCodeAt(0))) + ' ' : '';
@@ -2693,7 +2703,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visOn').hidden = true; $('#visOff').hidden = false; $('#visRefresh').hidden = true;
     if (title) $('#visOffTitle').textContent = title;
     $('#visErr').textContent = err || '';
-    if (!workerCode) fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : '').then(t => { workerCode = t; }).catch(() => {});
+    loadWorkerCode().catch(() => {});
   }
   // ---- chart «По дням» (owner 07.11.2026 «подробнее и анимированную при наведении курсора») ----
   // period 7/14/30 (`fedoskin-admin-per`; default = the smallest that covers all data), summary tiles (average people
@@ -2804,6 +2814,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
+    $('#wkNewTitle').textContent = j.gear ? 'Обновите код сервера' : 'Обновите код сервера, чтобы заработали бонусы экипировки в онлайн-батлах';
     $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs && j.cg && j.gear && j.rb2 >= 3); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
@@ -2924,16 +2935,21 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#visCheck').addEventListener('click', () => { $('#visErr').textContent = 'Проверяю…'; renderVisits().then(() => { if (!$('#visOff').hidden && $('#visErr').textContent === 'Проверяю…') $('#visErr').textContent = 'Пока не видно — проверьте шаги выше.'; }); });
   $('#visCopy').addEventListener('click', () => {
     const ok = () => toast('Код сервера скопирован — вставьте его в Cloudflare');
-    if (!workerCode) { // not loaded yet: fetch now and copy in the same tap (ClipboardItem keeps Safari's tap permission)
-      const get = () => fetch('server/push-worker.js?' + Date.now()).then(r => r.ok ? r.text() : Promise.reject()).then(t => { workerCode = t; return t; });
-      const bad = () => toast('Не удалось скопировать — проверьте интернет и нажмите ещё раз', true);
-      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
-        navigator.clipboard.write([new ClipboardItem({ 'text/plain': get().then(t => new Blob([t], { type: 'text/plain' })) })]).then(ok, () => workerCode ? toast('Код загружен — нажмите ещё раз', true) : bad());
-      } else get().then(t => navigator.clipboard.writeText(t)).then(ok, () => workerCode ? toast('Код загружен — нажмите ещё раз', true) : bad());
+    const retry = () => toast(workerCode ? 'Код загружен — нажмите ещё раз' : 'Не удалось скопировать — проверьте интернет и нажмите ещё раз', true);
+    const writeText = async text => {
+      if (navigator.clipboard?.writeText) {
+        try { await navigator.clipboard.writeText(text); return; } catch (_) {}
+      }
+      if (!fallbackCopy(text)) throw new Error('Clipboard unavailable');
+    };
+    if (workerCode) { writeText(workerCode).then(ok, () => toast('Не удалось скопировать', true)); return; }
+    if (window.ClipboardItem && navigator.clipboard?.write) {
+      // Safari needs the clipboard call in the tap even if the file is still loading.
+      const blob = loadWorkerCode().then(text => new Blob([text], { type: 'text/plain' }));
+      navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]).then(ok, retry);
       return;
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(workerCode).then(ok, () => fallbackCopy(workerCode) ? ok() : toast('Не удалось скопировать', true));
-    else if (fallbackCopy(workerCode)) ok(); else toast('Не удалось скопировать', true);
+    loadWorkerCode().then(writeText).then(ok, retry);
   });
   function fallbackCopy(text){ const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); return ok; }
 
