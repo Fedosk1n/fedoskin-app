@@ -65,6 +65,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - Battles: hero levels by lesson minutes, wardrobe (shop ⭐ items + street gear `c:<id>` from the city, one per slot), rating (top 100,
   cards), rhythm battle by hand (answer within 24 h) or auto cartoon, moves unlocked by STUDYING lessons (3 views with sound + level),
   starter gate for new players, rare/mythic moves, points for fresh lessons, coach bridge.
+- Wardrobe rarities are 0–4 (grey → red); equipped slot cards and capped bonuses share `HERO.itemOf/gearBoost/gearChances`. Keep red slots,
+  chance thresholds and mythic scores in sync with `BT_GEAR_*` in the Worker. The admin checks `gear: 1` before hiding the Worker update banner.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
 - City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) + «Промзона» (city3d-prom.js, `?d=prom`) — see the last entries of the full notes.
 - City 3D bodies are ONE skinned mesh per person (`skinGeo` in city3d-mocap.js) — don't hang new limb pieces on bones; dancers leave the floor on foot (`W.walk`); fixture brightness = `LAMP_K` / `FILL_K` in city3d.js (owner 16.11: «слишком ярко»).

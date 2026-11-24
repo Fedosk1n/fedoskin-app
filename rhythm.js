@@ -482,6 +482,7 @@
     let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
     G = { coach: !!(D.isCoach && o.opp && D.isCoach(o.opp)), g: o.g === 2 ? 2 : (o.onEnd || o.result) ? 1 : 2, level: o.level || 1, eq: o.eq || [], oppLevel: o.oppLevel || o.level || 1, onEnd: o.onEnd || null, onAuto: o.onAuto || null, city: o.city || null, onCity: o.onCity || null, mute, mode: '', picks: null, seed: 1,
       battle: !!(o.onEnd || o.result), answer: !!o.answer, ulOn: !!o.ul, ul: new Set(o.ul && o.ul.have || []), allow: o.ul && o.ul.v2 ? new Set(o.ul.allow || []) : null, ulKeys: new Set(o.ul && o.ul.keys || []), ulHint: o.ul && o.ul.hint || {}, opp: o.opp || null, me: o.me || '', beat: o.dj ? beatOf(o.dj).id : null };
+    G.gear = o.gear || null;
     $('#rbF').querySelector('.mv').innerHTML = HERO.svg(G.level, { uid: 'rb', rig: true, acc: G.eq });
     G.J = HERO.rigJoints($('#rbF').querySelector('svg'));
     $('#rbF').className = 'fighter' + (G.eq.includes('fire') ? ' fire' : '') + (G.eq.includes('cardboard') ? ' cardb' : '');
@@ -545,7 +546,7 @@
   function gearNote() {
     const b = window.HERO && HERO.gearBoost ? HERO.gearBoost(G.eq) : null, T = D.T; if (!b || !b.any) return '';
     const l = []; if (b.win) l.push(T('+{n} мс к попаданию', { n: b.win })); if (b.cor) l.push(T('шире траектория')); if (b.hold) l.push(T('фриз держать легче')); if (b.save) l.push(T('1 промах прощается'));
-    return '<p class="rbgear">👕 ' + T('Шмотки из города') + ': ' + l.join(' · ') + '</p>';
+    return '<p class="rbgear">👕 ' + T('Бонусы от надетых вещей') + ' · ' + l.join(' · ') + '</p>';
   }
   function setup() {
     const T = D.T; killBeat();
@@ -989,6 +990,8 @@
     const BB = beatOf(G.beat); BEAT = 60 / BB.bpm; TRAVEL = 2 * BEAT;
     G.gb = window.HERO && HERO.gearBoost ? HERO.gearBoost(G.eq) : { win: 0, cor: 0, hold: 0, save: 0 }; G.save = G.gb.save; // street gear from «Город» helps to hit
     G.notes = notesOf(G.picks, G.seed, G.beat); G.dns = G.notes.filter(n => n.draw); G.dn = G.dns[0] || null; G.dr = null; G.hold = null; G.bigAt = 0;
+    if (G.city) G.gear = HERO.gearEvent(HERO.gearChances(G.eq), Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
+    G.gearDraw = !!(!G.auto && (G.gear?.assist || G.gear?.move) && G.dns.length);
     if (G.auto) { const pm = clamp(.2 - .015 * G.level + .05 * (BB.lv - 2), .04, .35) * (.5 + Math.random()); G.notes.forEach(n => { n.am = Math.random() < pm + .05 * (lvOf(G.picks[n.ph], G.beat) - 1); /* harder move = more misses (the server's stand-in dancer does the same) */ n.aj = clamp((Math.random() + Math.random() + Math.random() - 1.5) * .11, -.15, .15); }); }
     const pad = $('#rbPad'); pad.textContent = G.auto ? T('Авто') : T('Тапай!'); pad.classList.toggle('auto', G.auto);
     $('#rbSkip').hidden = !G.auto; G.brk = [];
@@ -1072,7 +1075,7 @@
     R.pts = pts; R.idx = Math.round(keep * (pts.length - 1));
   }
   const stampS = stamp => { let p = performance.now(); if (stamp && Math.abs(stamp - p) < 500) p = stamp; return song(p); };
-  function drawOpen(stamp) { if (!G.dr || G.auto || G.dn.st) return false; const s = stampS(stamp); return s >= G.dn.t - .08 && s <= G.dn.end; }
+  function drawOpen(stamp) { if (!G.dr || G.auto || G.dn.st || G.gearDraw) return false; const s = stampS(stamp); return s >= G.dn.t - .08 && s <= G.dn.end; }
   function drawDown(e) { const R = G.dr; R.on = true; R.last = null; drawMove(e); }
   function drawFeed(x, y) {
     const R = G.dr, P = R.pts, tol = R.idx === 0 ? R.tol * 1.4 : R.tol; R.total++;
@@ -1100,6 +1103,12 @@
       if (!n.st && G.dn.st && G.dns.indexOf(n) > G.dns.indexOf(G.dn) && (s - ((G.dr && G.dr.doneAt) || 0) > .35 || s >= n.t - .15)) { G.dn = n; drawInit(); } else return;
     }
     const R = G.dr, pad = $('#rbPad'); if (!R) return;
+    if (G.gearDraw) {
+      if (!R.lab && s >= n.t - BEAT) { R.lab = 1; pad.textContent = D.T('Сам крутит'); }
+      if (!n.st && s >= n.t) { R.idx = R.pts.length - 1; drawEnd(s, 1); }
+      if (n.st && R.lab === 1 && s >= n.end) { R.lab = 2; pad.textContent = D.T('Тапай!'); }
+      return;
+    }
     if (!n.st) {
       if (!R.lab && s >= n.t - BEAT) { R.lab = 1; pad.textContent = D.T('Рисуй!'); pad.classList.add('dr'); }
       if (G.auto) { const k = clamp((s - n.t) / ((n.end - n.t) * .8), 0, 1); R.idx = Math.floor((R.pts.length - 1) * k * (n.am ? .45 : 1)); if (k >= 1) drawEnd(s, n.am ? 3 : Math.abs(n.aj) <= W_PERF ? 1 : 2); }
@@ -1110,6 +1119,7 @@
   function drawPaint(s) {
     const R = G.dr, n = G.dn, c = drawCan(), x = c.getContext('2d'), P = R.pts;
     x.setTransform(R.d, 0, 0, R.d, 0, 0); x.clearRect(0, 0, R.W, R.H);
+    if (G.gearDraw) return;
     const t0 = n.t - 2 * BEAT; if (s < t0 || !P.length || (R.doneAt && s - R.doneAt > .5) || s > n.end + .6) return;
     const live = s >= n.t - .08 && !n.st, fade = R.doneAt ? clamp(1 - (s - R.doneAt) / .5, 0, 1) : 1, a = (live || n.st ? 1 : .25 + .45 * clamp((s - t0) / (2 * BEAT), 0, 1)) * fade;
     const line = (from, to, col, w) => { if (to - from < 1) return; x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath(); x.moveTo(P[from][0], P[from][1]); for (let k = from + 1; k <= to; k++) x.lineTo(P[k][0], P[k][1]); x.stroke(); };
@@ -1191,7 +1201,9 @@
     const tTop = B_TOP * BEAT, tFoot = B_FOOT * BEAT, tPow = B_POW * BEAT, tFrz = B_FRZ * BEAT, tBig = B_BIG * BEAT, fz = M[G.picks[3]], fStart = tBig - .23 * fz.dur;
     const span = (mv, t0, n) => { const d = n * BEAT, reps = Math.max(1, Math.round(d / M[mv].dur)); return M[mv].f((((s - t0) / (d / reps)) % 1 + 1) % 1); };
     let key, p;
-    if (s < tTop) { key = 'in'; p = loop('bounce', s + 9); }
+    const myth = G.gear?.move && M[G.gear.move], mythAt = G.gearDraw ? G.dns[0].t : tPow;
+    if (myth && s >= mythAt && s < mythAt + myth.dur) { key = 'myth'; p = myth.f((s - mythAt) / myth.dur); }
+    else if (s < tTop) { key = 'in'; p = loop('bounce', s + 9); }
     else if (s < tFoot) { key = 'top'; p = loop(G.picks[0], s - tTop, .75); }
     else if (s < tPow) { key = 'foot'; p = span(G.picks[1], tFoot, FOOT); }
     else if (s < tFrz) { key = 'pow'; p = span(G.picks[2], tPow, POW); }
@@ -1234,6 +1246,7 @@
     if (G.hold && s >= G.hold.n.end) holdEnd(s);
     draw(s); if (G.dr) { drawPaint(s); holdPaint(s); }
     let [key, p] = pose(s);
+    if (key === 'myth') $('#rbPhase').textContent = HERO.MYTHIC_MOVES[G.gear.move];
     p = drive(key, p, s);
     const w = 1 - (s - G.missAt) / .35; if (w > 0 && key !== 'fail') p = mix(p, M.shock.f(.5), w * .6); // a miss: the hero stumbles for a moment
     setHero(p);
@@ -1251,9 +1264,10 @@
   function finish() {
     const T = D.T, total = G.notes.length, max = maxOf(G.picks, G.seed, G.level, G.beat), hits = G.notes.map(n => n.st).join('');
     drawOff();
-    const score = totalOf(G.picks, G.seed, G.level, G.beat, hits, G.brk); G.score = score; $('#rbScore').textContent = score;
+    const myth = G.gear?.move && HERO.MYTHIC_MOVES[G.gear.move];
+    const score = totalOf(G.picks, G.seed, G.level, G.beat, hits, G.brk) + (myth ? HERO.MYTHIC_SCORE : 0); G.score = score; $('#rbScore').textContent = score;
     const res = { score, max, picks: G.picks.slice(), seed: G.seed, beat: G.beat, perfect: G.cnt[1], good: G.cnt[2], miss: G.cnt[3], combo: G.best, acc: (G.cnt[1] + G.cnt[2] * .5) / total, hits,
-      round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 } };
+      round: { p: G.picks.slice(), s: G.seed, b: G.beat, h: hits, k: G.brk.slice(0, 300), au: G.auto ? 1 : 0 }, gm: myth ? G.gear.move : null, ga: !!(G.gearDraw && !myth) };
     if (V2()) { res.round.g = 2; res.round.r = RB2.R; res.draw = G.dns.length ? Math.max(...G.dns.map(n => n.st)) : 0; res.full = !G.cnt[3] && !G.brk.length; res.fresh = RB2.fresh(G.picks, G.prevPk);
       try { localStorage.setItem(prevKey(), JSON.stringify(G.picks)); } catch (_) {} }
     const viaL = G.picks.filter(m => needOf(m) > G.level); if (viaL.length) res.round.u = viaL; // opened by lessons (server checks the rest)
@@ -1307,7 +1321,7 @@
       '<div class="rbvs" style="grid-template-columns:1fr"><span class="me"><small>' + T('Счёт') + '</small><b>' + r.score + '</b></span></div>' +
       '<p>PERFECT ' + r.perfect + ' · GOOD ' + r.good + ' · MISS ' + r.miss + ' · ' + T('Комбо') + ' ' + r.combo + (r.draw ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][r.draw] : '') + '</p>' + (r.full ? '<p class="fc">FULL COMBO +10%</p>' : '') + (r.fresh ? '<p class="fc">' + T('Новая связка +{n} %', { n: r.fresh * 2 }) + '</p>' : '');
     $('#rbCrowd').classList.toggle('hype', r.acc >= .6);
-    wait(G.answer ? T('Судьи смотрят батл…') : T('Отправляем раунд…'), head, () => G.onEnd(r));
+    wait(G.answer ? T('Судьи смотрят батл…') : T('Отправляем раунд…'), head + gearResult(r), () => G.onEnd(r));
   }
   // after a battle with the coach himself: a calm offer of his online coaching (owner 13.11.2026 «делай»; at most once a day)
   function coachCard() {
@@ -1339,6 +1353,11 @@
   }
   // the judges' result of a battle by hand (no cartoon — owner 11.11.2026): both scores, three cards one by one, the verdict
   // r = { my: {sc, pf, gd, ms}, their: {sc}, votes: ['l' (for me) | 'r', ×3], won, note }
+  function gearResult(r) {
+    const name = HERO.MYTHIC_MOVES[r.gm];
+    if (name) return '<p class="fc">' + D.T('{move} · +{n} к счёту', { move: name, n: HERO.MYTHIC_SCORE }) + '</p>';
+    return r.ga ? '<p class="fc">' + D.T('Power move выполнен без обводки') + '</p>' : '';
+  }
   function showResult(r) {
     const T = D.T, end = $('#rbEnd'), g = G, my = r.my || {}, th = r.their || {};
     killBeat(); G.mode = 'end'; G.endAt = performance.now(); G.won = !!r.won;
@@ -1348,7 +1367,7 @@
     end.innerHTML = '<b id="rbResT" style="visibility:hidden">&nbsp;</b>' +
       '<div class="rbvs"><span class="me"><small>' + T('Ты') + '</small><b>' + (my.sc || 0) + '</b></span><div class="judges">' + jd + jd + jd + '</div><span class="op"><small>' + esc(G.opp ? G.opp.name : T('Соперник')) + '</small><b>' + (th.sc || 0) + '</b></span></div>' +
       (my.pf != null ? '<p>PERFECT ' + my.pf + ' · GOOD ' + my.gd + ' · MISS ' + my.ms + (my.dr ? ' · ' + T('Траектория') + ' ' + ['', 'PERFECT', 'GOOD', 'MISS'][my.dr] : '') + '</p>' + (my.g === 2 && my.ms === 0 && my.fc ? '<p class="fc">FULL COMBO +10%</p>' : '') + (my.nv ? '<p class="fc">' + T('Новая связка +{n} %', { n: my.nv * 2 }) + '</p>' : '') : '') +
-      (r.note ? '<p class="n">' + esc(r.note) + '</p>' : '');
+      gearResult(my) + (r.note ? '<p class="n">' + esc(r.note) + '</p>' : '');
     end.hidden = false; setTimeout(() => { if (G === g && g.mode === 'end') coachCard(); }, 500 + ((r.votes || []).length) * 600 + 900);
     const cards = end.querySelectorAll('.card'), votes = r.votes || [];
     votes.forEach((v, k) => setTimeout(() => { if (G !== g || g.mode !== 'end') return; cards[k].className = 'card ' + v; if (navigator.vibrate) try { navigator.vibrate(12); } catch (_) {} }, 500 + k * 600));

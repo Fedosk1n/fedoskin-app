@@ -20,18 +20,18 @@
   // accessories shop (owner 10.11.2026: points for battle wins and lesson hours, never for money). One item per slot;
   // names are Russian i18n keys. Prices are repeated in server/push-worker.js (SHOP) — keep them equal.
   const SHOP = [
-    { id: 'neon', slot: 'laces', price: 80, name: 'Неоновые шнурки' },
-    { id: 'gloves', slot: 'hands', price: 100, name: 'Перчатки без пальцев' },
-    { id: 'cardboard', slot: 'floor', price: 100, name: 'Картонка для брейка' },
-    { id: 'knee', slot: 'knees', price: 120, name: 'Наколенники' },
-    { id: 'bandana', slot: 'head', price: 150, name: 'Бандана' },
-    { id: 'wall', slot: 'bg', price: 200, name: 'Фон: граффити-стена' },
-    { id: 'city', slot: 'bg', price: 200, name: 'Фон: ночной город' },
-    { id: 'red', slot: 'kicks', price: 250, name: 'Красные кроссовки' },
-    { id: 'box', slot: 'item', price: 300, name: 'Бумбокс' },
-    { id: 'fire', slot: 'fx', price: 500, name: 'Огненная аура' },
+    { id: 'neon', slot: 'laces', price: 80, rar: 0, name: 'Неоновые шнурки', bt: { win: 3 } },
+    { id: 'gloves', slot: 'hands', price: 100, rar: 0, name: 'Перчатки без пальцев', bt: { cor: 2 } },
+    { id: 'cardboard', slot: 'floor', price: 100, rar: 0, name: 'Картонка для брейка' },
+    { id: 'knee', slot: 'knees', price: 120, rar: 1, name: 'Наколенники', bt: { hold: 1 } },
+    { id: 'bandana', slot: 'head', price: 150, rar: 1, name: 'Бандана', bt: { cor: 4 } },
+    { id: 'wall', slot: 'bg', price: 200, rar: 2, name: 'Фон: граффити-стена' },
+    { id: 'city', slot: 'bg', price: 200, rar: 2, name: 'Фон: ночной город' },
+    { id: 'red', slot: 'kicks', price: 250, rar: 4, name: 'Красные кроссовки', bt: { win: 20 } },
+    { id: 'box', slot: 'item', price: 300, rar: 3, name: 'Бумбокс' },
+    { id: 'fire', slot: 'fx', price: 500, rar: 3, name: 'Огненная аура' },
     // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
-    { id: 'tee', slot: 'top', price: 0, sub: true, name: 'Футболка Fedoskin team' },
+    { id: 'tee', slot: 'top', price: 0, rar: 0, sub: true, name: 'Футболка Fedoskin team', bt: { win: 3 } },
   ];
   // UNIQUE STREET GEAR (owner 14.11.2026 «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же… в городе можно найти
   // уникальные или выиграть, которых нет в магазине»): ONE catalog for the city, the wardrobe, battles and the rating. Worn as the token
@@ -52,8 +52,8 @@
     rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
     // the industrial zone's crews (16.11.2026, 3D city): Арматура lv 6, Высоковольтные lv 7, Литейка lv 8 (the district's owners)
     rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 20 } },
-    voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:volt', col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
-    forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 3, ico: '⛓️', src: 'gang:forge', f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
+    voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 4, ico: '👟', src: 'gang:volt', col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
+    forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 4, ico: '⛓️', src: 'gang:forge', f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
     waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
@@ -64,7 +64,7 @@
     turnKicks: { name: 'Кроссы «Час пик»', slot: 'kicks', rar: 2, ico: '👟', src: 'gang:turn', col: { shoe: '#2F7BFF', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFD23F' }, perk: ['en', 2], bt: { win: 15 } },
     chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 20 } },
     chromeTrack: { name: 'Олимпийка «Хром»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:chrome', f: { top: 'track' }, col: { top: '#C9CED6', yoke: '#18181B', sleeve: '#C9CED6', cuff: '#18181B', trim: '#3F8FD8' }, perk: ['life', 1], bt: { save: 1 } },
-    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
+    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', stash: true, col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
   // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
@@ -72,13 +72,27 @@
   const BOOST_CAP = { win: 30, cor: 12, hold: 1, save: 1 };
   function gearBoost(arr){
     const b = { win: 0, cor: 0, hold: 0, save: 0 };
-    (Array.isArray(arr) ? arr : []).forEach(k => { const g = typeof k === 'string' && k.slice(0, 2) === 'c:' && GEAR[k.slice(2)]; if (g && g.bt) for (const x in g.bt) b[x] = (b[x] || 0) + g.bt[x]; });
+    const worn = wornGear(arr);
+    worn.forEach(g => { if (g.bt) for (const x in g.bt) b[x] = (b[x] || 0) + g.bt[x]; });
     for (const x in BOOST_CAP) b[x] = Math.min(BOOST_CAP[x], b[x] || 0);
     b.any = !!(b.win || b.cor || b.hold || b.save);
     return b;
   }
   // any look token → { slot, name, … } (shop item or street gear); null for 'girl' / 'lv<N>' / unknown
   const itemOf = k => { if (typeof k !== 'string') return null; if (k.slice(0, 2) === 'c:') { const g = GEAR[k.slice(2)]; return g ? Object.assign({ id: k, city: true }, g) : null; } return SHOP.find(x => x.id === k) || null; };
+  const wornGear = arr => [...new Map((Array.isArray(arr) ? arr : []).map(itemOf).filter(Boolean).map(item => [item.slot, item])).values()];
+  // Basis points per dancer's round. The online worker uses the same red slots and probabilities.
+  const MYTHIC_MOVES = { rone: 'REAL ONE HAND', rcork: 'CORKSCREW', rplanche: 'PLANCHE' };
+  const MYTHIC_SCORE = 600;
+  function gearChances(arr) {
+    const count = Math.min(2, wornGear(arr).filter(item => item.rar === 4).length);
+    return { myth: count * 50, assist: count * 200 };
+  }
+  function gearEvent(chances, roll, move) {
+    if (roll < chances.myth) return { move: Object.keys(MYTHIC_MOVES)[move % 3] };
+    if (roll < chances.myth + chances.assist) return { assist: true };
+    return null;
+  }
   const SKIN = '#C68A5E', SKIN_D = '#A86F47', SKIN_L = '#D9A27A', HAIR = '#1E1714', INK = '#0E0E10';
   const OR = '#E2611A', OR_D = '#B44812', BLK = '#18181B', BLK2 = '#232328', WH = '#F2EFE8', WH_D = '#D6D1C6';
   // ---- the outfit table: ONE source for the profile drawing (svg) and for the city's top-down sprite (topDown) ----
@@ -88,6 +102,16 @@
     pants: [null, 'jeans', 'jeans', 'trackp', 'trackp', 'trackp', 'wind', 'trackpGold', 'trackpGold'],
     shoe: [null, 'canvas', 'leather', 'leather', 'runner', 'runner', 'high', 'highGold', 'highGold'],
   };
+  function baseSlots(level){
+    const L = Math.max(1, Math.min(8, level | 0));
+    const names = {
+      cap: 'Кепка', beanie: 'Шапка', bucket: 'Панама', capBack: 'Кепка', capGold: 'Кепка',
+      tee: 'Футболка', teeBig: 'Футболка оверсайз', track: 'Олимпийка', bomber: 'Бомбер', trackGold: 'Олимпийка',
+      jeans: 'Джинсы', trackp: 'Спортивные штаны', wind: 'Спортивные штаны', trackpGold: 'Спортивные штаны',
+      canvas: 'Кеды', leather: 'Кроссы', runner: 'Кроссы', high: 'Высокие кроссы', highGold: 'Высокие кроссы',
+    };
+    return { head: names[FIT.hat[L]], top: names[FIT.top[L]], pants: names[FIT.pants[L]], kicks: names[FIT.shoe[L]] };
+  }
   function lookOf(level, accArr){
     const arr = Array.isArray(accArr) ? accArr : [], pick = arr.map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
     const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8)), acc = new Set(arr), has = k => acc.has(k);
@@ -771,5 +795,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, gearBoost, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, baseSlots, gearBoost, gearChances, gearEvent, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();

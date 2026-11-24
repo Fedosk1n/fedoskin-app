@@ -570,6 +570,7 @@ function btPack(r, eq) {
   eq = eq || {};
   const rd = x => { try { return x ? rbPub(typeof x === 'string' ? JSON.parse(x) : x) : undefined; } catch (_) { return undefined; } };
   const o = { n: r.n, a: { id: r.a, name: r.na, lvl: r.la, eq: eq[r.a] || [] }, b: { id: r.b, name: r.nb, lvl: r.lb, eq: eq[r.b] || [] }, seed: r.seed, votes: JSON.parse(r.votes || '[]'), win: r.win, t: r.t };
+  if (r.gear_move) o.gearRare = { side: r.gear_side, mv: r.gear_move, myth: true };
   if (r.hst) Object.assign(o, { hand: 1, st: r.hst, dj: r.dj, exp: r.exp, ra: rd(r.hra), rb: r.hst === 'done' ? rd(r.hrb) : undefined, late: r.late ? 1 : 0 });
   return o;
 }
@@ -601,6 +602,24 @@ function btRareSide(seed) {
   let x = ((seed >>> 0) ^ 0x9E3779B9) >>> 0;
   x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0; x = (x ^ (x >>> 16)) >>> 0;
   return (x >>> 8) & 1 ? 'b' : 'a';
+}
+// Same red items, chances and positions as HERO.gearChances/gearEvent. One draw per dancer's round.
+const BT_GEAR_RED = { red: 'kicks', 'c:voltKicks': 'kicks', 'c:forgeChain': 'neck' };
+const BT_GEAR_MOVES = ['rone', 'rcork', 'rplanche'];
+const BT_GEAR_SCORE = 600;
+function btGearEvent(eq, roll, move) {
+  const slots = new Set(eq.filter(k => Object.hasOwn(BT_GEAR_RED, k)).map(k => BT_GEAR_RED[k]));
+  const count = Math.min(2, slots.size), myth = count * 50, assist = count * 200;
+  if (roll < myth) return { move: BT_GEAR_MOVES[move % BT_GEAR_MOVES.length] };
+  if (roll < myth + assist) return { assist: true };
+  return null;
+}
+async function btGearDeal(p, key, eq) {
+  if (!eq.some(k => Object.hasOwn(BT_GEAR_RED, k))) return null;
+  // An unchanged attempt gets the same draw on ready, retry, and submit. The rating hash stays on the server.
+  const bytes = await crypto.subtle.digest('SHA-256', enc.encode('gear:' + p.id + ':' + key + ':' + p.h));
+  const a = new DataView(bytes);
+  return btGearEvent(eq, Math.floor(a.getUint32(0) * 10000 / 4294967296), a.getUint32(4));
 }
 // <RB2> rules v2 of the rhythm battle (owner 13.11.2026 «продумай систему батлов, сложность элементов, подсчёт очков, сложные
 // диджейские биты, рисование траектории»). SOURCE = tools/rb2.js; `python3 tools/rb2_sync.py` copies this block into rhythm.js
@@ -711,7 +730,7 @@ const rbPool = (la, lb) => Math.min(la, lb) >= 3 ? 7 : 5;
 const rbG = x => { try { return (typeof x === 'string' ? JSON.parse(x) : x).g === 2 ? 2 : 1; } catch (_) { return 1; } };
 const rbR = x => { try { return +(typeof x === 'string' ? JSON.parse(x) : x).r || 0; } catch (_) { return 0; } }; // which revision of the v2 tables
 // a round the server checks: picks the hero knows, the DJ's track, one result per note; returns the stored form or null
-function rbCheck(r, level, beat, prev) { // prev = the picks of this phone's previous round (a new set earns a bonus in v2)
+function rbCheck(r, level, beat, prev, gear) { // prev = the picks of this phone's previous round (a new set earns a bonus in v2)
   if (!r || typeof r !== 'object' || r.b !== beat) return null;
   const g2 = r.g === 2; if (!(g2 ? RB2.BEATS : RB_BEATS)[beat]) return null; // g = which rules the phone played by
   if (g2 && +r.r !== RB2.R) return null; // v2 tables of another revision (the phone's code is older or newer than this server)
@@ -722,11 +741,19 @@ function rbCheck(r, level, beat, prev) { // prev = the picks of this phone's pre
   const u = Array.isArray(r.u) ? r.u.slice(0, 8).map(String) : [];
   if (p.length !== 4 || p.some((m, k) => !ROWS[k].includes(m) || ((NEED[m] || 1) > level && !u.includes(m)))) return null;
   const seed = Math.floor(+r.s || 0); if (!(seed >= 1 && seed < 4294967296)) return null;
-  const h = String(r.h || ''), n = (g2 ? RB2.notes(p, seed, beat) : rbNotes(p, seed, beat)).length; if (h.length !== n || /[^123]/.test(h)) return null;
+  const h = String(r.h || ''), notes = g2 ? RB2.notes(p, seed, beat) : rbNotes(p, seed, beat), n = notes.length; if (h.length !== n || /[^123]/.test(h)) return null;
   const k = (Array.isArray(r.k) ? r.k : []).slice(0, 300).map(x => Math.floor(+x)).filter(x => x >= 0 && x < n);
-  const o = { p, s: seed, b: beat, h, k, au: r.au ? 1 : 0, sc: g2 ? RB2.score(p, seed, beat, h, k, level, prev) : rbScore(p, seed, beat, h, k, level) };
+  const assist = g2 && (gear?.assist || gear?.move);
+  const hits = assist ? notes.map((note, i) => note.draw ? '1' : h[i]).join('') : h;
+  const o = { p, s: seed, b: beat, h: hits, k, au: r.au ? 1 : 0, sc: g2 ? RB2.score(p, seed, beat, hits, k, level, prev) : rbScore(p, seed, beat, hits, k, level) };
+  if (g2 && gear?.assist) o.ga = 1;
+  rbGearMyth(o, gear);
   if (g2) { o.g = 2; o.r = RB2.R; o.nv = RB2.fresh(p, prev); }
   return o;
+}
+function rbGearMyth(round, gear) {
+  if (gear?.move) { round.gm = gear.move; round.sc += BT_GEAR_SCORE; }
+  return round;
 }
 // the other dancer: its own last round's picks (if it still knows them) and hit shares, on the DJ's track; else by level
 function rbStand(def, level, beat, g) {
@@ -745,7 +772,7 @@ function rbStand(def, level, beat, g) {
   return o;
 }
 const rbPub = r => r && { p: r.p, b: r.b, sc: r.sc, pf: (r.h.match(/1/g) || []).length, gd: (r.h.match(/2/g) || []).length, ms: (r.h.match(/3/g) || []).length, fz: r.h.slice(-1) !== '3' ? 1 : 0, au: r.au, st: r.st || 0, g: r.g === 2 ? 2 : 1, r: +r.r || 0, fc: r.g === 2 && !/3/.test(r.h) && !(r.k && r.k.length) ? 1 : 0,
-  nv: r.nv || 0,
+  nv: r.nv || 0, gm: r.gm, ga: r.ga,
   dr: r.g === 2 ? Math.max(...RB2.notes(r.p, r.s, r.b).map((n, i) => n.draw ? +r.h[i] || 3 : 0)) : undefined }; // dr = how the trajectory was drawn (1 / 2 / 3)
 async function heroEq(db, ids) {
   const out = {}; if (!ids.length) return out;
@@ -772,6 +799,8 @@ async function btResolve(env, n, rb, late) {
   if (ch.meta && ch.meta.changes === 0) return false; // the other path got there first
   await db.prepare('UPDATE bt SET votes = ?, win = ?, seen = ? WHERE n = ?').bind(JSON.stringify(votes), win, late ? 0 : 1, n).run();
   await btScore(db, row.a, row.b, win);
+  const bonuses = [[row.a, ra], [row.b, rb]].filter(([, r]) => r.gm);
+  if (bonuses.length) await db.batch(bonuses.map(([id]) => btMythPoints(db, id, n)));
   try { // tell the challenger the result is there
     const sub = await db.prepare('SELECT sub, lang FROM bt_sub WHERE id = ?').bind(row.a).first();
     if (sub && sub.sub) {
@@ -782,6 +811,7 @@ async function btResolve(env, n, rb, late) {
   } catch (_) {}
   return true;
 }
+const btMythPoints = (db, id, n) => db.prepare('INSERT OR IGNORE INTO pts_bonus (id, ref, pts, t) VALUES (?, ?, ?, ?)').bind(id, 'rare:' + n, PTS_RED, Date.now());
 // no answer within a day ⇒ the other phone's dancer dances for it (its own last round's style, or by level)
 async function btExpire(env, only) {
   const db = env.DB, now = Date.now();
@@ -789,7 +819,9 @@ async function btExpire(env, only) {
   for (const r of rows) {
     const op = await lbRow(db, r.b), dr = await db.prepare('SELECT d FROM bt_def WHERE id = ? AND t > ?').bind(r.b, now - 30 * 864e5).first();
     let def = null; try { def = dr && JSON.parse(dr.d); } catch (_) {}
-    await btResolve(env, r.n, rbStand(def, heroLevel(op ? op.m : 0), r.dj, rbG(r.ra)), true);
+    const eq = op ? await heroEq(db, [r.b]) : {};
+    const gear = op ? await btGearDeal(op, 'answer:' + r.n, eq[r.b] || []) : null;
+    await btResolve(env, r.n, rbGearMyth(rbStand(def, heroLevel(op ? op.m : 0), r.dj, rbG(r.ra)), gear), true);
   }
 }
 async function battle(req, env, path, json) {
@@ -841,8 +873,9 @@ async function battle(req, env, path, json) {
     if (rest > 0) return json({ error: 'rest', rest }, 429);
     const c = await db.prepare('SELECT COUNT(*) AS same FROM bt WHERE a = ? AND b = ? AND t > ?').bind(id, to, now - 864e5).first();
     if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
-    const eq = await heroEq(db, [to]);
-    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT), +b.r === RB2.R ? rbPool(heroLevel(me.m), heroLevel(op.m)) : 0), lvl: heroLevel(me.m), ul: 1, g: +b.r === RB2.R ? 2 : 1, r: RB2.R }); // v2 only for a phone with the same tables (b.r)
+    const eq = await heroEq(db, [id, to]);
+    const gear = await btGearDeal(me, 'call:' + await lastCall(), eq[id] || []);
+    return json({ ok: true, opp: { id: to, name: op.n || ('Breaker ' + to.slice(-4)), lvl: heroLevel(op.m), eq: eq[to] || [], co: op.co || '' }, gear, dj: await rbDj(id, to, Math.floor(now / DJ_SLOT), +b.r === RB2.R ? rbPool(heroLevel(me.m), heroLevel(op.m)) : 0), lvl: heroLevel(me.m), ul: 1, g: +b.r === RB2.R ? 2 : 1, r: RB2.R }); // v2 only for a phone with the same tables (b.r)
   }
   if (path === '/bt/call') {
     const to = String(b.to || ''), op = await lbRow(db, to);
@@ -854,22 +887,27 @@ async function battle(req, env, path, json) {
     if ((c && c.same || 0) >= 3) return json({ error: 'limit' }, 429);
     const la = heroLevel(me.m), lb = heroLevel(op.m);
     const p = Math.max(.3, Math.min(.7, .5 + .05 * (la - lb)));
+    const eq = await heroEq(db, [id, to]);
+    const gear = await btGearDeal(me, 'call:' + await lastCall(), eq[id] || []);
     let ra = null;
     if (b.round) { // a round by hand: the DJ's track of this half hour (or the one before — the round takes ~20 s); the battle waits
       const slot = Math.floor(now / DJ_SLOT), djs = [];
       for (const pool of (b.round.g === 2 ? [rbPool(la, lb), 7, 5] : [0])) djs.push(await rbDj(id, to, slot, pool), await rbDj(id, to, slot - 1, pool));
-      ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0], await rbPrev(db, id));
+      ra = rbCheck(b.round, la, djs.includes(b.round.b) ? b.round.b : djs[0], await rbPrev(db, id), gear);
       if (!ra) return json({ error: 'round' }, 400);
     }
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 1;
     // 1 % of auto battles: the seed gives one dancer a rare legendary move (the app shows it) ⇒ all three judges for him
-    const tier = ra ? null : btRare(seed), rare = tier && btRareSide(seed);
+    const autoOpp = !ra && !gear?.move ? await btGearDeal(op, 'auto:' + seed, eq[to] || []) : null;
+    const gearMove = !ra && (gear?.move || autoOpp?.move), gearSide = gearMove ? gear?.move ? 'a' : 'b' : null;
+    const tier = ra ? null : gearMove ? 'red' : btRare(seed), rare = gearSide || (tier && btRareSide(seed));
     const votes = ra ? [] : rare ? [rare, rare, rare] : [0, 1, 2].map(() => Math.random() < p ? 'a' : 'b');
     const win = ra ? '' : votes.filter(v => v === 'a').length >= 2 ? 'a' : 'b';
     const na = me.n || ('Breaker ' + id.slice(-4)), nb = op.n || ('Breaker ' + to.slice(-4));
     const ins = await db.prepare('INSERT INTO bt (a, b, la, lb, na, nb, seed, votes, win, t) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(id, to, la, lb, na, nb, seed, JSON.stringify(votes), win, now).run();
     const n = ins.meta && ins.meta.last_row_id;
     if (ra) await db.batch([db.prepare('INSERT INTO bt_h (n, a, b, dj, ra, st, exp) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(n, id, to, ra.b, JSON.stringify(ra), 'wait', now + BT_WAIT), btDefSave(db, id, ra, now)]);
+    if (gearMove) await db.prepare('INSERT INTO bt_gear (n, side, move) VALUES (?, ?, ?)').bind(n, gearSide, gearMove).run();
     if (!ra) await btScore(db, id, to, win);
     if (rare) await db.prepare('INSERT OR IGNORE INTO pts_bonus (id, ref, pts, t) VALUES (?, ?, ?, ?)').bind(rare === 'a' ? id : to, 'rare:' + n, tier === 'red' ? PTS_RED : PTS_GOLD, now).run(); // ⭐ for the move itself
     // tell the challenged phone — at most once per 6 hours
@@ -882,10 +920,10 @@ async function battle(req, env, path, json) {
         if (res && (res.status === 404 || res.status === 410)) await db.prepare('DELETE FROM bt_sub WHERE id = ?').bind(to).run();
       }
     } catch (_) {}
-    return json({ ok: true, pending: ra ? 1 : 0, battle: btPack({ n, a: id, b: to, la, lb, na, nb, seed, votes: JSON.stringify(votes), win, t: now, hst: ra ? 'wait' : '', hra: ra, dj: ra && ra.b, exp: now + BT_WAIT }, await heroEq(db, [id, to])), score: await score(id), rest: BT_REST, pts: (await wallet()).pts });
+    return json({ ok: true, pending: ra ? 1 : 0, battle: btPack({ n, a: id, b: to, la, lb, na, nb, seed, votes: JSON.stringify(votes), win, t: now, hst: ra ? 'wait' : '', hra: ra, dj: ra && ra.b, exp: now + BT_WAIT, gear_side: gearSide, gear_move: gearMove }, eq), score: await score(id), rest: BT_REST, pts: (await wallet()).pts });
   }
   if (path === '/bt/inbox') {
-    const J = 'SELECT bt.*, bt_h.ra AS hra, bt_h.rb AS hrb, bt_h.dj, bt_h.exp, bt_h.st AS hst, bt_h.late FROM bt LEFT JOIN bt_h ON bt_h.n = bt.n ';
+    const J = 'SELECT bt.*, bt_h.ra AS hra, bt_h.rb AS hrb, bt_h.dj, bt_h.exp, bt_h.st AS hst, bt_h.late, bt_gear.side AS gear_side, bt_gear.move AS gear_move FROM bt LEFT JOIN bt_h ON bt_h.n = bt.n LEFT JOIN bt_gear ON bt_gear.n = bt.n ';
     const news = (await db.prepare(J + "WHERE bt.b = ? AND bt.seen = 0 AND bt.win != '' ORDER BY bt.n DESC LIMIT 5").bind(id).all()).results || [];
     // battles by hand: challenges waiting for this phone's answer, results of its own challenges, its challenges still waiting
     const calls = b.v >= 2 ? (await db.prepare(J + "WHERE bt.b = ? AND bt_h.st = 'wait' AND bt_h.exp > ? ORDER BY bt.n LIMIT 10").bind(id, now).all()).results || [] : [];
@@ -893,7 +931,8 @@ async function battle(req, env, path, json) {
     const out = b.v >= 2 ? (await db.prepare(J + "WHERE bt.a = ? AND bt_h.st = 'wait' AND bt_h.exp > ? ORDER BY bt.n DESC LIMIT 10").bind(id, now).all()).results || [] : [];
     const all = news.concat(calls, results, out), eq = await heroEq(db, [...new Set(all.map(r => r.a).concat(all.map(r => r.b), id))]);
     const w = await wallet();
-    return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: calls.map(r => btPack(r, eq)), results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)),
+    const active = await Promise.all(calls.map(async r => ({ ...btPack(r, eq), gear: await btGearDeal(me, 'answer:' + r.n, w.eq) })));
+    return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: active, results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)),
       lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq, ul: 1 });
   }
   if (path === '/bt/seen') {
@@ -910,7 +949,9 @@ async function battle(req, env, path, json) {
     const lvl = heroLevel(me.m);
     // both dance by the challenger's rules (g). An app that doesn't know rules v2 yet answers a v2 challenge ⇒ its dancer dances for it
     const g = rbG(row.hra), same = !!b.round && (b.round.g === 2 ? 2 : 1) === g && (g === 1 || (+b.round.r === RB2.R && rbR(row.hra) === RB2.R)), hand = !b.auto && same;
-    const rb = hand ? rbCheck(b.round, lvl, row.dj, await rbPrev(db, id)) : b.auto || g === 2 ? rbStand(null, lvl, row.dj, g) : null;
+    const eq = await heroEq(db, [id]);
+    const gear = await btGearDeal(me, 'answer:' + n, eq[id] || []);
+    const rb = hand ? rbCheck(b.round, lvl, row.dj, await rbPrev(db, id), gear) : b.auto || g === 2 ? rbGearMyth(rbStand(null, lvl, row.dj, g), gear) : null;
     if (!rb) return json({ error: 'round' }, 400);
     if (hand) rb.au = 0;
     if (!(await btResolve(env, n, rb, false))) { const r2 = await btGet(db, n); return json({ ok: true, late: 1, battle: btPack(r2, await heroEq(db, [r2.a, r2.b])) }); }
@@ -987,6 +1028,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS bt (n INTEGER PRIMARY KEY AUTOINCREMENT, a TEXT NOT NULL, b TEXT NOT NULL, la INTEGER, lb INTEGER, na TEXT, nb TEXT, seed INTEGER, votes TEXT, win TEXT, t INTEGER, seen INTEGER NOT NULL DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_b ON bt (b, seen)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_a ON bt (a, t)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS bt_gear (n INTEGER PRIMARY KEY, side TEXT NOT NULL, move TEXT NOT NULL)'),
     // the rating (10.11.2026, moved from one KV key so it can hold hundreds of thousands of phones)
     db.prepare('CREATE TABLE IF NOT EXISTS lb (id TEXT PRIMARY KEY, n TEXT, nl TEXT, c TEXT, cn TEXT, co TEXT, a TEXT, m INTEGER NOT NULL DEFAULT 0, v INTEGER, s INTEGER, h TEXT, f INTEGER, t INTEGER, lvl INTEGER, rk INTEGER, hid INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE INDEX IF NOT EXISTS lb_m ON lb (hid, m DESC, f)'),
@@ -1117,7 +1159,7 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
-  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, cg: 1, rb2: RB2.R, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
+  return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, cg: 1, gear: 1, rb2: RB2.R, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
 
     day,
     today: t,

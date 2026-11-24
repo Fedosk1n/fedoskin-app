@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=15';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=27';
+import { initGame } from './city3d-game.js?v=28';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=5';
 import { buildPark } from './city3d-park.js?v=4';
@@ -717,9 +717,12 @@ async function buildYard(scene) {
   W.turn = { who: +Q.get('set') || 0, start: 0, plan: null };
 }
 function heroLv() { if (Q.get('lv')) return +Q.get('lv'); try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60) || 1; } catch (_) { return 1; } }
+function heroEq() {
+  try { const eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]'); return Array.isArray(eq) ? eq : []; } catch (_) { return []; }
+}
 function myLook() {
   const lv = +Q.get('lv') || (() => { try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60); } catch (_) { return 4; } })() || 4;
-  let eq = []; try { eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
+  const eq = heroEq();
   try { const p = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}'); if (p.g === 'f') eq.push('girl'); } catch (_) {}
   try { const l = +localStorage.getItem('fedoskin-look'); if (l) eq.push('lv' + l); } catch (_) {}
   const look = HERO.topDown(Math.max(lv, Q.get('lv') ? 1 : 4), eq);
@@ -988,7 +991,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry) m.geometry.dispose(); }); };   // the old body's shapes (materials are shared)
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set (classic / rock / drop / powerFirst), city3d-game.js SHAPES
-  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, heroEq, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 

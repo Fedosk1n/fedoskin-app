@@ -426,8 +426,32 @@ body.chatmode .tabs{display:none}
 .mtop{display:flex;gap:14px;align-items:center;margin-top:12px;padding:8px 12px 8px 8px;border-radius:16px;background:#1A1A1D;border:1px solid #26262A}
 .mhero{flex:none;width:92px} .mhero svg{display:block;width:100%;height:auto}
 .mtop b{font-size:15px;line-height:1.25} .mtop small{font-size:12px;line-height:1.35}
-.shopscroll{max-height:62dvh;margin-top:4px} .shopscroll .shopgrid{max-height:none;overflow:visible}
-.mscroll{max-height:52dvh;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-bottom:4px}
+.wdslot-head{display:grid;gap:6px;min-width:0;flex:1}
+.wdslots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.wdslot{color:var(--fg);text-align:left;border:1px solid #414047;border-radius:8px;background:#242428;padding:6px;min-height:44px;overflow-wrap:anywhere;cursor:pointer}
+.wdslot[aria-pressed=true]{border-color:#e2611a;background:#372419}
+.wdslot small,.wdslot strong{display:block;font-size:11px;line-height:1.2}
+.wdslot small{color:#b8b6bc;margin-bottom:2px}
+[data-rarity="0"]{--wdrare:#b6b8c2}
+[data-rarity="1"]{--wdrare:#83b9ff}
+[data-rarity="2"]{--wdrare:#c7a3ff}
+[data-rarity="3"]{--wdrare:#ffd56d}
+[data-rarity="4"]{--wdrare:#ff929e}
+.wdslot strong,.wdrare{color:var(--wdrare,#b6b8c2)}
+.wdmeta{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 8px;color:#b8b6bc;font-size:11px}
+.shopit .wdmeta .wdrare{font-weight:750}
+.shopit[data-rarity]{border-top:2px solid var(--wdrare)}
+.shopit .wdmyth{font-size:11px;line-height:1.25}
+#mItems .shopit svg,#shopPane .shopit svg{max-height:132px}
+.shopit button{min-height:44px;height:auto;margin-top:auto;padding:4px}
+.wdboost{display:grid;gap:4px;margin:10px 0 3px;padding:10px;border-radius:12px;background:#222024;border:1px solid #3c3538}
+.wdboost b{font-size:13px}.wdboost small{font-size:12px;line-height:1.35;color:#c8c5cc}
+.wdboost .wdmyth,.shopit .wdmyth{color:#ff929e}
+.wdfilter{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:12px 0 8px}
+.wdfilter .mh{margin:0}
+.wdleavefilter{min-height:44px}
+.mscroll{max-height:68dvh;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-bottom:4px}
+.shopscroll .shopgrid{max-height:none;overflow:visible}
 .mh{font:400 20px var(--display);letter-spacing:.3px;text-transform:uppercase;margin:12px 0 2px}
 .mp{font-size:12.5px;line-height:1.4;color:var(--muted);margin:0 0 8px}
 .lookgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -1688,26 +1712,27 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Гардероб</h2><span class="pts big" id="shopPtsBox">⭐ <b id="shopPts">0</b></span></div>
     <div class="seg wdseg" role="group" aria-label="Мои вещи или магазин" id="wdSeg"><button type="button" data-tab="mine" aria-pressed="true">Мои вещи</button><button type="button" data-tab="shop" aria-pressed="false">Магазин</button></div>
     <div id="minePane">
-      <div class="mtop"><span class="mhero" id="mHero" aria-hidden="true"></span><span class="stack" style="gap:3px;min-width:0"><span class="label">Сейчас на тебе</span><b id="mLv"></b><small class="muted" id="mOn"></small></span></div>
       <div class="mscroll" id="mScroll">
+        <div class="mtop"><span class="mhero" id="mHero" aria-hidden="true"></span><div class="wdslot-head"><span class="label">Сейчас на тебе</span><b id="mLv"></b><div class="wdslots" id="mSlots" role="group"></div></div></div>
+        <div class="wdboost" id="mBoost"></div>
+        <div id="mAcc">
+          <div class="wdfilter"><h3 class="mh" id="mItemTitle">Мои вещи</h3><button type="button" class="btn btn-ghost wdleavefilter" id="mAll" hidden>Все вещи</button></div>
+          <div class="mgrid" id="mItems"></div>
+          <div class="mempty" id="mEmpty" hidden><p>Вещи можно выиграть в городе или купить за звёзды.</p><button type="button" class="btn btn-ghost" id="mToShop">В магазин</button></div>
+        </div>
         <h3 class="mh">Образ</h3>
         <p class="mp">Новые образы открываются за время тренировок по урокам. Носи любой открытый.</p>
         <div class="lookgrid" id="mLooks"></div>
-        <div id="mAcc">
-          <h3 class="mh">Аксессуары</h3>
-          <div class="mgrid" id="mItems"></div>
-          <div class="mempty" id="mEmpty" hidden><p>Пока пусто. Аксессуары покупаются в магазине за ⭐ — очки дают за победы в батлах и тренировки.</p><button type="button" class="btn btn-ghost" id="mToShop">В магазин</button></div>
-        </div>
       </div>
     </div>
     <div id="shopPane" class="mscroll shopscroll" hidden>
     <div class="ptsinfo"><b>Как получить ⭐</b>
-      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в авто-батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
-      <small>Поражение очков не даёт. Очки нельзя купить за деньги. Аксессуары — только для красоты, на батлы не влияют.</small></div>
+      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
+      <small>Звёзды нельзя купить за деньги. Бонусы указаны на карточках вещей.</small></div>
     <div class="shopgrid" id="shopGrid"></div>
     <div id="cityShop" hidden>
       <h3 class="mh">Только в городе</h3>
-      <p class="mp">Эти вещи не продаются. Их выбивают с уличных банд и получают за дела в «Городе». Надетые — видны на тебе везде и помогают в батлах: шире окно попадания, легче траектория и фриз.</p>
+      <p class="mp">Вещи из города дают за победы над бандами, задания и находки в тайниках.</p>
       <div class="shopgrid" id="cityGrid"></div>
     </div>
     </div>
@@ -1802,12 +1827,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=18"></script>
-<script src="rhythm.js?v=26"></script>
+<script src="hero.js?v=19"></script>
+<script src="rhythm.js?v=27"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=8"></script>
-<script src="city.js?v=13"></script>
+<script src="city.js?v=14"></script>
 <script src="vendor/qr.js"></script>
 <script>
 (function(){
@@ -5360,6 +5385,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные', funk: 'Фанк-бригада', roots: 'Корни', wave: 'Волна', rebar: 'Арматура', volt: 'Высоковольтные', forge: 'Литейка' }[id]; return c3 ? T(c3) : id; }
   function citySrc(g){
     const s = g.src || '';
+    if (g.stash) return T('Тайники Промзоны или граффити во Дворе');
     if (s.slice(0, 5) === 'gang:') return T('Выбей с банды «{x}» в городе', { x: cityGang(s.slice(5)) });
     if (s === 'mc') return T('Награда MC Рупора за сайфер в городе');
     if (s === 'dj') return T('Награда диджея Винта в городе');
@@ -5687,16 +5713,41 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!$('#shopSheet').hidden) wdPaint();
   }
   // one item card (shop and «Мои вещи» share it)
+  const WD_RARITY = ['Обычная', 'Редкая', 'Эпическая', 'Легендарная', 'Мифическая'];
+  const WD_SLOTS = { head: 'Голова', top: 'Верх', pants: 'Штаны', kicks: 'Кроссы', hands: 'Руки', knees: 'Колени', laces: 'Шнурки', ears: 'Уши', neck: 'Шея', floor: 'Пол', bg: 'Фон', item: 'Реквизит', fx: 'Эффект' };
+  const wdPercent = bp => nfmt(bp / 100);
+  function wdEffects(b){
+    return b ? [b.win && T('+{n} мс к попаданию', { n: b.win }), b.cor && T('+{n} пкс к ширине траектории', { n: b.cor }), b.hold && T('фриз держать легче'), b.save && T('1 промах прощается')].filter(Boolean) : [];
+  }
+  function wdChanceText(chance){
+    return [
+      T('Шанс суперэлемента в авто и вручную · +{n}% за раунд', { n: wdPercent(chance.myth) }),
+      T('Power move без обводки вручную · {n}% за раунд', { n: wdPercent(chance.assist) }),
+    ];
+  }
+  function wdText(parent, tag, value, className){
+    const el = document.createElement(tag); el.textContent = value;
+    if (className) el.className = className;
+    parent.appendChild(el); return el;
+  }
   function itemCard(it, pre){
     const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level;
-      const city = !!it.city, own = city ? cityOwned().includes(it.id.slice(2)) : (w.owned || []).includes(it.id), worn = myEq.includes(it.id);
+      const city = !!it.city, worn = myEq.includes(it.id), own = city ? cityOwned().includes(it.id.slice(2)) : (worn || (w.owned || []).includes(it.id));
       const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '') + (city ? ' cityit' + (own ? '' : ' lock') : '');
+      d.dataset.rarity = it.rar;
       const keep = myEq.filter(k => k !== it.id && slotOf(k) && slotOf(k) !== it.slot);
-      d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) }) + '<b></b><button type="button"></button>';
-      d.querySelector('b').textContent = T(it.name);
-      const btn = d.querySelector('button');
-      if (city) { const c = document.createElement('small'); c.className = 'citycap'; c.textContent = '🏙️ ' + (own ? T('Из города') : citySrc(it)); d.insertBefore(c, btn);
-        if (it.bt) { const e = document.createElement('small'); e.className = 'citybt'; e.textContent = '⚔️ ' + T('В батлах') + ': ' + [it.bt.win && T('+{n} мс к попаданию', { n: it.bt.win }), it.bt.cor && T('шире траектория'), it.bt.hold && T('фриз держать легче'), it.bt.save && T('1 промах прощается')].filter(Boolean).join(', '); d.insertBefore(e, btn); } }
+      d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) });
+      wdText(d, 'b', T(it.name));
+      const meta = wdText(d, 'div', '', 'wdmeta');
+      wdText(meta, 'span', '◆ ' + T(WD_RARITY[it.rar]), 'wdrare');
+      wdText(meta, 'span', T(WD_SLOTS[it.slot]));
+      if (city) wdText(d, 'small', '🏙️ ' + citySrc(it), 'citycap');
+      else if (!it.sub) wdText(d, 'small', '⭐ ' + nfmt(it.price), 'citycap');
+      const effects = wdEffects(it.bt);
+      wdText(d, 'small', effects.length ? effects.join(' · ') : T('Для образа'), 'citybt');
+      const chance = HERO.gearChances([it.id]);
+      if (chance.myth) wdChanceText(chance).forEach(line => wdText(d, 'small', line, 'wdmyth'));
+      const btn = document.createElement('button'); btn.type = 'button'; d.appendChild(btn);
       if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
       else if (city && !own) { btn.className = 'citybtn'; btn.textContent = CITY_ON && window.CITY ? T('В город') + ' →' : T('Только в городе');
         if (CITY_ON) btn.onclick = () => { $('#shopSheet').hidden = true; setTimeout(() => go('cityhub'), 250); }; else btn.disabled = true; }
@@ -5721,20 +5772,41 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const w = BT.wallet || { pts: 0, owned: [] }, box = $('#shopGrid');
     $('#shopPts').textContent = nfmt(w.pts);
     box.innerHTML = '';
-    HERO.SHOP.slice().sort((a, b) => (b.sub ? 1 : 0) - (a.sub ? 1 : 0)).forEach(it => box.appendChild(itemCard(it)));
+    HERO.SHOP.slice().sort((a, b) => a.rar - b.rar || a.price - b.price).forEach(it => box.appendChild(itemCard(it)));
     // gear only the hidden flat 2D city gives (MC, DJ, walls — not in the 3D city) is listed only for those who already have it
-    const own2d = cityOwned(), G = HERO.GEAR || {}, ids = Object.keys(G).filter(id => !['mc', 'dj', 'walls'].includes(G[id].src) || own2d.includes(id)), cg = $('#cityGrid'); cg.innerHTML = '';
+    const own2d = cityOwned(), G = HERO.GEAR || {}, ids = Object.keys(G).filter(id => G[id].stash || !['mc', 'dj', 'walls'].includes(G[id].src) || own2d.includes(id)), cg = $('#cityGrid'); cg.innerHTML = '';
     $('#cityShop').hidden = !ids.length;
     ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg')));
   }
   // ===== wardrobe = «Мои вещи» + «Магазин» in one sheet (owner 11.11.2026 «то есть инвентаря не предусмотрено?» → «делай») =====
-  let wdTab = 'mine';
+  let wdTab = 'mine', wdSlot = '';
   function minePaint(){
     const v = statsView(), cur = lookLv() || v.level, w = BT.wallet;
     $('#mHero').innerHTML = HERO.svg(v.level, { uid: 'mh', acc: myLook() });
     $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
-    const on = myEq.map(k => HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(x => x.id === k)).filter(Boolean).map(x => T(x.name));
-    $('#mOn').textContent = on.length ? on.join(' · ') : T('Без аксессуаров');
+    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id))
+      .concat(cityOwned().filter(id => HERO.GEAR && HERO.GEAR[id]).map(id => HERO.itemOf('c:' + id)));
+    const worn = new Map(myEq.map(HERO.itemOf).filter(Boolean).map(it => [it.slot, it]));
+    const slots = $('#mSlots'); slots.replaceChildren(); slots.setAttribute('aria-label', T('Сейчас на тебе'));
+    const activeSlots = new Set(['head', 'top', 'pants', 'kicks', ...worn.keys()]);
+    const base = HERO.baseSlots(cur);
+    for (const [slot, label] of Object.entries(WD_SLOTS)) {
+      if (!activeSlots.has(slot)) continue;
+      const item = worn.get(slot), button = document.createElement('button'); button.type = 'button'; button.className = 'wdslot';
+      button.dataset.rarity = item ? item.rar : 0; button.dataset.wdSlot = slot; button.setAttribute('aria-pressed', String(slot === wdSlot));
+      wdText(button, 'small', T(label)); wdText(button, 'strong', T(item ? item.name : base[slot] || 'Пусто'));
+      button.onclick = () => { wdSlot = wdSlot === slot ? '' : slot; minePaint(); $('#mSlots [data-wd-slot="' + slot + '"]').focus({ preventScroll: true }); };
+      slots.appendChild(button);
+    }
+    const buffs = $('#mBoost'); buffs.replaceChildren();
+    wdText(buffs, 'b', T('Бонусы от надетых вещей'));
+    const effects = wdEffects(HERO.gearBoost(myEq)), chance = HERO.gearChances(myEq);
+    if (effects.length) wdText(buffs, 'small', effects.join(' · '));
+    if (chance.myth) wdChanceText(chance).forEach(line => wdText(buffs, 'small', line, 'wdmyth'));
+    if (!effects.length && !chance.myth) wdText(buffs, 'small', T('Пока без бонусов'));
+    const filtered = wdSlot ? owned.filter(it => it.slot === wdSlot) : owned;
+    $('#mItemTitle').textContent = T(wdSlot ? WD_SLOTS[wdSlot] : 'Мои вещи');
+    $('#mAll').hidden = !wdSlot;
     const looks = $('#mLooks'); looks.innerHTML = '';
     HERO.LEVELS.forEach((need, i) => {
       const l = i + 1, open = l <= v.level, worn = l === cur;
@@ -5747,12 +5819,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       else if (!worn) d.addEventListener('click', () => setLook(l));
       looks.appendChild(d);
     });
-    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id))
-      .concat(cityOwned().filter(id => HERO.GEAR && HERO.GEAR[id]).map(id => HERO.itemOf('c:' + id)));
     const box = $('#mItems'); box.innerHTML = '';
-    owned.forEach(it => box.appendChild(itemCard(it, 'mi')));
-    $('#mAcc').hidden = !w && !owned.length;
-    $('#mEmpty').hidden = !!owned.length || !w;
+    filtered.sort((a, b) => b.rar - a.rar).forEach(it => box.appendChild(itemCard(it, 'mi')));
+    $('#mEmpty').hidden = !!filtered.length;
+    $('#mToShop').hidden = !w;
   }
   function wdPaint(){
     if ($('#shopSheet').hidden) return;
@@ -5765,12 +5835,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (wdTab === 'mine') { $('#shopGrid').innerHTML = ''; minePaint(); } else { $('#mItems').innerHTML = ''; $('#mLooks').innerHTML = ''; $('#mHero').innerHTML = ''; shopPaint(); }
   }
   function openWd(tab){
-    wdTab = tab || wdTab; $('#shopSheet').hidden = false; wdPaint();
+    wdTab = tab || wdTab; wdSlot = ''; $('#shopSheet').hidden = false; wdPaint();
     const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0;
     if (BT.wallet) btInbox(false);
   }
   $('#wdSeg').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (!b) return; wdTab = b.dataset.tab; wdPaint(); const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0; });
   $('#mToShop').addEventListener('click', () => { wdTab = 'shop'; wdPaint(); });
+  $('#mAll').addEventListener('click', () => { wdSlot = ''; minePaint(); });
   async function shopBuy(it, btn){
     btn.disabled = true;
     try {
@@ -5819,17 +5890,17 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BT.rest > Date.now()) { toast(T(prof.g === 'f' ? 'Твоя би-гёрл отдыхает — следующий батл через {t}' : 'Твой би-бой отдыхает — следующий батл через {t}', { t: hmFmt((BT.rest - Date.now()) / 60e3) })); return; }
     if (btn) btn.disabled = true;
     let lvl = statsView().level;
-    let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false, g = 1;
+    let opp = r ? { id: r.id, name: r.n || T('Брейкер {id}', { id: String(r.id).slice(-4) }), lvl: r.lvl || HERO.levelFor(r.m || 0), eq: r.eq || [] } : null, dj = null, old = false, g = 1, gear = null;
     try {
       const res = await btPost('/bt/ready', r ? { to: r.id, r: RB.RB2.R } : { find: 1, r: RB.RB2.R }), j = await res.json().catch(() => ({}));
       if (res.status === 404 && j.error === 'not found') old = true; // the server code is older than the app
       else if (!j.ok) { toast(btErr(res, j) || T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
-      else { opp = j.opp; dj = j.dj; g = j.g === 2 && j.r === RB.RB2.R ? 2 : 1; if (j.lvl) lvl = j.lvl; btUlSeen(j); } // g: 2 = the server knows rules v2 (difficulty 1–10, hard beats, the trajectory) // the server's level decides which moves count — the game uses the same
+      else { opp = j.opp; dj = j.dj; gear = j.gear; g = j.g === 2 && j.r === RB.RB2.R ? 2 : 1; if (j.lvl) lvl = j.lvl; btUlSeen(j); }
     } catch (_) { toast(T('Батл не получился. Проверь интернет.')); if (btn) btn.disabled = false; return; }
     if (btn) setTimeout(() => { btn.disabled = false; }, 1500);
     if (!dj) dj = RB.BEATS[Math.floor(Math.random() * RB.BEATS.length)].id;
     // owner 11.11.2026: «Сам» = your round by hand, the other one answers within a day (no cartoon); «Авто» = the old cartoon battle
-    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, g, ul: ulState2(), onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
+    RB.open({ level: lvl, eq: myLook(), me: prof.nick || T('Ты'), opp, dj, g, gear, ul: ulState2(), onEnd: res => btSendHand(opp, res.round), onAuto: () => btAuto(opp) });
   }
   const btFinal = m => { const e = new Error(m); e.final = true; return e; };
   async function btCallPost(opp, body){
@@ -5878,7 +5949,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (j.score) btPaintScore(j.score); if (typeof j.pts === 'number') btWallet({ pts: j.pts }); renderLeaders();
       return { result: btRes(j.battle, 'b') };
     };
-    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, g: bt.ra && bt.ra.g === 2 && bt.ra.r === RB.RB2.R ? 2 : 1, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
+    RB.open({ level: BT.lvl || statsView().level, eq: myLook(), me: prof.nick || T('Ты'), opp: bt.a, dj: bt.dj, gear: bt.gear, g: bt.ra && bt.ra.g === 2 && bt.ra.r === RB.RB2.R ? 2 : 1, answer: true, ul: ulState2(), onEnd: res => post({ round: res.round }), onAuto: () => post({ auto: 1 }) });
   }
   // the battle comes back from the server; `side` = which side this phone is ('a' challenged, 'b' was challenged)
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -5952,7 +6023,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const firstLeft = side === 'a', seg = { A: [[0, .9, 'walk']], B: [[0, .9, 'walk']] }, ev = [], used = { A: [], B: [] };
     let rate = 1, t = 1.0;
     ev.push([.1, () => round(T('Раунд {n}', { n: 1 }))]);
-    let rare = btRare(bt.seed || 1);
+    let rare = bt.gearRare || btRare(bt.seed || 1);
     if (rare && !(bt.win === rare.side && (bt.votes || []).every(v => v === rare.side))) rare = null; // an older server decided otherwise
     const rareLeft = rare && rare.side === side;
     for (let r = 1; r <= 2; r++) {
@@ -6039,7 +6110,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         A.classList.add(won ? 'win' : 'lose'); B.classList.add(won ? 'lose' : 'win'); arena.classList.add(won ? 'on-l' : 'on-r');
         const tt = $('#btResT'); tt.textContent = won ? T('Победа!') : T('Поражение'); tt.className = won ? 'win' : 'lose';
         $('#btResS').textContent = T('Судьи: {a} : {b}', { a: mine, b: votes.length - mine });
-        if (rare) { const rr = $('#btResR'); rr.textContent = rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); if (rareLeft && bt.n) rr.textContent += ' · ' + T('+{n} ⭐ за редкий приём', { n: rare.myth ? 10 : 5 }); rr.hidden = false; }
+        if (rare) { const rr = $('#btResR'); rr.textContent = bt.gearRare ? T('Мифическая вещь активировала {move}', { move: BT_NAME[rare.mv] }) : rare.myth ? T('Мифический приём {move} решил батл — такое бывает 1 раз из 200', { move: BT_NAME[rare.mv] }) : T('Редкий приём {move} решил батл — такое бывает 1 раз из 100', { move: BT_NAME[rare.mv] }); rr.classList.toggle('myth', !!rare.myth); if (rareLeft && bt.n) rr.textContent += ' · ' + T('+{n} ⭐ за редкий приём', { n: rare.myth ? 10 : 5 }); rr.hidden = false; }
         $('#btRes').hidden = false; $('#btSkip').hidden = true; $('#btClose').hidden = false;
         { const cb = $('#btCoach'), day = new Date().toISOString().slice(0, 10); let ok = bt.n > 0 && isCoach(opp); try { if (ok && localStorage.getItem('fedoskin-bt-coach') === day) ok = false; if (ok) localStorage.setItem('fedoskin-bt-coach', day); } catch (_) {} cb.hidden = !ok; }
         hype(true);

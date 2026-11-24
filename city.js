@@ -327,7 +327,7 @@
 
   // ---- crews on the streets (owner 13.11.2026 «как крипы, но без убийств: победил в танце — банда исчезает и тебе что-то достаётся») ----
   // gear: unique clothes that only drop in the city; each has a look (seen on the hero) and one small perk
-  const GEAR = (window.HERO && window.HERO.GEAR) || DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F'];
+  const GEAR = (window.HERO && window.HERO.GEAR) || DATA.gear || {}, RAR = ['обычная', 'редкая', 'эпическая', 'легендарная', 'Мифическая'], RARC = ['#C9CCD2', '#4FC0FF', '#C58CFF', '#FFD23F', '#FF929E'];
   const PERK = { time: '+{n} % времени в стычках', life: '+{n} жизнь в стычках', cash: '+{n} % кэша со стычек', rep: '+{n} респекта за разогнанную банду', show: '+{n} % в шляпу на шоу', en: 'Стычка стоит на {n} энергии меньше', coin: 'Монеты на земле: +{n}', can: 'Граффити стоит на {n} баллончик меньше' };
   // ONE wardrobe with the app (owner 14.11.2026): what is worn lives in the app's look list as 'c:<id>' — the same hero in the city,
   // in battles and in the rating; the app also shows these pieces in «Гардероб». Owned pieces stay in the city save (S.gear.own).

@@ -294,7 +294,9 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 #g3mv{position:absolute;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translateX(-50%);font:400 30px Anton,sans-serif;letter-spacing:.05em;text-shadow:0 3px 14px #000;white-space:nowrap;transition:transform .2s}
 #g3mv.pop{transform:translateX(-50%) scale(1.15)}
 #g3mv small{display:block;text-align:center;font:700 14px Inter,sans-serif;letter-spacing:.04em}
-#g3mv .ok{color:#3BD16F}#g3mv .bad{color:#FF5A4F}
+#g3mv .ok{color:#3BD16F}#g3mv .bad{color:#FF5A4F}#g3mv .gold{color:#FFD23F}
+#g3myth{position:absolute;left:50%;top:48%;width:min(38vw,220px);transform:translate(-50%,-50%);padding:12px;background:radial-gradient(ellipse,#66171f,#180a11 78%);border:1px solid #ee6971;border-radius:18px;pointer-events:none}
+#g3myth svg{display:block;width:100%;height:auto;overflow:visible}
 #g3skip{position:absolute;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));pointer-events:auto;border:1px solid rgba(255,255,255,.2);background:rgba(12,14,19,.7);color:#F2EFE8;border-radius:18px;padding:9px 14px;font:600 13px Inter,sans-serif}
 #g3res{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);opacity:0;transition:.3s;z-index:8;width:min(340px,88vw);background:rgba(14,16,21,.94);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:18px;font-family:Inter,sans-serif;color:#F2EFE8;text-align:center;pointer-events:none}
 #g3res.on{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}
@@ -325,7 +327,7 @@ function ui() {
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
 <div id="g3hud2"><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
 <button id="g3act" type="button"></button>
-<div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button></div>
+<div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button></div>
 <div id="g3res"></div><div id="g3toast"></div><div id="g3info"><div></div></div>`;
   [...h.children].forEach(c => document.body.appendChild(c));
 }
@@ -620,7 +622,13 @@ export function initGame(ctx) {
     if (pl.id === 'ring') startRing();
     if (pl.id === 'stash') { const s = PZ.stash[pl.i], big = rng(today() * 13 + pl.i)() < .34; S.stash.got.push(pl.i); s.g.visible = false; PLACES.splice(PLACES.indexOf(pl), 1);
       if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + BAL.stashEn)); S.rep += BAL.stashRep; }
-      save(); paintHud(); bumpGoal('stash'); sfx('hit'); toast(big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep })); near = null; paintAct(); }
+      const gear = !S.own.includes('writerKicks') && rng(today() * 97 + pl.i * 31 + 29)() < .12;
+      if (gear) S.own.push('writerKicks');
+      save(); paintHud(); bumpGoal('stash'); sfx('hit');
+      const reward = big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep });
+      toast(gear ? reward + ' · 🎁 ' + _t(HERO.GEAR.writerKicks.name) : reward);
+      near = null; paintAct();
+    }
   }
   // THE UNDERGROUND RING of the industrial zone: one battle of one round against a random regular (lv 6–8). Every win in a row makes the
   // next win pay more (the streak is kept across days, up to streakMax steps); a loss resets it. Same battle engine, flag c.ringB.
@@ -782,7 +790,7 @@ export function initGame(ctx) {
       step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
-  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }) {
+  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null) {
     // a set: toprock → down → footwork → power → freeze, each step with an outcome; the HERO's sets come in four shapes (HFREEZE above)
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
     const me = who === 'me';
@@ -822,13 +830,15 @@ export function initGame(ctx) {
     const pw = POWER.filter(p => p.lv <= lv); let P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
     if (me && W.forcePM) P = POWER.find(p => p.nm === W.forcePM) || P;   // tests: ?pm=FLARE
     const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
-    const pFail = r() < failP;
-    if (P.pre) push(P.pre, 1.6, 1.0, { kind: 'pre' });
+    const pFail = r() < failP && !gear;
+    if (P.pre && !gear?.move) push(P.pre, 1.6, 1.0, { kind: 'pre' });
     const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
-    push(P.c, reps * clipLen(P.c), 0, { nm: P.nm, pts: P.pts, kind: 'power', fail: pFail, failAt: .45 + r() * .35, lv: P.lv });
+    const failAt = .45 + r() * .35;
+    if (gear?.move) push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: P.pts + 6, kind: 'power', gear });
+    else push(P.c, reps * clipLen(P.c), 0, { nm: P.nm, pts: gear?.assist ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: P.lv, gear });
     // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
     const pwS = seq[seq.length - 1], mk = (c, len, at, o = {}) => Object.assign({ c, len, at: at || 0 }, o), ok = [], bad = [mk(null, 2.2, 0, { kind: 'fall' })];
-    if (P.post) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
+    if (P.post && !gear?.move) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
     // «powerFirst»: after the power move he goes back down into footwork (no extra points), then the freeze
     if (shape === 'powerFirst') combo(1.6 + r() * .6, false, ok, .45);
     // the freeze: the hero picks from six (not the same as last time; air freezes from level 2), opponents from the two old ones
@@ -850,7 +860,11 @@ export function initGame(ctx) {
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
     const meSpot = { x: cx - .3, z: cz + 2.1 }, opSpot = { x: cx + .3, z: cz - 2.1 };
     const turns = [], rounds = c.tour ? 1 : c.lv >= 3 ? 2 : 1;
-    for (let i = 0; i < rounds; i++) { turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff())); }
+    const eq = ctx.heroEq(), chance = HERO.gearChances(eq);
+    for (let i = 0; i < rounds; i++) {
+      const gear = HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
+      turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff(), gear));
+    }
     B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, fromMe: { x: H.root.position.x, z: H.root.position.z }, fromOp: { x: opp.root.position.x, z: opp.root.position.z }, clean: true };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
@@ -864,6 +878,17 @@ export function initGame(ctx) {
   function mvText(s, res) {
     const e = $('#g3mv'); e.innerHTML = (s.nm || '') + (res ? `<small class="${res[0]}">${res[1]}</small>` : '');
     e.classList.add('pop'); setTimeout(() => e.classList.remove('pop'), 180);
+  }
+  function mythCut(T, step, t) {
+    const el = $('#g3myth');
+    if (!step?.gear?.move) { if (!el.hidden) { el.hidden = true; el.replaceChildren(); } return; }
+    const move = HERO.MOVES[step.gear.move];
+    if (el.hidden) {
+      el.innerHTML = HERO.svg(B.lv, { uid: 'city-myth', rig: true, acc: ctx.heroEq() });
+      T.mythRig = HERO.rigJoints(el.querySelector('svg'));
+      el.hidden = false;
+    }
+    HERO.setPose(T.mythRig, move.f(clamp((t - step.a) / step.len, 0, 1)));
   }
   // a fall: the pose freezes in slow motion, the body tips over sideways and lies ON the ground (city3d-mocap J.rest), then gets up
   function fallStart(J) { J.fall = { t: 0, side: Math.random() < .5 ? -1 : 1 }; J.rest = true; if (J.act) J.act.timeScale = .15; ctx.shake && ctx.shake(.6); }
@@ -904,14 +929,15 @@ export function initGame(ctx) {
         else if (s.kind === 'power' || s.kind === 'freeze' || s.kind === 'top2') mvText(s);
         paintScore(T);
         // MY power move: drawn by the finger (the old random outcome only if nobody draws)
-        if (s.kind === 'power' && T.who === 'me' && !s.done && PM.can(s.c)) { s.pm = true; armDraw(T, s); }
+        if (s.kind === 'power' && T.who === 'me' && !s.done && !s.gear && PM.can(s.c)) { s.pm = true; armDraw(T, s); }
       }
       const s = si >= 0 ? T.seq[si] : null;
+      mythCut(T, s, t);
       if (si >= 0) spinTick(J, T, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
         if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); if (T.who === 'me') B.clean = false; }
-        else { T.score += s.pts; mvText(s, ['ok', _t('Чисто! +{n}', { n: s.pts })]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
+        else { T.score += s.pts; mvText(s, s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
         paintScore(T);
       }
       if (J.fall) fallTick(J, dt, s && s.soft);
@@ -980,6 +1006,7 @@ export function initGame(ctx) {
     $('#g3mv').innerHTML = '';
   }
   function finishSkip() {
+    mythCut(null, null, 0);
     // play out the rest instantly: every remaining scoring step counts as decided by its outcome
     B.turns.forEach((T, i) => { if (i < B.i) return; T.seq.forEach(s => { if (s.done || (i === B.i && T.si >= 0 && T.seq.indexOf(s) <= T.si && s.kind !== 'power' && s.kind !== 'freeze')) return;
       if (s.kind === 'top' || s.kind === 'foot') { if (!(i === B.i && T.seq.indexOf(s) <= T.si)) T.score += s.pts; }
