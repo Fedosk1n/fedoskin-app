@@ -1,0 +1,18 @@
+name: Check R2 access
+on:
+  push:
+    branches: [codex/check-r2-access]
+    paths: [.github/workflows/check-r2-access.yml]
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Count objects in fedoskin-video
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3api list-objects-v2 --endpoint-url https://424be49c67f065e5c755e508f41f2b88.r2.cloudflarestorage.com --bucket fedoskin-video --query 'length(Contents || `[]`)' --output json
