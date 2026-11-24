@@ -1827,7 +1827,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=19"></script>
+<script src="hero.js?v=20"></script>
 <script src="rhythm.js?v=27"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -5360,7 +5360,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   // ===== the hero: gallery of looks + «level up» screen =====
   // accessories this phone wears (bought in the shop with points; the server keeps the real list, this is the copy)
-  let myEq = []; try { myEq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]') || []; } catch (_) {}
+  function readMyEq(){
+    try { const eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]'); return Array.isArray(eq) ? eq : null; }
+    catch (_) { return null; }
+  }
+  let myEq = readMyEq() || [];
   const heroShown = () => !$('#profile').hidden || !$('#battles').hidden; // the hero card lives on «Батлы» (11.11.2026)
   // b-girl (owner 11.11.2026): the look = bought items + 'girl' (stored on the server with the items, so others see her too)
   // wardrobe (owner 11.11.2026 «инвентарь»): any unlocked level look can be worn — 'lv<N>' rides along with the items like 'girl'
@@ -5394,6 +5398,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   function wearCity(k, on){ return shopWear(on ? eqWith(myEq, k) : myEq.filter(x => x !== k)); }
   function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => !notItem(k)); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = ''; if (heroShown()) renderStats(); }
+  // The city can equip a prize while this page is in the browser's back/forward cache.
+  window.addEventListener('pageshow', e => {
+    if (!e.persisted) return;
+    const eq = readMyEq();
+    if (eq && JSON.stringify(eq) !== JSON.stringify(myEq)) { setMyEq(eq); wdPaint(); }
+  });
   function setLook(l){
     myLv = l >= statsView().level ? 0 : l; try { localStorage.setItem('fedoskin-look', String(myLv)); } catch (_) {}
     lookSync(); wdPaint();

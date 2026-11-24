@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=16';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=17';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=29';
+import { initGame } from './city3d-game.js?v=30';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=5';
 import { buildPark } from './city3d-park.js?v=4';
@@ -716,16 +716,23 @@ async function buildYard(scene) {
   });
   W.turn = { who: +Q.get('set') || 0, start: 0, plan: null };
 }
-function heroLv() { if (Q.get('lv')) return +Q.get('lv'); try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60) || 1; } catch (_) { return 1; } }
-function heroEq() {
-  try { const eq = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]'); return Array.isArray(eq) ? eq : []; } catch (_) { return []; }
+function heroLv() {
+  const level = Number(Q.get('lv'));
+  if (Number.isInteger(level) && level >= 1 && level <= HERO.LEVELS.length) return level;
+  try {
+    const stats = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}');
+    return HERO.levelFor((stats?.sec || 0) / 60);
+  } catch (_) { return 1; }
 }
-function myLook() {
-  const lv = +Q.get('lv') || (() => { try { const s = JSON.parse(localStorage.getItem('fedoskin-stats') || '{}'); return HERO.levelFor((s.sec || 0) / 60); } catch (_) { return 4; } })() || 4;
-  const eq = heroEq();
+function heroEq() {
+  let eq = [];
+  try { const saved = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]'); if (Array.isArray(saved)) eq = saved; } catch (_) {}
   try { const p = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}'); if (p.g === 'f') eq.push('girl'); } catch (_) {}
   try { const l = +localStorage.getItem('fedoskin-look'); if (l) eq.push('lv' + l); } catch (_) {}
-  const look = HERO.topDown(Math.max(lv, Q.get('lv') ? 1 : 4), eq);
+  return eq;
+}
+function myLook() {
+  const look = HERO.topDown(heroLv(), heroEq());
   look.cus = myCustom();   // details added to the clothes in the city (city3d-game.js «Кастом»)
   return look;
 }
