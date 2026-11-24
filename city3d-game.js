@@ -247,6 +247,7 @@ function load() {
     og: Number(Boolean(s.ogDay)),
     stash: s.stash.got.length,
   };
+  s.gearProgress.ringWins ??= s.best;
   s.paintedWalls = s.paintedWalls || Object.keys(s.turf);
   return s;
 }
@@ -258,19 +259,9 @@ function collectGear(activity, wall) {
   } else if (activity) {
     S.gearProgress[activity] = (S.gearProgress[activity] || 0) + 1;
   }
-  const progress = {
-    ...S.gearProgress,
-    paint: S.paintedWalls.length,
-    center: Number(Boolean(S.seen.center)),
-    chromeWins: S.wins.chrome,
-    forgeWins: S.wins.forge,
-    jamWon: S.jamWon,
-    ringBest: S.best,
-  };
   const rewards = [];
   for (const [id, item] of gearRewards) {
-    const [key, need] = item.reward;
-    if (!(progress[key] >= need) || S.own.includes(id)) continue;
+    if (S.own.includes(id) || !item.reward.every(([key, need]) => HERO.cityRewardValue(S, key) >= need)) continue;
     S.own.push(id);
     rewards.push(item.ico + ' ' + _t('Вещь в гардеробе: {x}', { x: _t(item.name) }));
   }
@@ -281,7 +272,8 @@ function refill() {
   const notes = [];
   const sec = lessonSec(), d = sec - (S.lsec || 0);
   if (S.day !== today()) {
-    const days = dayDiff(S.day, today()); S.day = today(); S.beat = {}; S.goals = null;
+    const days = dayDiff(S.day, today()); S.day = today(); S.goals = null;
+    S.beat = Object.fromEntries(Object.entries(S.beat).filter(([, day]) => day === S.day));
     if (S.en < BAL.daily) { notes.push(_t('☀️ Новый день: энергия до {n} ⚡', { n: BAL.daily })); S.en = BAL.daily; }
     // walls: each of my walls gives respect every new day; a crew not beaten for 3 days paints its wall back
     let rep = 0, lost = [];
@@ -679,12 +671,10 @@ export function initGame(ctx) {
     if (pl.id === 'ring') startRing();
     if (pl.id === 'stash') { const s = PZ.stash[pl.i], big = rng(today() * 13 + pl.i)() < .34; S.stash.got.push(pl.i); s.g.visible = false; PLACES.splice(PLACES.indexOf(pl), 1);
       if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + BAL.stashEn)); S.rep += BAL.stashRep; }
-      const gear = !S.own.includes('writerKicks') && rng(today() * 97 + pl.i * 31 + 29)() < .12;
-      if (gear) S.own.push('writerKicks');
       const rewards = collectGear('stash');
       save(); paintHud(); bumpGoal('stash'); sfx('hit');
       const reward = big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep });
-      toast(gear ? reward + ' · 🎁 ' + _t(HERO.GEAR.writerKicks.name) : reward, rewards);
+      toast(reward, rewards);
       near = null; paintAct();
     }
   }
@@ -694,7 +684,7 @@ export function initGame(ctx) {
     S.en -= BAL.ring; if (S.ringDay.day !== today()) S.ringDay = { day: today(), n: 0 }; S.ringDay.n++; save(); paintHud(); J.busy = true; PZ.crowd(true);
     startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }); }
   function ringResult(win) { const lines = [], rk0 = rankOf(S.rep);
-    if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
+    if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.gearProgress.ringWins++; S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>`, _t('🔥 Серия побед на ринге: <b>{n}</b>', { n: S.streak }) + (S.streak > 1 ? _t(' — каждая следующая стоит дороже') : '')); }
     else { lines.push(S.streak ? _t('Серия из {n} побед оборвалась. Начинай новую.', { n: S.streak }) : _t('Ринг не прощает срывов. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); S.streak = 0; }
     const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
@@ -702,13 +692,15 @@ export function initGame(ctx) {
   // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
   // what was earned stays. Runs on the same battle engine as the crews — the «crew» is one dancer with the flag tour.
   let JM = null;
-  function startJam() { S.en -= BAL.jam; S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false }; PK.crowd(true); jamRound(); }
+  function startJam() { S.en -= BAL.jam; S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true }; PK.crowd(true); jamRound(); }
   function jamRound() { const J = PK.dancers[JM.i], d = JAM[JM.i]; J.busy = true;
     startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
   function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
-    if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
+    if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; JM.clean &&= B.clean; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span> · ${_t('раунд {i} из 3', { i: i + 1 })}`);
-      if (JM.i >= 3) { JM.over = true; S.jamWon = (S.jamWon || 0) + 1; lines.unshift(`<span class="rw">${_t('🏆 Ты выиграл джем на эстраде! Всего +{n} ★', { n: JM.rep })}</span>`); }
+      if (JM.i >= 3) { JM.over = true; S.jamWon = (S.jamWon || 0) + 1;
+        if (JM.clean) S.gearProgress.jamClean = (S.gearProgress.jamClean || 0) + 1;
+        lines.unshift(`<span class="rw">${_t('🏆 Ты выиграл джем на эстраде! Всего +{n} ★', { n: JM.rep })}</span>`); }
       else lines.push(_t('Дальше — <b>{x}</b>, ур. {l}. Энергия уже оплачена', { x: JAM[JM.i].name, l: BAL.jamLv[JM.i] })); }
     else { JM.over = true; lines.push(i ? _t('Джем окончен на {i}-м раунде. За сегодня +{n} ★', { i: i + 1, n: JM.rep }) : _t('Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); }
     const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
@@ -1138,10 +1130,21 @@ export function initGame(ctx) {
     else if (win) {
       const was = S.wins[c.id] || 0, rk0 = rkP, rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
       S.rep += rep; S.wins[c.id] = was + 1; S.beat[c.id] = today();
+      if (c.id === 'forge' && B.clean) {
+        S.gearProgress['clean:forge'] = (S.gearProgress['clean:forge'] || 0) + 1;
+      }
+      if ((c.id === 'volt' || c.id === 'forge') && B.pm?.some(move => move.g === 'perfect')) {
+        const key = 'perfect:' + c.id;
+        S.gearProgress[key] = (S.gearProgress[key] || 0) + 1;
+      }
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>${B.clean ? _t(' (чистый батл без срывов)') : ''}`);
       const gi = was === 0 ? 0 : was === 2 ? 1 : -1, gid = gi >= 0 ? c.gear[gi] : null;
-      if (gid && !S.own.includes(gid) && HERO.GEAR && HERO.GEAR[gid]) { S.own.push(gid); B.wear = gid; const G = HERO.GEAR[gid]; lines.push(`<span class="rw">${G.ico} ${_t('Новая шмотка: {x} — уже на тебе', { x: _t(G.name) })}</span>`); }
-      else if (c.gear[1] && was < 2 && !S.own.includes(c.gear[1])) lines.push(_t(2 - was === 1 ? 'Победи их ещё раз — получишь {x}' : 'Победи их ещё {n} раза — получишь {x}', { n: 2 - was, x: HERO.GEAR[c.gear[1]] ? _t(HERO.GEAR[c.gear[1]].name) : _t('шмотку') }));
+      const prize = gid && HERO.GEAR[gid], nextPrize = c.gear[1] && HERO.GEAR[c.gear[1]];
+      if (prize && !prize.reward && !S.own.includes(gid)) {
+        S.own.push(gid); B.wear = gid;
+        lines.push(`<span class="rw">${prize.ico} ${_t('Новая шмотка: {x} — уже на тебе', { x: _t(prize.name) })}</span>`);
+      }
+      else if (nextPrize && !nextPrize.reward && was < 2 && !S.own.includes(c.gear[1])) lines.push(_t(2 - was === 1 ? 'Победи их ещё раз — получишь {x}' : 'Победи их ещё {n} раза — получишь {x}', { n: 2 - was, x: _t(nextPrize.name) }));
       const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
       S.last[c.id] = today(); bumpGoal('win'); if (B.clean) bumpGoal('clean'); if (c.lv >= 2) bumpGoal('strong'); if (c.d === 'center') bumpGoal('cwin'); if (c.d === 'park') bumpGoal('pwin'); if (c.d === 'prom') bumpGoal('zwin');
       if (c.boss && was === 0) lines.unshift(`<span class="rw">${_t('👑 {b} и «{x}» признали тебя: {y}', { b: c.boss, x: c.name, y: c.d === 'prom' ? _t('ты хозяин Промзоны! Остался Клуб') : c.d === 'park' ? _t('ты хозяин Парка! Дорога в Промзону открыта') : _t('ты хозяин Центра! Дорога в Парк открыта') })}</span>`);

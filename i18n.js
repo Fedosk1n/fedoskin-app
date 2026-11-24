@@ -1149,7 +1149,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "12% chance when opening an Industrial Zone cache",
  "Первая победа над бандой «{x}» в 3D-городе": "First win against the {x} crew in 3D City",
  "Третья победа над бандой «{x}» в 3D-городе": "Third win against the {x} crew in 3D City",
- "Скоро в продаже": "Coming to the shop soon"
+ "Скоро в продаже": "Coming to the shop soon",
+ "Победы над бандой «{x}»": "Wins against the {x} crew",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "Wins with a perfectly traced power move against {x}",
+ "Победы без срывов над бандой «{x}»": "Wins without falls against the {x} crew",
+ "Победы подряд на подпольном ринге": "Consecutive wins in the underground ring",
+ "Всего побед на подпольном ринге": "Total wins in the underground ring",
+ "Победы во всех трёх раундах джема в Парке": "Park jams won in all three rounds",
+ "Джемы в Парке с победой во всех раундах без срывов": "Park jams won in every round without falling",
+ "Тайники Промзоны": "Industrial Zone caches",
+ "Дни с победой в онлайн-батле · {a}/{b}": "Days with an online battle win · {a}/{b}",
+ "Нужны победы в разные дни": "Win battles on different days",
+ "Цена изменилась. Обнови приложение.": "The price changed. Update the app."
  },
  "es": {
  "Главная": "Inicio",
@@ -2298,7 +2309,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "12% de probabilidad al abrir un escondite en la Zona Industrial",
  "Первая победа над бандой «{x}» в 3D-городе": "Primera victoria contra la crew {x} en la Ciudad 3D",
  "Третья победа над бандой «{x}» в 3D-городе": "Tercera victoria contra la crew {x} en la Ciudad 3D",
- "Скоро в продаже": "Próximamente en la tienda"
+ "Скоро в продаже": "Próximamente en la tienda",
+ "Победы над бандой «{x}»": "Victorias contra la crew {x}",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "Victorias con un power move trazado a la perfección contra {x}",
+ "Победы без срывов над бандой «{x}»": "Victorias sin caídas contra la crew {x}",
+ "Победы подряд на подпольном ринге": "Victorias seguidas en el ring clandestino",
+ "Всего побед на подпольном ринге": "Victorias totales en el ring clandestino",
+ "Победы во всех трёх раундах джема в Парке": "Jams del Parque con las tres rondas ganadas",
+ "Джемы в Парке с победой во всех раундах без срывов": "Jams del Parque ganadas sin caídas en ninguna ronda",
+ "Тайники Промзоны": "Escondites de la Zona Industrial",
+ "Дни с победой в онлайн-батле · {a}/{b}": "Días con una victoria en un battle online · {a}/{b}",
+ "Нужны победы в разные дни": "Gana batallas en días distintos",
+ "Цена изменилась. Обнови приложение.": "El precio cambió. Actualiza la app."
  },
  "pt": {
  "Главная": "Início",
@@ -3447,7 +3469,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "12% de chance ao abrir um esconderijo na Zona Industrial",
  "Первая победа над бандой «{x}» в 3D-городе": "Primeira vitória contra a crew {x} na Cidade 3D",
  "Третья победа над бандой «{x}» в 3D-городе": "Terceira vitória contra a crew {x} na Cidade 3D",
- "Скоро в продаже": "Em breve na loja"
+ "Скоро в продаже": "Em breve na loja",
+ "Победы над бандой «{x}»": "Vitórias contra a crew {x}",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "Vitórias com um power move traçado com perfeição contra {x}",
+ "Победы без срывов над бандой «{x}»": "Vitórias sem quedas contra a crew {x}",
+ "Победы подряд на подпольном ринге": "Vitórias seguidas no ringue clandestino",
+ "Всего побед на подпольном ринге": "Total de vitórias no ringue clandestino",
+ "Победы во всех трёх раундах джема в Парке": "Jams do Parque com vitória nos três rounds",
+ "Джемы в Парке с победой во всех раундах без срывов": "Jams do Parque vencidas sem quedas em nenhum round",
+ "Тайники Промзоны": "Esconderijos da Zona Industrial",
+ "Дни с победой в онлайн-батле · {a}/{b}": "Dias com vitória em batalha online · {a}/{b}",
+ "Нужны победы в разные дни": "Vença batalhas em dias diferentes",
+ "Цена изменилась. Обнови приложение.": "O preço mudou. Atualize o app."
  },
  "fr": {
  "Главная": "Accueil",
@@ -4596,7 +4629,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "12 % de chances à l’ouverture d’une cache en zone industrielle",
  "Первая победа над бандой «{x}» в 3D-городе": "Première victoire contre le crew {x} dans la Ville 3D",
  "Третья победа над бандой «{x}» в 3D-городе": "Troisième victoire contre le crew {x} dans la Ville 3D",
- "Скоро в продаже": "Bientôt en boutique"
+ "Скоро в продаже": "Bientôt en boutique",
+ "Победы над бандой «{x}»": "Victoires contre le crew {x}",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "Victoires avec un power move tracé parfaitement contre {x}",
+ "Победы без срывов над бандой «{x}»": "Victoires sans chute contre le crew {x}",
+ "Победы подряд на подпольном ринге": "Victoires d’affilée sur le ring clandestin",
+ "Всего побед на подпольном ринге": "Total de victoires sur le ring clandestin",
+ "Победы во всех трёх раундах джема в Парке": "Jams du Parc gagnés en trois rounds",
+ "Джемы в Парке с победой во всех раундах без срывов": "Jams du Parc gagnés sans chute sur tous les rounds",
+ "Тайники Промзоны": "Caches de la zone industrielle",
+ "Дни с победой в онлайн-батле · {a}/{b}": "Jours avec une victoire en battle en ligne · {a}/{b}",
+ "Нужны победы в разные дни": "Gagne des battles sur plusieurs jours",
+ "Цена изменилась. Обнови приложение.": "Le prix a changé. Mets l’appli à jour."
  },
  "de": {
  "Главная": "Start",
@@ -5745,7 +5789,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "12 % Chance beim Öffnen eines Verstecks im Industriegebiet",
  "Первая победа над бандой «{x}» в 3D-городе": "Erster Sieg gegen die Crew {x} in der 3D-Stadt",
  "Третья победа над бандой «{x}» в 3D-городе": "Dritter Sieg gegen die Crew {x} in der 3D-Stadt",
- "Скоро в продаже": "Bald im Shop"
+ "Скоро в продаже": "Bald im Shop",
+ "Победы над бандой «{x}»": "Siege gegen die Crew {x}",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "Siege mit perfekt nachgezeichnetem Power Move gegen {x}",
+ "Победы без срывов над бандой «{x}»": "Siege ohne Sturz gegen die Crew {x}",
+ "Победы подряд на подпольном ринге": "Siege in Folge im Untergrundring",
+ "Всего побед на подпольном ринге": "Siege im Untergrundring insgesamt",
+ "Победы во всех трёх раундах джема в Парке": "Jams im Park mit Siegen in allen drei Runden",
+ "Джемы в Парке с победой во всех раундах без срывов": "Jams im Park ohne Sturz in allen Runden gewonnen",
+ "Тайники Промзоны": "Verstecke im Industriegebiet",
+ "Дни с победой в онлайн-батле · {a}/{b}": "Tage mit einem Sieg im Online-Battle · {a}/{b}",
+ "Нужны победы в разные дни": "Gewinne Battles an verschiedenen Tagen",
+ "Цена изменилась. Обнови приложение.": "Der Preis hat sich geändert. Aktualisiere die App."
  },
  "ja": {
  "Главная": "ホーム",
@@ -6894,7 +6949,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "工業地帯の隠し箱を開けると12%の確率で入手",
  "Первая победа над бандой «{x}» в 3D-городе": "3Dシティでクルー「{x}」に初勝利",
  "Третья победа над бандой «{x}» в 3D-городе": "3Dシティでクルー「{x}」に3回目の勝利",
- "Скоро в продаже": "近日ショップに登場"
+ "Скоро в продаже": "近日ショップに登場",
+ "Победы над бандой «{x}»": "クルー「{x}」への勝利",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "「{x}」戦でパワームーブを完璧になぞって勝利",
+ "Победы без срывов над бандой «{x}»": "クルー「{x}」に転倒せず勝利",
+ "Победы подряд на подпольном ринге": "地下リングでの連勝",
+ "Всего побед на подпольном ринге": "地下リングでの通算勝利",
+ "Победы во всех трёх раундах джема в Парке": "公園のジャムで全3ラウンド勝利",
+ "Джемы в Парке с победой во всех раундах без срывов": "公園のジャムで転倒せず全ラウンド勝利",
+ "Тайники Промзоны": "工業地帯の隠し箱",
+ "Дни с победой в онлайн-батле · {a}/{b}": "オンラインバトルで勝利した日数 · {a}/{b}",
+ "Нужны победы в разные дни": "別の日にバトルに勝とう",
+ "Цена изменилась. Обнови приложение.": "価格が変わりました。アプリを更新してください。"
  },
  "ko": {
  "Главная": "홈",
@@ -8043,7 +8109,18 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "산업 지대 은신처를 열 때 12% 확률",
  "Первая победа над бандой «{x}» в 3D-городе": "3D 도시에서 {x} 크루 첫 승리",
  "Третья победа над бандой «{x}» в 3D-городе": "3D 도시에서 {x} 크루에 세 번째 승리",
- "Скоро в продаже": "곧 상점에 출시"
+ "Скоро в продаже": "곧 상점에 출시",
+ "Победы над бандой «{x}»": "{x} 크루 상대 승리",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "{x}전에서 파워무브를 완벽하게 그려 승리",
+ "Победы без срывов над бандой «{x}»": "{x} 크루를 넘어지지 않고 이긴 횟수",
+ "Победы подряд на подпольном ринге": "지하 링 연승",
+ "Всего побед на подпольном ринге": "지하 링 총승리",
+ "Победы во всех трёх раундах джема в Парке": "공원 잼 전 3라운드 승리",
+ "Джемы в Парке с победой во всех раундах без срывов": "공원 잼에서 넘어지지 않고 전 라운드 승리",
+ "Тайники Промзоны": "산업 지대 은신처",
+ "Дни с победой в онлайн-батле · {a}/{b}": "온라인 배틀에서 승리한 날 · {a}/{b}",
+ "Нужны победы в разные дни": "서로 다른 날에 배틀에서 승리해",
+ "Цена изменилась. Обнови приложение.": "가격이 바뀌었어. 앱을 업데이트해."
  },
  "zh": {
  "Главная": "首页",
@@ -9192,6 +9269,17 @@ window.I18N = {
  "Шанс 12% при открытии тайника в Промзоне": "打开工业区藏匿点时有12%概率获得",
  "Первая победа над бандой «{x}» в 3D-городе": "在3D城市中首次击败团队「{x}」",
  "Третья победа над бандой «{x}» в 3D-городе": "在3D城市中第三次击败团队「{x}」",
- "Скоро в продаже": "即将上架"
+ "Скоро в продаже": "即将上架",
+ "Победы над бандой «{x}»": "击败「{x}」团队",
+ "Победы с идеально обведённым пауэрмувом против «{x}»": "对阵「{x}」时完美描线完成力量动作并获胜",
+ "Победы без срывов над бандой «{x}»": "无失误击败「{x}」团队",
+ "Победы подряд на подпольном ринге": "地下擂台连胜",
+ "Всего побед на подпольном ринге": "地下擂台总胜场",
+ "Победы во всех трёх раундах джема в Парке": "赢下公园即兴赛的全部三轮",
+ "Джемы в Парке с победой во всех раундах без срывов": "公园即兴赛全轮无失误夺冠",
+ "Тайники Промзоны": "工业区藏匿点",
+ "Дни с победой в онлайн-батле · {a}/{b}": "赢过在线对战的天数 · {a}/{b}",
+ "Нужны победы в разные дни": "在不同日期赢得对战",
+ "Цена изменилась. Обнови приложение.": "价格已变更，请更新应用。"
  }
 };

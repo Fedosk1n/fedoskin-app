@@ -1821,13 +1821,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=2"></script>
+<script src="i18n.js?v=3"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=21"></script>
+<script src="hero.js?v=22"></script>
 <script src="rhythm.js?v=27"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -5377,11 +5377,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // street gear won in «Город» (14.11.2026, owner «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же»): worn as 'c:<id>'
   // in the same list as shop items; the city save keeps what is owned. One item per slot across both.
   const isCityK = k => typeof k === 'string' && k.slice(0, 2) === 'c:';
+  function city3dSave(){
+    try { return JSON.parse(localStorage.getItem('fedoskin-city3d') || 'null') || {}; } catch (_) { return {}; }
+  }
   function cityOwned(){
     let own = []; try { if (window.CITY && CITY.owned) { const o = CITY.owned(); if (o) own = o.slice(); } } catch (_) {}
     if (!own.length) { try { const c = JSON.parse(localStorage.getItem('fedoskin-city') || 'null'); own = (c && c.gear && c.gear.own) || []; } catch (_) {} }
     // street gear won in the 3D city (city3d-game.js save) is the same wardrobe
-    try { const c3 = JSON.parse(localStorage.getItem('fedoskin-city3d') || 'null'); if (c3 && c3.own) own = own.concat(c3.own.filter(x => !own.includes(x))); } catch (_) {}
+    const c3 = city3dSave();
+    if (Array.isArray(c3.own)) own = own.concat(c3.own.filter(x => !own.includes(x)));
     return own;
   }
   const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
@@ -5389,8 +5393,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные', funk: 'Фанк-бригада', roots: 'Корни', wave: 'Волна', rebar: 'Арматура', volt: 'Высоковольтные', forge: 'Литейка' }[id]; return c3 ? T(c3) : id; }
   function citySrc(g){
     const s = g.src || '';
-    if (g.reward) return T(g.reward[2], { n: g.reward[1] });
-    if (g.stash) return cityOwned().includes('writerKicks') ? T('Тайники Промзоны или граффити во Дворе') : T('Шанс 12% при открытии тайника в Промзоне');
     if (s.startsWith('gang:')) {
       const gang = s.slice(5), name = cityGang(gang);
       const items = Object.values(HERO.GEAR).filter(item => item.src === s);
@@ -5407,7 +5409,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   window.addEventListener('pageshow', e => {
     if (!e.persisted) return;
     const eq = readMyEq();
-    if (eq && JSON.stringify(eq) !== JSON.stringify(myEq)) { setMyEq(eq); wdPaint(); }
+    if (eq && JSON.stringify(eq) !== JSON.stringify(myEq)) setMyEq(eq);
+    wdPaint();
   });
   function setLook(l){
     myLv = l >= statsView().level ? 0 : l; try { localStorage.setItem('fedoskin-look', String(myLv)); } catch (_) {}
@@ -5745,7 +5748,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (className) el.className = className;
     parent.appendChild(el); return el;
   }
-  function itemCard(it, pre){
+  function itemCard(it, pre, citySave){
     const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level;
       const city = !!it.city, worn = myEq.includes(it.id), own = city ? cityOwned().includes(it.id.slice(2)) : (worn || (w.owned || []).includes(it.id));
       const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '') + (city ? ' cityit' + (own ? '' : ' lock') : '');
@@ -5756,8 +5759,21 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const meta = wdText(d, 'div', '', 'wdmeta');
       wdText(meta, 'span', '◆ ' + T(WD_RARITY[it.rar]), 'wdrare');
       wdText(meta, 'span', T(WD_SLOTS[it.slot]));
-      if (city) wdText(d, 'small', '🏙️ ' + citySrc(it), 'citycap');
+      if (city && it.reward) {
+        const save = citySave || city3dSave();
+        for (const [key, need, hint] of it.reward) {
+          const crew = key.split(':')[1];
+          const label = T(hint, { n: need, x: crew ? cityGang(crew) : '' });
+          const progress = own ? '' : ' · ' + Math.min(need, HERO.cityRewardValue(save, key)) + '/' + need;
+          wdText(d, 'small', label + progress, 'citycap');
+        }
+      } else if (city) wdText(d, 'small', '🏙️ ' + citySrc(it), 'citycap');
       else if (!it.sub) wdText(d, 'small', '⭐ ' + nfmt(it.price), 'citycap');
+      if (it.winDays && !own) {
+        wdText(d, 'small', T('Дни с победой в онлайн-батле · {a}/{b}', {
+          a: Math.min(it.winDays, w.winDays || 0), b: it.winDays,
+        }), 'citycap');
+      }
       const effects = wdEffects(it.bt);
       wdText(d, 'small', effects.length ? effects.join(' · ') : T('Для образа'), 'citybt');
       const chance = HERO.gearChances([it.id]);
@@ -5780,6 +5796,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         };
       }
       else if (it.catalog && !(w.catalog >= it.catalog)) { btn.disabled = true; btn.textContent = T('Скоро в продаже'); }
+      else if (it.winDays && (w.winDays || 0) < it.winDays) { btn.disabled = true; btn.textContent = T('Нужны победы в разные дни'); }
       else if (w.pts >= it.price) { btn.textContent = T('Купить · ⭐ {n}', { n: it.price }); btn.onclick = () => shopBuy(it, btn); }
       else { btn.disabled = true; btn.textContent = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts }); }
       return d;
@@ -5792,7 +5809,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // gear only the hidden flat 2D city gives (MC, DJ, walls — not in the 3D city) is listed only for those who already have it
     const own2d = cityOwned(), G = HERO.GEAR || {}, ids = Object.keys(G).filter(id => G[id].stash || !['mc', 'dj', 'walls'].includes(G[id].src) || own2d.includes(id)), cg = $('#cityGrid'); cg.innerHTML = '';
     $('#cityShop').hidden = !ids.length;
-    ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg')));
+    const citySave = city3dSave();
+    ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg', citySave)));
   }
   // ===== wardrobe = «Мои вещи» + «Магазин» in one sheet (owner 11.11.2026 «то есть инвентаря не предусмотрено?» → «делай») =====
   let wdTab = 'mine', wdSlot = '';
@@ -5861,9 +5879,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   async function shopBuy(it, btn){
     btn.disabled = true;
     try {
-      const r = await btPost('/hero/buy', { item: it.id }), j = await r.json().catch(() => ({}));
+      const r = await btPost('/hero/buy', { item: it.id, price: it.price }), j = await r.json().catch(() => ({}));
       if (j.ok) { btWallet(j); toast(T('Куплено: {name}', { name: T(it.name) })); await shopWear(eqWith(myEq, it.id)); }
       else if (r.status === 402) { btWallet({ pts: j.pts }); toast(T('Не хватает очков')); }
+      else if (j.error === 'winDays') { btWallet({ pts: j.pts, winDays: j.winDays }); toast(T('Нужны победы в разные дни')); }
+      else if (j.error === 'price') toast(T('Цена изменилась. Обнови приложение.'));
       else toast(T('Не получилось. Проверь интернет.'));
     } catch (_) { toast(T('Не получилось. Проверь интернет.')); }
     wdPaint();

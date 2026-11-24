@@ -27,7 +27,7 @@
     { id: 'bandana', slot: 'head', price: 150, rar: 1, name: 'Бандана', bt: { cor: 4 } },
     { id: 'wall', slot: 'bg', price: 200, rar: 2, name: 'Фон: граффити-стена' },
     { id: 'city', slot: 'bg', price: 200, rar: 2, name: 'Фон: ночной город' },
-    { id: 'red', slot: 'kicks', price: 250, rar: 4, name: 'Красные кроссовки', bt: { win: 20 } },
+    { id: 'red', slot: 'kicks', price: 2400, rar: 4, catalog: 3, winDays: 21, name: 'Красные кроссовки', bt: { win: 20 } },
     { id: 'box', slot: 'item', price: 300, rar: 3, name: 'Бумбокс' },
     { id: 'fire', slot: 'fx', price: 500, rar: 3, name: 'Огненная аура' },
     // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
@@ -44,9 +44,9 @@
     { id: 'silverPendant', slot: 'neck', price: 245, rar: 2, catalog: 2, name: 'Подвеска «Маятник»', f: { chain: 2 }, col: { gold: '#9BBFCC' }, bt: { cor: 5 } },
     { id: 'contrastJoggers', slot: 'pants', price: 265, rar: 2, catalog: 2, name: 'Джоггеры «Контраст»', f: { pants: 'trackp' }, col: { pants: '#282431', stripe: '#DAD9E4' }, bt: { win: 5, hold: 1 } },
     { id: 'nightRunner', slot: 'kicks', price: 325, rar: 2, catalog: 2, name: 'Кроссы «Ночной маршрут»', f: { shoe: 'runner' }, col: { shoe: '#323E73', shoe2: '#AD82DE', sole: '#BCD1E9', lace: '#A5C8FC' }, bt: { win: 12, cor: 5 } },
-    { id: 'velvetBomber', slot: 'top', price: 395, rar: 3, catalog: 2, name: 'Бомбер «Бархат»', f: { top: 'bomber' }, col: { top: '#5D2148', sleeve: '#342A51', cuff: '#D7A06A', trim: '#D7A06A' }, bt: { save: 1, cor: 2 } },
-    { id: 'electricBucket', slot: 'head', price: 420, rar: 3, catalog: 2, name: 'Панама «Импульс»', f: { hat: 'bucket' }, col: { hat: ['#35418B', '#75F7AC'] }, bt: { win: 8, cor: 7 } },
-    { id: 'prismPhones', slot: 'ears', price: 560, rar: 4, catalog: 2, name: 'Наушники «Призма»', f: { phones: true }, col: { phones: '#F2B2F4' }, bt: { win: 5, cor: 3 } },
+    { id: 'velvetBomber', slot: 'top', price: 700, rar: 3, catalog: 3, name: 'Бомбер «Бархат»', f: { top: 'bomber' }, col: { top: '#5D2148', sleeve: '#342A51', cuff: '#D7A06A', trim: '#D7A06A' }, bt: { save: 1, cor: 2 } },
+    { id: 'electricBucket', slot: 'head', price: 800, rar: 3, catalog: 3, name: 'Панама «Импульс»', f: { hat: 'bucket' }, col: { hat: ['#35418B', '#75F7AC'] }, bt: { win: 8, cor: 7 } },
+    { id: 'prismPhones', slot: 'ears', price: 3200, rar: 4, catalog: 3, winDays: 28, name: 'Наушники «Призма»', f: { phones: true }, col: { phones: '#F2B2F4' }, bt: { win: 5, cor: 3 } },
   ];
   // UNIQUE STREET GEAR (owner 14.11.2026 «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же… в городе можно найти
   // уникальные или выиграть, которых нет в магазине»): ONE catalog for the city, the wardrobe, battles and the rating. Worn as the token
@@ -54,22 +54,22 @@
   // f and col override the outfit in topDown and svg. perk is specific to the legacy 2D city.
   // Ids are repeated in server/push-worker.js (CGEAR) — keep them equal.
   const GEAR = {
-    rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5], bt: { win: 10 } },
-    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1], bt: { win: 10 } },
-    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', f: { shoe: 'runner' }, col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1], bt: { win: 12 } },
-    acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1], bt: { cor: 4 } },
-    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15], bt: { win: 15 } },
-    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'hoodie' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8], bt: { cor: 6 } },
+    rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5], bt: { win: 6 } },
+    rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1], bt: { win: 7 } },
+    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', f: { shoe: 'runner' }, col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1], bt: { win: 9 } },
+    acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1], bt: { cor: 3 } },
+    owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15], bt: { win: 10 } },
+    owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'hoodie' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8], bt: { cor: 5 } },
     goldChain: { name: 'Цепь «Золотой зуб»', slot: 'neck', rar: 2, ico: '⛓️', src: 'gang:gold', f: { chain: 2 }, perk: ['cash', 15], bt: { hold: 1 } },
-    goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1], bt: { save: 1 } },
+    goldCap: { name: 'Золотая кепка', slot: 'head', rar: 3, ico: '🧢', src: 'gang:gold', reward: [['wins:gold', 5, 'Победы над бандой «{x}»']], f: { hat: 'capGold' }, col: { hat: ['#E7B23C', '#18181B'] }, perk: ['life', 1], bt: { save: 1 } },
     // the Park crews (16.11.2026, 3D city): Фанк-бригада lv 5, Корни lv 6, Волна lv 7 (the district's owners)
-    funkTrack: { name: 'Олимпийка «Фанк»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:funk', f: { top: 'track' }, col: { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { cor: 8 } },
-    rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
+    funkTrack: { name: 'Олимпийка «Фанк»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:funk', reward: [['wins:funk', 5, 'Победы над бандой «{x}»']], f: { top: 'track' }, col: { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { cor: 8 } },
+    rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', reward: [['wins:roots', 6, 'Победы над бандой «{x}»']], f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
     // the industrial zone's crews (16.11.2026, 3D city): Арматура lv 6, Высоковольтные lv 7, Литейка lv 8 (the district's owners)
-    rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 12, cor: 4 } },
-    voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 4, ico: '👟', src: 'gang:volt', f: { shoe: 'high' }, col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
-    forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 4, ico: '⛓️', src: 'gang:forge', f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
-    waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', f: { shoe: 'runner' }, col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
+    rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', reward: [['wins:rebar', 6, 'Победы над бандой «{x}»']], f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 12, cor: 4 } },
+    voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 4, ico: '👟', src: 'gang:volt', reward: [['wins:volt', 21, 'Победы над бандой «{x}»'], ['perfect:volt', 6, 'Победы с идеально обведённым пауэрмувом против «{x}»']], f: { shoe: 'high' }, col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
+    forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 4, ico: '⛓️', src: 'gang:forge', reward: [['wins:forge', 21, 'Победы над бандой «{x}»'], ['clean:forge', 8, 'Победы без срывов над бандой «{x}»']], f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
+    waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', reward: [['wins:wave', 7, 'Победы над бандой «{x}»']], f: { shoe: 'runner' }, col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
     // the Centre crews (16.11.2026, 3D city): Трафареты lv 3, Турникеты lv 4, Хромированные lv 5 (the district's owners)
@@ -77,25 +77,25 @@
     stencilBomber: { name: 'Бомбер Трафаретов', slot: 'top', rar: 2, ico: '🧥', src: 'gang:stencil', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#F2EFE8', cuff: '#C8202A', trim: '#C8202A' }, perk: ['rep', 2], bt: { cor: 6 } },
     turnBucket: { name: 'Панама Турникетов', slot: 'head', rar: 2, ico: '🎩', src: 'gang:turn', f: { hat: 'bucket' }, col: { hat: ['#2F7BFF', '#F2EFE8'] }, perk: ['coin', 1], bt: { cor: 6 } },
     turnKicks: { name: 'Кроссы «Час пик»', slot: 'kicks', rar: 2, ico: '👟', src: 'gang:turn', f: { shoe: 'leather' }, col: { shoe: '#2F7BFF', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFD23F' }, perk: ['en', 2], bt: { win: 8, cor: 4 } },
-    chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', f: { shoe: 'runner' }, col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 12, cor: 7 } },
-    chromeTrack: { name: 'Олимпийка «Хром»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:chrome', f: { top: 'track' }, col: { top: '#C9CED6', yoke: '#18181B', sleeve: '#C9CED6', cuff: '#18181B', trim: '#3F8FD8' }, perk: ['life', 1], bt: { save: 1 } },
-    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', stash: true, f: { shoe: 'canvas' }, col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
+    chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', reward: [['wins:chrome', 4, 'Победы над бандой «{x}»']], f: { shoe: 'runner' }, col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 12, cor: 7 } },
+    chromeTrack: { name: 'Олимпийка «Хром»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:chrome', reward: [['wins:chrome', 7, 'Победы над бандой «{x}»']], f: { top: 'track' }, col: { top: '#C9CED6', yoke: '#18181B', sleeve: '#C9CED6', cuff: '#18181B', trim: '#3F8FD8' }, perk: ['life', 1], bt: { save: 1 } },
+    writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', stash: true, reward: [['stash', 18, 'Тайники Промзоны']], f: { shoe: 'canvas' }, col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
     // 3D city activity rewards. The wardrobe uses the same threshold for its acquisition hint.
-    matPants: { name: 'Штаны «Первый заход»', slot: 'pants', rar: 0, ico: '👖', reward: ['train', 2, 'Во Дворе: проведи {n} тренировки на мате'], f: { pants: 'trackp' }, col: { pants: '#34516A', stripe: '#FF9065' }, bt: { win: 4 } },
-    beatGloves: { name: 'Митенки «Первый бит»', slot: 'hands', rar: 0, ico: '🧤', reward: ['dj', 1, 'Закажи бит у диджея во Дворе'], f: { gloves: true }, col: { glove: '#394F73', gloveTrim: '#6CB7FF' }, bt: { win: 3, cor: 1 } },
-    cypherCap: { name: 'Кепка «В кругу»', slot: 'head', rar: 0, ico: '🧢', reward: ['show', 1, 'Заверши свой выход в сайфере во Дворе'], f: { hat: 'capBack' }, col: { hat: ['#BA553D', '#EDC598'] }, bt: { win: 5, cor: 1 } },
-    cleanLaces: { name: 'Шнурки «Чистый раунд»', slot: 'laces', rar: 1, ico: '👟', reward: ['clean', 3, 'Выиграй {n} батла без срывов в 3D-городе'], col: { laces: '#A4E9FC' }, bt: { win: 2, cor: 3 } },
-    paintHoodie: { name: 'Худи «Свежая краска»', slot: 'top', rar: 2, ico: '🎨', reward: ['paint', 3, 'Закрась {n} разные стены банд в 3D-городе'], f: { top: 'hoodie' }, col: { top: '#276855', sleeve: '#276855', cuff: '#C4EF73', trim: '#F0C759' }, bt: { win: 7, cor: 4 } },
-    metroBeanie: { name: 'Шапка «Пересадка»', slot: 'head', rar: 1, ico: '🧶', reward: ['center', 1, 'Впервые доберись до Центра'], f: { hat: 'beanie' }, col: { hat: ['#263C57', '#75D7CD'] }, bt: { win: 4, cor: 4 } },
-    mallSneakers: { name: 'Кеды «Витрина»', slot: 'kicks', rar: 2, ico: '👟', reward: ['mallClean', 2, 'Заверши {n} шоу у ТЦ без срывов и без встречи с охраной'], f: { shoe: 'leather' }, col: { shoe: '#E9ABBE', shoe2: '#5E4163', sole: '#EEE9DE', lace: '#F8F1D0' }, bt: { win: 11, cor: 5 } },
-    chromePendant: { name: 'Кулон «Отражение»', slot: 'neck', rar: 3, ico: '⛓️', reward: ['chromeWins', 2, 'Победи Хромированных в Центре {n} раза'], f: { chain: 2 }, col: { gold: '#DCC7F0' }, bt: { win: 8, cor: 4 } },
-    parkVisor: { name: 'Кепка «Турник»', slot: 'head', rar: 1, ico: '🧢', reward: ['warm', 1, 'Заверши разминку на турниках в Парке'], f: { hat: 'cap' }, col: { hat: ['#4B632D', '#D2ED9B'] }, bt: { win: 3, cor: 5 } },
-    jamJacket: { name: 'Бомбер «Финал джема»', slot: 'top', rar: 4, ico: '🏆', reward: ['jamWon', 1, 'Победи во всех трёх раундах одного джема в Парке'], f: { top: 'bomber' }, col: { top: '#3E337C', sleeve: '#A44C73', cuff: '#EDC260', trim: '#EDC260' }, bt: { win: 6, save: 1 } },
-    pendulumPhones: { name: 'Наушники «Ритм Маятника»', slot: 'ears', rar: 2, ico: '🎧', reward: ['og', 3, 'Получи {n} награды за уроки у Маятника в Парке'], f: { phones: true }, col: { phones: '#F9A365' }, bt: { cor: 7 } },
-    foundryGloves: { name: 'Перчатки «Шлак»', slot: 'hands', rar: 2, ico: '🧤', reward: ['stash', 3, 'Открой тайники в Промзоне · {n} шт.'], f: { gloves: true }, col: { glove: '#623439', gloveTrim: '#E38A72' }, bt: { win: 3, cor: 5 } },
-    cachePants: { name: 'Штаны «Запасник»', slot: 'pants', rar: 3, ico: '👖', reward: ['stash', 10, 'Открой тайники в Промзоне · {n} шт.'], f: { pants: 'wind' }, col: { pants: '#635043', stripe: '#E5CB70' }, bt: { win: 7, cor: 4 } },
-    ringKnees: { name: 'Наколенники «Три подряд»', slot: 'knees', rar: 3, ico: '🥇', reward: ['ringBest', 3, 'Выиграй {n} батла подряд на подпольном ринге Промзоны'], f: { knee: true }, col: { knee: '#D58C53' }, bt: { hold: 1, win: 5 } },
-    forgeCrown: { name: 'Панама «Последняя плавка»', slot: 'head', rar: 4, ico: '👑', reward: ['forgeWins', 3, 'Победи Литейку в Промзоне {n} раза'], f: { hat: 'bucket' }, col: { hat: ['#563B44', '#EC8556'] }, bt: { win: 8, cor: 6 } },
+    matPants: { name: 'Штаны «Первый заход»', slot: 'pants', rar: 0, ico: '👖', reward: [['train', 2, 'Во Дворе: проведи {n} тренировки на мате']], f: { pants: 'trackp' }, col: { pants: '#34516A', stripe: '#FF9065' }, bt: { win: 4 } },
+    beatGloves: { name: 'Митенки «Первый бит»', slot: 'hands', rar: 0, ico: '🧤', reward: [['dj', 1, 'Закажи бит у диджея во Дворе']], f: { gloves: true }, col: { glove: '#394F73', gloveTrim: '#6CB7FF' }, bt: { win: 3, cor: 1 } },
+    cypherCap: { name: 'Кепка «В кругу»', slot: 'head', rar: 0, ico: '🧢', reward: [['show', 1, 'Заверши свой выход в сайфере во Дворе']], f: { hat: 'capBack' }, col: { hat: ['#BA553D', '#EDC598'] }, bt: { win: 5, cor: 1 } },
+    cleanLaces: { name: 'Шнурки «Чистый раунд»', slot: 'laces', rar: 1, ico: '👟', reward: [['clean', 3, 'Выиграй {n} батла без срывов в 3D-городе']], col: { laces: '#A4E9FC' }, bt: { win: 2, cor: 3 } },
+    paintHoodie: { name: 'Худи «Свежая краска»', slot: 'top', rar: 2, ico: '🎨', reward: [['paint', 3, 'Закрась {n} разные стены банд в 3D-городе']], f: { top: 'hoodie' }, col: { top: '#276855', sleeve: '#276855', cuff: '#C4EF73', trim: '#F0C759' }, bt: { win: 7, cor: 4 } },
+    metroBeanie: { name: 'Шапка «Пересадка»', slot: 'head', rar: 1, ico: '🧶', reward: [['center', 1, 'Впервые доберись до Центра']], f: { hat: 'beanie' }, col: { hat: ['#263C57', '#75D7CD'] }, bt: { win: 4, cor: 4 } },
+    mallSneakers: { name: 'Кеды «Витрина»', slot: 'kicks', rar: 2, ico: '👟', reward: [['mallClean', 2, 'Заверши {n} шоу у ТЦ без срывов и без встречи с охраной']], f: { shoe: 'leather' }, col: { shoe: '#E9ABBE', shoe2: '#5E4163', sole: '#EEE9DE', lace: '#F8F1D0' }, bt: { win: 11, cor: 5 } },
+    chromePendant: { name: 'Кулон «Отражение»', slot: 'neck', rar: 3, ico: '⛓️', reward: [['wins:chrome', 5, 'Победы над бандой «{x}»']], f: { chain: 2 }, col: { gold: '#DCC7F0' }, bt: { win: 8, cor: 4 } },
+    parkVisor: { name: 'Кепка «Турник»', slot: 'head', rar: 1, ico: '🧢', reward: [['warm', 1, 'Заверши разминку на турниках в Парке']], f: { hat: 'cap' }, col: { hat: ['#4B632D', '#D2ED9B'] }, bt: { win: 3, cor: 5 } },
+    jamJacket: { name: 'Бомбер «Финал джема»', slot: 'top', rar: 4, ico: '🏆', reward: [['jamWon', 21, 'Победы во всех трёх раундах джема в Парке'], ['jamClean', 7, 'Джемы в Парке с победой во всех раундах без срывов']], f: { top: 'bomber' }, col: { top: '#3E337C', sleeve: '#A44C73', cuff: '#EDC260', trim: '#EDC260' }, bt: { win: 6, save: 1 } },
+    pendulumPhones: { name: 'Наушники «Ритм Маятника»', slot: 'ears', rar: 2, ico: '🎧', reward: [['og', 3, 'Получи {n} награды за уроки у Маятника в Парке']], f: { phones: true }, col: { phones: '#F9A365' }, bt: { cor: 7 } },
+    foundryGloves: { name: 'Перчатки «Шлак»', slot: 'hands', rar: 2, ico: '🧤', reward: [['stash', 3, 'Открой тайники в Промзоне · {n} шт.']], f: { gloves: true }, col: { glove: '#623439', gloveTrim: '#E38A72' }, bt: { win: 3, cor: 5 } },
+    cachePants: { name: 'Штаны «Запасник»', slot: 'pants', rar: 3, ico: '👖', reward: [['stash', 24, 'Тайники Промзоны']], f: { pants: 'wind' }, col: { pants: '#635043', stripe: '#E5CB70' }, bt: { win: 7, cor: 4 } },
+    ringKnees: { name: 'Наколенники «Три подряд»', slot: 'knees', rar: 3, ico: '🥇', reward: [['ringBest', 3, 'Победы подряд на подпольном ринге'], ['ringWins', 12, 'Всего побед на подпольном ринге']], f: { knee: true }, col: { knee: '#D58C53' }, bt: { hold: 1, win: 5 } },
+    forgeCrown: { name: 'Панама «Последняя плавка»', slot: 'head', rar: 4, ico: '👑', reward: [['wins:forge', 28, 'Победы над бандой «{x}»'], ['perfect:forge', 5, 'Победы с идеально обведённым пауэрмувом против «{x}»'], ['ringBest', 8, 'Победы подряд на подпольном ринге']], f: { hat: 'bucket' }, col: { hat: ['#563B44', '#EC8556'] }, bt: { win: 8, cor: 6 } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
   // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
@@ -111,13 +111,24 @@
   }
   // any look token → { slot, name, … } (shop item or street gear); null for 'girl' / 'lv<N>' / unknown
   const itemOf = k => { if (typeof k !== 'string') return null; if (k.slice(0, 2) === 'c:') { const g = GEAR[k.slice(2)]; return g ? Object.assign({ id: k, city: true }, g) : null; } return SHOP.find(x => x.id === k) || null; };
+  // Shared by the 3D city's reward checks and the wardrobe's progress labels.
+  function cityRewardValue(save, key) {
+    const [kind, crew] = key.split(':');
+    if (kind === 'wins') return save.wins?.[crew] || 0;
+    if (key === 'center') return Number(Boolean(save.seen?.center));
+    if (key === 'paint') return save.paintedWalls?.length ?? Object.keys(save.turf || {}).length;
+    if (key === 'jamWon') return save.jamWon || 0;
+    if (key === 'ringBest') return save.best || 0;
+    return save.gearProgress?.[key] ?? ({ dj: Number(Boolean(save.djDay)), og: Number(Boolean(save.ogDay)),
+      stash: save.stash?.got?.length || 0, ringWins: save.best || 0 })[key] ?? 0;
+  }
   const wornGear = arr => [...new Map((Array.isArray(arr) ? arr : []).map(itemOf).filter(Boolean).map(item => [item.slot, item])).values()];
   // Basis points per dancer's round. The online worker uses the same red slots and probabilities.
   const MYTHIC_MOVES = { rone: 'REAL ONE HAND', rcork: 'CORKSCREW', rplanche: 'PLANCHE' };
   const MYTHIC_SCORE = 600;
   function gearChances(arr) {
     const count = Math.min(2, wornGear(arr).filter(item => item.rar === 4).length);
-    return { myth: count * 50, assist: count * 200 };
+    return { myth: count * 200, assist: count * 400 };
   }
   function gearEvent(chances, roll, move) {
     if (roll < chances.myth) return { move: Object.keys(MYTHIC_MOVES)[move % 3] };
@@ -840,5 +851,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, baseSlots, gearBoost, gearChances, gearEvent, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, cityRewardValue, baseSlots, gearBoost, gearChances, gearEvent, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();

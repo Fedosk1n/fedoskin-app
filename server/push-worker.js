@@ -559,13 +559,18 @@ const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', aci
   metroBeanie: 'head', mallSneakers: 'kicks', chromePendant: 'neck', parkVisor: 'head', jamJacket: 'top',
   pendulumPhones: 'ears', foundryGloves: 'hands', cachePants: 'pants', ringKnees: 'knees', forgeCrown: 'head' };
 // must match HERO.SHOP in hero.js: id → [slot, price]
-const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 250], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0],
+const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 2400], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0],
   streetLaces: ['laces', 60], canvasTeal: ['kicks', 100], asphaltPants: ['pants', 110], stripedBeanie: ['head', 130],
   amberGloves: ['hands', 145], sandTee: ['top', 145], foamKnees: ['knees', 165], rallyJacket: ['top', 220],
   pulsePhones: ['ears', 235], silverPendant: ['neck', 245], contrastJoggers: ['pants', 265], nightRunner: ['kicks', 325],
-  velvetBomber: ['top', 395], electricBucket: ['head', 420], prismPhones: ['ears', 560] }; // tee = not sold: given for push notifications (owner 11.11.2026)
-const GEAR_CATALOG = 2;
-const SHOP_COST = 'CASE item ' + Object.entries(SHOP).map(([id, [, price]]) => `WHEN '${id}' THEN ${price}`).join(' ') + ' ELSE 0 END';
+  velvetBomber: ['top', 700], electricBucket: ['head', 800], prismPhones: ['ears', 3200] }; // tee = not sold: given for push notifications (owner 11.11.2026)
+const GEAR_CATALOG = 3;
+const MYTHIC_WIN_DAYS = { red: 21, prismPhones: 28 };
+// Rows without a recorded payment were bought at the original prices.
+const ORIGINAL_PRICE = { red: 250, prismPhones: 560, velvetBomber: 395, electricBucket: 420 };
+const SHOP_COST = 'COALESCE(paid, CASE item ' + Object.entries(SHOP)
+  .map(([id, [, price]]) => `WHEN '${id}' THEN ${ORIGINAL_PRICE[id] ?? price}`).join(' ') + ' ELSE 0 END)';
+const BT_WINNER = "CASE win WHEN 'a' THEN a WHEN 'b' THEN b END";
 const PTS_WIN = 10, PTS_HOUR = 20, PTS_FRESH = 10, FRESH_MS = 3600e3, PTS_GOLD = 5, PTS_RED = 10; // + bonus for pulling out a rare move (owner 11.11.2026)
 const heroLevel = m => { let l = 1; HERO_LEVELS.forEach((x, i) => { if (m >= x) l = i + 1; }); return l; };
 const BT_TITLE = { ru: 'Батл!', en: 'Battle!', es: '¡Batalla!', pt: 'Batalha!', fr: 'Battle !', de: 'Battle!', ja: 'バトル！', ko: '배틀!', zh: '斗舞！' };
@@ -618,7 +623,7 @@ const BT_GEAR_MOVES = ['rone', 'rcork', 'rplanche'];
 const BT_GEAR_SCORE = 600;
 function btGearEvent(eq, roll, move) {
   const slots = new Set(eq.filter(k => Object.hasOwn(BT_GEAR_RED, k)).map(k => BT_GEAR_RED[k]));
-  const count = Math.min(2, slots.size), myth = count * 50, assist = count * 200;
+  const count = Math.min(2, slots.size), myth = count * 200, assist = count * 400;
   if (roll < myth) return { move: BT_GEAR_MOVES[move % BT_GEAR_MOVES.length] };
   if (roll < myth + assist) return { assist: true };
   return null;
@@ -847,16 +852,27 @@ async function battle(req, env, path, json) {
   const lastCall = async () => { const r = await db.prepare('SELECT MAX(t) AS t FROM bt WHERE a = ?').bind(id).first(); return r && r.t || 0; };
   const restLeft = async () => Math.max(0, (await lastCall()) + BT_REST - now);
   const wallet = async () => {
-    const sc = await score(id), own = await db.prepare('SELECT item FROM hero_own WHERE id = ?').bind(id).all();
-    const owned = (own.results || []).map(r => r.item).filter(k => Object.hasOwn(SHOP, k));
+    const sc = await score(id), own = await db.prepare(`SELECT item, ${SHOP_COST} AS cost FROM hero_own WHERE id = ?`).bind(id).all();
+    const purchases = (own.results || []).filter(r => Object.hasOwn(SHOP, r.item));
+    const owned = purchases.map(r => r.item);
     // the team tee: this phone has notifications on (its subscription is linked) ⇒ it's theirs
     if (!owned.includes('tee') && await db.prepare('SELECT 1 AS x FROM bt_sub WHERE id = ?').bind(id).first()) { await db.prepare('INSERT OR IGNORE INTO hero_own (id, item, t) VALUES (?, ?, ?)').bind(id, 'tee', now).run(); owned.push('tee'); }
     const bon = await db.prepare('SELECT SUM(pts) AS p FROM pts_bonus WHERE id = ?').bind(id).first();
     const earned = sc.w * PTS_WIN + Math.floor((me.m || 0) / 60) * PTS_HOUR + (bon && bon.p || 0);
-    const spent = owned.reduce((n, k) => n + SHOP[k][1], 0);
+    const spent = purchases.reduce((n, row) => n + row.cost, 0);
     const eqr = await db.prepare('SELECT eq FROM hero_eq WHERE id = ?').bind(id).first();
     let eq = []; try { eq = JSON.parse(eqr && eqr.eq || '[]'); } catch (_) {}
     return { pts: Math.max(0, earned - spent), earned, owned, eq, score: sc, catalog: GEAR_CATALOG };
+  };
+  const winDays = async () => {
+    // Completed manual battles use their resolution date. Automatic battles resolve at creation.
+    const row = await db.prepare(`SELECT COUNT(*) AS n FROM (
+      SELECT DISTINCT CAST((COALESCE(bt_h.done, battle.t) + 10800000) / 86400000 AS INTEGER)
+      FROM (SELECT n, t FROM bt WHERE (${BT_WINNER}) = ?) AS battle
+      LEFT JOIN bt_h ON bt_h.n = battle.n
+      WHERE COALESCE(bt_h.done, battle.t) > 0 LIMIT ?
+    )`).bind(id, Math.max(...Object.values(MYTHIC_WIN_DAYS))).first();
+    return row.n;
   };
   // «Найти соперника» (10.11.2026): a random active phone of about the same level the caller hasn't met today
   if (path === '/bt/find' || (path === '/bt/ready' && b.find)) {
@@ -942,7 +958,7 @@ async function battle(req, env, path, json) {
     const w = await wallet();
     const active = await Promise.all(calls.map(async r => ({ ...btPack(r, eq), gear: await btGearDeal(me, 'answer:' + r.n, w.eq) })));
     return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: active, results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)),
-      lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq, catalog: w.catalog, ul: 1 });
+      lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq, catalog: w.catalog, winDays: await winDays(), ul: 1 });
   }
   if (path === '/bt/seen') {
     if (b.side === 'a') await db.prepare('UPDATE bt_h SET sa = 1 WHERE n = ? AND a = ?').bind(Math.floor(+b.n || 0), id).run(); // a result of my own challenge
@@ -983,11 +999,19 @@ async function battle(req, env, path, json) {
     if (w.owned.includes(item)) return json({ ok: true, ...w });
     if (item === 'tee') return json({ error: 'sub', pts: w.pts }, 402); // only for notifications (wallet() gives it once they're on)
     const price = SHOP[item][1];
+    if ((Object.hasOwn(ORIGINAL_PRICE, item) || b.price != null) && b.price !== price) {
+      return json({ error: 'price' }, 409);
+    }
+    const needDays = MYTHIC_WIN_DAYS[item];
+    if (needDays) {
+      const days = await winDays();
+      if (days < needDays) return json({ error: 'winDays', pts: w.pts, winDays: days }, 403);
+    }
     if (w.pts < price) return json({ error: 'points', pts: w.pts }, 402);
     // Check spending inside the write so simultaneous purchases cannot both spend the same points.
-    await db.prepare(`INSERT OR IGNORE INTO hero_own (id, item, t) SELECT ?, ?, ?
+    await db.prepare(`INSERT OR IGNORE INTO hero_own (id, item, t, paid) SELECT ?, ?, ?, ?
       WHERE ? >= ? + (SELECT COALESCE(SUM(${SHOP_COST}), 0) FROM hero_own WHERE id = ?)`)
-      .bind(id, item, now, w.earned, price, id).run();
+      .bind(id, item, now, price, w.earned, price, id).run();
     const updated = await wallet();
     return updated.owned.includes(item) ? json({ ok: true, ...updated }) : json({ error: 'points', pts: updated.pts }, 402);
   }
@@ -1042,6 +1066,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS bt (n INTEGER PRIMARY KEY AUTOINCREMENT, a TEXT NOT NULL, b TEXT NOT NULL, la INTEGER, lb INTEGER, na TEXT, nb TEXT, seed INTEGER, votes TEXT, win TEXT, t INTEGER, seen INTEGER NOT NULL DEFAULT 0)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_b ON bt (b, seen)'),
     db.prepare('CREATE INDEX IF NOT EXISTS bt_a ON bt (a, t)'),
+    db.prepare(`CREATE INDEX IF NOT EXISTS bt_winner ON bt ((${BT_WINNER}), t)`),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_gear (n INTEGER PRIMARY KEY, side TEXT NOT NULL, move TEXT NOT NULL)'),
     // the rating (10.11.2026, moved from one KV key so it can hold hundreds of thousands of phones)
     db.prepare('CREATE TABLE IF NOT EXISTS lb (id TEXT PRIMARY KEY, n TEXT, nl TEXT, c TEXT, cn TEXT, co TEXT, a TEXT, m INTEGER NOT NULL DEFAULT 0, v INTEGER, s INTEGER, h TEXT, f INTEGER, t INTEGER, lvl INTEGER, rk INTEGER, hid INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
@@ -1059,7 +1084,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS pts_bonus (id TEXT NOT NULL, ref TEXT NOT NULL, pts INTEGER, t INTEGER, PRIMARY KEY (id, ref)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS bt_def (id TEXT PRIMARY KEY, d TEXT, t INTEGER) WITHOUT ROWID'),
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
-    db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, paid INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS hero_eq (id TEXT PRIMARY KEY, eq TEXT) WITHOUT ROWID'),
     // paid courses (12.11.2026): buyer phones (random id + key hash), orders, owned courses, access codes
     db.prepare('CREATE TABLE IF NOT EXISTS crs_dev (id TEXT PRIMARY KEY, kh TEXT, t INTEGER) WITHOUT ROWID'),
@@ -1068,7 +1093,16 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS crs_code (code TEXT PRIMARY KEY, course TEXT, note TEXT, t INTEGER, used INTEGER NOT NULL DEFAULT 0, uid TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_inv (code TEXT PRIMARY KEY, svc TEXT, note TEXT, made INTEGER, used INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS rv_sub (id TEXT PRIMARY KEY, code TEXT, svc TEXT, name TEXT, country TEXT, stars INTEGER, text TEXT, lang TEXT, made INTEGER, status TEXT NOT NULL DEFAULT \'new\') WITHOUT ROWID'),
-  ]).catch(e => { schemaReady = null; throw e; });
+  ]).then(async () => {
+    const columns = await db.prepare('PRAGMA table_info(hero_own)').all();
+    if ((columns.results || []).some(column => column.name === 'paid')) return;
+    try {
+      await db.prepare('ALTER TABLE hero_own ADD COLUMN paid INTEGER').run();
+    } catch (error) {
+      // Another Worker instance may have finished the same migration.
+      if (!String(error.message).includes('duplicate column name: paid')) throw error;
+    }
+  }).catch(e => { schemaReady = null; throw e; });
   return schemaReady;
 }
 async function hit(req, env, json) {
