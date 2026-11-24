@@ -6,9 +6,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=17';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=18';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=6';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=7';   // the hero's power move is DRAWN by the finger (17.11)
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -242,9 +242,40 @@ function load() {
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.cus = Object.assign({ kicks: 0, top: 0, pants: 0, head: 0 }, s.cus || {});
+  s.gearProgress = s.gearProgress || {
+    dj: Number(Boolean(s.djDay)),
+    og: Number(Boolean(s.ogDay)),
+    stash: s.stash.got.length,
+  };
+  s.paintedWalls = s.paintedWalls || Object.keys(s.turf);
   return s;
 }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} };
+const gearRewards = Object.entries(HERO.GEAR).filter(([, item]) => item.reward);
+function collectGear(activity, wall) {
+  if (activity === 'paint') {
+    if (!S.paintedWalls.includes(wall)) S.paintedWalls.push(wall);
+  } else if (activity) {
+    S.gearProgress[activity] = (S.gearProgress[activity] || 0) + 1;
+  }
+  const progress = {
+    ...S.gearProgress,
+    paint: S.paintedWalls.length,
+    center: Number(Boolean(S.seen.center)),
+    chromeWins: S.wins.chrome,
+    forgeWins: S.wins.forge,
+    jamWon: S.jamWon,
+    ringBest: S.best,
+  };
+  const rewards = [];
+  for (const [id, item] of gearRewards) {
+    const [key, need] = item.reward;
+    if (!(progress[key] >= need) || S.own.includes(id)) continue;
+    S.own.push(id);
+    rewards.push(item.ico + ' ' + _t('Вещь в гардеробе: {x}', { x: _t(item.name) }));
+  }
+  return rewards;
+}
 // energy: every new day free up to full (enMax); lessons and rewards stack above it up to enCap
 function refill() {
   const notes = [];
@@ -339,7 +370,7 @@ function ui() {
   [...h.children].forEach(c => document.body.appendChild(c));
 }
 let toastT = 0;
-function toast(t) { const e = $('#g3toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2600); }
+function toast(t, rewards = []) { const e = $('#g3toast'); e.textContent = [t, ...rewards].join(' · '); e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2600); }
 let NHERE = 4, IDS = [];
 function paintHud() {
   $('#g3enN').textContent = S.en + ' / ' + BAL.enMax; $('#g3en .bar i').style.width = Math.min(100, S.en / BAL.enMax * 100) + '%'; $('#g3en').classList.toggle('over', S.en > BAL.enMax);
@@ -363,6 +394,8 @@ export function initGame(ctx) {
   if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
   if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
   if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
+  const previousRewards = collectGear();
+  if (previousRewards.length) { notes.push(...previousRewards); save(); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
   addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
   $('#g3en').onclick = () => info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Каждый новый день энергия бесплатно восстанавливается до <b>{m} ⚡</b>.', { n: BAL.battle, m: BAL.daily })}</p>
@@ -468,9 +501,11 @@ export function initGame(ctx) {
   }
   function endPaint() {
     const g = P.g; P = null; try { window.RB && RB.hiss && RB.hiss(false); } catch (_) {}
-    S.turf[g.c.id] = today(); S.last[g.c.id] = today(); S.rep += BAL.repPaint; bumpGoal('paint'); save(); paintHud();
+    S.turf[g.c.id] = today(); S.last[g.c.id] = today(); S.rep += BAL.repPaint;
+    const rewards = collectGear('paint', g.c.id);
+    bumpGoal('paint'); save(); paintHud();
     W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); W.hero.play('Bboy_Uprock', { fade: .3 });
-    toast(_t('🎨 Стена «{x}» теперь твоя! +{a} ★, и +{b} ★ каждый день', { x: g.c.name, a: BAL.repPaint, b: BAL.turfRep }));
+    toast(_t('🎨 Стена «{x}» теперь твоя! +{a} ★, и +{b} ★ каждый день', { x: g.c.name, a: BAL.repPaint, b: BAL.turfRep }), rewards);
     if (IDS.every(id => S.turf[id])) setTimeout(() => toast(_t(ALLMINE[D] || ALLMINE.yard)), 2800);
     near = null; paintAct();
   }
@@ -613,7 +648,12 @@ export function initGame(ctx) {
   }
   function placeRun(pl) {
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
-    if (pl.id === 'dj') { S.en -= BAL.dj; S.djDay = today(); save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 }); toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля')); paintAct(); }
+    if (pl.id === 'dj') {
+      S.en -= BAL.dj; S.djDay = today();
+      const rewards = collectGear('dj');
+      save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 });
+      toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards); paintAct();
+    }
     if (pl.id === 'mat') startTrain();
     if (pl.id === 'atelier') startAtelier();
     if (pl.id === 'show') startShow();
@@ -624,8 +664,14 @@ export function initGame(ctx) {
     if (pl.id === 'mall') startMall();
     if (pl.id === 'park') travel('park');
     if (pl.id === 'pcenter') travel('center');
-    if (pl.id === 'og') { const add = Math.max(0, Math.min(BAL.enCap - S.en, BAL.ogEn)); S.en += add; S.rep += BAL.ogRep; S.ogDay = today(); save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
-      toast(_t('🧓 Маятник: «Вижу, работаешь. Так и растут» · +{r} ★ и +{e} ⚡', { r: BAL.ogRep, e: add })); paintAct(); }
+    if (pl.id === 'og') {
+      const add = Math.max(0, Math.min(BAL.enCap - S.en, BAL.ogEn));
+      S.en += add; S.rep += BAL.ogRep; S.ogDay = today();
+      const rewards = collectGear('og');
+      save(); paintHud(); bumpGoal('og'); sfx('win'); PK.og.J.play('Bboy_Uprock', { fade: .3 });
+      setTimeout(() => PK.og.J.play('Breakdance_Ready', { fade: .5 }), 4000);
+      toast(_t('🧓 Маятник: «Вижу, работаешь. Так и растут» · +{r} ★ и +{e} ⚡', { r: BAL.ogRep, e: add }), rewards); paintAct();
+    }
     if (pl.id === 'bars') { const H = W.hero; S.warmDay = today(); save(); A = { kind: 'warm', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: PK.bars.x, z: PK.bars.z } }; W.lock = true; W.camT = { x: PK.bars.x, z: PK.bars.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); paintAct(); }
     if (pl.id === 'jam') startJam();
     if (pl.id === 'prom') travel('prom');
@@ -635,9 +681,10 @@ export function initGame(ctx) {
       if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + BAL.stashEn)); S.rep += BAL.stashRep; }
       const gear = !S.own.includes('writerKicks') && rng(today() * 97 + pl.i * 31 + 29)() < .12;
       if (gear) S.own.push('writerKicks');
+      const rewards = collectGear('stash');
       save(); paintHud(); bumpGoal('stash'); sfx('hit');
       const reward = big ? _t('📦 Старая кассета с брейкбитами! +{n} ★', { n: BAL.stashRep * 2 }) : _t('📦 Термос и бутерброды: +{e} ⚡ и +{r} ★', { e: BAL.stashEn, r: BAL.stashRep });
-      toast(gear ? reward + ' · 🎁 ' + _t(HERO.GEAR.writerKicks.name) : reward);
+      toast(gear ? reward + ' · 🎁 ' + _t(HERO.GEAR.writerKicks.name) : reward, rewards);
       near = null; paintAct();
     }
   }
@@ -731,15 +778,23 @@ export function initGame(ctx) {
       H.tick(dt); if (!$('#g3info').classList.contains('on')) { $('#g3info').classList.remove('cum'); endAct(); } return; }
     if (A.kind === 'warm') { A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
       if (A.t > .8 && !A.p) { A.p = true; H.play('Breakdance_Footwork_1', { fade: .3 }); toast(_t('🤸 Разминка…')); }
-      if (A.t > 4.6) { H.play('Breakdance_Ready', { fade: .4 }); sfx('hit'); toast(_t('🤸 Размялся! Сегодня срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) })); endAct(); }
+      if (A.t > 4.6) {
+        const rewards = collectGear('warm');
+        save(); H.play('Breakdance_Ready', { fade: .4 }); sfx('hit');
+        toast(_t('🤸 Размялся! Сегодня срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) }), rewards); endAct();
+      }
       H.tick(dt); return; }
     if (A.kind === 'train') {
       A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
       if (A.t > .8 && !A.p) { A.p = true; H.play(A.P.c, { fade: .3 }); toast('💪 ' + A.P.nm + '…'); }
       if (A.fail && A.t > 2.6 && !A.f) { A.f = true; fallStart(H); sfx('crash'); }
       if (H.fall) fallTick(H, dt, false);
-      if (A.t > 4.4) { if (H.fall) fallEnd(H); H.play('Breakdance_Ready', { fade: .4 }); bumpGoal('train');
-        toast(_t(A.fail ? '💪 Сорвался, но форма растёт: {a} / {b} · −{c}% срывов сегодня' : '💪 Чисто! Форма {a} / {b} · −{c}% срывов сегодня', { a: S.form.n, b: BAL.trainMax, c: 3 * S.form.n }));
+      if (A.t > 4.4) {
+        if (H.fall) fallEnd(H);
+        H.play('Breakdance_Ready', { fade: .4 });
+        const rewards = collectGear('train');
+        save(); bumpGoal('train');
+        toast(_t(A.fail ? '💪 Сорвался, но форма растёт: {a} / {b} · −{c}% срывов сегодня' : '💪 Чисто! Форма {a} / {b} · −{c}% срывов сегодня', { a: S.form.n, b: BAL.trainMax, c: 3 * S.form.n }), rewards);
         if (!A.fail) sfx('hit'); endAct(); }
       H.tick(dt); return;
     }
@@ -762,10 +817,18 @@ export function initGame(ctx) {
         if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', _t('Срыв!')]); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', _t('Чисто!')]); } }
       if (H.fall) fallTick(H, dt, s && s.soft); if (s && s.kind !== 'fall' && H.fall && H.fall.up) fallEnd(H);
       if (si < 0 && !A.back) { A.back = true; if (H.fall) fallEnd(H); W.walk.start(H); $('#g3mv').innerHTML = ''; }
-      if (t >= T.len && A.mall) { const clean = A.clean !== false, rep = BAL.repMall + (clean ? BAL.repMallClean : 0); S.rep += rep; save(); bumpGoal('mall'); CN.crowd(false);
-        sfx('win'); toast(_t('🕺 Толпа в восторге! +{n} ★{c} — и охранник не успел', { n: rep, c: clean ? _t(' (чисто)') : '' })); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); }
-      else if (t >= T.len) { const clean = A.clean !== false, rep = BAL.repShow + (clean ? BAL.repShowClean : 0); S.rep += rep; save(); bumpGoal('show');
-        sfx('win'); toast(_t('🔥 Сайфер принял тебя! +{n} ★{c}', { n: rep, c: clean ? _t(' (чисто)') : '' })); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); W.cyBusy = false; }
+      if (t >= T.len && A.mall) {
+        const clean = A.clean !== false, rep = BAL.repMall + (clean ? BAL.repMallClean : 0);
+        S.rep += rep;
+        const rewards = clean ? collectGear('mallClean') : [];
+        save(); bumpGoal('mall'); CN.crowd(false);
+        sfx('win'); toast(_t('🕺 Толпа в восторге! +{n} ★{c} — и охранник не успел', { n: rep, c: clean ? _t(' (чисто)') : '' }), rewards); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); }
+      else if (t >= T.len) {
+        const clean = A.clean !== false, rep = BAL.repShow + (clean ? BAL.repShowClean : 0);
+        S.rep += rep;
+        const rewards = collectGear('show');
+        save(); bumpGoal('show');
+        sfx('win'); toast(_t('🔥 Сайфер принял тебя! +{n} ★{c}', { n: rep, c: clean ? _t(' (чисто)') : '' }), rewards); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); W.cyBusy = false; }
       H.tick(dt); if (!A) H.ws = null; else if (H.ws) W.walk.pose(H, dt); return;
     }
   }
@@ -1086,6 +1149,7 @@ export function initGame(ctx) {
     } else {
       lines.push(B.lv < c.lv ? _t('Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.') : _t('Не повезло со срывами. Попробуй ещё раз.'));
     }
+    if (win) lines.push(...collectGear(B.clean ? 'clean' : undefined).map(reward => `<span class="rw">${reward}</span>`));
     // the drawn power moves of this battle
     pf.forEach(nm => lines.unshift(`<span class="rw">${_t('✨ Первый идеальный {x}! +{n} ★', { x: nm, n: BAL.perfFirst })}</span>`));
     (B.pm || []).filter(x => x.g === 'perfect' && !pf.includes(x.nm)).forEach(x => lines.push(`<span class="rw">${_t('✨ {x} — идеально (всего {n})', { x: x.nm, n: S.perf[x.nm] })}</span>`));

@@ -32,16 +32,31 @@
     { id: 'fire', slot: 'fx', price: 500, rar: 3, name: 'Огненная аура' },
     // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
     { id: 'tee', slot: 'top', price: 0, rar: 0, sub: true, name: 'Футболка Fedoskin team', bt: { win: 3 } },
+    { id: 'streetLaces', slot: 'laces', price: 60, rar: 0, catalog: 2, name: 'Шнурки «Песок»', col: { laces: '#DDB882' }, bt: { win: 2, cor: 1 } },
+    { id: 'canvasTeal', slot: 'kicks', price: 100, rar: 0, catalog: 2, name: 'Бирюзовые кеды', f: { shoe: 'canvas' }, col: { shoe: '#218981', shoe2: '#184A4C', sole: '#F4DFB6' }, bt: { win: 6 } },
+    { id: 'asphaltPants', slot: 'pants', price: 110, rar: 0, catalog: 2, name: 'Штаны «Асфальт»', f: { pants: 'wind' }, col: { pants: '#43474E', stripe: '#B8BDC4' }, bt: { cor: 2 } },
+    { id: 'stripedBeanie', slot: 'head', price: 130, rar: 1, catalog: 2, name: 'Шапка «Полоса»', f: { hat: 'beanie' }, col: { hat: ['#334968', '#F9AF62'] }, bt: { win: 3, cor: 3 } },
+    { id: 'amberGloves', slot: 'hands', price: 145, rar: 1, catalog: 2, name: 'Янтарные митенки', f: { gloves: true }, col: { glove: '#895117', gloveTrim: '#FFC45C' }, bt: { cor: 5 } },
+    { id: 'sandTee', slot: 'top', price: 145, rar: 1, catalog: 2, name: 'Футболка «Дюна»', f: { top: 'teeBig' }, col: { top: '#D2AE76', trim: '#395750' }, bt: { win: 5 } },
+    { id: 'foamKnees', slot: 'knees', price: 165, rar: 1, catalog: 2, name: 'Наколенники «Мягкий ход»', f: { knee: true }, col: { knee: '#769ABB' }, bt: { hold: 1, cor: 2 } },
+    { id: 'rallyJacket', slot: 'top', price: 220, rar: 2, catalog: 2, name: 'Олимпийка «Ралли»', f: { top: 'track' }, col: { top: '#9C3246', yoke: '#EEE6C8', sleeve: '#9C3246', cuff: '#313E51', trim: '#EEE6C8' }, bt: { win: 8, cor: 3 } },
+    { id: 'pulsePhones', slot: 'ears', price: 235, rar: 2, catalog: 2, name: 'Наушники «Бас»', f: { phones: true }, col: { phones: '#62BC9F' }, bt: { win: 6, cor: 4 } },
+    { id: 'silverPendant', slot: 'neck', price: 245, rar: 2, catalog: 2, name: 'Подвеска «Маятник»', f: { chain: 2 }, col: { gold: '#9BBFCC' }, bt: { cor: 5 } },
+    { id: 'contrastJoggers', slot: 'pants', price: 265, rar: 2, catalog: 2, name: 'Джоггеры «Контраст»', f: { pants: 'trackp' }, col: { pants: '#282431', stripe: '#DAD9E4' }, bt: { win: 5, hold: 1 } },
+    { id: 'nightRunner', slot: 'kicks', price: 325, rar: 2, catalog: 2, name: 'Кроссы «Ночной маршрут»', f: { shoe: 'runner' }, col: { shoe: '#323E73', shoe2: '#AD82DE', sole: '#BCD1E9', lace: '#A5C8FC' }, bt: { win: 12, cor: 5 } },
+    { id: 'velvetBomber', slot: 'top', price: 395, rar: 3, catalog: 2, name: 'Бомбер «Бархат»', f: { top: 'bomber' }, col: { top: '#5D2148', sleeve: '#342A51', cuff: '#D7A06A', trim: '#D7A06A' }, bt: { save: 1, cor: 2 } },
+    { id: 'electricBucket', slot: 'head', price: 420, rar: 3, catalog: 2, name: 'Панама «Импульс»', f: { hat: 'bucket' }, col: { hat: ['#35418B', '#75F7AC'] }, bt: { win: 8, cor: 7 } },
+    { id: 'prismPhones', slot: 'ears', price: 560, rar: 4, catalog: 2, name: 'Наушники «Призма»', f: { phones: true }, col: { phones: '#F2B2F4' }, bt: { win: 5, cor: 3 } },
   ];
   // UNIQUE STREET GEAR (owner 14.11.2026 «шмотки города и в инвентаре и на тебе в батле должны быть одни и те же… в городе можно найти
   // уникальные или выиграть, которых нет в магазине»): ONE catalog for the city, the wardrobe, battles and the rating. Worn as the token
   // 'c:<id>' in the same look list as the shop items. Never sold — only won in the city (`src`). slot = the same slots as SHOP (one per slot).
-  // f = outfit overrides (hat / top type, phones, chain, gloves), col = colour overrides (topDown names; svg() reads them too); perk = city only.
+  // f and col override the outfit in topDown and svg. perk is specific to the legacy 2D city.
   // Ids are repeated in server/push-worker.js (CGEAR) — keep them equal.
   const GEAR = {
     rustyBandana: { name: 'Бандана Ржавых', slot: 'head', rar: 0, ico: '🧣', src: 'gang:rusty', f: { hat: 'bandana' }, col: { hat: ['#C8603A', '#F2EFE8'] }, perk: ['time', 5], bt: { win: 10 } },
     rustyTrack: { name: 'Олимпийка Ржавых', slot: 'top', rar: 1, ico: '🧥', src: 'gang:rusty', f: { top: 'track' }, col: { top: '#C8603A', yoke: '#18181B', sleeve: '#C8603A', cuff: '#18181B', trim: '#F2CC55' }, perk: ['rep', 1], bt: { win: 10 } },
-    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', f: { shoe: 'runner' }, col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1], bt: { win: 15 } },
+    acidKicks: { name: 'Кислотные кроссы', slot: 'kicks', rar: 1, ico: '👟', src: 'gang:acid', f: { shoe: 'runner' }, col: { shoe: '#7CFF4F', shoe2: '#18181B', sole: '#F2EFE8', lace: '#18181B' }, perk: ['en', 1], bt: { win: 12 } },
     acidBucket: { name: 'Кислотная панама', slot: 'head', rar: 1, ico: '🎩', src: 'gang:acid', f: { hat: 'bucket' }, col: { hat: ['#7CFF4F', '#18181B'] }, perk: ['coin', 1], bt: { cor: 4 } },
     owlPhones: { name: 'Наушники Совы', slot: 'ears', rar: 2, ico: '🎧', src: 'gang:owls', f: { phones: true }, perk: ['show', 15], bt: { win: 15 } },
     owlHoodie: { name: 'Худи Ночных сов', slot: 'top', rar: 2, ico: '🦉', src: 'gang:owls', f: { top: 'hoodie' }, col: { top: '#6B4E9A', sleeve: '#6B4E9A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['time', 8], bt: { cor: 6 } },
@@ -51,20 +66,36 @@
     funkTrack: { name: 'Олимпийка «Фанк»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:funk', f: { top: 'track' }, col: { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { cor: 8 } },
     rootsBeanie: { name: 'Шапка «Корни»', slot: 'head', rar: 3, ico: '🧶', src: 'gang:roots', f: { hat: 'beanie' }, col: { hat: ['#2F8F3A', '#FFD23F'] }, perk: ['en', 2], bt: { win: 20 } },
     // the industrial zone's crews (16.11.2026, 3D city): Арматура lv 6, Высоковольтные lv 7, Литейка lv 8 (the district's owners)
-    rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 20 } },
+    rebarCap: { name: 'Кепка «Арматура»', slot: 'head', rar: 3, ico: '🧢', src: 'gang:rebar', f: { hat: 'cap' }, col: { hat: ['#18181B', '#FF7A1A'] }, perk: ['time', 8], bt: { win: 12, cor: 4 } },
     voltKicks: { name: 'Кроссы «Высокое напряжение»', slot: 'kicks', rar: 4, ico: '👟', src: 'gang:volt', f: { shoe: 'high' }, col: { shoe: '#FFE23F', shoe2: '#141518', sole: '#141518', lace: '#141518' }, perk: ['en', 2], bt: { cor: 8 } },
     forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 4, ico: '⛓️', src: 'gang:forge', f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
     waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', f: { shoe: 'runner' }, col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
     djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
     // the Centre crews (16.11.2026, 3D city): Трафареты lv 3, Турникеты lv 4, Хромированные lv 5 (the district's owners)
-    stencilBandana: { name: 'Бандана Трафаретов', slot: 'head', rar: 1, ico: '🧣', src: 'gang:stencil', f: { hat: 'bandana' }, col: { hat: ['#F2EFE8', '#C8202A'] }, perk: ['time', 6], bt: { win: 10 } },
+    stencilBandana: { name: 'Бандана Трафаретов', slot: 'head', rar: 1, ico: '🧣', src: 'gang:stencil', f: { hat: 'bandana' }, col: { hat: ['#F2EFE8', '#C8202A'] }, perk: ['time', 6], bt: { win: 6, cor: 2 } },
     stencilBomber: { name: 'Бомбер Трафаретов', slot: 'top', rar: 2, ico: '🧥', src: 'gang:stencil', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#F2EFE8', cuff: '#C8202A', trim: '#C8202A' }, perk: ['rep', 2], bt: { cor: 6 } },
     turnBucket: { name: 'Панама Турникетов', slot: 'head', rar: 2, ico: '🎩', src: 'gang:turn', f: { hat: 'bucket' }, col: { hat: ['#2F7BFF', '#F2EFE8'] }, perk: ['coin', 1], bt: { cor: 6 } },
-    turnKicks: { name: 'Кроссы «Час пик»', slot: 'kicks', rar: 2, ico: '👟', src: 'gang:turn', f: { shoe: 'leather' }, col: { shoe: '#2F7BFF', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFD23F' }, perk: ['en', 2], bt: { win: 15 } },
-    chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', f: { shoe: 'runner' }, col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 20 } },
+    turnKicks: { name: 'Кроссы «Час пик»', slot: 'kicks', rar: 2, ico: '👟', src: 'gang:turn', f: { shoe: 'leather' }, col: { shoe: '#2F7BFF', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFD23F' }, perk: ['en', 2], bt: { win: 8, cor: 4 } },
+    chromeKicks: { name: 'Хромовые кроссы', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:chrome', f: { shoe: 'runner' }, col: { shoe: '#D9DEE6', shoe2: '#3F8FD8', sole: '#18181B', lace: '#FFFFFF' }, perk: ['time', 8], bt: { win: 12, cor: 7 } },
     chromeTrack: { name: 'Олимпийка «Хром»', slot: 'top', rar: 3, ico: '🧥', src: 'gang:chrome', f: { top: 'track' }, col: { top: '#C9CED6', yoke: '#18181B', sleeve: '#C9CED6', cuff: '#18181B', trim: '#3F8FD8' }, perk: ['life', 1], bt: { save: 1 } },
     writerKicks: { name: 'Кеды райтера', slot: 'kicks', rar: 3, ico: '🎨', src: 'walls', stash: true, f: { shoe: 'canvas' }, col: { shoe: '#F2EFE8', shoe2: '#FF4F9A', sole: '#4FC0FF', lace: '#FFD23F' }, perk: ['can', 1], bt: { win: 15 } },
+    // 3D city activity rewards. The wardrobe uses the same threshold for its acquisition hint.
+    matPants: { name: 'Штаны «Первый заход»', slot: 'pants', rar: 0, ico: '👖', reward: ['train', 2, 'Во Дворе: проведи {n} тренировки на мате'], f: { pants: 'trackp' }, col: { pants: '#34516A', stripe: '#FF9065' }, bt: { win: 4 } },
+    beatGloves: { name: 'Митенки «Первый бит»', slot: 'hands', rar: 0, ico: '🧤', reward: ['dj', 1, 'Закажи бит у диджея во Дворе'], f: { gloves: true }, col: { glove: '#394F73', gloveTrim: '#6CB7FF' }, bt: { win: 3, cor: 1 } },
+    cypherCap: { name: 'Кепка «В кругу»', slot: 'head', rar: 0, ico: '🧢', reward: ['show', 1, 'Заверши свой выход в сайфере во Дворе'], f: { hat: 'capBack' }, col: { hat: ['#BA553D', '#EDC598'] }, bt: { win: 5, cor: 1 } },
+    cleanLaces: { name: 'Шнурки «Чистый раунд»', slot: 'laces', rar: 1, ico: '👟', reward: ['clean', 3, 'Выиграй {n} батла без срывов в 3D-городе'], col: { laces: '#A4E9FC' }, bt: { win: 2, cor: 3 } },
+    paintHoodie: { name: 'Худи «Свежая краска»', slot: 'top', rar: 2, ico: '🎨', reward: ['paint', 3, 'Закрась {n} разные стены банд в 3D-городе'], f: { top: 'hoodie' }, col: { top: '#276855', sleeve: '#276855', cuff: '#C4EF73', trim: '#F0C759' }, bt: { win: 7, cor: 4 } },
+    metroBeanie: { name: 'Шапка «Пересадка»', slot: 'head', rar: 1, ico: '🧶', reward: ['center', 1, 'Впервые доберись до Центра'], f: { hat: 'beanie' }, col: { hat: ['#263C57', '#75D7CD'] }, bt: { win: 4, cor: 4 } },
+    mallSneakers: { name: 'Кеды «Витрина»', slot: 'kicks', rar: 2, ico: '👟', reward: ['mallClean', 2, 'Заверши {n} шоу у ТЦ без срывов и без встречи с охраной'], f: { shoe: 'leather' }, col: { shoe: '#E9ABBE', shoe2: '#5E4163', sole: '#EEE9DE', lace: '#F8F1D0' }, bt: { win: 11, cor: 5 } },
+    chromePendant: { name: 'Кулон «Отражение»', slot: 'neck', rar: 3, ico: '⛓️', reward: ['chromeWins', 2, 'Победи Хромированных в Центре {n} раза'], f: { chain: 2 }, col: { gold: '#DCC7F0' }, bt: { win: 8, cor: 4 } },
+    parkVisor: { name: 'Кепка «Турник»', slot: 'head', rar: 1, ico: '🧢', reward: ['warm', 1, 'Заверши разминку на турниках в Парке'], f: { hat: 'cap' }, col: { hat: ['#4B632D', '#D2ED9B'] }, bt: { win: 3, cor: 5 } },
+    jamJacket: { name: 'Бомбер «Финал джема»', slot: 'top', rar: 4, ico: '🏆', reward: ['jamWon', 1, 'Победи во всех трёх раундах одного джема в Парке'], f: { top: 'bomber' }, col: { top: '#3E337C', sleeve: '#A44C73', cuff: '#EDC260', trim: '#EDC260' }, bt: { win: 6, save: 1 } },
+    pendulumPhones: { name: 'Наушники «Ритм Маятника»', slot: 'ears', rar: 2, ico: '🎧', reward: ['og', 3, 'Получи {n} награды за уроки у Маятника в Парке'], f: { phones: true }, col: { phones: '#F9A365' }, bt: { cor: 7 } },
+    foundryGloves: { name: 'Перчатки «Шлак»', slot: 'hands', rar: 2, ico: '🧤', reward: ['stash', 3, 'Открой тайники в Промзоне · {n} шт.'], f: { gloves: true }, col: { glove: '#623439', gloveTrim: '#E38A72' }, bt: { win: 3, cor: 5 } },
+    cachePants: { name: 'Штаны «Запасник»', slot: 'pants', rar: 3, ico: '👖', reward: ['stash', 10, 'Открой тайники в Промзоне · {n} шт.'], f: { pants: 'wind' }, col: { pants: '#635043', stripe: '#E5CB70' }, bt: { win: 7, cor: 4 } },
+    ringKnees: { name: 'Наколенники «Три подряд»', slot: 'knees', rar: 3, ico: '🥇', reward: ['ringBest', 3, 'Выиграй {n} батла подряд на подпольном ринге Промзоны'], f: { knee: true }, col: { knee: '#D58C53' }, bt: { hold: 1, win: 5 } },
+    forgeCrown: { name: 'Панама «Последняя плавка»', slot: 'head', rar: 4, ico: '👑', reward: ['forgeWins', 3, 'Победи Литейку в Промзоне {n} раза'], f: { hat: 'bucket' }, col: { hat: ['#563B44', '#EC8556'] }, bt: { win: 8, cor: 6 } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
   // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
@@ -116,11 +147,15 @@
     const arr = Array.isArray(accArr) ? accArr : [], pick = arr.map(k => /^lv([1-8])$/.exec(k)).find(Boolean);
     const L = Math.max(1, Math.min(8, level | 0, pick ? +pick[1] : 8)), acc = new Set(arr), has = k => acc.has(k);
     const fit = { hat: has('bandana') ? 'bandana' : FIT.hat[L], top: has('tee') ? 'teeTeam' : FIT.top[L], pants: FIT.pants[L], shoe: FIT.shoe[L] };
-    // street gear on top: its outfit types (hat / top) and colours win; flags (phones, chain, gloves) are added
+    // Outfit overrides are shared by shop and city items.
     const co = {}, gf = {};
-    arr.forEach(k => { const g = typeof k === 'string' && k.slice(0, 2) === 'c:' && GEAR[k.slice(2)]; if (!g) return;
-      const f = g.f || {}; if (f.hat) fit.hat = f.hat; if (f.top) fit.top = f.top; if (f.shoe) fit.shoe = f.shoe; if (f.phones) gf.phones = true; if (f.chain) gf.chain = f.chain; if (f.gloves) gf.gloves = true;
-      Object.assign(co, g.col || {}); });
+    arr.forEach(k => {
+      const g = itemOf(k); if (!g) return;
+      const f = g.f || {};
+      for (const part of Object.keys(fit)) if (f[part]) fit[part] = f[part];
+      for (const flag of ['phones', 'chain', 'gloves', 'knee']) if (f[flag]) gf[flag] = f[flag];
+      Object.assign(co, g.col);
+    });
     return { L, has, fit, co, gf };
   }
   // The same look as plain data for a view from above (city mini-game, 13.11.2026): types + flat colours, no SVG.
@@ -130,7 +165,7 @@
     const out = {
       L, girl: has('girl'), hat: f.hat, top: f.top, pants: f.pants, shoe: f.shoe,
       phones: L === 4 || L === 5 || !!k.gf.phones, chain: Math.max(L >= 7 ? 2 : L >= 5 ? 1 : 0, k.gf.chain || 0), wrist: L >= 7 ? G : L >= 3 ? OR : null, belt: L >= 8,
-      knee: has('knee'), gloves: has('gloves') || !!k.gf.gloves, box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
+      knee: has('knee') || !!k.gf.knee, gloves: has('gloves') || !!k.gf.gloves, box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
       col: {
         skin: SKIN, hair: HAIR, ink: INK, gold: G,
         top: { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[f.top],
@@ -149,7 +184,7 @@
     };
     // street gear colours (same names) and the sleeve of a top that became long through gear
     Object.assign(out.col, k.co);
-    if (has('neon')) out.col.lace = '#B6FF3B';
+    if (k.co.laces || has('neon')) out.col.lace = k.co.laces || '#B6FF3B';
     if (long && !out.col.sleeve) out.col.sleeve = out.col.top;
     return out;
   }
@@ -241,7 +276,7 @@
       const out = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
       let lace = { canvas: WH, leather: WH, runner: WH, high: WH, highGold: '#E7B23C' }[t];
       if (CO.shoe) { up = CO.shoe; ov = CO.shoe2 || ov; mid = CO.sole || mid; lace = CO.lace || lace; }
-      if (has('neon')) lace = '#B6FF3B';
+      if (CO.laces || has('neon')) lace = CO.laces || '#B6FF3B';
       o.push('<g transform="translate(103 230) scale(1.18)">');
       // outsole + tread
       P('M-1 0 H40 Q46 0 46 -4 V-6 H-1 Z', out, S(2));
@@ -281,7 +316,7 @@
     // ---- pants ----
     const pants = () => {
       const t = fit.pants, track = t !== 'jeans', hem = t === 'jeans' ? 207 : t === 'wind' ? 193 : 197;
-      const col = { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[t];
+      const col = CO.pants || { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[t];
       // left leg (viewer's left) — the right one is mirrored
       const leg = 'M70 146 L100 146 L100 158 Q100 186 99 ' + hem + ' L73 ' + hem + ' Q67 178 70 146 Z';
       P(leg, col, S()); P(leg, 'url(#' + id + 'sh)');
@@ -293,7 +328,7 @@
         LN('M74 ' + (hem - 1) + ' H97', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"');
         LN('M71 148 Q69 180 72 ' + (hem - 2), '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"'); // outseam
       } else {
-        const pipe = t === 'trackpGold' ? GOLD : OR;
+        const pipe = CO.stripe || (t === 'trackpGold' ? GOLD : OR);
         LN('M71.5 149 Q68.5 178 72 ' + (hem - 9), pipe, 2.6);                            // side piping
         P('M71 ' + (hem - 9) + ' L99 ' + (hem - 9) + ' L99 ' + hem + ' L72 ' + hem + ' Z', t === 'wind' ? '#1A1A1E' : '#121214', S(1.6)); // gathered cuff
         LN('M76 ' + (hem - 8) + ' v7 M81 ' + (hem - 8) + ' v7 M86 ' + (hem - 8) + ' v7 M91 ' + (hem - 8) + ' v7 M96 ' + (hem - 8) + ' v7', 'rgba(255,255,255,.12)', 1);
@@ -305,8 +340,8 @@
     const PA_L = cap(pants), PA_R = cap(() => MIR(pants));
     if (!rig) o.push(PA_L, PA_R);
     let KN_L = '', KN_R = '';
-    if (has('knee')) {
-      const kp = () => { P('M73 168 Q85 164 97 168 L97 184 Q85 188 73 184 Z', '#141416', S(1.8)); P('M78 171 Q85 169 92 171 L92 181 Q85 183 78 181 Z', OR, S(1)); LN('M75 176 H95', 'rgba(255,255,255,.18)', 1); };
+    if (has('knee') || GF.knee) {
+      const kp = () => { P('M73 168 Q85 164 97 168 L97 184 Q85 188 73 184 Z', '#141416', S(1.8)); P('M78 171 Q85 169 92 171 L92 181 Q85 183 78 181 Z', CO.knee || OR, S(1)); LN('M75 176 H95', 'rgba(255,255,255,.18)', 1); };
       KN_L = cap(kp); KN_R = cap(() => MIR(kp));
       if (!rig) o.push(KN_L, KN_R);
     }
@@ -346,7 +381,7 @@
       // hand
       P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', SKIN, S());
       LN('M54 157 Q57 159 61 158', SKIN_D, 1.2);
-      if (has('gloves') || GF.gloves) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', '#141416', S(1.6)); LN('M53 154 H64', OR, 1.2); }
+      if (has('gloves') || GF.gloves) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', CO.glove || '#141416', S(1.6)); LN('M53 154 H64', CO.gloveTrim || OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     };
     const AR_L = cap(() => arm(0)), AR_R = rig ? cap(() => MIR(() => arm(1))) : '';
@@ -363,7 +398,7 @@
       }
       P('M137 44 Q135 30 142 27 Q152 25 155 31 Q157 38 152 45 Z', SKIN, S());
       LN('M140 33 Q146 31 152 33 M140 38 Q146 36 152 38', SKIN_D, 1.2);
-      if (has('gloves') || GF.gloves) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', '#141416', S(1.6)); LN('M139 40 H153', OR, 1.2); }
+      if (has('gloves') || GF.gloves) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', CO.glove || '#141416', S(1.6)); LN('M139 40 H153', CO.gloveTrim || OR, 1.2); }
       o.push('<rect x="139" y="28" width="6" height="3.6" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     } else MIR(() => arm(1));
 
@@ -382,7 +417,7 @@
       o.push('<text x="100" y="136.3" text-anchor="middle" font-family="Anton, Impact, Arial Black, sans-serif" font-weight="900" font-size="5.6" textLength="36" lengthAdjust="spacingAndGlyphs" fill="' + WH + '">FEDOSKIN TEAM</text>');
       LN('M84 139 v4 M100 139 v6 M114 139 v3', OR, 1.8); // little drips
     } else if (top === 'tee' || top === 'teeBig') {
-      const big = top === 'teeBig', col = big ? BLK : '#8E8E95';
+      const big = top === 'teeBig', col = CO.top || (big ? BLK : '#8E8E95'), print = CO.trim || OR;
       const body = big ? 'M66 94 Q70 87 82 85 L118 85 Q130 87 134 94 L133 156 Q100 160 67 156 Z' : 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 150 Q100 153 71 150 Z';
       P(body, col, S()); P(body, 'url(#' + id + 'sh)');
       // rib collar
@@ -393,9 +428,9 @@
       LN(big ? 'M68 152 Q100 156 132 152' : 'M72 146 Q100 149 128 146', big ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.2)', .9, ' stroke-dasharray="1.6 1.6"');
       if (L === 2) o.push('<rect x="108" y="98" width="9" height="6" rx="1.2" fill="' + OR + '" stroke="' + INK + '" stroke-width="1"/>'); // small chest patch
       if (big) { // spray piece on the chest: outlined orange letters-like shapes + drips + star
-        P('M79 112 Q84 104 92 108 Q96 101 104 106 Q110 100 118 105 Q123 110 119 117 Q122 124 113 125 Q104 130 96 125 Q86 129 81 122 Q75 118 79 112 Z', OR, S(1.8));
+        P('M79 112 Q84 104 92 108 Q96 101 104 106 Q110 100 118 105 Q123 110 119 117 Q122 124 113 125 Q104 130 96 125 Q86 129 81 122 Q75 118 79 112 Z', print, S(1.8));
         LN('M86 113 Q89 109 92 114 Q95 119 98 113 M101 112 Q104 108 107 113 Q110 118 113 112', BLK, 2.2);
-        LN('M90 126 v7 M104 128 v9 M114 124 v5', OR, 2.4); o.push('<circle cx="104" cy="139" r="1.7" fill="' + OR + '"/>');
+        LN('M90 126 v7 M104 128 v9 M114 124 v5', print, 2.4); o.push('<circle cx="104" cy="139" r="1.7" fill="' + print + '"/>');
         P('M123 98 l1.6 3.4 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5Z', WH);
       }
     } else if (top === 'track' || top === 'trackGold') {
@@ -465,7 +500,7 @@
     // ---- headphones round the neck (4, 5) ----
     if (L === 4 || L === 5 || GF.phones) {
       LN('M84 90 Q100 106 116 90', '#2A2A2F', 4.5);
-      [[78, 84], [114, 84]].forEach(p => { P('M' + p[0] + ' ' + p[1] + ' h8 q3 0 3 3 v10 q0 3 -3 3 h-8 q-3 0 -3 -3 v-10 q0 -3 3 -3 Z', '#26262B', S(1.6)); o.push('<rect x="' + (p[0] + 1.5) + '" y="' + (p[1] + 3) + '" width="5" height="10" rx="2" fill="' + OR + '"/>'); });
+      [[78, 84], [114, 84]].forEach(p => { P('M' + p[0] + ' ' + p[1] + ' h8 q3 0 3 3 v10 q0 3 -3 3 h-8 q-3 0 -3 -3 v-10 q0 -3 3 -3 Z', '#26262B', S(1.6)); o.push('<rect x="' + (p[0] + 1.5) + '" y="' + (p[1] + 3) + '" width="5" height="10" rx="2" fill="' + (CO.phones || OR) + '"/>'); });
       LN('M117 100 Q121 116 112 128', '#2A2A2F', 1.4);
     }
 

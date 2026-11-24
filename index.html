@@ -1821,13 +1821,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js"></script>
+<script src="i18n.js?v=2"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
-<script src="hero.js?v=20"></script>
+<script src="hero.js?v=21"></script>
 <script src="rhythm.js?v=27"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -5389,8 +5389,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные', funk: 'Фанк-бригада', roots: 'Корни', wave: 'Волна', rebar: 'Арматура', volt: 'Высоковольтные', forge: 'Литейка' }[id]; return c3 ? T(c3) : id; }
   function citySrc(g){
     const s = g.src || '';
-    if (g.stash) return T('Тайники Промзоны или граффити во Дворе');
-    if (s.slice(0, 5) === 'gang:') return T('Выбей с банды «{x}» в городе', { x: cityGang(s.slice(5)) });
+    if (g.reward) return T(g.reward[2], { n: g.reward[1] });
+    if (g.stash) return cityOwned().includes('writerKicks') ? T('Тайники Промзоны или граффити во Дворе') : T('Шанс 12% при открытии тайника в Промзоне');
+    if (s.startsWith('gang:')) {
+      const gang = s.slice(5), name = cityGang(gang);
+      const items = Object.values(HERO.GEAR).filter(item => item.src === s);
+      return T(items[0].name === g.name ? 'Первая победа над бандой «{x}» в 3D-городе' : 'Третья победа над бандой «{x}» в 3D-городе', { x: name });
+    }
     if (s === 'mc') return T('Награда MC Рупора за сайфер в городе');
     if (s === 'dj') return T('Награда диджея Винта в городе');
     if (s === 'walls') return T('За весь двор в твоих граффити');
@@ -5774,6 +5779,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           btn.disabled = false; wdPaint();
         };
       }
+      else if (it.catalog && !(w.catalog >= it.catalog)) { btn.disabled = true; btn.textContent = T('Скоро в продаже'); }
       else if (w.pts >= it.price) { btn.textContent = T('Купить · ⭐ {n}', { n: it.price }); btn.onclick = () => shopBuy(it, btn); }
       else { btn.disabled = true; btn.textContent = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts }); }
       return d;

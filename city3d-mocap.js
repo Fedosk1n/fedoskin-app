@@ -620,7 +620,7 @@ export function mocapPerson(look, opt = {}) {
   for (const s of ['Left', 'Right']) { const sg = s === 'Left' ? 1 : -1, bn = k => BI[s + k];
     { // arm: shoulder → upper arm → elbow → forearm → cuff → hand (palm, knuckles, fingers curled a little) + thumb
       const Jt = [s + 'Arm', s + 'ForeArm', s + 'Hand'].map(JP), d = Jt[2].clone().sub(Jt[0]).normalize(), E = Jt[0].distanceTo(Jt[1]), Wd = E + Jt[1].distanceTo(Jt[2]), fa = A * .7 + .3, hs = (A * .3 + .7) * (hi ? 1.05 : 1);
-      const low = sleeveLong ? slC : C.skin, hc = look.gloves ? '#18181B' : C.skin, tipC = C.skin;
+      const low = sleeveLong ? slC : C.skin, hc = look.gloves ? (C.glove || '#18181B') : C.skin, tipC = C.skin;
       const Kn = Jt[2].clone().addScaledVector(d, .074 * hs).addScaledVector(DOWN, .006), Tp = Jt[2].clone().addScaledVector(d, .128 * hs).addScaledVector(DOWN, .042 * hs), HL = Wd + Jt[2].distanceTo(Kn), TL = HL + Kn.distanceTo(Tp);
       const st = [[-.06, .05 * A, .053 * A, uc], [-.02, .06 * A, .063 * A, uc], [.02, .065 * A, .068 * A, uc], [.045, .065 * A, .067 * A, uc], [.045, .065 * A, .067 * A, slC, 1]];
       if (sleeveLong) {
@@ -636,7 +636,7 @@ export function mocapPerson(look, opt = {}) {
       if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1], [Wd - .014, .044 * fa, .044 * fa, cf]);                       // rib cuff
       else if (wb) st.push([Wd - .075, .041 * fa, .041 * fa, low], [Wd - .075, .0445 * fa, .0445 * fa, wb, 1], [Wd - .04, .0435 * fa, .0435 * fa, wb], [Wd - .04, .039 * fa, .039 * fa, low, 1], [Wd - .014, .037 * fa, .037 * fa, low]);   // wristband
       else st.push([Wd - .04, .041 * fa, .041 * fa, low], [Wd - .014, (sleeveLong ? .041 : .037) * fa, (sleeveLong ? .041 : .037) * fa, low]);
-      if (sleeveLong || look.gloves) st.push([Wd - .014, .034 * hs, .033 * hs, hc, 2, .85]);                                  // the sleeve's opening / the glove's edge
+      if (sleeveLong || look.gloves) st.push([Wd - .014, .034 * hs, .033 * hs, C.gloveTrim || hc, 2, .85]);                                  // the sleeve's opening / the glove's edge
       st.push([Wd + .022 * hs, .04 * hs, .0245 * hs, hc], [Wd + .05 * hs, .047 * hs, .0235 * hs, hc], [HL, .0465 * hs, .0215 * hs, hc]);
       if (look.gloves) st.push([HL + .012 * hs, .045 * hs, .021 * hs, hc], [HL + .012 * hs, .042 * hs, .019 * hs, tipC, 2]);   // fingerless gloves
       st.push([HL + .032 * hs, .041 * hs, .019 * hs, tipC], [TL - .01 * hs, .031 * hs, .0155 * hs, tipC]);
@@ -835,7 +835,7 @@ export function mocapPerson(look, opt = {}) {
     }
     if (look.phones) { const ph = M('#18191c', .5, .3); [-1, 1].forEach(s => {
         add(hg, new THREE.CylinderGeometry(.042, .042, .03, 12), ph, s * .12, .088, -.008).rotation.z = Math.PI / 2;
-        detail(new THREE.CylinderGeometry(.025, .027, .008, 12), '#E2611A', s * .137, .088, -.008).rotation.z = Math.PI / 2;
+        detail(new THREE.CylinderGeometry(.025, .027, .008, 12), C.phones || '#E2611A', s * .137, .088, -.008).rotation.z = Math.PI / 2;
       });
       const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .088, -.008); band.scale.set(.91, 1.25, 1); }
     // custom, head: a pin, a spin pad on the crown (the part you see best from above), a glowing band
@@ -847,7 +847,7 @@ export function mocapPerson(look, opt = {}) {
         pin.position.set(0, bk ? .2 : .13, 0).addScaledVector(d, bk ? .137 : hat === 'beanie' ? .145 : .135); pin.position.x *= bk ? .94 : HX; pin.quaternion.setFromUnitVectors(UP, d); }
       if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, top, 0); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, top + .002, 0); }
       if (cus.head >= 3) { const gb = add(hg, new THREE.TorusGeometry(br, .0075, 6, 28), glowOf(ac), 0, by, 0); gb.rotation.x = Math.PI / 2; gb.scale.x = bk ? .94 : HX; } } }
-  for (const s of ['Left', 'Right']) if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.082 * L, 10, 8), M('#18181B', .6), 0, .01, .03).scale.set(1, 1.1, .8);
+  for (const s of ['Left', 'Right']) if (look.knee) add(B[s + 'Leg'], new THREE.SphereGeometry(.082 * L, 10, 8), M(C.knee || '#18181B', .6), 0, .01, .03).scale.set(1, 1.1, .8);
   // ---- CUSTOM details (owner 16.11.2026 «добавь механику улучшения одежды… нашивки»): look.cus = { head, top, pants, kicks }, each 0…3.
   // top: a patch on the chest → patches on the sleeves → a big patch on the back; pants: reinforced knees (in the skin above) → cargo
   // pockets → a wallet chain; kicks and head: see the sneaker and the head blocks. Rigid pieces on bones, the hero only.
