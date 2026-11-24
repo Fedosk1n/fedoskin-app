@@ -1726,3 +1726,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   The beat grid, scoring, shared effects and the City's mixes still use their existing paths.
 
 - Wardrobe slots and red gear: the current look shows actual worn items by slot, with base clothes from HERO.FIT, and the owned list can be filtered by clicking an occupied slot. Existing prices and item IDs stay the same. Inspect each card for rarity, source and effects, with active capped bonuses above the list. A red piece adds 0.5 percentage points for REAL ONE HAND / CORKSCREW / PLANCHE in either mode and a separate 2% for the chosen manual power move to complete without tracing, up to two slots. The Worker draws once per attempt, scores the manual mythic bonus at +600 and awards the existing +10 stars. In City 3D the original mythic rig plays in a cut-in and adds 6 to the power step. Writer's kicks also drop once from Industrial Zone stashes (12% per opened stash). Deploy the updated Worker from the admin for online bonuses.
+
+## 24.11.2026 — City movement and battle sets
+
+- Five standing loops use the existing mocap. Each resident has a repeatable stance and arm swing, with shorter strides for smaller and older people. The hero alternates standing with short toprock phrases and advances the walking animation by actual distance after collisions.
+- The battle and street shows share three approaches to the center: straight, left arc, right arc. The hero and each opponent rotate through seven set shapes. The new shapes start on the floor, return to toprock after footwork, or pause in a freeze between floor phrases. Nearby crew members watch from the sides of the ring.
+- Cache versions: city3d.js 31, city3d-game.js 29, city3d-mocap.js 16 and city3d-power.js 5. All mocap imports must point to the same version so the game and the power drawing share the loaded clips.

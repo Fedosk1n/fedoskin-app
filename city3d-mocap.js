@@ -42,10 +42,12 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
     CLIPS[name].userData = { seam, once: seam > 15 };
   }
   gaitPrep();
-  // the two standing loops (see makeStand): «Stand» = a b-boy bobbing to the beat (from «Bboy_Uprock»), «Stand_Calm» = an ordinary
-  // person shifting the weight from foot to foot (from «Walking», slowed down) — passers-by, the guard, workers, the tailor
+  // Different standing loops share the same relaxed base. Keep the legs subtle so planted feet stay near their marks.
   makeStand('Stand', 'Bboy_Uprock', { a: .2, al: .07, sp: 1 });
+  makeStand('Stand_Rock', 'Brooklyn_Uprock', { a: .32, al: .045, sp: .7 });
+  makeStand('Stand_Bounce', 'Breakdance_Uprock_Var_1_M', { a: .27, al: .065, sp: .88 });
   makeStand('Stand_Calm', 'Walking', { a: .28, al: .07, sp: .45 });
+  makeStand('Stand_Quiet', 'Bboy_Uprock_M', { a: .12, al: .035, sp: .52 });
   return DATA;
 }
 // MIRRORED MOVES «<name>_M» (owner 17.11.2026 «добавь вариаций футворка во время батлов (слишком однообразно начинают и делают всё)»):
@@ -484,11 +486,13 @@ export function bodyOf(seed, o = {}) {
   const r = mul(seed * 2654435761), names = Object.keys(BODY_TYPES), pick = a => a[Math.floor(r() * a.length)];
   const type = o.type || pick(o.girl ? ['avg', 'slim', 'slim', 'small', 'lanky', 'athl', 'stocky', 'heavy'] : names), T = BODY_TYPES[type] || BODY_TYPES.avg, j = k => 1 + (r() - .5) * k;
   const b = { type, h: T.h * j(.05), limb: T.limb * j(.07), arm: T.arm * j(.07), chest: T.chest * j(.05), waist: T.waist * j(.06), hip: T.hip * j(.05), belly: T.belly * j(.3), head: T.head * j(.03),
-    skin: pick(SKINS), hair: o.old ? pick(['#8d9096', '#e9e9ec', '#b9bcc2']) : HAIRS[Math.floor(Math.pow(r(), 1.6) * 8)], style: pick(o.girl ? WOMEN : MEN), beard: !o.girl && r() < (o.old ? .5 : .28), girl: !!o.girl };
+    skin: pick(SKINS), hair: o.old ? pick(['#8d9096', '#e9e9ec', '#b9bcc2']) : HAIRS[Math.floor(Math.pow(r(), 1.6) * 8)], style: pick(o.girl ? WOMEN : MEN), beard: !o.girl && r() < (o.old ? .5 : .28), girl: !!o.girl,
+    motion: r() };
   if (o.girl) { b.chest *= .9; b.arm *= .88; b.hip *= 1.07; b.waist *= .93; b.h *= .96; }
   return Object.assign(b, o);
 }
 const BASE = BODY_TYPES.avg;
+const DANCER_IDLE = ['Stand', 'Stand_Rock', 'Stand_Bounce'];
 // body + clothes on a Mixamo skeleton. opt.body = a body from bodyOf() or a type name; without it — the plain average figure
 export function mocapPerson(look, opt = {}) {
   const R = DATA.rest, C = Object.assign({}, look.col);
@@ -726,7 +730,10 @@ export function mocapPerson(look, opt = {}) {
     pt('Hips', .1 * hd); pt('Spine', .1 * dp * wd + bd.belly * .05); pt('Spine1', .105 * dp); pt('Spine2', .116 * dp); pt('Neck', .07);
     for (const s of ['Left', 'Right']) { pt(s + 'Arm', .066 * A); pt(s + 'ForeArm', .05 * A); pt(s + 'Hand', .037 * A); pt(s + 'UpLeg', .092 * L); pt(s + 'Leg', .069 * L); pt(s + 'Foot', .06); } }
   const mixer = new THREE.AnimationMixer(rig);
-  const J = { root, rig, B, body, parts, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95, idle: opt.idle || 'Stand' };
+  const motion = bd.motion ?? .5, quiet = bd.old || motion < .42;
+  const J = { root, rig, B, body, parts, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95,
+    idle: opt.idle || (bd.motion === undefined ? 'Stand' : DANCER_IDLE[Math.floor(motion * DANCER_IDLE.length)]),
+    stepScale: scale * (bd.old ? .87 : .94 + motion * .12), armSwing: bd.old || bd.pack ? .6 + motion * .14 : .78 + motion * .22 };
   // advance the animation and move the dancer by the clip's own travel
   J.tick = dt => {
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
@@ -767,7 +774,12 @@ export function mocapPerson(look, opt = {}) {
     J.act = a; J.cur = name;
   };
   // a calmer (or another) standing loop for this person; switches at once if he is standing now
-  J.setIdle = name => { if (!CLIPS[name] || J.idle === name) return; const was = J.cur === J.idle; J.idle = name; if (was) J.play(name, { at: Math.random() * 2, fade: .01 }); };
+  J.setIdle = name => {
+    if (name === 'Stand_Calm' && quiet) name = 'Stand_Quiet';
+    if (!CLIPS[name] || J.idle === name) return;
+    const was = J.cur === J.idle; J.idle = name;
+    if (was) J.play(name, { at: motion * CLIPS[name].duration, fade: .25 });
+  };
   J.hipsWorld = new THREE.Vector3();
   return J;
 }
