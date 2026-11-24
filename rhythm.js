@@ -220,6 +220,53 @@
   function scratch(o, t, up, a) { const sc = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); sc.buffer = noise; fl.type = 'bandpass'; fl.Q.value = 6; fl.frequency.setValueAtTime(up ? 500 : 2600, t); fl.frequency.exponentialRampToValueAtTime(up ? 2600 : 500, t + .09); g.gain.setValueAtTime(.001, t); g.gain.linearRampToValueAtTime(a || .5, t + .015); g.gain.exponentialRampToValueAtTime(.001, t + .11); sc.connect(fl); fl.connect(g); g.connect(o); sc.start(t, Math.random() * .5, .14); }
   const wood = (o, t) => { tone(o, t, 'triangle', 1250, 0, .2, .05); tone(o, t, 'square', 620, 0, .05, .04); }; // every tap of a hard beat is heard
   const tom = (o, t, f) => tone(o, t, 'sine', f, f * .6, .5, .16);
+  function battleKick(out, t) {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.setValueAtTime(145, t);
+    osc.frequency.exponentialRampToValueAtTime(55, t + .045);
+    gain.gain.setValueAtTime(.001, t);
+    gain.gain.exponentialRampToValueAtTime(.88, t + .003);
+    gain.gain.exponentialRampToValueAtTime(.49, t + .052);
+    gain.gain.exponentialRampToValueAtTime(.001, t + .23);
+    osc.connect(gain); gain.connect(out); osc.start(t); osc.stop(t + .23);
+    tone(out, t, 'triangle', 207, 151, .34, .145);
+    hiss(out, t, 'bandpass', 1650, .85, .30, .027);
+  }
+  function battleSnare(out, t, a = 1) {
+    tone(out, t, 'triangle', 213, 174, .55 * a, .13);
+    hiss(out, t, 'bandpass', 1550, .75, .66 * a, .19);
+    hiss(out, t, 'bandpass', 3700, .85, .32 * a, .057);
+  }
+  function battleBass(out, t, f, d, wave, lp, a) {
+    const osc = ctx.createOscillator(), harmonic = ctx.createOscillator(), harmonicGain = ctx.createGain();
+    const filter = ctx.createBiquadFilter(), amp = ctx.createGain();
+    osc.type = wave; osc.frequency.value = f;
+    // An octave above the bass stays audible on a phone speaker.
+    harmonic.type = 'triangle'; harmonic.frequency.value = f * 2; harmonicGain.gain.value = .95;
+    filter.type = 'lowpass'; filter.frequency.value = Math.max(lp, 440);
+    // Leave room for the kick transient, then hold the body of the bass note.
+    amp.gain.setValueAtTime(.001, t);
+    amp.gain.exponentialRampToValueAtTime(a * .85, t + .032);
+    amp.gain.exponentialRampToValueAtTime(a * .59, t + d * .65);
+    amp.gain.exponentialRampToValueAtTime(.001, t + d);
+    osc.connect(filter); harmonic.connect(harmonicGain); harmonicGain.connect(filter);
+    filter.connect(amp); amp.connect(out);
+    osc.start(t); harmonic.start(t); osc.stop(t + d); harmonic.stop(t + d);
+  }
+  const battleCurve = Float32Array.from({ length: 1025 }, (_, i) => {
+    const x = i / 512 - 1, knee = .46, excess = Math.abs(x) - knee;
+    return excess > 0 ? Math.sign(x) * (knee + .32 * Math.tanh(excess / .32)) : x;
+  });
+  function battleMusicBus(out) {
+    const lowCut = ctx.createBiquadFilter(), mid = ctx.createBiquadFilter(), highs = ctx.createBiquadFilter();
+    const drive = ctx.createWaveShaper();
+    lowCut.type = 'highpass'; lowCut.frequency.value = 34; lowCut.Q.value = Math.SQRT1_2;
+    mid.type = 'peaking'; mid.frequency.value = 380; mid.Q.value = .9; mid.gain.value = -1.6;
+    highs.type = 'highshelf'; highs.frequency.value = 6500; highs.gain.value = -2.3;
+    drive.curve = battleCurve;
+    lowCut.connect(mid); mid.connect(highs); highs.connect(drive); drive.connect(out);
+    return lowCut;
+  }
   // each beat's own sound: drum pattern per 16th, swing (share of a 16th), bass, chords
   const STY = {
     lofi: { sw: .3, kicks: [[0, 10], [0, 7, 10], [0, 9, 11]], sn: [4, 12], snA: .55, rim: [10], hats: 8, hatA: .11, ghostHat: .25, open: [],
@@ -250,8 +297,11 @@
       roots: [73.4, 82.4, 77.8], walk: [1, 1, 1.189, 1.498], bw: 'sawtooth', blp: 1100, ba: .3, bd: .12,
       ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4], half: { kicks: [0, 11], sn: [8], hats: 8 } } };
   // the whole round is scheduled at once (~300 short sounds): no timers to be throttled. preview = only `bars` bars, no count-in
-  function schedule(t0, seed, beat, preview, cues) {
+  function schedule(t0, seed, beat, preview, cues, battleMix = true) {
     const out = ctx.createGain(); out.connect(master);
+    const music = battleMix ? battleMusicBus(out) : out;
+    const drumKick = battleMix ? battleKick : kick, drumSnare = battleMix ? battleSnare : snare;
+    const playBass = battleMix ? battleBass : bass;
     const Y = STY[beatOf(beat).id], bt = 60 / beatOf(beat).bpm, S = bt / 4;
     const rnd = mulberry(seed * 7 + 3), kp = Y.kicks[Math.floor(rnd() * Y.kicks.length)];
     const root = Y.roots[Math.floor(rnd() * Y.roots.length)];
@@ -265,22 +315,28 @@
         const t = tb + s * S + (s % 2 ? Y.sw * S : 0);
         if (last && s >= 12) break; // the freeze hit lands in silence
         if (Y.gap && Y.gap(bar, s)) continue; // the DJ cut the sound
-        if (kpB.includes(s)) { kick(out, t); bass(out, t, Y.oct && kn % 2 ? f * 2 : f, s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18), Y.bw, Y.blp, Y.ba); kn++; }
-        if (snB.includes(s)) snare(out, t, Y.snA);
-        if (!hf && Y.ghost && Y.ghost.includes(s) && rnd() < .7) snare(out, t, Y.ghostA || .22);
-        if (Y.rim && Y.rim.includes(s) && bar % 2) rim(out, t);
-        if (!hf && Y.open.includes(s)) ohat(out, t, .13);
+        if (kpB.includes(s)) {
+          drumKick(music, t);
+          let d = s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18);
+          if (battleMix && Y.gap && Y.gap(bar, s + 1)) d = Math.min(d, tb + (s + 1) * S - t);
+          playBass(music, t, Y.oct && kn % 2 ? f * 2 : f, d, Y.bw, Y.blp, Y.ba);
+          kn++;
+        }
+        if (snB.includes(s)) drumSnare(music, t, Y.snA);
+        if (!hf && Y.ghost && Y.ghost.includes(s) && rnd() < .7) drumSnare(music, t, Y.ghostA || .22);
+        if (Y.rim && Y.rim.includes(s) && bar % 2) rim(music, t);
+        if (!hf && Y.open.includes(s)) ohat(music, t, .13);
         else if (!hatsB) { /* the style plays its own hi-hat (fx) */ }
-        else if (hatsB === 16) hat(out, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
-        else if (s % 2 === 0) hat(out, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(out, t, Y.hatA * .5);
-        if (Y.crackle && rnd() < .35) hiss(out, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
+        else if (hatsB === 16) hat(music, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
+        else if (s % 2 === 0) hat(music, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(music, t, Y.hatA * .5);
+        if (Y.crackle && rnd() < .35) hiss(music, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
       }
-      if (!last || Y === STY.raw) Y.ch(out, tb, f, bar, S);
-      if (!preview && Y.crash.includes(bar)) crash(out, tb);
-      if (Y.fx) Y.fx(out, tb, bar, bt, last);
+      if (!last || Y === STY.raw) Y.ch(music, tb, f, bar, S);
+      if (!preview && Y.crash.includes(bar)) crash(music, tb);
+      if (Y.fx) Y.fx(music, tb, bar, bt, last);
     }
     if (cues) cues.forEach(c => wood(out, (preview ? tb0 : t0) + c));
-    if (!preview) { const tBig = t0 + B_BIG * bt; kick(out, tBig); snare(out, tBig); crash(out, tBig); stab(out, tBig, root * 4); }
+    if (!preview) { const tBig = t0 + B_BIG * bt; drumKick(music, tBig); drumSnare(music, tBig); crash(music, tBig); stab(music, tBig, root * 4); }
     return out;
   }
   function blip(kind) { // the tap itself is heard at once: a clap for a hit
@@ -566,7 +622,7 @@
       master.gain.value = G.mute ? 0 : .85;
       const bars = 2, d = bars * 4 * 60 / beatOf(id).bpm;
       const sd = Math.floor(Math.random() * 1e9) + 1, B = beatOf(id), cues = B.g ? RB2.notes(['indian', 'ccs', 'swipe', 'handstand'], sd, id).filter(n => !n.draw && n.b >= 4 && n.b < 4 + bars * 4).map(n => (n.b - 4) * 60 / B.bpm) : null;
-      G.pv = schedule(ctx.currentTime + .05, sd, id, bars, cues); G.pvId = id;
+      G.pv = schedule(ctx.currentTime + .05, sd, id, bars, cues, !G.city); G.pvId = id;
       const card = $('#rbSet').querySelector('.rbc[data-b="' + id + '"]'); if (card) card.classList.add('pl');
       const pv = G.pv; G.pvT = setTimeout(() => { if (G.pv === pv) stopPreview(); }, d * 1000 + 300);
     } catch (_) {}
@@ -583,7 +639,7 @@
     try {
       let mute = false; try { mute = localStorage.getItem('fedoskin-rb-mute') === '1'; } catch (_) {}
       master.gain.value = mute ? 0 : .85;
-      const o = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars, null);
+      const o = schedule(ctx.currentTime + .05, Math.floor(Math.random() * 1e9) + 1, id, bars, null, false);
       const stop = () => { try { o.gain.setTargetAtTime(0, ctx.currentTime, .05); } catch (_) {} setTimeout(() => { try { o.disconnect(); } catch (_) {} }, 500); };
       // when the first beat is HEARD (page clock, ms) and how long a beat is: the city's dance-off puts its arrows on this grid
       stop.t0 = performance.now() + 50 + clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25) * 1000; stop.spb = 60000 / beatOf(id).bpm;
@@ -687,7 +743,7 @@
   // ducks everything else (`pump`: the «pumping» of club music). Every bass note gets a HELD saturated copy (`sh` → only 140–460 Hz: these
   // overtones make the bass heard on a phone speaker, where the notes themselves, 40–110 Hz, are nearly silent) and a held sine sub for
   // headphones; the loop's own bass line is 20% louder. Measured (8 bars, offline): the 150–400 Hz band +4…+7 dB, below 120 Hz +5…+9 dB. Every bar gets battle drums (hotDrums): a crash opens each 4 bars, a snare roll + a noise riser close them,
-  // a pickup kick ends every second bar. HOT is null for the yard and for the rest of this file (the rhythm battle) — they sound as before.
+  // a pickup kick ends every second bar. HOT is null for the yard and for the rhythm battle.
   function hotRig(out, hb) {   // hb = the loop's own level of the phone bass (LOOPS[id].hb)
     const pump = ctx.createGain(), sh = ctx.createWaveShaper(), lo = ctx.createGain(), F = [['highpass', 140], ['highpass', 140], ['lowpass', 460], ['lowpass', 460]].map(([ty, f]) => { const x = ctx.createBiquadFilter(); x.type = ty; x.frequency.value = f; return x; });
     const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 4) / Math.tanh(4); }
@@ -939,7 +995,7 @@
     G.score = 0; G.combo = 0; G.best = 0; G.cnt = [0, 0, 0, 0]; G.missAt = -9; G.bigSt = 0; G.lastBeat = -1; G.shown = -1;
     const now = performance.now(); let lat = 0;
     G.audio = audioOn();
-    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed, G.beat, 0, V2() && BB.g ? G.notes.filter(n => !n.draw && !n.big).map(n => n.t) : null); } catch (_) { G.audio = false; } }
+    if (G.audio) { try { lat = clamp((ctx.outputLatency || 0) + (ctx.baseLatency || 0), 0, .25); G.aud0 = ctx.currentTime + .15; master.gain.value = G.mute ? 0 : .85; G.out = schedule(G.aud0, G.seed, G.beat, 0, V2() && BB.g ? G.notes.filter(n => !n.draw && !n.big).map(n => n.t) : null, !G.city); } catch (_) { G.audio = false; } }
     G.lat = lat; G.perf0 = now + 150; // song second 0 is heard at perf0 + lat
     G.mode = 'play';
     $('#rbSet').hidden = true; $('#rbEnd').hidden = true; $('#rbPlay').hidden = false; sizeCan();

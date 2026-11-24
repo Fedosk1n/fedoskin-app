@@ -1718,3 +1718,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   Centre 2 rounds vs Chrome, Park jam, prom ring — all to the judges, no errors; cypher show filmed frame by frame (drop, powerFirst);
   rewear (all tailor details) in German; `_t.miss` empty. NOT on a real iPhone (smoothness, the joins of the new freezes at full speed).
 - Versions: city3d.js ?v=27 (city3d.html), city3d-mocap.js ?v=14, city3d-perf.js ?v=2, city3d-game.js ?v=26, city3d-power.js ?v=3.
+
+## 24.11.2026 — Battles music mix
+
+- The main «Батлы» DJ preview and rhythm round now use a dedicated music bus in rhythm.js (?v=26): layered kick and snare,
+  sustained bass with an octave harmonic, corrective EQ and soft saturation. Count-in and tap cues bypass that bus.
+  The beat grid, scoring, shared effects and the City's mixes still use their existing paths.
