@@ -6,9 +6,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=16';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=17';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=5';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=6';   // the hero's power move is DRAWN by the finger (17.11)
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -127,7 +127,17 @@ function dress(l, c, i, acc, body) {
 // member i of crew c (ci = its index among the district's crews): the body and the clothes (also used by the line-up test page)
 export function crewLook(c, ci, i, D = c.d || 'yard') {
   const acc = c.looks[i], bd = (c.bodies || [])[i], body = bodyOf((D === 'park' ? 900 : D === 'prom' ? 1800 : 0) + ci * 31 + i * 7 + 11, Object.assign({ girl: acc.includes('girl') }, typeof bd === 'string' ? { type: bd } : bd));
-  const lk = HERO.topDown(c.base ? c.base + (i % 2) : Math.min(8, c.lv + 2 + (i % 2)), acc); dress(lk, c, i, acc, body); if (c.fix) c.fix(lk); tidy(lk);
+  const lk = HERO.topDown(c.base ? c.base + (i % 2) : Math.min(8, c.lv + 2 + (i % 2)), acc);
+  dress(lk, c, i, acc, body);
+  if (c.fix) c.fix(lk);
+  tidy(lk);
+  // The crew palette is for their own clothes. Prizes use their inventory colours on everyone.
+  for (const token of acc) {
+    const gear = HERO.itemOf(token);
+    if (!gear?.city) continue;
+    Object.assign(lk, gear.f);
+    Object.assign(lk.col, gear.col);
+  }
   return { lk, body };
 }
 // after the district's own colours (c.fix): a hoodie is one colour with darker rib cuffs, whatever the fix did to the sleeves
