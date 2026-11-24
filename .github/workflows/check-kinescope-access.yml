@@ -1,0 +1,20 @@
+name: Check Kinescope access
+on:
+  push:
+    branches: [codex/check-kinescope-access]
+    paths: [.github/workflows/check-kinescope-access.yml]
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read the video list
+        env:
+          TOKEN: ${{ secrets.KINESCOPE_API_TOKEN }}
+        run: |
+          test -n "$TOKEN"
+          curl --fail --silent --show-error --max-time 45 \
+            --header "Authorization: Bearer $TOKEN" \
+            'https://api.kinescope.io/v1/videos?page=1&per_page=1' |
+            jq -e 'select(.data | type == "array") | {returned: (.data | length), total: (.meta.pagination.total // null)}'
