@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 54</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 55</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -637,7 +637,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
         <b id="wkNewTitle" style="font-size:15px">Обновите код сервера</b>
         <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
-          <li>Нажмите <button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button></li>
+          <li><button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> <a class="btn btn-sm" href="server/push-worker.js" download="fedoskin-push.js" style="margin:2px 0;min-height:32px">Скачать код</a></li>
           <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
           <li>В окне с кодом выделите всё (на компьютере Ctrl+A, на телефоне — долгое нажатие → «Выбрать всё»), удалите и вставьте скопированное.</li>
           <li>Нажмите <b>Deploy</b> (справа вверху), вернитесь сюда и нажмите «Обновить». Эта плашка исчезнет.</li>
@@ -1169,6 +1169,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   });
 
   // ---------- tabs ----------
+  if (location.hash === '#stats') store.set('fedoskin-admin-tab', 'stats');
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
   function showTab(name){
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
@@ -2814,7 +2815,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNewTitle').textContent = j.gear ? 'Обновите код сервера' : 'Обновите код сервера, чтобы заработали бонусы экипировки в онлайн-батлах';
+    $('#wkNewTitle').textContent = j.gear >= 3 ? 'Обновите код сервера' : 'Обновите код сервера для магазина и мифических вещей';
     $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs && j.cg && j.gear >= 3 && j.rb2 >= 3); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
