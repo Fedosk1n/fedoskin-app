@@ -577,6 +577,20 @@ async function buildYard(scene) {
       const fan = new THREE.Mesh(new THREE.CircleGeometry(.24, 16), M('#1b1d21', .5)); fan.rotation.x = -Math.PI / 2; fan.position.set(ac.position.x, b.h + .61, ac.position.z); scene.add(fan); }
     for (let i = 0; i < 3; i++) { const v = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, .7, 10), M('#8a8f96', .4, .7)); v.position.set(b.x - b.w / 2 + 1 + r() * (b.w - 2), b.h + .35, -16 - .8 - r() * (b.d - 1.6)); scene.add(shadowAll(v)); }
   });
+  // The Blender-built canopy and fire escape share a single vertex-coloured mesh.
+  // Keep the original facade usable if the optional detail asset cannot be fetched.
+  try {
+    const geometry = await new THREE.BufferGeometryLoader().loadAsync('./anim/yard-facade.json');
+    geometry.computeVertexNormals();
+    const facade = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: true, roughness: .78, metalness: .18,
+    }));
+    facade.name = 'Yard fire escape';
+    facade.position.z = -16;
+    scene.add(shadowAll(facade));
+  } catch (error) {
+    console.warn('Yard facade detail unavailable', error);
+  }
   // water tank on the tall roof + antenna
   { const t = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 1.6, 18), M('#4b3b30', .8)); t.position.set(-11, 9.5 + .8 + .5, -20); scene.add(shadowAll(t));
     [-.6, .6].forEach(dx => [-.6, .6].forEach(dz => { const l = new THREE.Mesh(new THREE.BoxGeometry(.08, .5, .08), M('#2a2c31', .6, .5)); l.position.set(-11 + dx, 9.75, -20 + dz); scene.add(l); }));
