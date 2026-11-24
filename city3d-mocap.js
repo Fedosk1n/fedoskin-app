@@ -189,7 +189,7 @@ function seg(bone, to, r, mat, r2) {
 // The torso, arms and legs used to be separate capsules and boxes hung on the bones — every elbow, knee, shoulder and the
 // waist showed as a hinge. Now they are ONE skinned mesh: rings of vertices along the spine / arm / leg, each vertex follows
 // one bone, or two bones near a joint (soft bend). Colours (top, sleeves, skin, trousers) are vertex colours ⇒ one draw call.
-// Small balls inside the knees, elbows and shoulders keep the volume when a joint bends hard. Head, hands, shoes and
+// Half-angle bend bones support the rings around knees, elbows and shoulders. Head, hands, shoes and
 // accessories stay rigid pieces on their bones. The skeleton and the moves are untouched.
 const _p = new THREE.Vector3(), _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const SKIN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .82 });
@@ -315,6 +315,24 @@ function mergeParts(rig, body) {
   }
   return out;
 }
+// Blender loft sections: distance from pivot, forward radius, lateral radius (metres).
+const ELBOW_PROFILE = [[-0.07, 0.057, 0.052], [-0.046, 0.053, 0.049], [-0.023, 0.048, 0.047], [0, 0.045, 0.045], [0.026, 0.048, 0.044], [0.055, 0.054, 0.047], [0.09, 0.055, 0.049], [0.135, 0.05, 0.045], [0.17, 0.043, 0.04]];
+const KNEE_PROFILE = [[-0.045, 0.084, 0.08], [-0.022, 0.081, 0.077], [0, 0.079, 0.074], [0.022, 0.077, 0.072], [0.045, 0.073, 0.07]];
+
+// Centre rings follow half of the joint rotation. Interpolating the rotation
+// before skinning preserves thickness even when the dancer folds a limb tightly.
+function bendBone(joint) {
+  const helper = new THREE.Bone();
+  const rest = joint.quaternion.clone().normalize();
+  helper.position.copy(joint.position);
+  helper.name = joint.name + 'Bend';
+  helper.updateMatrix = function () {
+    this.quaternion.copy(rest).slerp(joint.quaternion, .5);
+    THREE.Bone.prototype.updateMatrix.call(this);
+  };
+  joint.parent.add(helper);
+  return helper;
+}
 function skinGeo() {
   const pos = [], col = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
   // sh = brightness of the vertex colour (painted shade: darker under the arms, between the legs, under a hem)
@@ -331,18 +349,17 @@ function skinGeo() {
   G.rew = (R, f) => { for (let i = R.i0; i < R.i0 + R.n; i++) { const w = f(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]); if (!w) continue; const t = w.reduce((a, b) => a + b[1], 0);
     for (let k = 0; k < 4; k++) { si[i * 4 + k] = w[k] ? w[k][0] : 0; sw[i * 4 + k] = w[k] ? w[k][1] / t : 0; } } };
   G.quad = (a, b, c, d, color, wa, wc) => { const i = vert(a, color, wa); vert(b, color, wa); vert(c, color, wc); vert(d, color, wc); idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2); };
-  const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
-  G.ball = (c, r, color, w, n = 8) => { let prev = null; const m = 5; for (let k = 1; k < m; k++) { const a = -Math.PI / 2 + k / m * Math.PI, R = G.ring(_p.copy(c).addScaledVector(Y, Math.sin(a) * r).clone(), Z, X, Math.cos(a) * r, Math.cos(a) * r, color, w, n);
-      if (prev) G.join(prev, R); else G.pole(R, c.clone().addScaledVector(Y, -r), color, w, true); prev = R; } G.pole(prev, c.clone().addScaledVector(Y, r), color, w, false); };
   // a limb along the joints P[0..m]: bones[k] drives the piece P[k]→P[k+1], `pre` drives what lies before P[0]; near joint k the
   // two neighbours are blended over ±bz[k] metres. st = stations [s (m along the limb from P[0]), ru (forward), rv (sideways), colour, seam?, brightness?];
   // seam: 1 = a colour change (same place, no faces between, normals shared), 2 = a step with faces (a sleeve's opening);
   // returns the rings (for stripes). fwd = the body's forward; e = superellipse power (1 = round); side = [towards +u, towards +v] = the shaded side
-  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1, side) => {
+  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1, side, bends) => {
     const L = [0]; for (let k = 1; k < P.length; k++) L.push(L[k - 1] + P[k].distanceTo(P[k - 1]));
     const d = P[P.length - 1].clone().sub(P[0]).normalize(), u = fwd.clone().addScaledVector(d, -fwd.dot(d)).normalize(), v = d.clone().cross(u);
     const at = s => { if (s <= 0) return P[0].clone().addScaledVector(d, s); for (let k = 1; k < P.length; k++) if (s <= L[k]) return P[k - 1].clone().lerp(P[k], (s - L[k - 1]) / (L[k] - L[k - 1])); return P[P.length - 1].clone().addScaledVector(d, s - L[L.length - 1]); };
-    const wt = s => { for (let k = 0; k < P.length - 1; k++) { const b = bz[k] || 0; if (b && Math.abs(s - L[k]) < b) { let t = .5 + (s - L[k]) / (2 * b); t = t * t * (3 - 2 * t); const a = k ? bones[k - 1] : pre; return [[a, 1 - t], [bones[k], t]]; } }
+    const wt = s => { for (let k = 0; k < P.length - 1; k++) { const b = bz[k] || 0; if (b && Math.abs(s - L[k]) < b) { let t = .5 + (s - L[k]) / (2 * b); t = t * t * (3 - 2 * t); const a = k ? bones[k - 1] : pre; const mid = bends?.[k];
+        if (mid !== undefined) return t < .5 ? [[a, 1 - 2*t], [mid, 2*t]] : [[mid, 2 - 2*t], [bones[k], 2*t - 1]];
+        return [[a, 1 - t], [bones[k], t]]; } }
       let k = 0; while (k < bones.length - 1 && s > L[k + 1]) k++; return [[s < 0 ? pre : bones[k], 1]]; };
     const rings = []; let prev = null;
     st.forEach(([s, ru, rv, color, seam, sh = 1]) => { const ao = side || sh !== 1 ? [sh, side ? side[0] : 0, side ? side[1] : 0] : null, R = G.ring(at(s), u, v, ru, rv, color, wt(s), n, e, ao); R.s = s; R.c = at(s); R.ru = ru; R.rv = rv; R.w = wt(s); R.col = color;
@@ -495,6 +512,15 @@ export function mocapPerson(look, opt = {}) {
   // trouser legs are wide and stack on the shoe (or end in a cuff), and the cloth is shaded by paint (under the arms, between the legs).
   rig.updateMatrixWorld(true);
   const names = Object.keys(R), BI = {}; names.forEach((n, i) => { BI[n] = i; });
+  for (const side of ['Left', 'Right']) {
+    for (const segment of ['Arm', 'ForeArm', 'Leg']) {
+      const helper = bendBone(B[side + segment]);
+      BI[helper.name] = names.length;
+      names.push(helper.name);
+      B[helper.name] = helper;
+    }
+  }
+  rig.updateMatrixWorld(true);
   const JP = n => new THREE.Vector3().setFromMatrixPosition(B[n].matrixWorld), FWD = new THREE.Vector3(0, 0, 1), DOWN = new THREE.Vector3(0, -1, 0), G = skinGeo();
   const hi = !!opt.hero, NT = 24, NA = 14, NL = 16, cus = look.cus || {}, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hd = 1 + (bd.hip - 1) * .8, wd = 1 + (ww - 1) * .5, topC = C.top, slC = C.sleeve || C.top, tp = look.top || 'tee', yk = C.yoke && C.yoke !== topC ? C.yoke : null, uc = yk || topC;
@@ -504,10 +530,18 @@ export function mocapPerson(look, opt = {}) {
   { const P = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck'].map(JP), y0 = P[0].y, S = n => JP(n).y - y0, shW = Math.abs(JP('LeftArm').x) + .03, bl = bd.belly * .03;
     const hemW = .152 * (bd.hip * .55 + ww * .45), hemD = .102 * (hd * .55 + wd * .45), TB = [BI.Hips, BI.Spine, BI.Spine1, BI.Spine2], TZ = [0, .04, .04, .04];
     // trousers: the seat up to the waistband (the top hangs over it)
-    G.limb(P, TB, BI.Hips, TZ, [[-.105, .068 * hd, .09 * bd.hip, C.pants, 0, .78], [-.07, .094 * hd, .138 * bd.hip, C.pants, 0, .86], [-.02, .102 * hd, .152 * bd.hip, C.pants, 0, .95], [.055, hemD, hemW, C.pants]], NT, FWD, .78, -.125, .07);
+    const seat = G.limb(P, TB, BI.Hips, TZ, [[-.105, .068 * hd, .09 * bd.hip, C.pants, 0, .78], [-.07, .094 * hd, .138 * bd.hip, C.pants, 0, .86], [-.02, .102 * hd, .152 * bd.hip, C.pants, 0, .95], [.055, hemD, hemW, C.pants]], NT, FWD, .78, -.125, .07);
+    for (const ring of seat) {
+      G.rew(ring, x => {
+        const side = clamp(Math.abs(x) / (.095 * bd.hip), 0, 1);
+        const thigh = .72 * side * clamp((.04 - ring.s) / .12, 0, 1);
+        return [[BI.Hips, 1 - thigh], [x > 0 ? BI.LeftUpLeg : BI.RightUpLeg, thigh]];
+      });
+    }
     // the top: hem (a big tee hangs lower; jackets end in a rib band) → waist → chest → sloped shoulders → collar
-    const rib = /track|bomber|hoodie/.test(tp) && C.cuff ? C.cuff : null, drop = tp === 'teeBig' ? .08 : /^tee/.test(tp) ? .045 : .015, lo = .04 - drop, ex = (tp === 'teeBig' ? .017 : .01) * baggy;
+    const rib = /track|bomber|hoodie/.test(tp) && C.cuff ? C.cuff : null, drop = tp === 'teeBig' ? .14 : /^tee/.test(tp) ? .112 : .048, lo = .04 - drop, ex = (tp === 'teeBig' ? .017 : .01) * baggy;
     const st = [[lo, hemD + ex, hemW + ex * 1.15, rib || topC, 0, .8]];
+    if (!rib) st.push([lo + .012, hemD + ex + .003, hemW + ex * 1.15 + .002, topC, 0, .94], [lo + .044, hemD + ex * .7, hemW + ex * .85, topC]);
     if (rib) st.push([lo + .036, hemD + ex, hemW + ex * 1.15, rib, 0, .92], [lo + .036, hemD + ex + .005, hemW + ex + .006, topC, 1, .92]);
     const sy = S('Spine2') + .05, nk = S('Neck');
     st.push([S('Spine') + .02, .1 * dp * wd + bl, .155 * ww, topC, 0, .93], [S('Spine1'), .105 * dp + bl * .6, .175 * (cw * .6 + ww * .4), topC, 0, .97], [S('Spine2'), .115 * dp, .195 * cw, topC]);
@@ -537,7 +571,10 @@ export function mocapPerson(look, opt = {}) {
       const st = [[-.06, .05 * A, .053 * A, uc], [-.02, .06 * A, .063 * A, uc], [.02, .065 * A, .068 * A, uc], [.045, .065 * A, .067 * A, uc], [.045, .065 * A, .067 * A, slC, 1]];
       if (sleeveLong) st.push([.14, .059 * A, .06 * A, slC]);
       else st.push([E * .46, .064 * A, .066 * A, topC], [E * .46, .052 * A, .053 * A, C.skin, 2, .88]);
-      st.push([E - .07, .053 * A, .053 * A, low], [E - .035, .051 * A, .051 * A, low], [E, .05 * A, .05 * A, low], [E + .035, .05 * fa, .051 * fa, low], [E + .09, .051 * fa, .052 * fa, low], [E + .17, .046 * fa, .046 * fa, low]);
+      for (const [offset, depth, width] of ELBOW_PROFILE) {
+        const size = offset <= 0 ? A : fa;
+        st.push([E + offset, depth * size, width * size, low]);
+      }
       const cf = sleeveLong && C.cuff ? C.cuff : null, wb = !sleeveLong && look.wrist && s === 'Left' ? look.wrist : null;
       if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1], [Wd - .014, .044 * fa, .044 * fa, cf]);                       // rib cuff
       else if (wb) st.push([Wd - .075, .041 * fa, .041 * fa, low], [Wd - .075, .0445 * fa, .0445 * fa, wb, 1], [Wd - .04, .0435 * fa, .0435 * fa, wb], [Wd - .04, .039 * fa, .039 * fa, low, 1], [Wd - .014, .037 * fa, .037 * fa, low]);   // wristband
@@ -546,8 +583,7 @@ export function mocapPerson(look, opt = {}) {
       st.push([Wd + .022 * hs, .04 * hs, .0245 * hs, hc], [Wd + .05 * hs, .047 * hs, .0235 * hs, hc], [HL, .0465 * hs, .0215 * hs, hc]);
       if (look.gloves) st.push([HL + .012 * hs, .045 * hs, .021 * hs, hc], [HL + .012 * hs, .042 * hs, .019 * hs, tipC, 2]);   // fingerless gloves
       st.push([HL + .032 * hs, .041 * hs, .019 * hs, tipC], [TL - .01 * hs, .031 * hs, .0155 * hs, tipC]);
-      G.limb([Jt[0], Jt[1], Jt[2], Kn, Tp], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.058, .055, .028, 0], st, NA, FWD, 1, -.085, TL + .004, [0, sg * .2]);
-      G.ball(Jt[1], .04 * A, low, [[bn('ForeArm'), 1]]); G.ball(Jt[0], .05 * A, uc, [[bn('Shoulder'), 1]]);
+      G.limb([Jt[0], Jt[1], Jt[2], Kn, Tp], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.077, .084, .028, 0], st, NA, FWD, 1, -.085, TL + .004, [0, sg * .2], [bn('ArmBend'), bn('ForeArmBend')]);
       const ta = Jt[2].clone().addScaledVector(d, .02 * hs).addScaledVector(FWD, .03 * hs).addScaledVector(DOWN, .004), tb = Jt[2].clone().addScaledVector(d, .072 * hs).addScaledVector(FWD, .062 * hs).addScaledVector(DOWN, .016), tl = ta.distanceTo(tb);
       G.limb([ta, tb], [bn('Hand')], bn('Hand'), [0], [[0, .0175 * hs, .0175 * hs, hc], [tl * .55, .016 * hs, .016 * hs, hc], [tl, .0125 * hs, .0125 * hs, tipC]], 6, new THREE.Vector3(0, 1, 0), 1, -.012, tl + .01);
       lpt(s + 'Hand', Tp, .016); lpt(s + 'Hand', tb, .013); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, .04 * hs), .02); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, -.04 * hs), .02); }
@@ -556,13 +592,15 @@ export function mocapPerson(look, opt = {}) {
       const cuffed = /^trackp/.test(pt), Lb = Ls * (pt === 'wind' ? 1.16 : cuffed ? 1.08 : 1.1), kc = cus.pants >= 1 ? mixOf(pc, '#9aa0ab', .36) : pc;
       const st = [[-.04, .074 * L, .07 * L, pc, 0, .8], [0, .093 * L, .088 * L, pc, 0, .9], [.06, .098 * L, .091 * L, pc], [.2, .094 * L, .089 * L, pc], [K - .1, .086 * L, .083 * L, pc]];
       if (kc !== pc) st.push([K - .07, .083 * Lk, .08 * Lk, pc], [K - .07, .086 * Lk, .083 * Lk, kc, 1]);                    // custom: reinforced knees
-      st.push([K - .045, .081 * Lk, .078 * Lk, kc], [K, .078 * Lk, .076 * Lk, kc], [K + .045, .073 * Lb, .071 * Lb, kc]);
+      for (const [offset, depth, width] of KNEE_PROFILE) {
+        const size = offset <= 0 ? Lk : Lb;
+        st.push([K + offset, depth * size, width * size, kc]);
+      }
       if (kc !== pc) st.push([K + .09, .074 * Lb, .071 * Lb, kc], [K + .09, .072 * Lb, .069 * Lb, pc, 1]);
       st.push([K + .14, .072 * Lb, .07 * Lb, pc], [K + .26, .069 * Lb, .067 * Lb, pc, 0, .96]);
       if (cuffed) { const cc = mixOf(pc, '#8a8d94', .22); st.push([F - .13, .069 * Lb, .067 * Lb, pc, 0, .93], [F - .085, .072 * Lb, .07 * Lb, pc, 0, .9], [F - .062, .061 * Ls, .06 * Ls, pc, 0, .84], [F - .062, .0605 * Ls, .0595 * Ls, cc, 1], [F - .02, .059 * Ls, .058 * Ls, cc]); }
       else st.push([F - .13, .071 * Lb, .069 * Lb, pc, 0, .94], [F - .09, .077 * Lb, .075 * Lb, pc, 0, .9], [F - .064, .072 * Lb, .07 * Lb, pc, 0, .82], [F - .038, .079 * Lb, .077 * Lb, pc, 0, .9], [F - .01, .075 * Lb, .074 * Lb, pc, 0, .78]);
-      const lg = G.limb(Jt, [bn('UpLeg'), bn('Leg')], BI.Hips, [.05, .065], st, NL, FWD, 1, -.07, F - (cuffed ? .012 : .004), [0, sg * .2]);
-      G.ball(Jt[1], .061 * Lk, kc, [[bn('Leg'), 1]]);
+      const lg = G.limb(Jt, [bn('UpLeg'), bn('Leg')], BI.Hips, [.05, .095], st, NL, FWD, 1, -.07, F - (cuffed ? .012 : .004), [0, sg * .2], [undefined, bn('LegBend')]);
       // the side stripe of track pants runs down the leg to the cuff
       if (C.stripe) { const out = lg.v.clone().multiplyScalar(Math.sign(lg.v.x) * sg), f = (R, k) => R.c.clone().addScaledVector(out, R.rv + .004).addScaledVector(lg.u, k * .016), end = cuffed ? F - .061 : F;
         for (let i = 2; i < lg.length - 1; i++) { const a = lg[i], b = lg[i + 1]; if (b.s - a.s < 1e-4 || b.s > end) continue; G.quad(f(a, sg), f(a, -sg), f(b, sg), f(b, -sg), C.stripe, a.w, b.w); } } }
