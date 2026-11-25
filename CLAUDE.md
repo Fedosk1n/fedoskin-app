@@ -127,4 +127,4 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   TouchEvents. Claude has never heard the sounds and can't test on a real iPhone — say so and ask the owner.
 
 ## Git
-- Commit and push when the owner asks for the change to be live: `git -c push.negotiate=true push origin HEAD`.
+- Publish app changes after verification by default. Follow the publishing workflow in `AGENTS.md`.
