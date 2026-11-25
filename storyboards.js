@@ -199,6 +199,15 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
+ "fr-airbaby": {
+  "src": "r2:fr-airbaby-to0b3ely.mp4",
+  "every": 3,
+  "n": 119,
+  "w": 320,
+  "h": 180,
+  "cols": 10,
+  "v": 1
+ },
  "tk-monkey": {
   "src": "r2:tk-monkey-5l5vx1ua.mp4",
   "every": 0.5,
@@ -325,12 +334,12 @@ window.LESSON_SB = {
   "cols": 10,
   "v": 1
  },
- "fr-airbaby": {
-  "src": "r2:fr-airbaby-to0b3ely.mp4",
-  "every": 3,
-  "n": 119,
-  "w": 320,
-  "h": 180,
+ "fr-side-freeze": {
+  "src": "r2:fr-side-freeze-kodbiw2i.mp4",
+  "every": 0.5,
+  "n": 60,
+  "w": 180,
+  "h": 320,
   "cols": 10,
   "v": 1
  }
