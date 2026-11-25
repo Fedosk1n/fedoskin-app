@@ -14,6 +14,15 @@ import { initPower } from './city3d-power.js?v=10';   // the hero's power move i
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
 
 const KEY = 'fedoskin-city3d';
+const unlimitedEnergy = (() => {
+  try {
+    const profile = JSON.parse(localStorage.getItem('fedoskin-profile') || 'null');
+    return profile?.id === '502629';
+  } catch (_) {
+    return false;
+  }
+})();
+const energyCost = cost => unlimitedEnergy ? 0 : cost;
 export const BAL = {
   // ENERGY (owner 22.11.2026 «ежедневное восстановление энергии до полного… уроки и другие вещи добавляют энергии сверх 100»):
   // every new day free up to enMax; lessons and every reward in the city stack ABOVE it up to enCap (the extra is never lost)
@@ -365,7 +374,9 @@ let toastT = 0;
 function toast(t, rewards = []) { const e = $('#g3toast'); e.textContent = [t, ...rewards].join(' · '); e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2600); }
 let NHERE = 4, IDS = [];
 function paintHud() {
-  $('#g3enN').textContent = S.en + ' / ' + BAL.enMax; $('#g3en .bar i').style.width = Math.min(100, S.en / BAL.enMax * 100) + '%'; $('#g3en').classList.toggle('over', S.en > BAL.enMax);
+  $('#g3enN').textContent = unlimitedEnergy ? '∞' : S.en + ' / ' + BAL.enMax;
+  $('#g3en .bar i').style.width = (unlimitedEnergy ? 100 : Math.min(100, S.en / BAL.enMax * 100)) + '%';
+  $('#g3en').classList.toggle('over', unlimitedEnergy || S.en > BAL.enMax);
   const r = rankOf(S.rep), a = BAL.rep[r], b = BAL.rep[r + 1];
   $('#g3rkN').textContent = BAL.ranks[r]; $('#g3rkC').textContent = b ? _t('{a} / {b} уважения', { a: S.rep, b }) : _t('{a} уважения', { a: S.rep });
   $('#g3rk .bar i').style.width = (b ? (S.rep - a) / (b - a) * 100 : 100) + '%';
@@ -390,9 +401,15 @@ export function initGame(ctx) {
   if (previousRewards.length) { notes.push(...previousRewards); save(); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
   addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
-  $('#g3en').onclick = () => info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Каждый новый день энергия бесплатно восстанавливается до <b>{m} ⚡</b>.', { n: BAL.battle, m: BAL.daily })}</p>
+  $('#g3en').onclick = () => {
+    if (unlimitedEnergy) {
+      info(`<h4>${_t('⚡ Энергия')} · ∞</h4><button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
+      return;
+    }
+    info(`<h4>${_t('⚡ Энергия')}</h4><p>${_t('Каждый батл с бандой стоит <b>{n} ⚡</b>. Каждый новый день энергия бесплатно восстанавливается до <b>{m} ⚡</b>.', { n: BAL.battle, m: BAL.daily })}</p>
     <p>${_t('<b>Уроки</b> и награды в городе добавляют энергию сверх {m}: каждая минута урока = <b>+{n} ⚡</b>. Запас копится до {c} ⚡ и не сгорает.', { n: BAL.perMin, m: BAL.enMax, c: BAL.enCap })}</p>
     <p>${_t('Сила твоего би-боя тоже из уроков: чем выше уровень героя, тем сложнее пауэр он крутит и тем реже падает.')}</p><button onclick="location.href='./'">${_t('🎬 К урокам')}</button>`);
+  };
   $('#g3info').onclick = e => { if (e.target.id === 'g3info') e.currentTarget.classList.remove('on'); };
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
     info(`<h4>${_t('★ Прогресс')}</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
@@ -403,7 +420,7 @@ export function initGame(ctx) {
   $('#g3gl').onclick = () => info(`<h4>${_t('📋 Задания на сегодня')}</h4>${S.goals.map(g => { const G = GOALS.find(x => x.id === g.id);
       return `<div class="gl ${g.done ? 'd' : ''}"><i>${g.done ? '✅' : '⬜'}</i><span>${G.t}</span><span class="p">${g.n} / ${G.n}</span></div>`; }).join('')}
     <p style="margin-top:10px">${_t('За каждое задание <b>+5 ★</b>. Все три — <b>+15 ⚡</b>{x}. Завтра будут новые.', { x: S.goalsPaid ? _t(' (уже получено ✓)') : '' })}</p><button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
-  $('#g3tf').onclick = () => info(`<h4>${_t('🎨 Стены района')}</h4><p>${_t('У каждой банды своя стена с граффити. <b>Победи банду</b> — и в тот же день можешь закрасить её стену своим куском (−{n} ⚡).', { n: BAL.paint })}</p>
+  $('#g3tf').onclick = () => info(`<h4>${_t('🎨 Стены района')}</h4><p>${_t('У каждой банды своя стена с граффити. <b>Победи банду</b> — и в тот же день можешь закрасить её стену своим куском (−{n} ⚡).', { n: energyCost(BAL.paint) })}</p>
     <p>${_t('Каждая твоя стена даёт <b>+{n} ★ каждый день</b>. Если банду не побеждать {d} дня, она закрасит стену обратно.', { n: BAL.turfRep, d: BAL.hold })}</p>
     ${HERE.map(c => `<div class="row"><span style="color:${c.col}">${c.name}</span><span>${S.turf[c.id] ? _t('🎨 твоя') : S.beat[c.id] === today() ? _t('🟢 можно закрасить') : '—'}</span></div>`).join('')}
     <button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
@@ -473,8 +490,8 @@ export function initGame(ctx) {
   const canPaint = g => S.beat[g.c.id] === today() && !S.turf[g.c.id];
   let P = null;   // painting in progress
   function startPaint(g) {
-    if (S.en < BAL.paint) { toast(_t('Нужно {n} ⚡ — посмотри урок', { n: BAL.paint })); return; }
-    S.en -= BAL.paint; save(); paintHud();
+    if (S.en < energyCost(BAL.paint)) { toast(_t('Нужно {n} ⚡ — посмотри урок', { n: energyCost(BAL.paint) })); return; }
+    S.en -= energyCost(BAL.paint); save(); paintHud();
     const H = W.hero, w = g.wall; P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, old: artCanvas('crew', g.c), neu: artCanvas('me', g.c) };
     W.lock = true; W.camT = { x: w.at.x, z: w.at.z + .6, zoom: .5 }; document.body.classList.add('g3fight');
     H.play('Breakdance_Ready', { fade: .3 }); try { window.RB && RB.hiss && RB.hiss(true); } catch (_) {}
@@ -611,8 +628,8 @@ export function initGame(ctx) {
   function placeBtn(pl) {
     const t = today();
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
-    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: _t('🎧 Бит качает до конца дня'), s: _t('Меньше срывов и больше стиля в батлах') } : { h: _t('🎧 Заказать бит · −{n} ⚡', { n: BAL.dj }), s: _t('На весь день: меньше срывов, больше стиля'), low: S.en < BAL.dj };
-    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: _t('💪 Форма на максимуме сегодня'), s: _t('Срывов в батлах меньше на {n}%', { n: 3 * n }) } : { h: _t('💪 Тренировать пауэр · −{n} ⚡', { n: BAL.train }), s: _t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax }), low: S.en < BAL.train }; }
+    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: _t('🎧 Бит качает до конца дня'), s: _t('Меньше срывов и больше стиля в батлах') } : { h: _t('🎧 Заказать бит · −{n} ⚡', { n: energyCost(BAL.dj) }), s: _t('На весь день: меньше срывов, больше стиля'), low: S.en < energyCost(BAL.dj) };
+    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: _t('💪 Форма на максимуме сегодня'), s: _t('Срывов в батлах меньше на {n}%', { n: 3 * n }) } : { h: _t('💪 Тренировать пауэр · −{n} ⚡', { n: energyCost(BAL.train) }), s: _t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax }), low: S.en < energyCost(BAL.train) }; }
     if (pl.id === 'atelier') { const left = CUS.reduce((a, c) => a + 3 - (S.cus[c.id] || 0), 0);
       return { h: _t('🧵 Ателье «Игла» — кастом шмота'), s: left ? _t('Нашивки, шнурки, спин-пад: вещи становятся сильнее в батлах') : _t('Весь кастом сделан — зайди полюбоваться') }; }
     if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: _t('🔒 Центр — со звания «{r}»', { r: BAL.ranks[BAL.gateRank] }), s: _t('Сейчас: {r} · {a} / {b} ★', { r: BAL.ranks[rk], a: S.rep, b: BAL.rep[BAL.gateRank] }) } : { h: _t('🚪 Войти в Центр'), s: _t('Банды 3–5 уровня · ТЦ · метро') }; }
@@ -630,18 +647,18 @@ export function initGame(ctx) {
     if (pl.id === 'stash') return S.stash.got.includes(pl.i) ? { off: true, h: _t('📦 Тайник уже пуст'), s: '' } : { h: _t('📦 Вскрыть тайник'), s: _t('Сегодня найдено {n} из {m} · внутри ⚡ или ★', { n: S.stash.got.length, m: BAL.stashN }) };
     if (pl.id === 'ring') { const n = S.ringDay.day === t ? S.ringDay.n : 0, next = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep;
       return n >= BAL.ringMax ? { off: true, h: _t('🥊 Ринг закрыт до завтра'), s: _t('Серия побед: {n} · она не сгорает за ночь', { n: S.streak }) }
-        : { h: _t('🥊 Подпольный ринг · −{n} ⚡', { n: BAL.ring }), s: _t('Серия побед: {n} · победа даст +{r} ★ · проиграл — серия с нуля', { n: S.streak, r: next }), low: S.en < BAL.ring }; }
+        : { h: _t('🥊 Подпольный ринг · −{n} ⚡', { n: energyCost(BAL.ring) }), s: _t('Серия побед: {n} · победа даст +{r} ★ · проиграл — серия с нуля', { n: S.streak, r: next }), low: S.en < energyCost(BAL.ring) }; }
     if (pl.id === 'bars') return S.warmDay === t ? { off: true, h: _t('🤸 Ты размят до конца дня'), s: _t('Срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) }) } : { h: _t('🤸 Размяться на площадке'), s: _t('Бесплатно раз в день: −{n}% срывов сегодня', { n: Math.round(BAL.warm * 100) }) };
     if (pl.id === 'og') { const m = lesMin(); return S.ogDay === t ? { off: true, h: _t('🧓 Маятник: «На сегодня всё. Завтра приходи»'), s: _t('Старый би-бой проверяет тебя раз в день') }
       : m < BAL.ogMin ? { go: true, h: _t('🧓 Маятник: «Сначала поучись»'), s: _t('{n} мин уроков сегодня (сейчас {m}) → +{r} ★ и +{e} ⚡', { n: BAL.ogMin, m, r: BAL.ogRep, e: BAL.ogEn }) }
       : { h: _t('🧓 Показать Маятнику, чему научился'), s: _t('Ты учился сегодня {m} мин: +{r} ★ и +{e} ⚡', { m, r: BAL.ogRep, e: BAL.ogEn }) }; }
-    if (pl.id === 'jam') return S.jamDay === t ? { off: true, h: _t('🏆 Джем на сегодня сыгран'), s: _t('Завтра эстрада ждёт снова') } : { h: _t('🏆 Джем на эстраде · −{n} ⚡', { n: BAL.jam }), s: _t('Три соперника подряд: ур. {l} · до +{r} ★', { l: BAL.jamLv.join(', '), r: BAL.jamRep.reduce((a, b) => a + b, 0) + BAL.jamChamp }), low: S.en < BAL.jam };
-    if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: _t('🕺 Толпа устала — приходи завтра'), s: _t('Шоу у ТЦ: {n} раза в день', { n: BAL.mallMax }) } : { h: _t('🕺 Шоу у ТЦ · −{n} ⚡', { n: BAL.mall }), s: _t('Начинай, когда охранник далеко: красный круг — его зона'), low: S.en < BAL.mall }; }
+    if (pl.id === 'jam') return S.jamDay === t ? { off: true, h: _t('🏆 Джем на сегодня сыгран'), s: _t('Завтра эстрада ждёт снова') } : { h: _t('🏆 Джем на эстраде · −{n} ⚡', { n: energyCost(BAL.jam) }), s: _t('Три соперника подряд: ур. {l} · до +{r} ★', { l: BAL.jamLv.join(', '), r: BAL.jamRep.reduce((a, b) => a + b, 0) + BAL.jamChamp }), low: S.en < energyCost(BAL.jam) };
+    if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: _t('🕺 Толпа устала — приходи завтра'), s: _t('Шоу у ТЦ: {n} раза в день', { n: BAL.mallMax }) } : { h: _t('🕺 Шоу у ТЦ · −{n} ⚡', { n: energyCost(BAL.mall) }), s: _t('Начинай, когда охранник далеко: красный круг — его зона'), low: S.en < energyCost(BAL.mall) }; }
   }
   function placeRun(pl) {
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
     if (pl.id === 'dj') {
-      S.en -= BAL.dj; S.djDay = today();
+      S.en -= energyCost(BAL.dj); S.djDay = today();
       const rewards = collectGear('dj');
       save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 });
       toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards); paintAct();
@@ -681,7 +698,7 @@ export function initGame(ctx) {
   // THE UNDERGROUND RING of the industrial zone: one battle of one round against a random regular (lv 6–8). Every win in a row makes the
   // next win pay more (the streak is kept across days, up to streakMax steps); a loss resets it. Same battle engine, flag c.ringB.
   function startRing() { const r = rng(Date.now() >>> 0), d = RING[Math.floor(r() * RING.length)], J = PZ.fighters[Math.floor(r() * PZ.fighters.length)], lv = BAL.ringLv[Math.floor(r() * BAL.ringLv.length)];
-    S.en -= BAL.ring; if (S.ringDay.day !== today()) S.ringDay = { day: today(), n: 0 }; S.ringDay.n++; save(); paintHud(); J.busy = true; PZ.crowd(true);
+    S.en -= energyCost(BAL.ring); if (S.ringDay.day !== today()) S.ringDay = { day: today(), n: 0 }; S.ringDay.n++; save(); paintHud(); J.busy = true; PZ.crowd(true);
     startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }); }
   function ringResult(win) { const lines = [], rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.gearProgress.ringWins++; S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
@@ -692,7 +709,7 @@ export function initGame(ctx) {
   // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
   // what was earned stays. Runs on the same battle engine as the crews — the «crew» is one dancer with the flag tour.
   let JM = null;
-  function startJam() { S.en -= BAL.jam; S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true }; PK.crowd(true); jamRound(); }
+  function startJam() { S.en -= energyCost(BAL.jam); S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true }; PK.crowd(true); jamRound(); }
   function jamRound() { const J = PK.dancers[JM.i], d = JAM[JM.i]; J.busy = true;
     startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
   function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
@@ -707,7 +724,7 @@ export function initGame(ctx) {
     return lines; }
   // practice: the hero runs one power move on the mat; the form point is given whatever happens
   function startTrain() {
-    S.en -= BAL.train; if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
+    S.en -= energyCost(BAL.train); if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
     const H = W.hero, lv = ctx.heroLevel(), pw = POWER.filter(p => p.lv <= lv), P = pw[pw.length - 1], fail = Math.random() < .3;
     A = { kind: 'train', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: matAt, P, fail, said: false };
     W.lock = true; W.camT = { x: matAt.x, z: matAt.z + .3, zoom: .45 }; document.body.classList.add('g3fight'); paintAct();
@@ -727,7 +744,7 @@ export function initGame(ctx) {
   function startMall() {
     const H = W.hero, r = rng(Date.now() >>> 0), bf = buff(), { x, z } = H.root.position;
     const T = makeTurn(H, ctx.heroLevel(), r, 'me', { ...bf, fall: bf.fall + BAL.mallFloor }, null, Math.hypot(CN.show.x - x, CN.show.z - z));
-    S.en -= BAL.mall; if (S.mallDay.day !== today()) S.mallDay = { day: today(), n: 0 }; S.mallDay.n++; save(); paintHud();
+    S.en -= energyCost(BAL.mall); if (S.mallDay.day !== today()) S.mallDay = { day: today(), n: 0 }; S.mallDay.n++; save(); paintHud();
     W.walk.start(H);
     A = { kind: 'show', mall: true, T, c: CN.show, t0: performance.now() / 1000, from: { x, z } };
     W.lock = true; W.camT = { x: CN.show.x, z: CN.show.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); CN.crowd(true);
@@ -741,13 +758,13 @@ export function initGame(ctx) {
     W.lock = true; W.camT = { x: atFront.x + .45, z: atFront.z + 1.6, zoom: .4 }; document.body.classList.add('g3fight'); paintAct(); sheetAtelier();
   }
   function sheetAtelier() {
-    const rk = rankOf(S.rep), rows = CUS.map(c => { const n = S.cus[c.id] || 0, max = n >= 3, cost = BAL.cusCost[n], need = BAL.cusRank[n], lock = !max && rk < need;
+    const rk = rankOf(S.rep), rows = CUS.map(c => { const n = S.cus[c.id] || 0, max = n >= 3, cost = energyCost(BAL.cusCost[n]), need = BAL.cusRank[n], lock = !max && rk < need;
       const btn = max ? `<button disabled>${_t('✓ Всё')}</button>` : lock ? `<button disabled>${_t('🔒 «{r}»', { r: BAL.ranks[need] })}</button>` : `<button data-cu="${c.id}"${S.en < cost ? ' class="sec"' : ''}>${_t('Пришить · {n} ⚡', { n: cost })}</button>`;
       const fx = max ? cusFx(c, c.v(3)) : n ? cusFx(c, c.v(n) + ' → ' + c.v(n + 1)) : _t('Даст {x}', { x: cusFx(c, c.v(1)) });
       return `<div class="cu${max ? ' max' : ''}"><i>${c.ico}</i><div><b>${c.nm}</b><span class="dots">${'●'.repeat(n)}${'○'.repeat(3 - n)}</span>
         <small class="n">${max ? _t('Готово: {x}', { x: c.lv[2] }) : '→ ' + c.lv[n]}</small><small>${fx}</small></div>${btn}</div>`; }).join('');
     info(`<h4>${_t('🧵 Ателье «Игла»')}</h4><p>${_t('Доработки видны на герое и <b>навсегда</b> усиливают тебя в батлах города. Платишь энергией — она из уроков.')}</p>${rows}
-      <p style="margin-top:8px">${_t('У тебя <b>{n} ⚡</b> · 2-й уровень — со звания «{a}», 3-й — «{b}»', { n: S.en, a: BAL.ranks[BAL.cusRank[1]], b: BAL.ranks[BAL.cusRank[2]] })}</p>
+      <p style="margin-top:8px">${_t('У тебя <b>{n} ⚡</b> · 2-й уровень — со звания «{a}», 3-й — «{b}»', { n: unlimitedEnergy ? '∞' : S.en, a: BAL.ranks[BAL.cusRank[1]], b: BAL.ranks[BAL.cusRank[2]] })}</p>
       <button class="sec" id="g3cuL">${_t('🎬 К урокам — +{n} ⚡ за минуту', { n: BAL.perMin })}</button>`);
     $('#g3info').classList.add('cum');
     document.querySelectorAll('#g3info [data-cu]').forEach(b => { b.onclick = () => sew(b.dataset.cu); });
@@ -756,8 +773,9 @@ export function initGame(ctx) {
   function sew(id) {
     const c = CUS.find(x => x.id === id), n = S.cus[id] || 0; if (!c || n >= 3) return;
     if (rankOf(S.rep) < BAL.cusRank[n]) { toast(_t('🔒 Игла шьёт это только для звания «{r}»', { r: BAL.ranks[BAL.cusRank[n]] })); return; }
-    if (S.en < BAL.cusCost[n]) { toast(_t('⚡ Не хватает энергии: нужно {n}, у тебя {a}. Минута урока = +{m} ⚡', { n: BAL.cusCost[n], a: S.en, m: BAL.perMin })); return; }
-    S.en -= BAL.cusCost[n]; S.cus[id] = n + 1; save(); paintHud(); ctx.rewear && ctx.rewear(); sfx('win');
+    const cost = energyCost(BAL.cusCost[n]);
+    if (S.en < cost) { toast(_t('⚡ Не хватает энергии: нужно {n}, у тебя {a}. Минута урока = +{m} ⚡', { n: cost, a: S.en, m: BAL.perMin })); return; }
+    S.en -= cost; S.cus[id] = n + 1; save(); paintHud(); ctx.rewear && ctx.rewear(); sfx('win');
     if (atP) { atP.play('Bboy_Uprock', { fade: .3 }); setTimeout(() => atP.play('Breakdance_Ready', { fade: .5 }), 2600); }
     if (A && A.kind === 'atelier') { A.spin = id === 'top' && n + 1 === 3 ? Math.PI : id === 'kicks' || id === 'pants' ? .6 : 0; A.ty = 0; }
     toast(_t('🧵 Игла пришила: {x}', { x: c.lv[n] + ' · ' + cusFx(c, c.v(n + 1)) })); sheetAtelier();
@@ -836,18 +854,18 @@ export function initGame(ctx) {
     if (!near || B || P || A) return;
     if (near.paint) { startPaint(near.g); return; }
     if (near.place) { placeRun(near.place); return; }
-    if (S.en < BAL.battle) { location.href = './'; return; }
+    if (S.en < energyCost(BAL.battle)) { location.href = './'; return; }
     startBattle(near);
   };
   function paintAct() {
     if (!near || B || P || A) { act.classList.remove('on'); return; }
     if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? _t('🎬 Мало энергии — посмотри урок') : b.h) + `<small>${b.low ? _t('1 минута урока = +{n} ⚡', { n: BAL.perMin }) : b.s}</small>`; return; }
-    if (near.paint) { const low = S.en < BAL.paint; act.className = 'on' + (low ? ' low' : '');
-      act.innerHTML = _t('🎨 Закрасить стену «{x}» · −{n} ⚡', { x: near.g.c.name, n: BAL.paint }) + `<small>${low ? _t('Мало энергии — посмотри урок') : _t('Твой кусок +{n} ★ каждый день', { n: BAL.turfRep })}</small>`; return; }
-    const low = S.en < BAL.battle, lv = ctx.heroLevel(), c = near.c;
+    if (near.paint) { const low = S.en < energyCost(BAL.paint); act.className = 'on' + (low ? ' low' : '');
+      act.innerHTML = _t('🎨 Закрасить стену «{x}» · −{n} ⚡', { x: near.g.c.name, n: energyCost(BAL.paint) }) + `<small>${low ? _t('Мало энергии — посмотри урок') : _t('Твой кусок +{n} ★ каждый день', { n: BAL.turfRep })}</small>`; return; }
+    const low = S.en < energyCost(BAL.battle), lv = ctx.heroLevel(), c = near.c;
     act.className = 'on' + (low ? ' low' : '');
     act.innerHTML = low ? `${_t('🎬 Мало энергии — посмотри урок')}<small>${_t('1 минута урока = +{n} ⚡', { n: BAL.perMin })}</small>`
-      : `${_t('⚔️ Батл с «{x}»{b} · −{n} ⚡', { x: c.name, b: c.boss ? ' 👑' : '', n: BAL.battle })}<small>${lv > c.lv ? _t('Ты сильнее — шансы хорошие') : lv === c.lv ? _t('Равные силы') : _t('Они сильнее — будет трудно')}</small>`;
+      : `${_t('⚔️ Батл с «{x}»{b} · −{n} ⚡', { x: c.name, b: c.boss ? ' 👑' : '', n: energyCost(BAL.battle) })}<small>${lv > c.lv ? _t('Ты сильнее — шансы хорошие') : lv === c.lv ? _t('Равные силы') : _t('Они сильнее — будет трудно')}</small>`;
   }
 
   // ---------- the battle ----------
@@ -943,7 +961,7 @@ export function initGame(ctx) {
     return { J, who, seq, shape, enter, bend: entry.bend, len: t + OUT, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
   function startBattle(g) {
-    if (!g.c.tour) S.en -= BAL.battle; S.fights++; save(); paintHud();
+    if (!g.c.tour) S.en -= energyCost(BAL.battle); S.fights++; save(); paintHud();
     // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
     if (ctx.music) ctx.music(g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id);
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
