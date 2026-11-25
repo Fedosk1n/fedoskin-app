@@ -40,6 +40,9 @@ const TEXT = {
 };
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
+// Increment for each release that requires redeploying this Worker.
+const WORKER_VERSION = 1;
+
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
   async scheduled(ev, env, ctx) {
@@ -74,7 +77,7 @@ export default {
       const r = json(await passMake(env)); r.headers.set('Cache-Control', 'no-store'); return r;
     }
     try {
-      if (path === '/' ) return json({ ok: true, service: 'fedoskin-push' });
+      if (path === '/' ) return json({ ok: true, service: 'fedoskin-push', version: WORKER_VERSION });
       if (path === '/key') return json({ key: (await vapid(env)).pub });
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
       if (path === '/lb') return await leaderboard(req, env, json);

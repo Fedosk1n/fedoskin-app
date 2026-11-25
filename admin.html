@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 55</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 56</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -319,6 +319,17 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 
   <!-- ===== основное ===== -->
   <section id="main" hidden>
+    <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
+      <b style="font-size:15px">Обновите код сервера для перехода к батлу по уведомлению</b>
+      <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
+        <li><button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> <a class="btn btn-sm" href="server/push-worker.js" download="fedoskin-push.js" style="margin:2px 0;min-height:32px">Скачать код</a></li>
+        <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
+        <li>В окне с кодом выделите всё (на компьютере Ctrl+A, на телефоне — долгое нажатие → «Выбрать всё»), удалите и вставьте скопированное.</li>
+        <li>Нажмите <b>Deploy</b> (справа вверху), вернитесь сюда и нажмите «Проверить обновление».</li>
+      </ol>
+      <button class="btn btn-sm" id="wkCheck" type="button" style="margin-top:8px">Проверить обновление</button>
+      <p class="hint" style="margin:6px 0 0">Статистика и подписчики уведомлений не пропадут — меняется только программа сервера.</p>
+    </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="lessons" aria-selected="true">Уроки</button>
       <button class="tab" role="tab" data-tab="add">Добавить видео</button>
@@ -634,16 +645,6 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     <div data-pane="stats" hidden>
       <div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-top:12px"><h2 style="margin:0">Посещаемость</h2><span class="row" style="flex-wrap:wrap;gap:6px"><button class="btn btn-sm" id="visCopyTop" type="button">Скопировать код сервера</button><button class="btn btn-sm rbtn" id="visRefresh" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg><span>Обновить</span></button></span></div>
       <p class="hint" id="visUpd" style="margin:4px 0 0;min-height:16px"></p>
-      <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
-        <b id="wkNewTitle" style="font-size:15px">Обновите код сервера</b>
-        <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
-          <li><button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> <a class="btn btn-sm" href="server/push-worker.js" download="fedoskin-push.js" style="margin:2px 0;min-height:32px">Скачать код</a></li>
-          <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
-          <li>В окне с кодом выделите всё (на компьютере Ctrl+A, на телефоне — долгое нажатие → «Выбрать всё»), удалите и вставьте скопированное.</li>
-          <li>Нажмите <b>Deploy</b> (справа вверху), вернитесь сюда и нажмите «Обновить». Эта плашка исчезнет.</li>
-        </ol>
-        <p class="hint" style="margin:6px 0 0">Статистика и подписчики уведомлений не пропадут — меняется только программа сервера.</p>
-      </div>
       <div id="visOff" class="card" style="margin-top:12px" hidden>
         <b id="visOffTitle">Подключите счётчик посещений — один раз, минут 5, бесплатно</b>
         <p class="soft small" style="margin:6px 0 12px">Счётчик работает на том же сервере Cloudflare, что уведомления и рейтинг. Нужно добавить к нему бесплатную базу данных и обновить код сервера.</p>
@@ -2040,7 +2041,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#repoSize').textContent = fmtMB(total);
   }
 
-  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); paintIntro(); paintMove(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); }
+  function renderAll(){ renderLessons(); renderSettings(); paintSaveBar(); paintIntro(); paintMove(); fillSecSelect($('#aSec')); $('#aDate').value = today(); showTab(store.get('fedoskin-admin-tab') || 'lessons'); checkWorkerUpdate(); }
 
   // ---------- add video ----------
   const isPhone = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
@@ -2815,8 +2816,6 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#visGeoAll').innerHTML = barsHtml(j.countriesAll, cc => flag(cc) + ccName(cc));
     $('#visPlat').innerHTML = barsHtml(j.platforms, p => PLAT[p] || p);
     renderSources(j); renderServices(j);
-    $('#wkNewTitle').textContent = j.gear >= 3 ? 'Обновите код сервера' : 'Обновите код сервера для магазина и мифических вещей';
-    $('#wkNew').hidden = !!(j.sources && j.svc && j.bt && j.rb && j.pf && j.tee && j.lk && j.wd && j.ul && j.sd && j.crs && j.cg && j.gear >= 3 && j.rb2 >= 3); // the worker in Cloudflare is older than the admin ⇒ big banner with the copy button
   }
   // where people come from (worker table src): new people, visits, people who tapped «Написать в Telegram»
   const SRC_NAME = { share: 'Поделились друзья', ig: 'Instagram', fb: 'Facebook', yt: 'YouTube', tg: 'Telegram', tt: 'TikTok', vk: 'ВКонтакте', web: 'Другие сайты', direct: 'Прямой заход', none: 'До подсчёта' };
@@ -2910,6 +2909,33 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   }
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#svCopy').addEventListener('click', () => $('#visCopy').click());
+  // Match WORKER_VERSION in server/push-worker.js for each release that requires a Worker deploy.
+  const REQUIRED_WORKER_VERSION = 1;
+  let workerVersionCheck;
+  async function checkWorkerUpdate(manual = false){
+    workerVersionCheck?.abort();
+    const controller = workerVersionCheck = new AbortController();
+    const url = String(remote?.cfg.pushUrl || '').replace(/\/+$/, '');
+    const button = $('#wkCheck');
+    if (!url) { $('#wkNew').hidden = true; button.disabled = false; return; }
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    button.disabled = true;
+    try {
+      const response = await fetch(url + '/', { cache: 'no-store', signal: controller.signal });
+      const data = await response.json();
+      if (!response.ok || !data.ok || data.service !== 'fedoskin-push') throw new Error('Unexpected Worker response');
+      if (workerVersionCheck !== controller) return;
+      const current = Number(data.version) >= REQUIRED_WORKER_VERSION;
+      $('#wkNew').hidden = current;
+      if (manual) toast(current ? 'Сервер обновлён' : 'Cloudflare пока отдаёт предыдущую версию');
+    } catch (_) {
+      if (manual && workerVersionCheck === controller) toast('Не удалось проверить версию сервера', true);
+    } finally {
+      clearTimeout(timeout);
+      if (workerVersionCheck === controller) button.disabled = false;
+    }
+  }
+  $('#wkCheck').addEventListener('click', () => checkWorkerUpdate(true));
   $('#wkCopy').addEventListener('click', () => $('#visCopy').click());
   $('#visCopyTop').addEventListener('click', () => $('#visCopy').click());
   $('#visRefresh').addEventListener('click', async () => {
