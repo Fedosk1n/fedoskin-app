@@ -1765,3 +1765,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - The first manual rhythm round shows a gesture demo before the music starts. The balance meter uses the same green zone, dot and completion bar in the demo and on the note track. The pad cues the hold before FRZ arrives and prompts players to recover while there is still time.
 - The manual hold lasts four beats. The zone begins drifting after 22% of the hold and reaches its target at 84%. A player who leaves the zone has 500 ms to recover. The existing Worker chart and score payload apply. Cache versions are rhythm.js 30 and i18n.js 6.
+
+## 25.11.2026 — City character and garment details
+
+- `city3d-hood.js` builds the lowered hood as one surface with pleats, binding and a recessed lining. Its base follows Spine2 and uses the equipped top colour.
+- `city3d-head.js` sculpts the ear rim, bowl and lobe, and adds detail to the face, braids and headwear. Hands, garment seams, drawstrings, pockets and footwear keep their existing skin weights or follow the same bones as the garment.
+- Compared the details in Blender, including a run and a freeze. Cache versions are city3d.js 37, city3d-game.js 35, city3d-mocap.js 21, city3d-power.js 10, city3d-head.js 2 and city3d-hood.js 1.
