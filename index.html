@@ -812,6 +812,10 @@ body.fsmode .bigplay{z-index:3}
 .pushcard .row{gap:10px}
 .pushcard .btn{min-height:42px;font-size:14px}
 .alphabar{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;margin-top:6px;padding:8px 12px;border-radius:12px;border:1px solid rgba(226,97,26,.45);background:rgba(226,97,26,.1);color:var(--fg);font-size:13px;font-weight:600;cursor:pointer}
+.vpn-notice{display:flex;align-items:center;gap:4px;margin-top:8px;padding:4px 4px 4px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--soft);font-size:13px;line-height:1.4}
+.vpn-notice p{flex:1;margin:0;padding-block:4px}
+.vpn-notice strong{color:var(--fg)}
+.vpn-notice button{flex:none;width:44px;height:44px;border:0;border-radius:8px;background:none;color:var(--soft);font:inherit;font-size:22px;cursor:pointer}
 .alphatag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 7px;border-radius:5px;background:var(--accent);color:var(--on-accent)}
 .alphabadge{display:inline-flex;align-items:center;font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.6px;padding:4px 8px;border-radius:6px;background:var(--accent);color:var(--on-accent)}
 .alphamini{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;vertical-align:middle}
@@ -1078,6 +1082,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none;justify-self:end"><span class="av-slot" data-size="44"></span></button>
   </header>
   <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left" data-cfg="alphaBanner">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <aside class="vpn-notice" id="vpnNotice" hidden>
+    <p><strong>Для работы приложения может понадобиться VPN.</strong> Попробуй его включить, если уроки или рейтинг не загружаются.</p>
+    <button id="vpnNoticeDismiss" type="button" aria-label="Скрыть подсказку про VPN">×</button>
+  </aside>
   <div class="search" style="margin-top:10px">
     <svg class="ico muted" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" autocomplete="off" placeholder="Найти элемент: windmill, 6-step…" aria-label="Поиск элемента">
@@ -1897,6 +1905,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (LANG !== 'ru') { const dl = document.getElementById('countryList'); if (dl) dl.innerHTML = ''; }
   }
   translateDom(document.body);
+  if (LANG === 'ru') {
+    const notice = $('#vpnNotice'), key = 'fedoskin-vpn-notice-dismissed';
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(key) === '1'; } catch (_) {}
+    notice.hidden = dismissed;
+    $('#vpnNoticeDismiss').addEventListener('click', () => {
+      notice.hidden = true;
+      try { localStorage.setItem(key, '1'); } catch (_) {}
+    });
+  }
 
   // ===== real lessons (alpha) =====
   const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
