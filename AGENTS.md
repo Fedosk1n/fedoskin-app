@@ -2,6 +2,8 @@
 
 Publish requested app changes as soon as they pass verification. GitHub Pages publishes from `main`. Verify the update at https://fedosk1n.github.io/fedoskin-app/ before reporting it live.
 
+For gameplay changes, test the first-use flow on mobile with a fresh profile. Introduce unfamiliar controls before the player is expected to act.
+
 # Cloudflare Worker releases
 
 Every change that requires deploying `server/push-worker.js` must include a visible update notice in `admin.html` in the same pull request.
