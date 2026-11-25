@@ -282,6 +282,18 @@ window.LESSONS_DATA = [
   "r2": "fr-airbaby-to0b3ely.mp4"
  },
  {
+  "id": "fr-side-freeze",
+  "sec": "Freezes",
+  "name": "Side freeze",
+  "dur": 30,
+  "ru": "",
+  "added": "2026-11-25",
+  "at": 1795638301012,
+  "pv": true,
+  "vertical": true,
+  "r2": "fr-side-freeze-kodbiw2i.mp4"
+ },
+ {
   "id": "tk-monkey",
   "sec": "Tricks",
   "name": "Monkey flip",
