@@ -1429,7 +1429,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <span class="av-slot" data-size="40"></span>
       <span class="stack" style="gap:2px;flex:1;min-width:0"><b>Ты <span class="alphamini" title="Альфа-тестер">α</span></b><span class="muted" id="myMins" style="font-size:12px"></span></span>
     </div>
-    <p class="muted" id="rankMsg" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
+    <p class="muted" id="rankMsg" role="status" style="font-size:13px;line-height:1.45;margin:12px 0 0" hidden></p>
+    <button class="btn btn-ghost" id="rankRetry" type="button" style="margin-top:8px" hidden>Повторить</button>
     <div class="btrest" id="btRest" hidden><div class="row" style="justify-content:space-between;gap:10px"><b id="btRestH">Твой би-бой отдыхает</b><span id="btRestT"></span></div><span class="bar"><i id="btRestBar"></i></span><small>Батл можно начинать раз в 15 минут</small></div>
     <div class="bttools" id="btTools" hidden>
       <button class="btn btn-accent" id="btFind" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Найти соперника</button>
@@ -1821,7 +1822,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=3"></script>
+<script src="i18n.js?v=4"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
@@ -4117,7 +4118,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#sheetDone').addEventListener('click', () => {
     myAvatar = pending; try { localStorage.setItem('fedoskin-avatar-a', myAvatar); } catch (_) {}
     paintMine(); closeSheet(); toast(T('Аватар обновлён'));
-    if (typeof LB_URL !== 'undefined' && LB_URL) lbSend(0).then(lbLoad);
+    if (typeof LB_URL !== 'undefined' && LB_URL) lbSend(0).then(() => lbLoad(true));
   });
 
   let rankScope = 'world';
@@ -5581,16 +5582,25 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try { localStorage.setItem('fedoskin-profile', JSON.stringify(prof)); } catch (_) {}
     if (gWas !== gPick) lookSync();
     paintProfile(); btPaintRest(); $('#profSheet').hidden = true; toast(T('Профиль сохранён'));
-    if (LB_URL) lbSend(0).then(lbLoad);
+    if (LB_URL) lbSend(0).then(() => lbLoad(true));
   });
   const _goProfile = go;
-  go = function(id){ _goProfile(id); if (id === 'profile' || id === 'battles') { renderStats(); if (LB_URL) btInbox(false); if (LB_URL) lbSend(2 * 60e3).then(() => { if (Date.now() - lbAt > 60e3) lbLoad(); else renderLeaders(); }); } };
+  go = function(id){
+    _goProfile(id);
+    if (id !== 'profile' && id !== 'battles') return;
+    renderStats();
+    if (!LB_URL) return;
+    btInbox(false);
+    if (lbErr || Date.now() - lbAt > 60e3) lbLoad();
+    else renderLeaders();
+    lbSend(2 * 60e3).then(sent => { if (sent) lbLoad(true); });
+  };
 
   // ===== leaderboard (alpha): our small Cloudflare server (the same one as notifications), no accounts =====
   // The phone sends its nick, city, avatar and minutes; a random secret makes sure only this phone can change its line.
   // KV on the free plan allows ~1000 writes a day, so we send only when something changed and not more often than every few minutes.
   const LB_URL = String(CFG.pushUrl || '').replace(/\/+$/, '');
-  let lbData = null, lbErr = false, lbBusy = false, lbAt = 0;
+  let lbData = null, lbErr = false, lbBusy = false, lbReload = false, lbAt = 0;
   let lbSecret = ''; try { lbSecret = localStorage.getItem('fedoskin-lb-secret') || ''; } catch (_) {}
   if (!/^[0-9a-f]{32}$/.test(lbSecret)) {
     const a = new Uint8Array(16); crypto.getRandomValues(a); lbSecret = Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
@@ -5600,27 +5610,40 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let lbSent = {}; try { lbSent = JSON.parse(localStorage.getItem('fedoskin-lb-sent') || '{}') || {}; } catch (_) {}
   const nfmt = n => Number(n || 0).toLocaleString(LANG === 'ru' ? 'ru-RU' : undefined);
   function lbPayload(){ const v = statsView(); return {id: prof.id, secret: lbSecret, nick: prof.nick, city: prof.city, country: prof.country, av: myAvatar, m: v.mins, v: v.views, s: v.streak}; }
+  async function lbRequest(path, options){
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10e3);
+    try {
+      const r = await fetch(LB_URL + path, { ...options, signal: controller.signal });
+      if (!r.ok) throw new Error('lb ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(timeout); }
+  }
   async function lbSend(minGap, force){
     if (!LB_URL || !lbShow) return;
     const p = lbPayload(), sig = [p.m, p.v, p.s, p.nick, p.city, p.country, p.av].join('|');
     if (p.m < 1 && !force) return; // nothing watched yet — don't fill the ranking with zeros
     if (sig === lbSent.sig || Date.now() - (lbSent.t || 0) < (minGap || 0)) return;
     try {
-      const r = await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p), keepalive: true});
-      if (r.ok) { lbSent = {sig, t: Date.now()}; try { localStorage.setItem('fedoskin-lb-sent', JSON.stringify(lbSent)); } catch (_) {} }
+      await lbRequest('/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p), keepalive: true});
+      lbSent = {sig, t: Date.now()}; try { localStorage.setItem('fedoskin-lb-sent', JSON.stringify(lbSent)); } catch (_) {}
+      return true;
     } catch (_) {}
   }
-  async function lbLoad(){
-    if (!LB_URL || lbBusy) return;
+  async function lbLoad(afterWrite = false){
+    if (!LB_URL) return;
+    if (lbBusy) { if (afterWrite) lbReload = true; return; }
     lbBusy = true; lbErr = false;
+    $('#rankRetry').hidden = true;
     if (!lbData) renderLeaders();
     try {
       const q = new URLSearchParams({id: prof.id, city: prof.city || ''});
-      const r = await fetch(LB_URL + '/lb?' + q, {cache: 'no-store'});
-      if (!r.ok) throw new Error('lb');
-      lbData = await r.json(); lbAt = Date.now();
+      const data = await lbRequest('/lb?' + q, {cache: 'no-store'});
+      if (!Array.isArray(data?.world?.top) || (data.city && !Array.isArray(data.city.top))) throw new Error('invalid leaderboard');
+      lbData = data; lbAt = Date.now();
     } catch (_) { lbErr = true; }
     lbBusy = false; renderLeaders();
+    if (lbReload) { lbReload = false; lbLoad(); }
   }
   const LB_SHOW = 10; let lbAll = false; // rating rows shown before «Показать весь рейтинг» (owner 11.11.2026)
   function renderLeaders(){
@@ -5630,8 +5653,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const box = $('#leaders'), msg = $('#rankMsg');
     const say = t => { msg.hidden = !t; msg.textContent = t || ''; };
     box.innerHTML = '';
+    $('#rankRetry').hidden = !lbErr || (rankScope === 'city' && !prof.city);
     if (rankScope === 'city' && !prof.city) { $('#myPlace').textContent = '—'; say(T('Укажи город в профиле — и увидишь рейтинг своего города.')); return; }
-    if (!lbData) { $('#myPlace').textContent = '—'; say(lbErr ? T('Рейтинг не загрузился. Проверь интернет.') : T('Загружаю рейтинг…')); return; }
+    if (!lbData) { $('#myPlace').textContent = '—'; say(lbErr ? T('Рейтинг не загрузился.') : T('Загружаю рейтинг…')); return; }
     const part = rankScope === 'city' ? lbData.city : lbData.world;
     $('#myPlace').textContent = lbShow && part && part.place ? '#' + part.place : '—';
     if (!lbShow) say(T('Ты скрыт из рейтинга — другие тебя не видят.'));
@@ -6315,12 +6339,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     setTimeout(freshLoad, 1500);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - FRESH_AT > 10 * 60e3) freshLoad(); });
     $('#rankSoon').hidden = true; $('#rankBox').hidden = false;
+    $('#rankRetry').addEventListener('click', () => lbLoad());
     $('#rankShow').addEventListener('change', async () => {
       lbShow = $('#rankShow').checked;
       try { localStorage.setItem('fedoskin-lb-show', lbShow ? '1' : '0'); } catch (_) {}
       if (lbShow) { lbSent = {}; await lbSend(0); }
-      else { try { await fetch(LB_URL + '/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: prof.id, secret: lbSecret, hide: true})}); } catch (_) {} lbSent = {}; }
-      lbLoad();
+      else { try { await lbRequest('/lb', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: prof.id, secret: lbSecret, hide: true})}); } catch (_) {} lbSent = {}; }
+      lbLoad(true);
     });
     document.addEventListener('visibilitychange', () => { if (document.hidden) lbSend(2 * 60e3); });
     setInterval(() => lbSend(10 * 60e3), 60e3);
