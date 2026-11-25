@@ -220,33 +220,35 @@
   function scratch(o, t, up, a) { const sc = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); sc.buffer = noise; fl.type = 'bandpass'; fl.Q.value = 6; fl.frequency.setValueAtTime(up ? 500 : 2600, t); fl.frequency.exponentialRampToValueAtTime(up ? 2600 : 500, t + .09); g.gain.setValueAtTime(.001, t); g.gain.linearRampToValueAtTime(a || .5, t + .015); g.gain.exponentialRampToValueAtTime(.001, t + .11); sc.connect(fl); fl.connect(g); g.connect(o); sc.start(t, Math.random() * .5, .14); }
   const wood = (o, t) => { tone(o, t, 'triangle', 1250, 0, .2, .05); tone(o, t, 'square', 620, 0, .05, .04); }; // every tap of a hard beat is heard
   const tom = (o, t, f) => tone(o, t, 'sine', f, f * .6, .5, .16);
-  function battleKick(out, t) {
+  function battleKick(out, t, velocity = 1) {
     const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.frequency.setValueAtTime(145, t);
     osc.frequency.exponentialRampToValueAtTime(55, t + .045);
     gain.gain.setValueAtTime(.001, t);
-    gain.gain.exponentialRampToValueAtTime(.88, t + .003);
-    gain.gain.exponentialRampToValueAtTime(.49, t + .052);
+    gain.gain.exponentialRampToValueAtTime(.88 * velocity, t + .003);
+    gain.gain.exponentialRampToValueAtTime(.49 * velocity, t + .052);
     gain.gain.exponentialRampToValueAtTime(.001, t + .23);
     osc.connect(gain); gain.connect(out); osc.start(t); osc.stop(t + .23);
-    tone(out, t, 'triangle', 207, 151, .34, .145);
-    hiss(out, t, 'bandpass', 1650, .85, .30, .027);
+    tone(out, t, 'triangle', 207, 151, .34 * velocity, .145);
+    hiss(out, t, 'bandpass', 1650, .85, .30 * velocity, .027);
   }
   function battleSnare(out, t, a = 1) {
     tone(out, t, 'triangle', 213, 174, .55 * a, .13);
     hiss(out, t, 'bandpass', 1550, .75, .66 * a, .19);
     hiss(out, t, 'bandpass', 3700, .85, .32 * a, .057);
   }
-  function battleBass(out, t, f, d, wave, lp, a) {
+  function battleBass(out, t, f, d, wave, lp, a, withKick) {
     const osc = ctx.createOscillator(), harmonic = ctx.createOscillator(), harmonicGain = ctx.createGain();
     const filter = ctx.createBiquadFilter(), amp = ctx.createGain();
     osc.type = wave; osc.frequency.value = f;
     // An octave above the bass stays audible on a phone speaker.
     harmonic.type = 'triangle'; harmonic.frequency.value = f * 2; harmonicGain.gain.value = .95;
-    filter.type = 'lowpass'; filter.frequency.value = Math.max(lp, 440);
-    // Leave room for the kick transient, then hold the body of the bass note.
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(lp * 1.8, t);
+    filter.frequency.exponentialRampToValueAtTime(lp, t + d * .55);
+    // Leave the kick transient room on shared hits, pick up offbeats more quickly.
     amp.gain.setValueAtTime(.001, t);
-    amp.gain.exponentialRampToValueAtTime(a * .85, t + .032);
+    amp.gain.exponentialRampToValueAtTime(a * .85, t + Math.min(withKick ? .027 : .009, d * .25));
     amp.gain.exponentialRampToValueAtTime(a * .59, t + d * .65);
     amp.gain.exponentialRampToValueAtTime(.001, t + d);
     osc.connect(filter); harmonic.connect(harmonicGain); harmonicGain.connect(filter);
@@ -267,7 +269,88 @@
     lowCut.connect(mid); mid.connect(highs); highs.connect(drive); drive.connect(out);
     return lowCut;
   }
-  // each beat's own sound: drum pattern per 16th, swing (share of a 16th), bass, chords
+  function breakStab(out, t, f, a) {
+    const osc = ctx.createOscillator(), band = ctx.createBiquadFilter(), gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(f * 1.025, t);
+    osc.frequency.exponentialRampToValueAtTime(f, t + .018);
+    band.type = 'bandpass'; band.Q.value = .85;
+    band.frequency.setValueAtTime(1550, t);
+    band.frequency.exponentialRampToValueAtTime(650, t + .075);
+    env(gain, t, a, .108);
+    osc.connect(band); band.connect(gain); gain.connect(out); osc.start(t); osc.stop(t + .12);
+  }
+  // Two-bar drum breaks. Bass entries are [sixteenth, semitones from the pedal note].
+  const BREAKS = {
+    lofi: { root: 82.4, swing: .23, wave: 'triangle', lp: 470, bars: [
+      { k: [0, 6, 10], g: [7, 15], b: [[0, 0], [7, 0], [10, -2]], p: [3] },
+      { k: [0, 3, 8, 11], g: [6, 15], b: [[0, 0], [6, 0], [11, -2], [14, -1]], p: [9] }] },
+    boom: { root: 87.3, swing: .19, wave: 'sawtooth', lp: 515, bars: [
+      { k: [0, 3, 7, 10], g: [6, 11, 15], b: [[0, 0], [7, 0], [10, 3], [14, 0]], p: [2, 11] },
+      { k: [0, 6, 8, 11, 14], g: [3, 10], b: [[0, 0], [6, 0], [9, 5], [14, -1]], p: [3] }] },
+    funk: { root: 98, swing: .22, wave: 'square', lp: 670, bars: [
+      { k: [0, 3, 6, 10], g: [7, 13, 15], b: [[0, 0], [3, 12], [7, 0], [10, 7], [13, 0]], p: [2, 14] },
+      { k: [0, 2, 7, 9, 11, 14], g: [5, 15], b: [[0, 0], [5, 7], [7, 0], [11, 3], [14, -1]], p: [3, 9] }] },
+    raw: { root: 73.4, swing: .10, wave: 'sawtooth', lp: 810, bars: [
+      { k: [0, 2, 7, 10, 11], g: [3, 6, 9, 15], b: [[0, 0], [7, 0], [10, 1], [14, 0]], p: [6] },
+      { k: [0, 5, 8, 10, 14], g: [3, 7, 11, 15], b: [[0, 0], [5, 0], [8, 3], [13, -2]], p: [2, 9] }] },
+    cut: { root: 82.4, swing: .14, wave: 'sawtooth', lp: 600, cut: true, bars: [
+      { k: [0, 3, 7, 10, 11], g: [6, 9, 15], b: [[0, 0], [7, 0], [10, 3], [13, 0]], p: [2] },
+      { k: [0, 2, 6, 14], g: [3, 7, 15], b: [[0, 0], [5, 0], [14, -1]], p: [3] }] },
+    trip: { root: 77.8, swing: 0, wave: 'triangle', lp: 490, triplets: true, bars: [
+      { k: [0, 6, 8, 14], g: [7, 11], b: [[0, 0], [6, 0], [8, -2], [14, 0]], p: [3] },
+      { k: [0, 3, 8, 10], g: [6, 15], b: [[0, 0], [5, 0], [8, 3], [11, -1]], p: [7] }] },
+    dbl: { root: 73.4, swing: .06, wave: 'sawtooth', lp: 800, bars: [
+      { k: [0, 2, 6, 9, 11, 14], g: [3, 7, 10, 15], b: [[0, 0], [6, 0], [9, 3], [14, -1]], p: [3, 13] },
+      { k: [0, 6, 11], s: [8], g: [7, 13, 15], b: [[0, 0], [6, 0], [11, -2]], p: [4] }] }
+  };
+  function scheduleBreak(out, id, seed, preview, start, bars, beatTime) {
+    const style = BREAKS[id], stepTime = beatTime / 4;
+    const random = mulberry(seed * 7 + 3), root = style.root * (random() < .5 ? 1 : 2 ** (-2 / 12));
+    for (let bar = 0; bar < bars; bar++) {
+      const tBar = start + bar * 4 * beatTime, odd = bar % 2;
+      const pattern = style.bars[odd], last = !preview && bar === bars - 1;
+      const limit = last ? 12 : 16;
+      const cut = style.cut && odd && !last;
+      const fill = last || bar % 4 === 3;
+      const drumsOnly = bar % 4 === 2;
+      const onStep = s => tBar + (s + (s % 2 ? style.swing : 0)) * stepTime;
+      for (let s = 0; s < limit; s++) {
+        if (cut && s >= 8 && s < 14) continue;
+        const t = onStep(s);
+        if (pattern.k.includes(s)) battleKick(out, t, s === 0 ? 1.03 : .72 + random() * .18);
+        if ((pattern.s || [4, 12]).includes(s)) battleSnare(out, t + .004, 1.05);
+        if (pattern.g.includes(s)) battleSnare(out, t + .006, .17 + random() * .15);
+        if (!style.triplets) {
+          if (s === (odd ? 6 : 14)) hiss(out, t, 'bandpass', 5900, .55, .18, .135);
+          else hat(out, t, (s % 4 === 0 ? .20 : s % 2 === 0 ? .13 : .055) * (.86 + random() * .28));
+        }
+        if (!drumsOnly && pattern.p.includes(s)) breakStab(out, t, root * 4, .27);
+      }
+      if (!drumsOnly) pattern.b.forEach(([s, semitones], i) => {
+        if (s >= limit || (cut && s >= 8 && s < 14)) return;
+        const next = pattern.b[i + 1];
+        let end = next ? Math.min(next[0], limit) : limit;
+        if (cut && s < 8) end = Math.min(end, 8);
+        const duration = Math.min(2.65 * stepTime, onStep(end) - onStep(s) - .012);
+        battleBass(out, onStep(s), root * 2 ** (semitones / 12), duration, style.wave, style.lp, s === 0 ? .42 : .35, pattern.k.includes(s));
+      });
+      if (style.triplets) {
+        for (let i = 0; i < limit * .75; i++) hat(out, tBar + i * beatTime / 3, i % 3 === 0 ? .20 : .08);
+      }
+      if (cut) {
+        scratch(out, onStep(8) - .075, false, .39);
+        scratch(out, onStep(14) - .115, true, .48);
+      } else if (fill) {
+        const t = onStep(limit - 3);
+        tom(out, t, 246); tom(out, t + stepTime * .75, 172);
+        if (!last) scratch(out, onStep(15), false, .32);
+      }
+      if (bar > 0 && bar % 4 === 0) hiss(out, tBar, 'highpass', 4200, .4, .30, .38);
+    }
+    return root;
+  }
+  // The original city jam arrangement uses the same beat IDs and tempo.
   const STY = {
     lofi: { sw: .3, kicks: [[0, 10], [0, 7, 10], [0, 9, 11]], sn: [4, 12], snA: .55, rim: [10], hats: 8, hatA: .11, ghostHat: .25, open: [],
       roots: [87.3, 82.4, 92.5], walk: [1, 1.335, 1.189, .891], bw: 'sine', blp: 300, ba: .5, bd: .5,
@@ -296,17 +379,10 @@
     dbl: { sw: .06, kicks: [[0, 2, 7, 10], [0, 3, 6, 10, 11], [0, 2, 10, 11]], sn: [4, 12], ghost: [7, 9, 14, 15], ghostA: .4, hats: 16, hatA: .2, open: [6, 14],
       roots: [73.4, 82.4, 77.8], walk: [1, 1, 1.189, 1.498], bw: 'sawtooth', blp: 1100, ba: .3, bd: .12,
       ch: (o, t, f) => stab(o, t, f * 4), crash: [0, 2, 4], half: { kicks: [0, 11], sn: [8], hats: 8 } } };
-  // the whole round is scheduled at once (~300 short sounds): no timers to be throttled. preview = only `bars` bars, no count-in
-  function schedule(t0, seed, beat, preview, cues, battleMix = true) {
-    const out = ctx.createGain(); out.connect(master);
-    const music = battleMix ? battleMusicBus(out) : out;
-    const drumKick = battleMix ? battleKick : kick, drumSnare = battleMix ? battleSnare : snare;
-    const playBass = battleMix ? battleBass : bass;
-    const Y = STY[beatOf(beat).id], bt = 60 / beatOf(beat).bpm, S = bt / 4;
+  function scheduleCityBreak(out, id, seed, preview, tb0, bars, bt) {
+    const Y = STY[id], S = bt / 4;
     const rnd = mulberry(seed * 7 + 3), kp = Y.kicks[Math.floor(rnd() * Y.kicks.length)];
     const root = Y.roots[Math.floor(rnd() * Y.roots.length)];
-    if (!preview) for (let b = 0; b < COUNT; b++) { tone(out, t0 + b * bt, 'square', 1100, 0, .12, .04); hat(out, t0 + b * bt + bt / 2, .12); }
-    const bars = preview || (B_FRZ + FRZ - COUNT) / 4, tb0 = preview ? t0 : t0 + COUNT * bt;
     for (let bar = 0; bar < bars; bar++) {
       const tb = tb0 + bar * 4 * bt, last = !preview && bar === bars - 1, f = root * Y.walk[bar % 4];
       const hf = Y.half && bar % 2 === 1 ? Y.half : null, kpB = hf ? hf.kicks : kp, snB = hf ? hf.sn : Y.sn, hatsB = hf ? hf.hats : Y.hats;
@@ -315,28 +391,42 @@
         const t = tb + s * S + (s % 2 ? Y.sw * S : 0);
         if (last && s >= 12) break; // the freeze hit lands in silence
         if (Y.gap && Y.gap(bar, s)) continue; // the DJ cut the sound
-        if (kpB.includes(s)) {
-          drumKick(music, t);
-          let d = s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18);
-          if (battleMix && Y.gap && Y.gap(bar, s + 1)) d = Math.min(d, tb + (s + 1) * S - t);
-          playBass(music, t, Y.oct && kn % 2 ? f * 2 : f, d, Y.bw, Y.blp, Y.ba);
-          kn++;
-        }
-        if (snB.includes(s)) drumSnare(music, t, Y.snA);
-        if (!hf && Y.ghost && Y.ghost.includes(s) && rnd() < .7) drumSnare(music, t, Y.ghostA || .22);
-        if (Y.rim && Y.rim.includes(s) && bar % 2) rim(music, t);
-        if (!hf && Y.open.includes(s)) ohat(music, t, .13);
+        if (kpB.includes(s)) { kick(out, t); bass(out, t, Y.oct && kn % 2 ? f * 2 : f, s === 0 ? (Y.bd || .32) : Math.min(.18, Y.bd || .18), Y.bw, Y.blp, Y.ba); kn++; }
+        if (snB.includes(s)) snare(out, t, Y.snA);
+        if (!hf && Y.ghost && Y.ghost.includes(s) && rnd() < .7) snare(out, t, Y.ghostA || .22);
+        if (Y.rim && Y.rim.includes(s) && bar % 2) rim(out, t);
+        if (!hf && Y.open.includes(s)) ohat(out, t, .13);
         else if (!hatsB) { /* the style plays its own hi-hat (fx) */ }
-        else if (hatsB === 16) hat(music, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
-        else if (s % 2 === 0) hat(music, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(music, t, Y.hatA * .5);
-        if (Y.crackle && rnd() < .35) hiss(music, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
+        else if (hatsB === 16) hat(out, t, s % 4 === 0 ? Y.hatA : s % 2 === 0 ? Y.hatA * .75 : Y.hatA * .45);
+        else if (s % 2 === 0) hat(out, t, s % 4 === 0 ? Y.hatA : Y.hatA * .65); else if (s === 15 && rnd() < Y.ghostHat) hat(out, t, Y.hatA * .5);
+        if (Y.crackle && rnd() < .35) hiss(out, t + rnd() * S, 'highpass', 3000, .7, .025 + rnd() * .03, .012);
       }
-      if (!last || Y === STY.raw) Y.ch(music, tb, f, bar, S);
-      if (!preview && Y.crash.includes(bar)) crash(music, tb);
-      if (Y.fx) Y.fx(music, tb, bar, bt, last);
+      if (!last || Y === STY.raw) Y.ch(out, tb, f, bar, S);
+      if (!preview && Y.crash.includes(bar)) crash(out, tb);
+      if (Y.fx) Y.fx(out, tb, bar, bt, last);
     }
+    return root;
+  }
+  // Schedule the entire round on the audio clock. Preview only plays the requested bars.
+  function schedule(t0, seed, beat, preview, cues, battleMix = true) {
+    const out = ctx.createGain(); out.connect(master);
+    const { id, bpm } = beatOf(beat), bt = 60 / bpm;
+    if (!preview) for (let b = 0; b < COUNT; b++) { tone(out, t0 + b * bt, 'square', 1100, 0, .12, .04); hat(out, t0 + b * bt + bt / 2, .12); }
+    const bars = preview || (B_FRZ + FRZ - COUNT) / 4, tb0 = preview ? t0 : t0 + COUNT * bt;
+    const music = battleMix ? battleMusicBus(out) : out;
+    const arrange = battleMix ? scheduleBreak : scheduleCityBreak;
+    const root = arrange(music, id, seed, preview, tb0, bars, bt);
     if (cues) cues.forEach(c => wood(out, (preview ? tb0 : t0) + c));
-    if (!preview) { const tBig = t0 + B_BIG * bt; drumKick(music, tBig); drumSnare(music, tBig); crash(music, tBig); stab(music, tBig, root * 4); }
+    if (!preview) {
+      const tBig = t0 + B_BIG * bt;
+      if (battleMix) {
+        battleKick(music, tBig, 1.08); battleSnare(music, tBig, 1.12);
+        breakStab(music, tBig, root * 4, .35);
+      } else {
+        kick(out, tBig); snare(out, tBig); stab(out, tBig, root * 4);
+      }
+      crash(music, tBig);
+    }
     return out;
   }
   function blip(kind) { // the tap itself is heard at once: a clap for a hit

@@ -1732,3 +1732,11 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Five standing loops use the existing mocap. Each resident has a repeatable stance and arm swing, with shorter strides for smaller and older people. The hero alternates standing with short toprock phrases and advances the walking animation by actual distance after collisions.
 - The battle and street shows share three approaches to the center: straight, left arc, right arc. The hero and each opponent rotate through seven set shapes. The new shapes start on the floor, return to toprock after footwork, or pause in a freeze between floor phrases. Nearby crew members watch from the sides of the ring.
 - Cache versions: city3d.js 31, city3d-game.js 29, city3d-mocap.js 16 and city3d-power.js 5. All mocap imports must point to the same version so the game and the power drawing share the loaded clips.
+
+## 25.11.2026 — Competition-style battle breaks
+
+- The DJ preview and rhythm round in «Батлы» use seven original two-bar breaks in `BREAKS` (rhythm.js v28). Drum-only bars,
+  syncopated bass, short stabs and percussion fills replace the sustained chord parts. DJ CUTS, TRIPLET FLIP and DOUBLE TIME
+  retain their cut, triplet and half-time phrasing. The City jam still uses `STY`. Beat IDs, BPM, tap cues and scoring stay the same.
+- Reference tracks: DJ Fleg's New Horns and Lean Rock's Fire in the Hole in the WDSF qualifiers. The app synthesizes its own sounds.
+  [WDSF DJ tracks](https://www.breakingforgold.com/djs-and-music)
