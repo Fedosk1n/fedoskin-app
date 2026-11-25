@@ -1749,6 +1749,13 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Compared posed city meshes in Blender. Checked 56 body and outfit combinations across 8,736 sampled poses and built all 64 inventory items.
   Cache versions are city3d.js 35, city3d-game.js 33, city3d-mocap.js 19 and city3d-power.js 8.
 
+## 25.11.2026 — City heads from above
+
+- `city3d-head.js` builds heads for the hero and residents. The six face meshes have narrower temples, distinct jaws and a longer nape profile.
+  Hair follows the scalp shape. Caps, beanies, buckets and bandanas use separate fitted cuts and keep their catalog colours.
+- Headspins use contact points sampled from the head and equipped headwear. Compared the heads in Blender at the city camera angle and in profile.
+  Cache versions are city3d.js 36, city3d-game.js 34, city3d-mocap.js 20, city3d-power.js 9 and city3d-head.js 1.
+
 ## 25.11.2026 — Balance during rhythm freezes
 
 - On the last note, follow the green zone with a small sideways movement while holding the original pointer. The zone moves once and starts after a short pause. Moving back into the zone within 280 ms saves the hold. Harder freezes have a narrower zone, and equipment with the hold bonus widens it.
