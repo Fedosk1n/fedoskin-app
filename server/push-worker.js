@@ -40,6 +40,9 @@ const TEXT = {
 };
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
+// Increment for each release that requires redeploying this Worker.
+const WORKER_VERSION = 1;
+
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
   async scheduled(ev, env, ctx) {
@@ -74,7 +77,7 @@ export default {
       const r = json(await passMake(env)); r.headers.set('Cache-Control', 'no-store'); return r;
     }
     try {
-      if (path === '/' ) return json({ ok: true, service: 'fedoskin-push' });
+      if (path === '/' ) return json({ ok: true, service: 'fedoskin-push', version: WORKER_VERSION });
       if (path === '/key') return json({ key: (await vapid(env)).pub });
       if (path === '/latest') return json(JSON.parse((await env.PUSH.get('latest')) || '{}'));
       if (path === '/lb') return await leaderboard(req, env, json);
@@ -819,7 +822,7 @@ async function btResolve(env, n, rb, late) {
     const sub = await db.prepare('SELECT sub, lang FROM bt_sub WHERE id = ?').bind(row.a).first();
     if (sub && sub.sub) {
       const L = BT_TITLE_R[sub.lang] ? sub.lang : 'en';
-      const res = await sendPush(JSON.parse(sub.sub), JSON.stringify({ title: BT_TITLE_R[L], body: BT_BODY_R[L].replace('{n}', row.nb), tag: 'battle-r' + n, battle: 1 }), await vapid(env)).catch(() => null);
+      const res = await sendPush(JSON.parse(sub.sub), JSON.stringify({ title: BT_TITLE_R[L], body: BT_BODY_R[L].replace('{n}', row.nb), tag: 'battle-r' + n, battle: 1, battleId: n }), await vapid(env)).catch(() => null);
       if (res && (res.status === 404 || res.status === 410)) await db.prepare('DELETE FROM bt_sub WHERE id = ?').bind(row.a).run();
     }
   } catch (_) {}
@@ -847,7 +850,8 @@ async function battle(req, env, path, json) {
   await lbMigrate(env);
   const db = env.DB, now = Date.now(), me = await lbRow(db, id);
   if (!me || me.hid || me.h !== await hash('lb:' + secret)) return json({ error: 'not in rating' }, 403);
-  if (path === '/bt/inbox' || path === '/bt/ready') await btExpire(env, null).catch(() => {});
+  const inboxTarget = path === '/bt/inbox' && Number.isSafeInteger(b.n) && b.n > 0 ? b.n : null;
+  if ((path === '/bt/inbox' && !inboxTarget) || path === '/bt/ready') await btExpire(env, null).catch(() => {});
   const score = async x => (await db.prepare('SELECT w, l FROM bt_score WHERE id = ?').bind(x).first()) || { w: 0, l: 0 };
   const lastCall = async () => { const r = await db.prepare('SELECT MAX(t) AS t FROM bt WHERE a = ?').bind(id).first(); return r && r.t || 0; };
   const restLeft = async () => Math.max(0, (await lastCall()) + BT_REST - now);
@@ -941,7 +945,7 @@ async function battle(req, env, path, json) {
       const sub = (ra || (recent && recent.n || 0) <= 1) && await db.prepare('SELECT sub, lang FROM bt_sub WHERE id = ?').bind(to).first();
       if (sub && sub.sub) {
         const L = BT_TITLE[sub.lang] ? sub.lang : 'en';
-        const res = await sendPush(JSON.parse(sub.sub), JSON.stringify({ title: BT_TITLE[L], body: (ra ? BT_BODY_H : BT_BODY)[L].replace('{n}', na), tag: 'battle', battle: 1 }), await vapid(env)).catch(() => null);
+        const res = await sendPush(JSON.parse(sub.sub), JSON.stringify({ title: BT_TITLE[L], body: (ra ? BT_BODY_H : BT_BODY)[L].replace('{n}', na), tag: ra ? 'battle-' + n : 'battle', battle: 1, battleId: n }), await vapid(env)).catch(() => null);
         if (res && (res.status === 404 || res.status === 410)) await db.prepare('DELETE FROM bt_sub WHERE id = ?').bind(to).run();
       }
     } catch (_) {}
@@ -954,10 +958,21 @@ async function battle(req, env, path, json) {
     const calls = b.v >= 2 ? (await db.prepare(J + "WHERE bt.b = ? AND bt_h.st = 'wait' AND bt_h.exp > ? ORDER BY bt.n LIMIT 10").bind(id, now).all()).results || [] : [];
     const results = b.v >= 2 ? (await db.prepare(J + "WHERE bt.a = ? AND bt_h.st = 'done' AND bt_h.sa = 0 ORDER BY bt.n LIMIT 5").bind(id).all()).results || [] : [];
     const out = b.v >= 2 ? (await db.prepare(J + "WHERE bt.a = ? AND bt_h.st = 'wait' AND bt_h.exp > ? ORDER BY bt.n DESC LIMIT 10").bind(id, now).all()).results || [] : [];
-    const all = news.concat(calls, results, out), eq = await heroEq(db, [...new Set(all.map(r => r.a).concat(all.map(r => r.b), id))]);
+    // A notification can outlive the unread lists. Only the participant can open its battle.
+    const findTarget = () => db.prepare(J + "WHERE bt.n = ? AND (bt.b = ? OR (bt.a = ? AND bt_h.st = 'done'))").bind(inboxTarget, id, id).first();
+    let row = inboxTarget && await findTarget();
+    if (row?.hst === 'wait' && row.exp <= now) {
+      await btExpire(env, inboxTarget).catch(() => {});
+      row = await findTarget();
+    }
+    const pending = row && row.hst === 'wait' && row.exp > now;
+    const target = row && (pending || row.win) ? row : null;
+    const all = news.concat(calls, results, out, target ? [target] : []), eq = await heroEq(db, [...new Set(all.map(r => r.a).concat(all.map(r => r.b), id))]);
     const w = await wallet();
     const active = await Promise.all(calls.map(async r => ({ ...btPack(r, eq), gear: await btGearDeal(me, 'answer:' + r.n, w.eq) })));
-    return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: active, results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)),
+    const selected = target ? active.find(r => r.n === target.n) || btPack(target, eq) : null;
+    if (selected && pending && !selected.gear) selected.gear = await btGearDeal(me, 'answer:' + target.n, w.eq);
+    return json({ ok: true, news: news.map(r => btPack(r, eq)), calls: active, results: results.map(r => btPack(r, eq)), out: out.map(r => btPack(r, eq)), target: selected,
       lvl: heroLevel(me.m), now, score: w.score, rest: await restLeft(), pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq, catalog: w.catalog, winDays: await winDays(), ul: 1 });
   }
   if (path === '/bt/seen') {

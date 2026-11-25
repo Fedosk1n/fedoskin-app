@@ -5590,7 +5590,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (id !== 'profile' && id !== 'battles') return;
     renderStats();
     if (!LB_URL) return;
-    btInbox(false);
+    if (!BT.push) btInbox();
     if (lbErr || Date.now() - lbAt > 60e3) lbLoad();
     else renderLeaders();
     lbSend(2 * 60e3).then(sent => { if (sent) lbLoad(true); });
@@ -5727,7 +5727,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (n === LBQ.n) { LBQ.busy = false; renderLeaders(); }
     }, 350);
   });
-  const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, busy: false, run: 0, cur: null, rest: 0, wallet: null, ul: false };
+  const BT = { news: [], calls: [], results: [], out: [], later: new Set(), lvl: 0, inbox: null, push: null, run: 0, cur: null, rest: 0, wallet: null, ul: false };
   try { BT.ul = sessionStorage.getItem('fedoskin-ul-srv') === '1'; } catch (_) {}
   const btUlSeen = j => { if (j && j.ul && !BT.ul) { BT.ul = true; try { sessionStorage.setItem('fedoskin-ul-srv', '1'); } catch (_) {} ulCheck(true); if (curLesson && !$('#lesson').hidden) ulPaint(curLesson); } };
   try { BT.rest = +localStorage.getItem('fedoskin-bt-rest') || 0; } catch (_) {}
@@ -5895,7 +5895,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function openWd(tab){
     wdTab = tab || wdTab; wdSlot = ''; $('#shopSheet').hidden = false; wdPaint();
     const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0;
-    if (BT.wallet) btInbox(false);
+    if (BT.wallet) btInbox();
   }
   $('#wdSeg').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (!b) return; wdTab = b.dataset.tab; wdPaint(); const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0; });
   $('#mToShop').addEventListener('click', () => { wdTab = 'shop'; wdPaint(); });
@@ -5925,7 +5925,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#shopRow').addEventListener('click', () => openWd('shop'));
   $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') $('#shopSheet').hidden = true; });
-  const btPost = (path, body) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})) });
+  const btPost = (path, body, signal) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})), signal });
   function btPaintScore(sc){
     if (!sc || (!sc.w && !sc.l)) return;
     const el = $('#btScore'); el.hidden = false;
@@ -6220,20 +6220,56 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#btClose').addEventListener('click', () => { BT.run++; $('#battle').hidden = true; setTimeout(btShowNews, 600); });
   new MutationObserver(() => { if ($('#battle').hidden) { BT.run++; $('#btCrowd').classList.remove('hype'); } }).observe($('#battle'), { attributes: true, attributeFilter: ['hidden'] });
   // battles somebody started against this phone
-  async function btInbox(now){
-    if (!LB_URL || !lbShow || BT.busy) return;
-    BT.busy = true;
+  function btInbox(n){
+    if (!LB_URL || !lbShow) return;
+    if (!BT.inbox) BT.inbox = btReadInbox(n).finally(() => {
+      BT.inbox = null;
+      btShowNews();
+    });
+    return BT.inbox;
+  }
+  async function btReadInbox(n){
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
     try {
-      const res = await btPost('/bt/inbox', { v: 2 }), j = await res.json().catch(() => ({}));
-      if (j.ok) {
-        btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} }
-        btWallet(j); btUlSeen(j); BT.news = (j.news || []).slice().reverse(); BT.calls = j.calls || []; BT.results = j.results || []; BT.out = j.out || []; if (j.lvl) BT.lvl = j.lvl;
-        const skew = j.now ? Date.now() - j.now : 0; [BT.calls, BT.out].forEach(l => l.forEach(x => { x.exp += skew; }));
-        btLinkPush(); btPaintLists(); if (lbData) renderLeaders();
+      const res = await btPost('/bt/inbox', { v: 2, n }, controller.signal), j = await res.json();
+      if (!j.ok) return;
+      btPaintScore(j.score); if (typeof j.rest === 'number') { BT.rest = Date.now() + j.rest; try { localStorage.setItem('fedoskin-bt-rest', String(BT.rest)); } catch (_) {} }
+      btWallet(j); btUlSeen(j); BT.news = (j.news || []).slice().reverse(); BT.calls = j.calls || []; BT.results = j.results || []; BT.out = j.out || []; if (j.lvl) BT.lvl = j.lvl;
+      const skew = j.now ? Date.now() - j.now : 0;
+      [BT.calls, BT.out].forEach(l => l.forEach(x => { x.exp += skew; }));
+      if (j.target?.st === 'wait') j.target.exp += skew;
+      btLinkPush(); btPaintLists(); if (lbData) renderLeaders();
+      return j;
+    } catch (_) {} finally { clearTimeout(timeout); }
+  }
+  async function btOpenFromPush(value){
+    const n = Number(value), push = { n: Number.isSafeInteger(n) && n > 0 ? n : undefined };
+    BT.push = push;
+    go('battles');
+    for (const sheet of OVERLAYS) {
+      if (sheet.hidden) continue;
+      sheet._ovByBack = !!sheet._ovPushed;
+      if (sheet.id === 'rbGame') RB.close(); else sheet.hidden = true;
+    }
+    BT.sheet = null;
+    try {
+      if (!lbShow) { toast(T('Включи «Показывать меня в рейтинге», чтобы батлить')); return; }
+      if (BT.inbox) await BT.inbox;
+      if (BT.push !== push) return;
+      const j = await btInbox(push.n);
+      if (BT.push !== push || $('#battles').hidden) return;
+      if (!j) { toast(T('Батл не получился. Проверь интернет.')); return; }
+      const incoming = BT.calls.filter(x => x.exp > Date.now()).concat(BT.news);
+      const bt = push.n ? j.target || incoming.concat(BT.results).find(x => x.n === push.n)
+        : incoming.reduce((latest, x) => !latest || x.n > latest.n ? x : latest, null) || BT.results.at(-1);
+      if (!bt) { toast(T('Этот вызов уже не действует')); return; }
+      if (bt.st === 'wait') btAnswer(bt);
+      else if (bt.a.id === prof.id) btOpenRes(bt);
+      else {
+        btSeen(bt);
+        if (bt.hand) btShowResult(bt, 'b'); else btPlay(bt, 'b', { id: bt.a.id });
       }
-    } catch (_) {}
-    BT.busy = false;
-    btShowNews(now);
+    } finally { if (BT.push === push) BT.push = null; }
   }
   // battles by hand on the «Батлы» tab: challenges to answer, results ready, my challenges still waiting
   function btPaintLists(){
@@ -6264,7 +6300,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BT.news.length) return ['news', BT.news[0]];
     return null;
   }
-  function btShowNews(force){
+  function btShowNews(){
+    if (BT.push) return;
     const nx = btNext(); if (!nx) return;
     const busy = !$('#lesson').hidden || document.body.classList.contains('fsmode') || !$('#story').hidden || [...document.querySelectorAll('.sheet-bg')].some(x => !x.hidden);
     if (busy) return;
@@ -6335,7 +6372,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   window.fedoskinBattle = (la, lb, win, side, seed) => btPlay({ n: 0, a: { id: '1', name: 'Mike', lvl: la || 3, eq: myLook() }, b: { id: '2', name: 'Ana', lvl: lb || 6, eq: ['bandana', 'gloves', 'girl'] }, seed: seed || Math.floor(Math.random() * 1e9) + 1, votes: win === 'b' ? ['b', 'a', 'b'] : ['a', 'b', 'a'], win: win || 'a' }, side || 'a', { id: '' });
 
   if (LB_URL) {
-    setTimeout(() => btInbox(false), 4000);
+    setTimeout(() => btInbox(), 4000);
     setTimeout(freshLoad, 1500);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - FRESH_AT > 10 * 60e3) freshLoad(); });
     $('#rankSoon').hidden = true; $('#rankBox').hidden = false;
@@ -6933,7 +6970,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (BY_ID[id]) { openSection(BY_ID[id].sec); openLesson(id); }
     else toast(T('Новый урок появится через пару минут — потяни экран вниз, чтобы обновить'));
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); if (e.data && e.data.type === 'open-chat') { go('review'); openChat(); } if (e.data && e.data.type === 'open-battle') btInbox(true); if (e.data && e.data.type === 'open-course') { crsMy(); crsOpen(e.data.id); } });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.type === 'open-lesson') openFromPush(e.data.id); if (e.data && e.data.type === 'open-chat') { go('review'); openChat(); } if (e.data && e.data.type === 'open-battle') btOpenFromPush(e.data.battleId); if (e.data && e.data.type === 'open-course') { crsMy(); crsOpen(e.data.id); } });
 
   // ===== language picker =====
   (function langPicker(){
@@ -6971,12 +7008,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#langSheet').addEventListener('click', e => { if (e.target.id === 'langSheet') $('#langSheet').hidden = true; });
   })();
 
+  const launchQuery = new URLSearchParams(location.search);
+  const battleLaunch = launchQuery.get('battle') === '1';
   let startState = history.state;
   try { const r = sessionStorage.getItem('fedoskin-restore'); if (r) { sessionStorage.removeItem('fedoskin-restore'); startState = JSON.parse(r); } } catch (_) {}
   restoring = true; go('home'); restoring = false;
   try { history.replaceState({ s: 'home' }, ''); } catch (_) {}
   // after "pull to refresh" reopen the same section / lesson
-  if (startState && startState.s && startState.s !== 'home') {
+  if (!battleLaunch && startState && startState.s && startState.s !== 'home') {
     if (startState.s === 'lesson' && startState.lid && BY_ID[startState.lid]) {
       const l = BY_ID[startState.lid], row = Array.isArray(startState.lr) ? startState.lr.map(id => BY_ID[id]).filter(Boolean) : null;
       if (startState.lt > 3) resumeAt = { id: l.id, t: startState.lt };
@@ -7002,7 +7041,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
     window.addEventListener('pagehide', clear);
-    if (!r || !(Date.now() - r.ts < 90e3) || !BY_ID[r.id]) return;
+    if (battleLaunch || !r || !(Date.now() - r.ts < 90e3) || !BY_ID[r.id]) return;
     if (r.m) try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
     let last = 0; try { last = +localStorage.getItem(REC) || 0; } catch (_) {}
     if (Date.now() - last < 600e3 || (startState && startState.s === 'lesson')) return;
@@ -7020,9 +7059,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }
     setTimeout(() => toast(T('Приложение перезапустилось — продолжаем с {t}', { t: fmtD(r.t) })), 600);
   })();
-  if (!startState || !startState.s || /^(home|review|svc)$/.test(startState.s)) restoreCrypto(); // came back from the exchange app after a reload
+  if (!battleLaunch && (!startState || !startState.s || /^(home|review|svc)$/.test(startState.s))) restoreCrypto(); // came back from the exchange app after a reload
   try {
-    const qs = new URLSearchParams(location.search), lid = qs.get('lesson');
+    const qs = launchQuery, lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
     const vs = qs.get('vs'); if (vs) { history.replaceState(history.state, '', location.pathname); setTimeout(() => vsOpen(vs), 1500); } // a friend's battle link
@@ -7033,7 +7072,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const rq = /^rare([1-6])?$/.exec(qs.get('battle') || ''); // ?battle=rare / rare1 (2000) / rare2 (double backflip) / rare3 (one-hand hollowback) / mythic: rare4 (real one hand) / rare5 (corkscrew) / rare6 (planche)
     if (rq) { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinRare(rq[1] ? +rq[1] : 0), 800); }
     else if (qs.get('battle') === 'demo') { history.replaceState(history.state, '', location.pathname); setTimeout(() => window.fedoskinBattle(statsView().level, Math.min(8, statsView().level + 3), Math.random() < .5 ? 'a' : 'b'), 800); } // a demo battle without the server (owner wants to see the show)
-    else if (qs.get('battle')) { history.replaceState(history.state, '', location.pathname); setTimeout(() => btInbox(true), 600); } // somebody challenged this phone
+    else if (qs.get('battle') === '1') { history.replaceState(history.state, '', location.pathname); btOpenFromPush(qs.get('battleId')); }
     const rvc = qs.get('review'); // a review link from the coach (09.11.2026)
     if (rvc && /^[a-z0-9]{10}$/.test(rvc)) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openReviewForm(rvc), 300); }
     // courses (12.11.2026): ?c=<course> = a link to a course (posts, «course is open» push); ?ca=<code> = an access code from the coach
