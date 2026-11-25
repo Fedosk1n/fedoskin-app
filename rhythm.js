@@ -442,6 +442,7 @@
 .rb .btlbox{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
 #rbDraw{position:absolute;left:0;top:0;z-index:8;pointer-events:none}
 .rbpad.dr{border-color:#F2CC55;background:rgba(242,204,85,.14);color:#F2CC55}
+.rbpad.balance{padding:0 8px;text-align:center;font-size:20px;letter-spacing:.04em}
 .rbend p.fc{color:#F2CC55;font-family:var(--display);font-size:18px;letter-spacing:1px;margin-top:6px}
 .rbc i u{text-decoration:none;color:var(--fg)}
 .rbcoach{margin-top:12px;padding:12px 14px;border:1px solid rgba(59,209,111,.28);background:rgba(59,209,111,.07);border-radius:14px;text-align:left}
@@ -555,10 +556,25 @@
       if (!G || G.mode !== 'play') return;
       if (e.target.closest && e.target.closest('[data-nt]')) return;
       e.preventDefault();
+      if (G.hold) return;
       if (drawOpen(e.timeStamp)) { try { box.setPointerCapture(e.pointerId); } catch (_) {} drawDown(e); } else tap(e.timeStamp, e);
     });
-    box.addEventListener('pointermove', e => { if (!G || G.mode !== 'play') return; if (G.hold && !G.hold.auto && e.pointerId === G.hold.id && Math.hypot(e.clientX - G.hold.x, e.clientY - G.hold.y) > (G.gb && G.gb.hold ? 72 : 48)) holdEnd(stampS(e.timeStamp)); if (G.dr && G.dr.on) { e.preventDefault(); drawMove(e); } });
-    ['pointerup', 'pointercancel'].forEach(ev => box.addEventListener(ev, e => { if (G && G.mode === 'play' && G.hold && !G.hold.auto && e.pointerId === G.hold.id) holdEnd(stampS(e.timeStamp)); if (G && G.dr) { G.dr.on = false; G.dr.last = null; } }));
+    box.addEventListener('pointermove', e => {
+      if (!G || G.mode !== 'play') return;
+      if (G.hold && e.pointerId === G.hold.id) {
+        G.hold.offset = e.clientX - G.hold.x;
+        holdTick(stampS(e.timeStamp));
+      }
+      if (G.dr && G.dr.on) { e.preventDefault(); drawMove(e); }
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => box.addEventListener(ev, e => {
+      if (G && G.mode === 'play' && G.hold && e.pointerId === G.hold.id) {
+        const s = stampS(e.timeStamp);
+        holdTick(s);
+        holdEnd(s);
+      }
+      if (ev !== 'lostpointercapture' && G && G.dr) { G.dr.on = false; G.dr.last = null; }
+    }));
     box.addEventListener('touchstart', e => { if (G && G.mode === 'play' && !(e.target.closest && e.target.closest('[data-nt]'))) e.preventDefault(); }, { passive: false });
     document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'play') again(); });
     new MutationObserver(() => { if (D.el.hidden) stop(); }).observe(D.el, { attributes: true, attributeFilter: ['hidden'] });
@@ -664,7 +680,7 @@
     if (!V2() && beatOf(G.beat).g) G.beat = null;
     if (!G.beat) { let b = ''; try { b = localStorage.getItem('fedoskin-rb-beat') || ''; } catch (_) {} G.beat = beatOf(b).id; }
     const bdots = l => l > 4 ? '<em>🔥' + '●'.repeat(l - 4) + '</em>' : '<em>' + '●'.repeat(l) + '</em>' + '○'.repeat(4 - l);
-    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') + ' ' + T('На фризе попади в бит и держи палец, пока не заполнится круг.') + (G.prevPk ? ' ' + T('Новая связка: +2 % за каждый элемент, которого не было в твоём прошлом раунде.') : '') : '') + '</p>' +
+    $('#rbSet').innerHTML = '<h3>' + T('Собери связку') + '</h3><p>' + T('Тапай в такт биту. Сложное движение даёт больше очков, но попасть труднее.') + (V2() ? ' ' + T('На пауэрмуве проведи пальцем по траектории ног — чем точнее, тем больше очков.') + ' ' + T('На фризе попади в бит и, не отпуская палец, удерживай точку в зелёной зоне.') + (G.prevPk ? ' ' + T('Новая связка: +2 % за каждый элемент, которого не было в твоём прошлом раунде.') : '') : '') + '</p>' +
       gearNote() +
       (G.ulOn ? '<p class="rbulnote">' + (G.allow ? T('🎬 Новые движения открывают уроки: посмотри урок 3 раза и дорасти до нужного уровня героя') : T('🎬 Смотри уроки — открывай новые движения раньше уровня')) + '</p>' : '') +
       (G.battle || G.city ? djHtml() : '<div class="rbrow"><small>BEAT · ' + T('нажми, чтобы послушать') + '</small><div class="rbcards b4">' +
@@ -1120,9 +1136,8 @@
     const gw = G.gb ? G.gb.win / 1000 : 0; // street gear: wider windows
     for (const n of G.notes) { if (n.st || n.draw || n.hs) continue; const d = Math.abs(n.t - s); if (d < bd) { bd = d; bestN = n; } if (n.t - s > W_GOOD + gw) break; }
     const xw = (G.city && G.city.fw && bestN && bestN.ph === 1 ? G.city.fw : 0) + gw; // city: sneakers widen the footwork windows a little
-    if (bestN && bd <= W_GOOD + xw && bestN.hold) holdStart(bestN, bd <= W_PERF + xw ? 1 : 2, s, e);
+    if (bestN && bd <= W_GOOD + xw && bestN.hold) holdStart(bestN, bd <= W_PERF + xw ? 1 : 2, e);
     else if (bestN && bd <= W_GOOD + xw) { const kind = bd <= W_PERF + xw ? 1 : 2; judge(bestN, kind, s); blip(kind); if (kind === 1 && G.combo % 4 === 0) puff(); }
-    else if (G.hold) { /* a second finger while holding the freeze */ }
     else if (G.dns && G.dns.some(n => s > n.t - .1 && s < n.end + .15)) { /* fingers near the trajectory: not a stray tap */ }
     else if (s > B_TOP * BEAT - W_GOOD && s < (B_BIG * BEAT) + W_GOOD) { const nx = G.notes.findIndex(n => !n.st && n.t > s); G.brk.push(nx < 0 ? G.notes.length : nx); G.combo = 0; $('#rbCombo').textContent = '0'; $('#rbCombo').classList.remove('hot'); blip(3); } // a tap into nothing breaks the combo
   }
@@ -1146,7 +1161,7 @@
     G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30) + (G.city && G.city.cor && G.picks[2] === 'headspin' ? G.city.cor : 0) + (G.gb ? G.gb.cor : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
     drawCan().hidden = false; drawPlace();
   }
-  function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr'); }
+  function drawOff() { const c = drawCan(); if (c) c.hidden = true; if (G) G.dr = null; const pad = box && box.querySelector('#rbPad'); if (pad) pad.classList.remove('dr', 'balance'); }
   // the drawing field = from the top of the arena to the bottom of the tap pad; the line is centred on it
   function drawPlace() {
     const R = G.dr, c = drawCan(), b = box.getBoundingClientRect(), a = $('#rbArena').getBoundingClientRect(), pd = $('#rbPad').getBoundingClientRect();
@@ -1255,21 +1270,68 @@
       x.globalAlpha = 1;
     }
   }
-  // ---- the held freeze (rules v2, owner 13.11.2026 «удержать палец в точке = зафиксировать фриз») ----
-  // The last note: hit it in time, then keep the finger down and still (within 48 px) for two beats while the ring fills.
-  // Held to the end = the grade of the hit; let go after half = GOOD; earlier = MISS.
-  function holdStart(n, kind, s, e) {
-    n.hs = true; G.hold = { n, kind, x: e ? e.clientX : 0, y: e ? e.clientY : 0, id: e ? e.pointerId : -1, auto: !e };
+  // During a two-beat hold the balance zone drifts once. The original pointer controls the marker relative to where it landed.
+  const HOLD_GRACE = .28;
+  const holdProgress = (n, s) => clamp((s - n.t) / (n.end - n.t), 0, 1);
+  function holdTarget(H, s) {
+    const u = clamp((holdProgress(H.n, s) - .18) / .42, 0, 1);
+    return H.shift * u * u * (3 - 2 * u);
+  }
+  function holdStart(n, kind, e) {
+    n.hs = true;
+    const H = G.hold = { n, kind, id: e ? e.pointerId : -1, auto: !e };
+    if (e) {
+      const bounds = box.getBoundingClientRect(), x = e.clientX, tier = tierOf(G.picks[3]) - 1;
+      let direction = G.seed % 2 ? -1 : 1;
+      if (x - bounds.left < 48) direction = 1;
+      else if (bounds.right - x < 48) direction = -1;
+      Object.assign(H, {
+        x, offset: 0, shift: direction * (36 + 3 * tier), tol: 19 - 2 * tier + (G.gb.hold ? 5 : 0),
+        offAt: null, followed: false,
+      });
+      try { box.setPointerCapture(e.pointerId); } catch (_) {}
+    }
     const ar = $('#rbArena'); ar.classList.remove('shake', 'flash'); void ar.offsetWidth; ar.classList.add('shake', 'flash'); puff(); blip(kind);
-    const j = $('#rbJ'); j.textContent = 'HOLD!'; j.className = 'rbj g'; void j.offsetWidth; j.classList.add('show');
-    const pad = $('#rbPad'); pad.textContent = D.T('Держи!'); pad.classList.add('dr');
+    const j = $('#rbJ'); j.classList.remove('show');
+    if (H.auto) { j.textContent = 'HOLD!'; j.className = 'rbj g'; void j.offsetWidth; j.classList.add('show'); }
+    const pad = $('#rbPad'); pad.textContent = D.T(H.auto ? 'Держи!' : 'Веди точку в зону'); pad.classList.add('dr'); pad.classList.toggle('balance', !H.auto);
     if (navigator.vibrate) try { navigator.vibrate(18); } catch (_) {}
   }
-  function holdEnd(s) {
+  function holdTick(s) {
+    const H = G.hold;
+    if (!H) return;
+    if (!H.auto) {
+      const at = Math.min(s, H.n.end), target = holdTarget(H, at);
+      if (Math.abs(H.offset - target) <= H.tol) {
+        H.offAt = null;
+        // The center must drift far enough that keeping the pointer still cannot qualify.
+        if (Math.abs(target) > H.tol + 2) H.followed = true;
+      } else {
+        H.offAt ??= at;
+        if (at - H.offAt >= HOLD_GRACE) { holdEnd(at, true); return; }
+      }
+    }
+    if (s >= H.n.end) holdEnd(H.n.end);
+  }
+  function holdEnd(s, slipped = false) {
     const H = G.hold; if (!H || H.n.st) return; G.hold = null;
-    const n = H.n, k = clamp((s - n.t) / (n.end - n.t), 0, 1), easy = G.gb && G.gb.hold, kind = k >= (easy ? .82 : .92) ? H.kind : k >= (easy ? .4 : .5) ? 2 : 3;
-    judge(n, kind, s); if (kind === 3) blip(3);
-    const pad = $('#rbPad'); pad.classList.remove('dr'); pad.textContent = G.auto ? D.T('Авто') : D.T('Тапай!');
+    const k = holdProgress(H.n, s), easy = G.gb.hold;
+    let kind = 3;
+    if (!slipped && (H.auto || H.followed) && k >= (easy ? .4 : .5)) {
+      kind = (H.auto || H.offAt === null) && k >= (easy ? .82 : .92) ? H.kind : 2;
+    }
+    judge(H.n, kind, s); if (kind === 3) blip(3);
+    const pad = $('#rbPad'); pad.classList.remove('dr', 'balance'); pad.textContent = G.auto ? D.T('Авто') : D.T('Тапай!');
+  }
+  function holdMeter(x, H, s, cx, cy) {
+    const target = cx + holdTarget(H, s), dot = cx + clamp(H.offset, -64, 64);
+    x.fillStyle = '#141416'; x.fillRect(cx - 72, cy - 10, 144, 20);
+    x.strokeStyle = '#66666E'; x.lineWidth = 1; x.strokeRect(cx - 72, cy - 10, 144, 20);
+    x.fillStyle = '#296844'; x.fillRect(target - H.tol, cy - 8, H.tol * 2, 16);
+    x.strokeStyle = '#78E2A3'; x.strokeRect(target - H.tol, cy - 8, H.tol * 2, 16);
+    x.fillStyle = H.offAt === null ? '#F2CC55' : '#FF9254';
+    x.beginPath(); x.arc(dot, cy, 5, 0, TAU); x.fill();
+    x.strokeStyle = '#141416'; x.lineWidth = 2; x.stroke();
   }
   function holdPaint(s) {
     const n = G.notes[G.notes.length - 1], R = G.dr; if (!n || !n.hold || !R || !R.W) return;
@@ -1280,9 +1342,11 @@
     x.lineWidth = 6; x.strokeStyle = 'rgba(11,11,12,.6)'; x.beginPath(); x.arc(cx, cy, r0, 0, 7); x.stroke();
     x.lineWidth = 4; x.strokeStyle = n.st === 3 ? '#6A6A72' : 'rgba(242,239,232,.55)'; x.beginPath(); x.arc(cx, cy, r0, 0, 7); x.stroke();
     if (!n.hs && !n.st && s < n.t) { const k = clamp((n.t - s) / (2 * BEAT), 0, 1); x.strokeStyle = '#F2CC55'; x.lineWidth = 3; x.beginPath(); x.arc(cx, cy, r0 + 46 * k, 0, 7); x.stroke(); } // closes in on the beat
-    const k = n.st && n.st !== 3 ? clamp((n.jt - n.t) / (n.end - n.t), 0, 1) : n.hs && !n.st ? clamp((s - n.t) / (n.end - n.t), 0, 1) : 0;
+    const H = G.hold;
+    const k = n.st && n.st !== 3 ? holdProgress(n, n.jt) : H ? holdProgress(n, s) : 0;
     if (k > 0) { x.strokeStyle = n.st === 2 ? '#F2EFE8' : '#F2CC55'; x.lineWidth = 7; x.lineCap = 'round'; x.beginPath(); x.arc(cx, cy, r0, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); x.stroke(); }
     x.fillStyle = n.st === 3 ? '#6A6A72' : '#F2CC55'; x.font = '15px Anton, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(n.hs || n.st ? 'HOLD' : 'FRZ', cx, cy + 1);
+    if (H && !H.auto) holdMeter(x, H, s, cx, cy + 50);
     x.globalAlpha = 1;
   }
   // which pose the hero is in at song second s
@@ -1299,7 +1363,11 @@
     else if (s < tFrz) { key = 'pow'; p = span(G.picks[2], tPow, POW); }
     else if (s < fStart) { key = 'pre'; p = loop(G.picks[0], s - tFrz, .75); }
     else if (G.bigSt === 3) { const t = s - (G.bigAt || (tBig + W_GOOD)); key = 'fail'; p = t < M.shock.dur ? M.shock.f(clamp(t / M.shock.dur, 0, 1)) : loop('lose2', t); }
-    else { const u = (s - fStart) / fz.dur; if (u < 1) { key = 'frz'; p = fz.f(clamp(u, 0, 1)); } else { key = 'after'; p = loop('win', s - fStart - fz.dur); } }
+    else {
+      const u = (s - fStart) / fz.dur, holding = G.hold && !G.hold.auto;
+      if (u < 1 || holding) { key = 'frz'; p = fz.f(clamp(u, 0, holding ? .65 : 1)); }
+      else { key = 'after'; p = loop('win', s - fStart - fz.dur); }
+    }
     return [key, p];
   }
   const PS = { key: '', from: null, at: 0, pose: null, shd: 1 };
@@ -1323,7 +1391,7 @@
     // keep the clock on the sound (the audio clock is the truth; small corrections only)
     if (G.audio && ctx.state === 'running') { const diff = (ctx.currentTime - G.aud0 - G.lat) - song(now); if (Math.abs(diff) > .04) G.perf0 -= diff * 1000 * .15; }
     const s = song(now), T = D.T;
-    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.hs && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; if (n.hold) { holdStart(n, kind, s); continue; } judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
+    if (G.auto) for (const n of G.notes) { if (n.t - s > .2) break; if (!n.draw && !n.st && !n.hs && !n.am && s >= n.t + n.aj) { const kind = Math.abs(n.aj) <= W_PERF ? 1 : 2; if (n.hold) { holdStart(n, kind); continue; } judge(n, kind, s); blip(kind); const pad = $('#rbPad'); pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90); } }
     for (const n of G.notes) { if (n.draw) { drawTick(n, s); continue; } if (!n.st && !n.hs && s - n.t > W_GOOD + (G.gb && !G.auto ? G.gb.win / 1000 : 0)) judge(n, 3, s); if (n.t - s > W_GOOD) break; }
     const beat = Math.floor(s / BEAT);
     if (beat !== G.lastBeat) {
@@ -1333,7 +1401,7 @@
       if (ph !== G.shown) { G.shown = ph; if (ph >= 0) $('#rbPhase').textContent = D.names[G.picks[ph]]; $('#rbF').classList.toggle('spin', (ph === 1 || ph === 2) && D.spin.includes(G.picks[ph])); if (ph === 1 || ph === 2) puff(); }
       if (ph < 3) $('#rbCrowd').classList.toggle('hype', G.combo >= 8);
     }
-    if (G.hold && s >= G.hold.n.end) holdEnd(s);
+    if (G.hold) holdTick(s);
     draw(s); if (G.dr) { drawPaint(s); holdPaint(s); }
     let [key, p] = pose(s);
     if (key === 'myth') $('#rbPhase').textContent = HERO.MYTHIC_MOVES[G.gear.move];

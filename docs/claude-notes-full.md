@@ -1748,3 +1748,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Hoodies, coats, pockets and protection sit on the skinned garment. The tailor's chest, sleeve and back patches retain their graphics and follow the fabric.
 - Compared posed city meshes in Blender. Checked 56 body and outfit combinations across 8,736 sampled poses and built all 64 inventory items.
   Cache versions are city3d.js 35, city3d-game.js 33, city3d-mocap.js 19 and city3d-power.js 8.
+
+## 25.11.2026 — Balance during rhythm freezes
+
+- On the last note, follow the green zone with a small sideways movement while holding the original pointer. The zone moves once and starts after a short pause. Moving back into the zone within 280 ms saves the hold. Harder freezes have a narrower zone, and equipment with the hold bonus widens it.
+- A balanced hold through the end earns the grade of the opening hit. A balanced partial hold can earn GOOD. The freeze still sends one grade with the existing RB2 note and score format. Cache versions are rhythm.js 29 and i18n.js 5.
