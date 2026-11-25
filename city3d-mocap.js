@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
+import { addCityHead } from './city3d-head.js?v=1';
 
 let DATA = null;
 const CLIPS = {};
@@ -178,8 +179,6 @@ const tameShader = sh => { sh.fragmentShader = sh.fragmentShader.replace('void m
 const tame = m => { m.onBeforeCompile = tameShader; return m; };
 const M = (c, r = .8, m = 0) => { const k = c + r + m; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m }))); return mats.get(k); };
 const UP = new THREE.Vector3(0, 1, 0);
-// two-sided cloth (a brim seen from below, an open band): its own cached material, the one-sided M() ones stay as they are
-const M2 = (c, r = .8) => { const k = 'd' + c + r; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, side: THREE.DoubleSide }))); return mats.get(k); };
 // a limb piece from the bone's origin to its child's rest position
 function seg(bone, to, r, mat, r2) {
   const len = to.length(), m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(.01, len - r * 1.4), 3, 10), mat);
@@ -214,7 +213,7 @@ const shadeOf = (c, k) => '#' + _c1.set(c).multiplyScalar(k).getHexString(), mix
 export const DEPTH_SKIN = new THREE.MeshDepthMaterial();
 // 2) A PERSON'S RIGID PIECES AS ONE SKINNED PIECE. Head, hair, cap, eyes, ears, brows, laces, chain… were ~14 separate meshes a person —
 //    ~14 draw calls each frame (+ their shadows); 21 people in the yard ≈ 300 of the ~400 draw calls. Now all of them that use the plain
-//    clothing materials (M / M2 / MV) are baked into one mesh on the SAME skeleton: every vertex follows the bone its piece hung on (weight
+//    clothing materials (M / MV) are baked into one mesh on the SAME skeleton: every vertex follows the bone its piece hung on (weight
 //    1, so it moves exactly as before), the piece's colour / roughness / metalness ride on the vertices (PARTS). The originals stay in the
 //    tree (ground contact points use them) but are drawn nowhere (layers off). Glowing custom details and sewn patches stay separate.
 const PARTS_SHADER = sh => {
@@ -512,106 +511,6 @@ function patchMat(kind, c) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const m = tame(new THREE.MeshStandardMaterial({ map: t, roughness: .9 })); PATCH.set(k, m); return m;
 }
-// ---------- THE HEAD (owner 17.11.2026 «сделай форму головы не круглой, сделай похожей всё-таки на человека») ----------
-// It was a stretched ball. Now a sculpted shape made of horizontal slices from the chin to the crown: the skull a little narrower than it
-// is deep, a flatter face, cheekbones, a jaw that narrows into a chin, the nape going down into the neck; a nose, a brow ridge, eye sockets
-// and lips are pushed out of / into that surface; lips, sockets and the underside of the jaw are painted darker (vertex colours).
-// Head-group space (y up from the Head bone, z forward, before bd.head). Above the eyes the skull keeps the old ball's height and depth,
-// only narrower (HX) — hair, hats and the custom pieces are narrowed by the same HX and fit as before.
-// ONE shared geometry per variant (man / woman, + the beard shell): built once, used by every person.
-const HX = .9;
-const capBill = (() => {
-  const shape = new THREE.Shape();
-  shape.moveTo(-.086, .085);
-  shape.quadraticCurveTo(0, .123, .086, .085);
-  shape.quadraticCurveTo(.104, .176, .058, .201);
-  shape.quadraticCurveTo(0, .222, -.058, .201);
-  shape.quadraticCurveTo(-.104, .176, -.086, .085);
-  const g = new THREE.ExtrudeGeometry(shape, { depth: .009, bevelSize: .004, bevelThickness: .003, bevelSegments: 1, curveSegments: 5 });
-  g.rotateX(Math.PI / 2);
-  return g;
-})();
-const bandanaPrint = (() => {
-  const p = [], faces = [];
-  for (const [theta, phi] of [[.7, 0], [.7, 2.1], [.7, 4.2], [1.24, .65], [1.24, 1.9], [1.24, 3.15], [1.24, 4.4], [1.24, 5.65]]) {
-    const i = p.length / 3;
-    for (const [dt, dp] of [[-.10, 0], [0, .085], [.10, 0], [0, -.085]]) {
-      const t = theta + dt, a = phi + dp;
-      p.push(.133 * Math.sin(t) * Math.sin(a), .133 * Math.cos(t), .133 * Math.sin(t) * Math.cos(a));
-    }
-    faces.push(i, i + 2, i + 1, i, i + 3, i + 2);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  g.setIndex(faces);
-  g.computeVertexNormals();
-  return g;
-})();
-// slices below the brow: [y, front, back, half-width, z of the widest point, taper of the front (the jaw → the chin)]
-const HEAD_SL = [[-.04, .1, .062, .03, .081, .18], [-.03, .112, .045, .05, .075, .26], [-.015, .116, .02, .064, .06, .3], [0, .118, -.03, .074, .03, .33],
-  [.015, .121, -.065, .08, .015, .36], [.03, .124, -.085, .088, .01, .3], [.05, .127, -.1, .095, .005, .22], [.07, .129, -.11, .1, 0, .14],
-  [.09, .13, -.116, .104, 0, .1], [.11, .13, -.12, .106, 0, .08], [.13, .126, -.121, .107, 0, .07]];
-const HEADS = {};
-function headSlice(y, girl) {
-  let s;
-  if (y > .13) { const k = Math.sqrt(Math.max(0, 1 - Math.pow((y - .13) / .11, 2))); s = [y, .126 * k, -.121 * k, .107 * k, -.004 * (1 - k), .07]; }
-  else { let i = 0; while (i < HEAD_SL.length - 2 && y > HEAD_SL[i + 1][0]) i++; const A = HEAD_SL[i], B = HEAD_SL[i + 1], t = Math.max(0, Math.min(1, (y - A[0]) / (B[0] - A[0]))); s = A.map((v, j) => v + (B[j] - v) * t); }
-  if (girl && y < .08) { const k = Math.max(0, Math.min(1, (.08 - y) / .1)); s[3] *= 1 - .13 * k; s[1] -= .004 * k; s[5] += .07 * k; }   // a softer, narrower jaw and a smaller chin
-  return s;
-}
-// a point of the slice at angle a (0 = the left side +x, π/2 = the face, 3π/2 = the back of the head)
-function headPt(S, a) {
-  // the face (chin … brow) is flatter than the rest; the forehead is round again so it stays under the hair's fringe
-  const cs = Math.cos(a), sn = Math.sin(a), [y, f, b, w, zm, tp] = S, sm = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-  const ef = .78 + .17 * (1 - sm(-.02, .005, y)) + .17 * sm(.105, .135, y);
-  const z = sn >= 0 ? zm + (f - zm) * Math.pow(sn, ef) : zm - (zm - b) * Math.pow(-sn, .95);
-  return [w * Math.sign(cs) * Math.pow(Math.abs(cs), .9) * (1 - tp * Math.pow(Math.max(0, sn), 1.5)), z, Math.max(0, sn)];
-}
-const g2 = (v, s) => Math.exp(-(v / s) * (v / s));
-// the face pushed out of / into the surface: nose, brow ridge, eye sockets, cheekbones, lips, chin. fr = how much the point faces forward
-function headFeat(x, y, fr, girl) {
-  const ax = Math.abs(x), f2 = fr * fr; let dz = 0, dx = 0;
-  { let h = 0; if (y >= .06 && y <= .118) h = .004 + .017 * Math.pow((.118 - y) / .058, 1.3); else if (y >= .045 && y < .06) h = .021 * Math.pow((y - .045) / .015, .7);   // nose
-    if (girl) h *= .82; dz += h * g2(x, .008 + .01 * Math.max(0, Math.min(1, (.118 - y) / .058))) * f2 * f2; }
-  dz += (girl ? .0025 : .0042) * g2(y - .12, .009) * g2(ax - .035, .04) * f2;   // brow ridge
-  dz -= .006 * g2(ax - .04, .02) * g2(y - .103, .016) * f2;                      // eye sockets
-  dx += Math.sign(x) * .004 * g2(y - .072, .018) * fr;                           // cheekbones
-  dz += (girl ? .005 : .0035) * g2(y - .029, .008) * g2(x, .024) * f2;           // lips
-  dz += .004 * g2(y + .022, .012) * g2(x, .03) * f2;                             // chin
-  return [dx, dz];
-}
-// the front of the face at (x, y): where the eyes, brows, nose go
-function headFront(x, y, girl) {
-  const S = headSlice(y, girl), ax = Math.abs(x); let lo = 0, hi = Math.PI / 2;
-  for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (headPt(S, m)[0] > ax) lo = m; else hi = m; }
-  const p = headPt(S, (lo + hi) / 2); return p[1] + headFeat(x, y, p[2], girl)[1];
-}
-function headGeo(girl) {
-  const key = girl ? 'f' : 'm'; if (HEADS[key]) return HEADS[key];
-  const n = 48, ys = []; for (let y = -.04; y < .2375; y += .0093) ys.push(y); ys.push(.2375);
-  const pos = [], col = [], idx = [], FR = [];
-  const push = (x, y, z, fr) => { pos.push(x, y, z); FR.push(fr);
-    const ax = Math.abs(x), lip = g2(y - .029, .0085) * g2(x, .024) * Math.pow(fr, 4), sock = g2(ax - .04, .022) * g2(y - .104, .018) * fr, jaw = Math.max(0, Math.min(1, (-.004 - y) / .03));
-    const k = (1 - .13 * sock) * (1 - .2 * jaw); col.push(k * (1 - (girl ? .26 : .2) * lip), k * (1 - (girl ? .44 : .36) * lip), k * (1 - (girl ? .38 : .33) * lip)); };
-  push(0, -.0445, .081, 1);
-  ys.forEach(y => { const S = headSlice(y, girl); for (let i = 0; i < n; i++) { const p = headPt(S, i / n * Math.PI * 2), d = headFeat(p[0], y, p[2], girl); push(p[0] + d[0], y, p[1] + d[1], p[2]); } });
-  push(0, .2405, -.004, 0);
-  const top = 1 + ys.length * n;
-  for (let i = 0; i < n; i++) idx.push(0, 1 + i, 1 + (i + 1) % n);
-  for (let r = 0; r < ys.length - 1; r++) for (let i = 0; i < n; i++) { const a = 1 + r * n + i, b = 1 + r * n + (i + 1) % n, c = a + n, d = b + n; idx.push(a, c, b, b, c, d); }
-  for (let i = 0; i < n; i++) idx.push(top, 1 + (ys.length - 1) * n + (i + 1) % n, 1 + (ys.length - 1) * n + i);
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-  // the beard: a shell 7 mm over the jaw, chin and lower cheeks, with the lips left open (men only)
-  let beard = null;
-  // its edge: the shell sinks under the skin where the beard ends, so the border is a smooth line, not stairs of triangles
-  if (!girl) { const N = g.attributes.normal, bp = [], WB = [], ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-    for (let i = 0; i < pos.length / 3; i++) { const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2], ax = Math.abs(x), yt = .046 + .02 * ss(.025, .07, ax);
-      const lips = ss(.025, .017, ax) * ss(.041, .034, y) * ss(.013, .019, y), w = (1 - ss(yt - .007, yt + .002, y)) * ss(-.05, -.028, z) * (1 - lips), o = -.004 + .012 * w + .003 * g2(y + .03, .02) * g2(x, .04) * w;
-      WB.push(w); bp.push(x + N.getX(i) * o, y + N.getY(i) * o, z + N.getZ(i) * o); }
-    const bi = []; for (let t = 0; t < idx.length; t += 3) if (WB[idx[t]] > .12 || WB[idx[t + 1]] > .12 || WB[idx[t + 2]] > .12) bi.push(idx[t], idx[t + 1], idx[t + 2]);
-    beard = new THREE.BufferGeometry(); beard.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3)); beard.setIndex(bi); beard.computeVertexNormals(); }
-  return (HEADS[key] = { geo: g, beard });
-}
 const MV = (c, r = .7) => { const k = 'v' + c + r; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, vertexColors: true }))); return mats.get(k); };
 // ---------- BODIES (owner 16.11.2026 «улучши визуал человечков, добавь разнообразия: разный вес, рост, типаж») ----------
 // A body = numbers that reshape our own low-poly figure on the same mocap skeleton: h height (whole rig), limb / arm thickness,
@@ -656,7 +555,7 @@ export function mocapPerson(look, opt = {}) {
   // wider or narrower frame: clavicles and hip joints move with the chest and the hips
   for (const s of ['Left', 'Right']) { B[s + 'Shoulder'].position.x *= bd.chest * gW; B[s + 'Arm'].position.multiplyScalar(bd.chest * gW); B[s + 'UpLeg'].position.x *= Math.max(1, bd.hip * (1 + (L - 1) * .5)); }
   const P = n => B[n].position.clone();
-  const skin = M(C.skin, .7), top = M(C.top, .78), hair = M(C.hair, .9);
+  const skin = M(C.skin, .7), top = M(C.top, .78);
   const tp = look.top || 'tee', hoodie = tp === 'hoodie', bomber = tp === 'bomber', track = /^track/.test(tp), coat = bomber && bd.coat;
   const sleeveLong = hoodie || bomber || track, baggy = hoodie ? 1.12 : /Big|bomber|track/.test(tp) ? 1.06 : 1;
   const cw = bd.chest * gW * baggy, ww = bd.waist * baggy, dp = 1 + (bd.chest - 1) * .7 + bd.belly * .12, add = (bone, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); bone.add(m); return m; };
@@ -936,80 +835,8 @@ export function mocapPerson(look, opt = {}) {
     }
   }
   seg(B.Neck, P('Head'), .052 * Math.sqrt(A), skin);
-  // head: face, ears, hair by style, beard, hat
-  { const hg = new THREE.Group(); hg.scale.setScalar(bd.head); B.Head.add(hg); const eye = M('#17130f', .4), H = C.hat, hat = H ? (look.hat || '') : '';
-    const detail = (geo, color, x, y, z) => {
-      const piece = add(hg, geo, M(color, .83), x, y, z);
-      piece.userData.clothDetail = true;
-      return piece;
-    };
-    // the sculpted head (see headGeo): skull, face, jaw, nose, lips — one shared shape; it touches the ground as a few balls (falls, headspins)
-    const HG = headGeo(girl), hd = add(hg, HG.geo, MV(C.skin), 0, 0, 0);
-    hd.userData.balls = [[0, .135, -.005, .104], [0, .075, -.02, .098], [0, .065, .045, .085], [0, -.02, .072, .03]];
-    for (const s of [-1, 1]) { const ez = headFront(.04, .102, girl), e = add(hg, new THREE.SphereGeometry(.0132, 10, 8), eye, s * .04, .102, ez - .0015); e.scale.set(1, 1.18, .55);
-      const bz = headFront(.041, .121, girl), br = add(hg, new THREE.CapsuleGeometry(girl ? .0033 : .0043, .022, 2, 6), hair, s * .041, .1215, bz + .001); br.rotation.set(0, s * .32, Math.PI / 2 + s * .14);
-      const er = add(hg, new THREE.SphereGeometry(.029, 8, 6), skin, s * .105, .082, -.01); er.scale.set(.42, 1, .7); }
-    if (bd.beard && HG.beard) add(hg, HG.beard, hair, 0, 0, 0);
-    let st = bd.style || (girl ? 'tail' : 'short'); if (hat && /afro|mohawk|top|bun|buns|curly/.test(st)) st = girl ? 'tail' : 'short';
-    const cap = (r, th, sy = 1.05) => { const hr = add(hg, new THREE.SphereGeometry(r, 30, 11, 0, Math.PI * 2, 0, th), hair, 0, .115, -.006); hr.scale.set(.93, sy, hat ? 1.065 : 1.085); hr.rotation.x = -.16; return hr; };
-    if (st !== 'bald' && !(hat && st === 'buzz')) {
-      if (st === 'buzz') cap(.1215, Math.PI / 2.25, 1.1); else if (hat) cap(.121, Math.PI / 2, 1.08); else if (st !== 'afro') cap(.126, Math.PI / 2.05);
-      if (st === 'afro') { const a = add(hg, new THREE.SphereGeometry(.165, 14, 10), hair, 0, .15, -.02); a.scale.set(1.05, .95, 1); }
-      else if (st === 'top') add(hg, new THREE.CylinderGeometry(.1, .092, .07, 14), hair, 0, .235, 0).scale.x = HX;
-      else if (st === 'mohawk') add(hg, new RoundedBoxGeometry(.035, .075, .24, 1, .015), M(bd.dye || C.hair, .8), 0, .25, -.01).rotation.x = -.12;
-      else if (st === 'curly') [[0, .225, .03, .06], [.06, .21, -.03, .055], [-.06, .21, -.03, .055], [0, .2, -.08, .05]].forEach(([x, y, z, r]) => add(hg, new THREE.IcosahedronGeometry(r, 1), hair, x, y, z));
-      else if (st === 'bun') add(hg, new THREE.SphereGeometry(.052, 10, 8), hair, 0, .25, -.05);
-      else if (st === 'buns') [-1, 1].forEach(s => add(hg, new THREE.SphereGeometry(.045, 10, 8), hair, s * .078, .225, -.02));
-      else if (st === 'tail') { const t = add(hg, new THREE.CapsuleGeometry(.038, .17, 3, 8), hair, 0, .03, -.135); t.rotation.x = .3; }
-      else if (st === 'long') add(hg, new RoundedBoxGeometry(.2, .25, .09, 2, .042), hair, 0, .03, -.088);
-      else if (st === 'braids') [-1, 1].forEach(s => { const t = add(hg, new THREE.CapsuleGeometry(.026, .2, 3, 6), hair, s * .093, -.02, -.052); t.rotation.z = s * .12; });
-      else if (st === 'dreads') [[-.094, -.05], [-.047, -.11], [.047, -.11], [.094, -.05], [0, -.125]].forEach(([x, z]) => { const t = add(hg, new THREE.CapsuleGeometry(.021, .15, 2, 6), hair, x, .03, z); t.rotation.x = .2; });
-    }
-    if (/^cap/.test(hat)) {
-      const back = hat === 'capBack', gold = hat === 'capGold';
-      const crown = add(hg, new THREE.SphereGeometry(.132, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(H[0], .75), 0, .13, 0);
-      crown.scale.set(HX, 1.02, 1);
-      if (!back && !gold && H[0] !== H[1]) {
-        detail(new THREE.SphereGeometry(.1345, 8, 8, Math.PI * .28, Math.PI * .44, 0, Math.PI / 2), H[1], 0, .13, 0).scale.copy(crown.scale);
-      }
-      const bill = add(hg, capBill.clone(), M(gold || back ? H[1] : H[0], .76), 0, .144, 0);
-      bill.rotation.y = back ? Math.PI : 0;
-      detail(new THREE.SphereGeometry(.012, 8, 5), H[1], 0, .268, 0).scale.y = .45;
-      if (back) detail(new RoundedBoxGeometry(.086, .017, .012, 1, .005), shadeOf(H[0], 1.2), 0, .134, .125);
-    } else if (hat === 'beanie') {
-      const crown = add(hg, new THREE.SphereGeometry(.133, 18, 10, 0, Math.PI * 2, 0, Math.PI / 1.9), M(H[0], .91), 0, .12, 0);
-      crown.scale.set(HX, 1.18, 1);
-      const cuffProfile = [[.132, .111], [.139, .117], [.141, .134], [.138, .155], [.131, .161]];
-      add(hg, new THREE.LatheGeometry(cuffProfile.map(([r, y]) => new THREE.Vector2(r, y)), 20), M(H[1] || H[0], .91), 0, 0, 0).scale.x = HX;
-      detail(new RoundedBoxGeometry(.031, .021, .008, 1, .003), shadeOf(H[0], .7), .042, .137, .131).rotation.y = .34;
-    }
-    else if (hat === 'bucket') {   // a soft rounded crown, a band, a brim sloping down (17.11.2026: it was a cylinder and read as a top hat)
-      const pr = [[0, .262], [.07, .259], [.104, .249], [.123, .23], [.133, .2], [.137, .17], [.139, .148], [.166, .131], [.196, .111], [.206, .102], [.2, .096], [.168, .114], [.14, .13]].map(([x, y]) => new THREE.Vector2(x, y));
-      add(hg, new THREE.LatheGeometry(pr, 22), M2(H[0], .85), 0, 0, 0).scale.x = .94;
-      add(hg, new THREE.CylinderGeometry(.1395, .1405, .022, 22, 1, true), M2(H[1] || H[0], .8), 0, .16, 0).scale.x = .94;
-      const stitch = detail(new THREE.TorusGeometry(.180, .0028, 4, 24), H[1] || H[0], 0, .123, 0);
-      stitch.rotation.x = Math.PI / 2; stitch.scale.x = .94;
-    } else if (hat === 'bandana') {
-      add(hg, new THREE.SphereGeometry(.131, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2.1), M(H[0], .88), 0, .12, 0).scale.x = HX;
-      detail(bandanaPrint.clone(), H[1] || '#F2EFE8', 0, .12, 0).scale.x = HX;
-      detail(new THREE.SphereGeometry(.024, 8, 6), H[0], .058, .125, -.112).scale.set(1.15, .68, .72);
-      const tail = detail(new THREE.CapsuleGeometry(.009, .046, 2, 5), H[0], .073, .105, -.109);
-      tail.rotation.set(.36, 0, .48);
-    }
-    if (look.phones) { const ph = M('#18191c', .5, .3); [-1, 1].forEach(s => {
-        add(hg, new THREE.CylinderGeometry(.042, .042, .03, 12), ph, s * .12, .088, -.008).rotation.z = Math.PI / 2;
-        detail(new THREE.CylinderGeometry(.025, .027, .008, 12), C.phones || '#E2611A', s * .137, .088, -.008).rotation.z = Math.PI / 2;
-      });
-      const band = add(hg, new THREE.TorusGeometry(.132, .011, 6, 16, Math.PI), ph, 0, .088, -.008); band.scale.set(.91, 1.25, 1); }
-    // custom, head: a pin, a spin pad on the crown (the part you see best from above), a glowing band
-    if (cus.head && !hat) { const ac = look.acc || '#E2611A', bandM = cus.head >= 3 ? glowOf(ac) : M(ac, .75);
-      const sb = add(hg, new THREE.TorusGeometry(.129, .016, 8, 30), bandM, 0, .175, -.008); sb.rotation.x = Math.PI / 2 - .2; sb.scale.x = HX;
-      if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, .262, -.01); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, .264, -.01); } }
-    if (cus.head && hat) { const ac = look.acc || '#E2611A', bk = hat === 'bucket', top = bk ? .263 : hat === 'beanie' ? .28 : hat === 'bandana' ? .251 : .266, by = bk ? .16 : hat === 'beanie' ? .14 : .152, br = bk ? .1415 : .136;
-      { const d = new THREE.Vector3(.52, bk ? 0 : .5, .7).normalize(), pin = add(hg, new THREE.CylinderGeometry(.021, .021, .009, 14), M('#E7B23C', .3, 1), 0, 0, 0);
-        pin.position.set(0, bk ? .2 : .13, 0).addScaledVector(d, bk ? .137 : hat === 'beanie' ? .145 : .135); pin.position.x *= bk ? .94 : HX; pin.quaternion.setFromUnitVectors(UP, d); }
-      if (cus.head >= 2) { add(hg, new THREE.CylinderGeometry(.05, .06, .012, 20), M(ac, .55), 0, top, 0); add(hg, new THREE.CylinderGeometry(.024, .024, .014, 14), M('#F2EFE8', .5), 0, top + .002, 0); }
-      if (cus.head >= 3) { const gb = add(hg, new THREE.TorusGeometry(br, .0075, 6, 28), glowOf(ac), 0, by, 0); gb.rotation.x = Math.PI / 2; gb.scale.x = bk ? .94 : HX; } } }
+  const head = addCityHead(B.Head, { ...look, col: C }, bd, { M, MV, glowOf });
+  for (const p of head.userData.contactPoints) PTS.push({ m: head, p, r: 0 });
   // ---- CUSTOM details (owner 16.11.2026 «добавь механику улучшения одежды… нашивки»): look.cus = { head, top, pants, kicks }, each 0…3.
   if (cus.pants >= 3) { const ch = add(B.Hips, new THREE.TorusGeometry(.085, .0075, 6, 20, Math.PI), M('#C9CED6', .28, 1), -(.153 * bd.hip + .012), -.005, .005); ch.rotation.set(0, Math.PI / 2, Math.PI); ch.scale.y = 1.25; }
   // shadows: the body, the head, hair, hats, bags cast them; eyes, ears, laces, pins, patches don't (invisible from above, but each was one
@@ -1022,8 +849,7 @@ export function mocapPerson(look, opt = {}) {
   const parts = opt.noMerge ? [] : mergeParts(rig, body);
   personShadows(root);   // the rest (glowing details, patches): one merged shadow piece per bone
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
-  root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.userData.clothDetail || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
-    if (m.userData.balls) { m.userData.balls.forEach(([x, y, z, r]) => PTS.push({ m, p: new THREE.Vector3(x, y, z), r: r * scale * bd.head })); return; }
+  root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.parent === head || m.userData.clothDetail || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
     if (g.type === 'CapsuleGeometry') { const h = P.height / 2; PTS.push({ m, p: new THREE.Vector3(0, h, 0), r: P.radius * sc }, { m, p: new THREE.Vector3(0, -h, 0), r: P.radius * sc }); }
     else if (g.type === 'SphereGeometry' && P.thetaLength > 3) PTS.push({ m, p: new THREE.Vector3(), r: P.radius * sc });
     else { g.computeBoundingBox(); const b = g.boundingBox; for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) PTS.push({ m, p: new THREE.Vector3(x, y, z), r: 0 }); } });
