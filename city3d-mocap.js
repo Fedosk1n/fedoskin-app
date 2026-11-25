@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead } from './city3d-head.js?v=1';
+import { addCityHead } from './city3d-head.js?v=2';
+import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 
 let DATA = null;
 const CLIPS = {};
@@ -334,7 +335,7 @@ function bendBone(joint) {
 }
 const BADGE_DISC = new THREE.CircleGeometry(1, 24);
 function skinGeo() {
-  const pos = [], col = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
+  const pos = [], col = [], finish = [], si = [], sw = [], idx = [], seams = [], G = { n: 0 };
   const weights = (indices, strengths, vertex, influences) => {
     const total = influences.reduce((sum, [, value]) => sum + value, 0);
     for (let k = 0; k < 4; k++) {
@@ -344,12 +345,12 @@ function skinGeo() {
     }
   };
   // sh = brightness of the vertex colour (painted shade: darker under the arms, between the legs, under a hem)
-  const vert = (p, c, w, sh = 1) => { pos.push(p.x, p.y, p.z); _c1.set(c); col.push(_c1.r * sh, _c1.g * sh, _c1.b * sh); weights(si, sw, G.n, w); return G.n++; };
+  const vert = (p, c, w, sh = 1, rough = .89) => { pos.push(p.x, p.y, p.z); _c1.set(c); col.push(_c1.r * sh, _c1.g * sh, _c1.b * sh); finish.push(rough); weights(si, sw, G.n, w); return G.n++; };
   // n points of a (super)ellipse around c in the plane (u, v); u × v must point along the limb. ao = [brightness, darker towards +u, darker towards +v]
   G.ring = (c, u, v, ru, rv, color, w, n, e = 1, ao) => { const i0 = G.n; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
     vert(_p.copy(c).addScaledVector(u, Math.sign(cs) * Math.pow(Math.abs(cs), e) * ru).addScaledVector(v, Math.sign(sn) * Math.pow(Math.abs(sn), e) * rv), color, w, ao ? ao[0] * (1 - Math.max(0, cs * ao[1] + sn * ao[2])) : 1); } return { i0, n }; };
   // a ring of any shape: points, a colour (or one per point), weights (or a list per point), brightness per point
-  G.loop = (pts, cols, ws, shs) => { const i0 = G.n; pts.forEach((p, i) => vert(p, Array.isArray(cols) ? cols[i] : cols, Array.isArray(ws[0][0]) ? ws[i] : ws, shs ? shs[i] : 1)); return { i0, n: pts.length }; };
+  G.loop = (pts, cols, ws, shs, rough) => { const i0 = G.n; pts.forEach((p, i) => vert(p, Array.isArray(cols) ? cols[i] : cols, Array.isArray(ws[0][0]) ? ws[i] : ws, shs ? shs[i] : 1, rough)); return { i0, n: pts.length }; };
   const face = (a, b, c, d) => idx.push(a, b, c, b, d, c);
   G.join = (a, b, openings) => {
     for (let i = 0; i < a.n; i++) {
@@ -449,6 +450,28 @@ function skinGeo() {
       G.quad(edge(a, -1), edge(a, 1), edge(b, -1), edge(b, 1), color, a.w, b.w);
     }
   };
+  G.trace = (rings, path, color, width, rise = .004) => {
+    let last;
+    for (const [s, a] of path) {
+      const row = G.loop([onSurface(rings, s, a - width / 2, rise), onSurface(rings, s, a + width / 2, rise)], color, rings.wt(s));
+      if (last) face(last.i0, last.i0 + 1, row.i0, row.i0 + 1);
+      last = row;
+    }
+  };
+  G.cord = (rings, path, color, radius, lift) => {
+    const curve = new THREE.SplineCurve(path.map(([s, a]) => new THREE.Vector2(s, a)));
+    const from = path[0][0], to = path[path.length - 1][0];
+    let last;
+    for (let i = 0; i <= 9; i++) {
+      const p = curve.getPoint(i / 9);
+      const s = Math.max(from, Math.min(to, p.x)), a = p.y;
+      const normal = rings.u.clone().multiplyScalar(Math.cos(a)).addScaledVector(rings.v, Math.sin(a));
+      const across = rings.d.clone().cross(normal).normalize();
+      const row = G.ring(onSurface(rings, s, a, lift), normal, across, radius, radius, color, rings.wt(s), 6);
+      if (last) G.join(last, row);
+      last = row;
+    }
+  };
   G.panel = (rings, angle, sections, color) => {
     const columns = 8;
     let previous = null;
@@ -490,7 +513,7 @@ function skinGeo() {
     return geometry;
   };
   G.build = () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    { const n = pos.length / 3, rm = new Float32Array(n * 2), rim = new Float32Array(n).fill(1); for (let i = 0; i < n; i++) rm[i * 2] = .82; g.setAttribute('rm', new THREE.BufferAttribute(rm, 2)); g.setAttribute('rim', new THREE.BufferAttribute(rim, 1)); }
+    { const n = finish.length, rm = new Float32Array(n * 2), rim = new Float32Array(n).fill(.68); for (let i = 0; i < n; i++) rm[i * 2] = finish[i]; g.setAttribute('rm', new THREE.BufferAttribute(rm, 2)); g.setAttribute('rim', new THREE.BufferAttribute(rim, 1)); }
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx); g.computeVertexNormals();
     const N = g.attributes.normal; seams.forEach(([A, B]) => { for (let i = 0; i < A.n; i++) { _p.set(N.getX(A.i0 + i) + N.getX(B.i0 + i), N.getY(A.i0 + i) + N.getY(B.i0 + i), N.getZ(A.i0 + i) + N.getZ(B.i0 + i)).normalize(); N.setXYZ(A.i0 + i, _p.x, _p.y, _p.z); N.setXYZ(B.i0 + i, _p.x, _p.y, _p.z); } });
     return g; };
@@ -511,7 +534,11 @@ function patchMat(kind, c) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const m = tame(new THREE.MeshStandardMaterial({ map: t, roughness: .9 })); PATCH.set(k, m); return m;
 }
-const MV = (c, r = .7) => { const k = 'v' + c + r; if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, vertexColors: true }))); return mats.get(k); };
+const MV = (c, r = .7, metalness = 0) => {
+  const k = 'v' + c + ':' + r + ':' + metalness;
+  if (!mats.has(k)) mats.set(k, tame(new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness, vertexColors: true })));
+  return mats.get(k);
+};
 // ---------- BODIES (owner 16.11.2026 «улучши визуал человечков, добавь разнообразия: разный вес, рост, типаж») ----------
 // A body = numbers that reshape our own low-poly figure on the same mocap skeleton: h height (whole rig), limb / arm thickness,
 // chest / waist / hip width, belly 0..1, head size; plus skin, hair colour and hair style, beard, backpack, coat.
@@ -555,7 +582,7 @@ export function mocapPerson(look, opt = {}) {
   // wider or narrower frame: clavicles and hip joints move with the chest and the hips
   for (const s of ['Left', 'Right']) { B[s + 'Shoulder'].position.x *= bd.chest * gW; B[s + 'Arm'].position.multiplyScalar(bd.chest * gW); B[s + 'UpLeg'].position.x *= Math.max(1, bd.hip * (1 + (L - 1) * .5)); }
   const P = n => B[n].position.clone();
-  const skin = M(C.skin, .7), top = M(C.top, .78);
+  const skin = M(C.skin, .83);
   const tp = look.top || 'tee', hoodie = tp === 'hoodie', bomber = tp === 'bomber', track = /^track/.test(tp), coat = bomber && bd.coat;
   const sleeveLong = hoodie || bomber || track, baggy = hoodie ? 1.12 : /Big|bomber|track/.test(tp) ? 1.06 : 1;
   const cw = bd.chest * gW * baggy, ww = bd.waist * baggy, dp = 1 + (bd.chest - 1) * .7 + bd.belly * .12, add = (bone, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); bone.add(m); return m; };
@@ -626,9 +653,12 @@ export function mocapPerson(look, opt = {}) {
     for (const [f, depth, width] of section) {
       st.push([bottom + f * (shoulder - bottom), depth * dp, jx + width * ak, uc, f === 0 && yk ? 1 : 0]);
     }
-    if (track) st.push([nk + .008, .073, .081, uc], [nk + .044, .066, .072, C.trim || uc]);                                    // stand collar
-    else if (bomber) st.push([nk + .006, .076, .084, rib || uc], [nk + .026, .069, .075, rib || uc]);                           // rib collar
-    else { const rc = shadeOf(topC, .72); st.push([nk + .002, .072, .082, topC], [nk + .002, .072, .082, rc, 1], [nk + .02, .063, .07, rc]); }   // crew neck
+    if (track) st.push([nk + .008, .073, .081, uc], [nk + .033, .070, .076, uc], [nk + .044, .066, .072, C.trim || uc]);
+    else if (bomber) st.push([nk + .006, .076, .084, rib || uc], [nk + .020, .073, .079, rib || uc, 0, .87], [nk + .026, .069, .075, rib || uc]);
+    else {
+      const binding = shadeOf(topC, .70);
+      st.push([nk - .006, .076, .087, topC], [nk + .002, .075, .084, binding], [nk + .015, .067, .077, binding, 0, 1.06], [nk + .020, .062, .069, binding]);
+    }
     const openings = [5, 15];
     const tr = G.limb(P, TB, BI.Hips, TZ, st, NT, FWD, .78, lo - .012, st[st.length - 1][0] + .012, null, {
       cut: (a, b) => a.s >= bottom - 1e-5 && b.s <= shoulder + 1e-5 ? openings : null,
@@ -651,44 +681,88 @@ export function mocapPerson(look, opt = {}) {
       const zipEnd = nk + (track ? .044 : .026);
       G.strip(tr, 0, .023, shadeOf(topC, .48), zipStart, zipEnd);
       G.strip(tr, 0, .007, C.trim || '#9A968E', zipStart, zipEnd, .004);
+      const pull = [[nk - .037, 0], [nk - .014, 0], [nk + .004, 0]];
+      G.trace(tr, pull, shadeOf(topC, .38), .16, .006);
+      G.trace(tr, pull.slice(1), C.trim || '#A7A19B', .095, .009);
+      for (const side of [-1, 1]) {
+        const pocketY = lo + (coat ? .15 : .085);
+        const pocket = [[pocketY, .39 * side], [pocketY + .052, .55 * side], [pocketY + .085, .62 * side]];
+        G.trace(tr, pocket, shadeOf(topC, .39), .075);
+        G.trace(tr, pocket.map(([s, angle]) => [s + .005, angle + .065 * side]), shadeOf(topC, 1.21), .038);
+      }
     }
-    if (hoodie) G.panel(tr, 0, [[.025, .46, .004], [.041, .70, .01], [.097, .67, .013], [.143, .43, .005]], shadeOf(topC, .79));
+    if (hoodie) {
+      G.panel(tr, 0, [[.025, .46, .003], [.041, .70, .009], [.097, .67, .010], [.143, .43, .003]], shadeOf(topC, .83));
+      const thread = C.trim || shadeOf(topC, 1.43);
+      for (const side of [-1, 1]) {
+        G.trace(tr, [[.054, .61 * side], [.091, .60 * side], [.128, .48 * side]], shadeOf(topC, .46), .068, .012);
+        const end = nk - (side < 0 ? .158 : .174);
+        const cord = [[end, .28 * side], [end + .026, .24 * side], [nk - .061, .27 * side], [nk - .018, .31 * side]];
+        G.cord(tr, cord, thread, .0029, .006);
+        G.cord(tr, [[end - .012, .289 * side], cord[0], [end + .003, .276 * side]], shadeOf(thread, .72), .0034, .006);
+        G.trace(tr, [[nk - .026, .31 * side], [nk - .015, .32 * side]], shadeOf(topC, .44), .11, .0033);
+      }
+    }
+    if (bd.pack) {
+      for (const side of [-1, 1]) G.trace(tr, [[.136, .83 * side], [.224, .54 * side], [.338, .60 * side], [nk + .010, .68 * side]], shadeOf(bd.pack, .62), .16, .007);
+    }
     if (cus.top >= 1) patches.chest.push({ rings: tr, station: S('Spine2') + .045, angle: .43, arc: .185, height: .034 });
     if (cus.top >= 3) patches.back.push({ rings: tr, station: S('Spine2') + .008, angle: Math.PI, arc: .54, height: .088 });
   }
   for (const s of ['Left', 'Right']) { const sg = s === 'Left' ? 1 : -1, bn = k => BI[s + k];
-    { // arm: shoulder → upper arm → elbow → forearm → cuff → hand (palm, knuckles, fingers curled a little) + thumb
+    { // Shoulder, sleeve and palm share the same skin. The fingers curl from the knuckles in the bind pose.
       const Jt = [s + 'Arm', s + 'ForeArm', s + 'Hand'].map(JP), d = Jt[2].clone().sub(Jt[0]).normalize(), E = Jt[0].distanceTo(Jt[1]), Wd = E + Jt[1].distanceTo(Jt[2]), fa = A * .7 + .3, hs = (A * .3 + .7) * (hi ? 1.05 : 1);
       const low = sleeveLong ? slC : C.skin, hc = look.gloves ? (C.glove || '#18181B') : C.skin, tipC = C.skin;
-      const Kn = Jt[2].clone().addScaledVector(d, .074 * hs).addScaledVector(DOWN, .006), Tp = Jt[2].clone().addScaledVector(d, .128 * hs).addScaledVector(DOWN, .042 * hs), HL = Wd + Jt[2].distanceTo(Kn), TL = HL + Kn.distanceTo(Tp);
+      const Kn = Jt[2].clone().addScaledVector(d, .073 * hs).addScaledVector(DOWN, .006 * hs);
+      const palmEnd = Kn.clone().addScaledVector(d, .017 * hs).addScaledVector(DOWN, .006 * hs);
+      const HL = Wd + Jt[2].distanceTo(Kn), palmLength = HL + Kn.distanceTo(palmEnd);
       const ease = hoodie || bomber ? 1.09 : 1;
       const st = [[.055, .066 * A * ease, .065 * A * ease, slC], [.087, .065 * A * ease, .064 * A * ease, slC]];
       if (sleeveLong) {
         st.push([.115, .062 * A * ease, .062 * A * ease, slC], [.14, .059 * A * ease, .06 * A * ease, slC]);
       }
-      else st.push([E * .46, .064 * A, .066 * A, topC], [E * .46, .052 * A, .053 * A, C.skin, 2, .88]);
+      else st.push([E * .41, .063 * A, .065 * A, topC], [E * .46, .064 * A, .067 * A, shadeOf(topC, .80)],
+        [E * .46, .052 * A, .053 * A, C.skin, 2, .88]);
       for (const [offset, depth, width] of ELBOW_PROFILE) {
         const size = offset <= 0 ? A : fa;
         st.push([E + offset, depth * size, width * size, low]);
       }
       const cf = sleeveLong && C.cuff ? C.cuff : null, wb = !sleeveLong && look.wrist && s === 'Left' ? look.wrist : null;
-      if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1], [Wd - .014, .044 * fa, .044 * fa, cf]);                       // rib cuff
+      if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1],
+        [Wd - .053, .0465 * fa, .0465 * fa, cf, 0, 1.06], [Wd - .022, .0445 * fa, .0445 * fa, cf], [Wd - .014, .044 * fa, .044 * fa, cf, 0, .79]);
       else if (wb) st.push([Wd - .075, .041 * fa, .041 * fa, low], [Wd - .075, .0445 * fa, .0445 * fa, wb, 1], [Wd - .04, .0435 * fa, .0435 * fa, wb], [Wd - .04, .039 * fa, .039 * fa, low, 1], [Wd - .014, .037 * fa, .037 * fa, low]);   // wristband
       else st.push([Wd - .04, .041 * fa, .041 * fa, low], [Wd - .014, (sleeveLong ? .041 : .037) * fa, (sleeveLong ? .041 : .037) * fa, low]);
       if (sleeveLong || look.gloves) st.push([Wd - .014, .034 * hs, .033 * hs, C.gloveTrim || hc, 2, .85]);                                  // the sleeve's opening / the glove's edge
-      st.push([Wd + .022 * hs, .04 * hs, .0245 * hs, hc], [Wd + .05 * hs, .047 * hs, .0235 * hs, hc], [HL, .0465 * hs, .0215 * hs, hc]);
-      if (look.gloves) st.push([HL + .012 * hs, .045 * hs, .021 * hs, hc], [HL + .012 * hs, .042 * hs, .019 * hs, tipC, 2]);   // fingerless gloves
-      st.push([HL + .032 * hs, .041 * hs, .019 * hs, tipC], [TL - .01 * hs, .031 * hs, .0155 * hs, tipC]);
-      const arm = G.limb([Jt[0], Jt[1], Jt[2], Kn, Tp], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.11, .084, .028, 0], st, NA, FWD, 1, .055, TL + .004, [0, sg * .15], {
+      st.push([Wd + .022 * hs, .037 * hs, .020 * hs, hc], [Wd + .048 * hs, .045 * hs, .019 * hs, hc],
+        [HL, .0445 * hs, .0175 * hs, hc], [HL + .009 * hs, .037 * hs, .014 * hs, hc]);
+      const arm = G.limb([Jt[0], Jt[1], Jt[2], Kn, palmEnd], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.11, .084, .028, 0], st, NA, FWD, .84, .055, palmLength, [0, sg * .14], {
         bends: [bn('ArmBend'), bn('ForeArmBend')], openStart: true,
       });
       G.bridge(sleeves[s === 'Left' ? 0 : 1], arm[0], uc !== slC ? uc : null);
       const outer = arm.v.y > 0 ? Math.PI / 2 : -Math.PI / 2;
       if (track && C.trim) G.strip(arm, outer, .017, C.trim, .115, cf ? Wd - .062 : Wd - .014);
+      if (look.gloves) G.panel(arm, outer, [[Wd + .010 * hs,.33,.002],[Wd + .019 * hs,.68,.004],[Wd + .025 * hs,.67,.003]], C.gloveTrim || shadeOf(hc, 1.75));
       if (cus.top >= 2) patches.arm.push({ rings: arm, station: sleeveLong ? .143 : .095, angle: outer, arc: .48, height: sleeveLong ? .034 : .025 });
+      const hand = bn('Hand'), nail = mixOf(tipC, '#F1C5A5', .20);
+      for (const [offset, reach, curl, width] of [[-.032,.042,.025,.0086],[-.012,.053,.035,.0098],[.009,.056,.036,.0102],[.031,.050,.030,.010]]) {
+        const base = Kn.clone().addScaledVector(FWD, offset * hs).addScaledVector(d, -.005 * hs);
+        const joint = base.clone().addScaledVector(d, reach * .62 * hs).addScaledVector(DOWN, curl * .29 * hs);
+        const tip = base.clone().addScaledVector(d, reach * hs).addScaledVector(DOWN, curl * hs).addScaledVector(FWD, offset * .09 * hs);
+        const jointS = base.distanceTo(joint), end = jointS + joint.distanceTo(tip), r = width * hs;
+        const stations = [[0, r, .87 * r, hc], [.010 * hs, .99 * r, .85 * r, hc]];
+        if (look.gloves) stations.push([.010 * hs, .97 * r, .83 * r, tipC, 2]);
+        stations.push([jointS, .88 * r, .82 * r, tipC], [end * .78, .76 * r, .73 * r, tipC], [end * .94, .64 * r, .60 * r, tipC]);
+        const finger = G.limb([base, joint, tip], [hand, hand], hand, [0, 0], stations, 8, FWD, .88, -.006 * hs, end);
+        const back = finger.v.y > 0 ? Math.PI / 2 : -Math.PI / 2;
+        G.trace(finger, [[end * .76,back],[end * .87,back]], nail, .54, .001);
+        lpt(s + 'Hand', tip, .0055 * hs);
+      }
       const ta = Jt[2].clone().addScaledVector(d, .02 * hs).addScaledVector(FWD, .03 * hs).addScaledVector(DOWN, .004), tb = Jt[2].clone().addScaledVector(d, .072 * hs).addScaledVector(FWD, .062 * hs).addScaledVector(DOWN, .016), tl = ta.distanceTo(tb);
-      G.limb([ta, tb], [bn('Hand')], bn('Hand'), [0], [[0, .0175 * hs, .0175 * hs, hc], [tl * .55, .016 * hs, .016 * hs, hc], [tl, .0125 * hs, .0125 * hs, tipC]], 6, new THREE.Vector3(0, 1, 0), 1, -.012, tl + .01);
-      lpt(s + 'Hand', Tp, .016); lpt(s + 'Hand', tb, .013); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, .04 * hs), .02); lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, -.04 * hs), .02); }
+      G.limb([ta, tb], [hand], hand, [0], [[0, .015 * hs, .016 * hs, hc], [tl * .48, .013 * hs, .0135 * hs, hc], [tl * .67, .011 * hs, .011 * hs, tipC], [tl, .0085 * hs, .009 * hs, tipC]], 8, new THREE.Vector3(0, 1, 0), 1, -.010, tl + .008);
+      lpt(s + 'Hand', tb.clone().addScaledVector(tb.clone().sub(ta).normalize(), .006), .008);
+      lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, .039 * hs), .017 * hs);
+      lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, -.039 * hs), .017 * hs);
+    }
     { // leg: hip → thigh → knee → shin → hem. Wide legs stack on the shoe; track pants end in a cuff
       const Jt = [s + 'UpLeg', s + 'Leg', s + 'Foot'].map(JP), K = Jt[0].distanceTo(Jt[1]), F = K + Jt[1].distanceTo(Jt[2]), Ls = L * .75 + .25, Lk = (L + Ls) / 2, pc = C.pants, pt = look.pants || 'jeans';
       const cuffed = /^trackp/.test(pt), Lb = Ls * (pt === 'wind' ? 1.16 : cuffed ? 1.08 : 1.1), kc = cus.pants >= 1 ? mixOf(pc, '#9aa0ab', .36) : pc;
@@ -709,6 +783,14 @@ export function mocapPerson(look, opt = {}) {
       const outer = lg.v.x * sg > 0 ? Math.PI / 2 : -Math.PI / 2;
       const seam = C.stripe || mixOf(pc, pt === 'jeans' ? '#A88F67' : '#A4A4AD', .26);
       G.strip(lg, outer, C.stripe ? .026 : .008, seam, .06, cuffed ? F - .062 : F);
+      const stitch = mixOf(pc, pt === 'jeans' ? '#B89D79' : '#92939B', .43);
+      const pocketSide = Math.sign(outer);
+      G.trace(lg, [[.085,.44*pocketSide],[.128,.57*pocketSide],[.179,.83*pocketSide],[.204,.93*pocketSide]], shadeOf(pc, .46), .084);
+      G.trace(lg, [[.091,.49*pocketSide],[.132,.62*pocketSide],[.182,.88*pocketSide],[.206,.98*pocketSide]], stitch, .032);
+      if (pt === 'jeans') {
+        G.strip(lg, outer - .097 * pocketSide, .0045, stitch, .115, F - .036, .0037);
+        G.panel(lg, Math.PI, [[.112,.50,.003],[.146,.57,.005],[.235,.49,.005],[.255,.28,.003]], shadeOf(pc, .79));
+      }
       if (look.knee) {
         G.panel(lg, 0, [[K - .068, .36, .005], [K - .046, .66, .015], [K, .72, .022], [K + .047, .63, .016], [K + .067, .36, .005]], C.knee || '#18181B');
       }
@@ -721,21 +803,23 @@ export function mocapPerson(look, opt = {}) {
       const A0 = JP(s + 'Foot'), T0 = JP(s + 'ToeBase'), x0 = A0.x, yB = -.04, bigS = hi ? 1.06 : 1, zH = A0.z - .078 * bigS, zT = T0.z + .108 * bigS, len = zT - zH, n = 16;
       const gum = cus.kicks >= 2, soleC = C.sole || '#eeeeee', yM = yB + .032, highT = /^high/.test(look.shoe) ? .045 : 0;
       const up = C.shoe, cap = C.shoe2 || up, laceC = C.lace || '#F2EFE8';
-      const tread = gum ? '#C98A45' : shadeOf(soleC, .55), canvas = look.shoe === 'canvas';
+      const tread = gum ? '#C98A45' : shadeOf(soleC, .49), canvas = look.shoe === 'canvas', runner = look.shoe === 'runner';
+      const soleEdge = shadeOf(soleC, .84);
       const wOf = (z, y) => {
         const toe = smooth(T0.z - .03, T0.z + .03, z);
         const ankle = (highT ? .8 : .44) * smooth(.045, .11 + highT * .35, y) * (1 - toe);
         return [[bn('Foot'), 1 - toe - ankle], [bn('ToeBase'), toe], [bn('Leg'), ankle]];
       };
       // sections along the foot: t (0 heel … 1 toe), half-width, height of the top
-      const SEC = [[.03, .027, .06], [.11, .039, .1 + highT], [.23, .045, .108 + highT], [.36, .049, .102 + highT * .8], [.49, .053, .08], [.62, .056, .058], [.74, .056, .047], [.86, .051, .04], [.95, .037, .033]];
-      const upper = [];
+      const SEC = [[.03, .026, .059], [.11, .038, .093 + highT], [.23, .045, .110 + highT], [.36, runner ? .046 : .049, .102 + highT * .8], [.49, .053, .080], [.62, .056, .061], [.74, .055, .050], [.86, .051, .041], [.95, .035, .034]];
+      const upper = [], outsole = [];
       const part = sole => {
         let prev = null;
         for (const [t, w, yT] of SEC) {
           const z = zH + t * len;
           const yb = yB + .015 * clamp((t - .62) / .38, 0, 1) ** 2 + .012 * clamp((.18 - t) / .18, 0, 1) ** 2;
-          const top = sole ? yM + .004 : yT - (canvas ? .008 : 0), bot = sole ? yb : yM - .008;
+          const stack = runner ? .008 * (1 - t) : 0;
+          const top = sole ? yM + .004 + stack : yT - (canvas ? .008 : 0), bot = sole ? yb : yM - .008;
           const mid = sole ? (top + bot) / 2 : yM + .004, width = w * bigS * (sole ? 1.08 : 1);
           const c0 = sole ? soleC : t > .74 || t < .18 ? cap : up;
           const pts = [], cols = [], ws = [], shs = [];
@@ -745,36 +829,57 @@ export function mocapPerson(look, opt = {}) {
             const y = sn >= 0 ? mid + (top - mid) * sn ** (sole ? .45 : .8) : mid + (bot - mid) * (-sn) ** (sole ? .45 : .6);
             pts.push(new THREE.Vector3(x, y, z));
             ws.push(wOf(z, y));
-            if (sole) cols.push(sn < -.35 ? tread : soleC);
+            if (sole) cols.push(sn < -.35 ? tread : sn > .38 && sn < .69 ? soleEdge : soleC);
             else cols.push(!canvas && t >= .36 && t <= .62 && sn > .1 && sn < .45 ? cap : c0);
             shs.push(sole ? 1 : .84 + .16 * Math.max(0, sn));
           }
-          const ring = G.loop(pts, cols, ws, shs);
+          const ring = G.loop(pts, cols, ws, shs, sole ? .92 : canvas ? .96 : runner ? .83 : .74);
           if (prev) G.join(prev, ring);
           else G.pole(ring, new THREE.Vector3(x0, (top + bot) / 2, zH), c0, wOf(zH, 0), true);
-          if (!sole) upper.push(pts);
+          (sole ? outsole : upper).push(pts);
           prev = ring;
         }
         G.pole(prev, new THREE.Vector3(x0, sole ? yB + .03 : yB + .045, zT), sole ? soleC : cap, [[bn('ToeBase'), 1]], false);
       };
       part(true); part(false);
-      // Separate laces lie on the curved upper and bend with it. Tailoring thickens the equipped laces.
-      const surface = (t, i, lift) => {
+      // Stitch the panels, laces and tread to the same deformed surface as the shoe.
+      const surface = (rows, t, i, lift) => {
         const k = SEC.findIndex(section => section[0] >= t);
-        const mix = (t - SEC[k - 1][0]) / (SEC[k][0] - SEC[k - 1][0]);
-        const p = upper[k - 1][i].clone().lerp(upper[k][i], mix);
-        p.y += lift;
+        const u = (t - SEC[k - 1][0]) / (SEC[k][0] - SEC[k - 1][0]);
+        const j = Math.floor(i), a = i * 2 * Math.PI / n;
+        const edge = row => rows[row][j].clone().lerp(rows[row][(j + 1) % n], i - j);
+        const p = edge(k - 1).lerp(edge(k), u);
+        p.x += Math.cos(a) * lift; p.y += Math.sin(a) * lift;
         return p;
       };
-      const laceWidth = cus.kicks >= 1 ? .023 : .013;
-      const laceBase = mixOf(up, '#8C8991', .42);
-      for (const t of [.32, .40, .48, .56]) {
-        for (let i = 2; i < 6; i++) {
-          const a = surface(t - laceWidth, i, .002), b = surface(t - laceWidth, i + 1, .002);
-          const c = surface(t + laceWidth, i, .002), d = surface(t + laceWidth, i + 1, .002);
-          G.quad(a, b, c, d, i === 2 || i === 5 ? laceBase : laceC, wOf(a.z, a.y), wOf(c.z, c.y));
+      const shoeBand = (rows, edge, start, end, c, lift) => {
+        for (let i = start; i < end; i++) {
+          const [u0, v0] = edge(i), [u1, v1] = edge(i + 1);
+          const a = surface(rows, u0, i, lift), b = surface(rows, u1, i + 1, lift);
+          const c0 = surface(rows, v0, i, lift), d = surface(rows, v1, i + 1, lift);
+          G.quad(a, b, c0, d, c, wOf(a.z, a.y), wOf(c0.z, c0.y));
         }
+      };
+      const tongue = shadeOf(up, canvas ? .83 : .71);
+      for (const [t0, t1] of [[.245,.35],[.35,.47],[.47,.575],[.575,.632]]) shoeBand(upper, () => [t0,t1], 2, 6, tongue, .003);
+      shoeBand(upper, i => {
+        const edge = .700 + .046 * Math.sin(i * Math.PI / 8);
+        return [edge, edge + .019];
+      }, 0, 8, mixOf(shadeOf(up,.59), cap, .54), .0035);
+      const laceWidth = cus.kicks >= 1 ? .023 : .013;
+      const eyelets = mixOf(shadeOf(up, .46), cap, .34);
+      for (const [row, t] of [.315, .398, .482, .566].entries()) {
+        const direction = row % 2 ? -1 : 1;
+        shoeBand(upper, i => {
+          const center = t + (i - 4) * .011 * direction;
+          return [center - laceWidth, center + laceWidth];
+        }, 2, 6, laceC, .007);
+        for (const side of [1.66, 5.66]) shoeBand(upper, i => {
+          const center = t + (Math.round(i) - 4) * .011 * direction;
+          return [center - .022, center + .019];
+        }, side, side + 1, eyelets, .005);
       }
+      for (const t of [.19,.32,.45,.62,.77,.89]) shoeBand(outsole, () => [t,t+.019], 10, 14, shadeOf(tread, 1.28), .001);
       [[0, yB, zH + .02], [-.05, yB, T0.z - .01], [.05, yB, T0.z - .01], [0, .11 + highT, A0.z - .04]].forEach(([dx, y, z]) => lpt(s + 'Foot', new THREE.Vector3(x0 + dx, y, z)));
       [[0, yB + .014, zT - .008], [0, .05, zT - .04], [-.045, yB + .01, T0.z + .04], [.045, yB + .01, T0.z + .04]].forEach(([dx, y, z]) => lpt(s + 'ToeBase', new THREE.Vector3(x0 + dx, y, z)));
       // Custom tier 3 adds glowing strips along the sole.
@@ -817,22 +922,29 @@ export function mocapPerson(look, opt = {}) {
     const fz = y => nz * y / ny + surf(y) * dp + .014 * (baggy > 1 ? 1.4 : 1) + bd.belly * .045 * clamp((ny - y) / drop, 0, 1) + tb, yb = ny - drop;
     const pts = [[0, yb, fz(yb) + .002], [.046, yb + .022, fz(yb + .022)], [.074, ny - drop * .52, fz(ny - drop * .52)], [.09, ny - .012, nz + .045 * dp], [.092, ny + .006, nz - .02], [.062, ny + .012, nz - .07], [0, ny + .014, nz - .084]];
     const loop = pts.concat(pts.slice(1, -1).reverse().map(([x, y, z]) => [-x, y, z])).map(([x, y, z]) => new THREE.Vector3(x, y, z));
-    add(B.Spine2, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true, 'centripetal'), 44, tb, 6, true), gm, 0, 0, 0);
-    if (heavy) { const my = yb - .028, md = add(B.Spine2, new RoundedBoxGeometry(.035, .035, .012, 1, .004), gm, 0, my, fz(my) + .004); md.rotation.set(.12, 0, Math.PI / 4);
-      add(B.Spine2, new THREE.TorusGeometry(.009, .003, 4, 10), gm, 0, yb - .004, fz(yb) + .002); } }
-  if (bd.pack) { add(B.Spine2, new RoundedBoxGeometry(.27, .34, .13, 2, .05), M(bd.pack, .8), 0, .04, -.18 * dp); }
-  if (hoodie || bd.hood) {
-    const hood = add(B.Spine2, new THREE.SphereGeometry(.105, 16, 10), top, 0, .17, -.117 * dp);
-    hood.scale.set(1.17, .75, .91);
-    const fold = add(B.Spine2, new THREE.TorusGeometry(.062, .009, 5, 18), M(shadeOf(C.top, .63), .9), 0, .242, -.136 * dp);
-    fold.rotation.x = -1.16; fold.scale.x = 1.36; fold.userData.clothDetail = true;
-  }
-  if (hoodie) {
-    const neck = P('Neck'), thread = M(C.trim || shadeOf(C.top, 1.25), .79);
-    for (const side of [-1, 1]) {
-      const cord = add(B.Spine2, new THREE.CapsuleGeometry(.005, side < 0 ? .062 : .081, 2, 5), thread, side * .036, neck.y - .068, .11 * dp);
-      cord.rotation.set(.16, 0, side * .13); cord.userData.clothDetail = true;
+    const links = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true, 'centripetal'), 66, tb, 6, true);
+    const linkColor = [];
+    for (let i = 0; i < links.attributes.position.count; i++) {
+      const ring = Math.floor(i / 7), angle = i % 7 * Math.PI / 3;
+      const tone = .83 + .15 * Math.cos(ring * Math.PI * 2 / 3 + angle * 2);
+      linkColor.push(tone, tone, tone);
     }
+    links.setAttribute('color', new THREE.Float32BufferAttribute(linkColor, 3));
+    add(B.Spine2, links, MV(C.gold, .34, .72), 0, 0, 0);
+    if (heavy) { const my = yb - .028, md = add(B.Spine2, new RoundedBoxGeometry(.035, .035, .012, 1, .004), gm, 0, my, fz(my) + .004); md.rotation.set(.12, 0, Math.PI / 4);
+      const inset = add(md, new RoundedBoxGeometry(.022, .022, .003, 1, .001), M(shadeOf(C.gold, .61), .5, .45), 0, 0, .006);
+      inset.userData.clothDetail = true;
+      add(B.Spine2, new THREE.TorusGeometry(.009, .003, 4, 10), gm, 0, yb - .004, fz(yb) + .002); } }
+  if (bd.pack) {
+    const pack = M(bd.pack, .9);
+    add(B.Spine2, new RoundedBoxGeometry(.253, .313, .119, 2, .042), pack, 0, .026, -.178 * dp);
+    add(B.Spine2, new RoundedBoxGeometry(.198, .128, .042, 2, .018), M(shadeOf(bd.pack, .81), .92), 0, -.033, -.236 * dp);
+    add(B.Spine2, new RoundedBoxGeometry(.166, .012, .009, 1, .004), M(shadeOf(bd.pack, .46), .88), 0, .013, -.258 * dp);
+  }
+  if (hoodie || bd.hood) {
+    const hood = add(B.Spine2, FOLDED_HOOD, MV(C.top, .96), 0, 0, -.009 * dp);
+    hood.name = 'FoldedHood';
+    hood.scale.set(Math.sqrt(cw), 1, Math.sqrt(dp));
   }
   seg(B.Neck, P('Head'), .052 * Math.sqrt(A), skin);
   const head = addCityHead(B.Head, { ...look, col: C }, bd, { M, MV, glowOf });

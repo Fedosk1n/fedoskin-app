@@ -76,6 +76,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   Fit head accessories to these profiles and include their silhouette in the support points if they touch the ground during headspins.
 - City 3D CLOTHING (25.11): sleeve openings and trouser seats join their limbs through `G.bridge`. Shirt hems blend with the hips and thighs.
   Fit pockets, knee pads and sewn patches to the garment surface with `G.panel` or `G.badges` so they follow the same rig.
+  `G.trace` and `G.cord` follow the garment surface for seams and drawstrings. `city3d-hood.js` shapes the folded hood and its lining.
 - City 3D CREW BEATS (17.11, owner «разные биты под батлы с разными бандами… как фоновая музыка»): rhythm.js `LOOPS` (yard = the old background,
   13 crews by `c.id`, `jam`, `ring`; each `{name, bpm, vol, play()}`, 16-step pattern strings). `startBattle` → `ctx.music(id)`, `endBattle` → `ctx.music(null)`
   (city3d.js `setMusic`, 40 ms debounce so jam rounds don't re-scratch); `RB.bgm(true, id)` swaps with a DJ scratch; speakers pump on `RB.bgmBeat()`.
