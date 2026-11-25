@@ -1,3 +1,7 @@
+# Publishing the app
+
+Publish requested app changes as soon as they pass verification. GitHub Pages publishes from `main`. Verify the update at https://fedosk1n.github.io/fedoskin-app/ before reporting it live.
+
 # Cloudflare Worker releases
 
 Every change that requires deploying `server/push-worker.js` must include a visible update notice in `admin.html` in the same pull request.
