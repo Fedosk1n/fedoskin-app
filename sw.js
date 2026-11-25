@@ -212,25 +212,43 @@ self.addEventListener('push', e => {
       badge: 'icons/icon2-192.png',
       tag: msg.tag || 'new-lesson',
       renotify: !!(msg.chat || msg.battle),
-      data: { id: msg.id || '', chat: msg.chat ? 1 : 0, battle: msg.battle ? 1 : 0, course: /^[a-z0-9]{2,24}$/.test(msg.course || '') ? msg.course : '' }
+      data: { id: msg.id || '', chat: msg.chat ? 1 : 0, battle: msg.battle ? 1 : 0, battleId: msg.battleId, course: /^[a-z0-9]{2,24}$/.test(msg.course || '') ? msg.course : '' }
     });
   })());
 });
 
-// tap on the notification: open the app on that lesson
+// A battle needs a navigation even if an app window is already open.
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const id = (e.notification.data && e.notification.data.id) || '';
-  const chat = !!(e.notification.data && e.notification.data.chat); // the coach answered in the chat (09.11.2026)
-  const battle = !!(e.notification.data && e.notification.data.battle); // somebody challenged this phone (10.11.2026)
-  const course = (e.notification.data && e.notification.data.course) || ''; // a bought course was opened by the coach (12.11.2026)
-  const url = new URL('./' + (course ? '?c=' + course : battle ? '?battle=1' : chat ? '?chat=1' : id ? '?lesson=' + encodeURIComponent(id) : ''), self.registration.scope).href;
+  const { id, chat, battle, course, battleId } = e.notification.data || {};
+  // Already delivered result notifications have the battle number in their tag.
+  const n = Number(battleId || /^battle-r?(\d+)$/.exec(e.notification.tag || '')?.[1]);
+  const battleQuery = '?battle=1' + (Number.isSafeInteger(n) && n > 0 ? '&battleId=' + n : '');
+  const root = new URL('./', self.registration.scope);
+  const url = new URL(course ? '?c=' + course : battle ? battleQuery : chat ? '?chat=1' : id ? '?lesson=' + encodeURIComponent(id) : '', root).href;
   e.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (battle && !course) {
+      const app = wins.find(w => {
+        const page = new URL(w.url);
+        return page.origin === root.origin && (page.pathname === root.pathname || page.pathname === root.pathname + 'index.html');
+      });
+      if (app) {
+        try {
+          const opened = await app.navigate(url);
+          if (opened) { await opened.focus(); return; }
+        } catch (_) {}
+        await app.focus().catch(() => {});
+        app.postMessage({ type: 'open-battle', battleId: n });
+        return;
+      }
+      await self.clients.openWindow(url);
+      return;
+    }
     for (const w of wins) {
       if (w.url.startsWith(self.registration.scope)) {
         await w.focus();
-        try { w.postMessage(course ? { type: 'open-course', id: course } : battle ? { type: 'open-battle' } : chat ? { type: 'open-chat' } : { type: 'open-lesson', id }); return; } catch (_) {}
+        try { w.postMessage(course ? { type: 'open-course', id: course } : chat ? { type: 'open-chat' } : { type: 'open-lesson', id }); return; } catch (_) {}
       }
     }
     await self.clients.openWindow(url);

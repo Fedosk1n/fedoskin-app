@@ -36,8 +36,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 
 ## Server (Cloudflare Worker `server/push-worker.js`, owner deploys BY HAND)
 - KV `PUSH`, D1 `DB`, R2 `VIDEOS`, Workers AI `AI`, secret `TG_TOKEN` (never ask the owner to send tokens). URL = `pushUrl` in config.
-- Admin auth = owner's GitHub token. After server changes: `/visits` returns a feature flag (e.g. `cg: 1`, `rb2: 3`); admin shows the
-  «обновите код сервера» banner until the owner pastes the new code. Always tell him when he must update the server.
+- Admin auth = owner's GitHub token. For every Worker change requiring a deployment, follow the admin banner and version rule in `AGENTS.md`.
 - Covers: push, visits/sources/events stats, rating (D1 `lb`), battles + points + shop, R2 video + passes (`/pass`, `?p=`), chat via
   Telegram bot (+ translator), reviews invites, courses/orders.
 - Test the worker locally with node:sqlite as D1 (sandbox can't reach workers.dev or install wrangler).
