@@ -1753,3 +1753,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - On the last note, follow the green zone with a small sideways movement while holding the original pointer. The zone moves once and starts after a short pause. Moving back into the zone within 280 ms saves the hold. Harder freezes have a narrower zone, and equipment with the hold bonus widens it.
 - A balanced hold through the end earns the grade of the opening hit. A balanced partial hold can earn GOOD. The freeze still sends one grade with the existing RB2 note and score format. Cache versions are rhythm.js 29 and i18n.js 5.
+
+## 25.11.2026 — First-use freeze demo
+
+- The first manual rhythm round shows a gesture demo before the music starts. The balance meter uses the same green zone, dot and completion bar in the demo and on the note track. The pad cues the hold before FRZ arrives and prompts players to recover while there is still time.
+- The manual hold lasts four beats. The zone begins drifting after 22% of the hold and reaches its target at 84%. A player who leaves the zone has 500 ms to recover. The existing Worker chart and score payload apply. Cache versions are rhythm.js 30 and i18n.js 6.
