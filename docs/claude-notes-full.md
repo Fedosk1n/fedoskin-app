@@ -1740,3 +1740,11 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   retain their cut, triplet and half-time phrasing. The City jam still uses `STY`. Beat IDs, BPM, tap cues and scoring stay the same.
 - Reference tracks: DJ Fleg's New Horns and Lean Rock's Fire in the Hole in the WDSF qualifiers. The app synthesizes its own sounds.
   [WDSF DJ tracks](https://www.breakingforgold.com/djs-and-music)
+
+## 25.11.2026 — City character rig and clothing fit
+
+- Sleeve openings now share a surface with the torso, and the two trouser legs join their seat at the crotch. Hems follow the hips and thighs
+  to clear the trousers when running or folding into a freeze. Raised cuffs have closed edges, and high-top shoes blend their collars with the shin.
+- Hoodies, coats, pockets and protection sit on the skinned garment. The tailor's chest, sleeve and back patches retain their graphics and follow the fabric.
+- Compared posed city meshes in Blender. Checked 56 body and outfit combinations across 8,736 sampled poses and built all 64 inventory items.
+  Cache versions are city3d.js 35, city3d-game.js 33, city3d-mocap.js 19 and city3d-power.js 8.
