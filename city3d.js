@@ -1083,7 +1083,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
+  const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   const soundSystem = addCitySound({ scene, W, game: GAME, library: soundModels, colliders });

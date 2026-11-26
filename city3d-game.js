@@ -525,8 +525,14 @@ export function initGame(ctx) {
     if (S.en < energyCost(BAL.paint)) { toast(_t('Нужно {n} ⚡ — посмотри урок', { n: energyCost(BAL.paint) })); return; }
     S.en -= energyCost(BAL.paint); save(); paintHud();
     const H = W.hero, w = g.wall;
-    P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, old: w.artCanvas(wallArt(g.c, false)), neu: w.artCanvas(wallArt(g.c, true)) };
     const yaw = w.group.rotation.y;
+    const tangent = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+    const aside = [1.64, -1.64].map(d => ({ x: w.x + tangent.x * d, z: w.z + tangent.z * d })).find(p => {
+      const clear = ctx.collide(p.x, p.z, .32);
+      return Math.hypot(p.x - clear.x, p.z - clear.z) < .04;
+    }) || w;
+    P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, aside,
+      old: w.artCanvas(wallArt(g.c, false)), neu: w.artCanvas(wallArt(g.c, true)) };
     const dist = Math.max(4.6, 2.05 / (ctx.camera.aspect * Math.tan(THREE.MathUtils.degToRad(ctx.camera.fov / 2))));
     const off = new THREE.Vector3(Math.sin(yaw) * dist, dist * .52, Math.cos(yaw) * dist);
     W.lock = true; W.camT = { x: w.at.x, y: 1.10, z: w.at.z, zoom: 1, off }; W.zoom = 1; W.camSnap = true;
@@ -536,13 +542,28 @@ export function initGame(ctx) {
     paintAct();
   }
   function paintTick(dt) {
-    const H = W.hero, w = P.g.wall; P.t += dt; const walk = ease(clamp(P.t / .9, 0, 1)), k = clamp((P.t - 1) / 3.2, 0, 1);
-    H.root.position.set(lerp(P.from.x, w.x, walk), 0, lerp(P.from.z, w.z, walk)); H.root.rotation.y = Math.atan2(w.at.x - H.root.position.x, w.at.z - H.root.position.z);
-    // the new piece is sprayed over the old one from left to right, with a soft wet edge
-    if (P.t > 1) revealGraffiti(w, P.old, P.neu, k);
-    // a little arm movement while spraying
-    H.tick(dt); if (P.t > 1) { const a = Math.sin(P.t * 9) * .35; H.B.RightArm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -1.1 + a)); }
-    if (P.t > 4.4) endPaint();
+    const H = W.hero, w = P.g.wall, previous = P.t;
+    P.t += dt;
+    const step = clamp((P.t - 4.2) / .56, 0, 1), walk = ease(clamp(P.t / .9, 0, 1));
+    const pos = H.root.position;
+    pos.set(lerp(P.from.x, w.x, walk), 0, lerp(P.from.z, w.z, walk));
+    if (step > 0 && P.aside !== w) {
+      const clear = ctx.collide(lerp(w.x, P.aside.x, step), lerp(w.z, P.aside.z, step), .32);
+      pos.set(clear.x, 0, clear.z);
+      if (previous <= 4.2) H.play('Walking', { fade: .15 });
+      if (P.t >= 4.76 && previous < 4.76) H.play('Breakdance_Ready', { fade: .2 });
+    }
+    H.root.rotation.y = step > 0 && step < 1 && P.aside !== w
+      ? Math.atan2(P.aside.x - w.x, P.aside.z - w.z)
+      : Math.atan2(w.at.x - pos.x, w.at.z - pos.z);
+    if (P.t > 1 && previous < 4.2) revealGraffiti(w, P.old, P.neu, clamp((P.t - 1) / 3.2, 0, 1));
+    if (P.t >= 4.2 && previous < 4.2) { try { window.RB?.hiss?.(false); } catch (_) {} }
+    H.tick(dt);
+    if (P.t > 1 && P.t < 4.2) {
+      const a = Math.sin(P.t * 9) * .35;
+      H.B.RightArm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -1.1 + a));
+    }
+    if (P.t > 5.35) endPaint();
   }
   function endPaint() {
     const g = P.g; P = null; try { window.RB && RB.hiss && RB.hiss(false); } catch (_) {}
