@@ -1783,3 +1783,7 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - Release on the guide after the first full turn to land. All four draw-enabled moves cap at ten turns. The city adds 0.3 points for each complete turn beyond the first on a successful exit. Slides outside the 1990 corridor end in a fall, including late in the move. Replays use the completed part of the recording.
 - The bucket hat restores the round crown and continuous sloping brim from the earlier profile. The band, stitch and tailor details follow the same shape.
+
+- 26.11.2026 — 3D city move wheel (`city3d-wheel.js`): immediately before each player power step in crew battles, the ring and the jam.
+  Four fixed directions per page, tap or drag and release, locked moves explain their requirements. The existing prefix and score are kept
+  when the chosen power clip and its endings are appended. Battle confirmation still introduces the freeze on first use.
