@@ -9,10 +9,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=23';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=43';
+import { initGame } from './city3d-game.js?v=44';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
-import { buildPark } from './city3d-park.js?v=4';
+import { buildPark } from './city3d-park.js?v=5';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -106,6 +106,25 @@ async function loadAsphalt() {
   };
   const [color, surface, repair] = await Promise.all([load('color', true, true), load('surface', false, true), load('repair', true, false)]);
   return { color, surface, repair };
+}
+async function loadDistrictModel() {
+  const file = { yard: 'yard-dj', park: 'park-paths' }[DIST];
+  if (!file) return null;
+  try {
+    const response = await fetch(new URL(`./anim/${file}.json?v=1`, import.meta.url));
+    if (!response.ok) return null;
+    const model = await response.json();
+    const arrays = { Float32Array, Int8Array, Uint16Array, Uint32Array };
+    for (const { data: { attributes, index } } of model.geometries) {
+      for (const a of [...Object.values(attributes), index]) {
+        const bytes = Uint8Array.from(atob(a.bytes), c => c.charCodeAt(0));
+        a.array = new arrays[a.type](bytes.buffer);
+      }
+    }
+    return new THREE.ObjectLoader().parse(model);
+  } catch (_) {
+    return null;
+  }
 }
 function asphaltMaterial(assets, width, length, tint, bumpScale) {
   // Both maps cover the same physical area. Clones share an image and GPU upload with different repeats.
@@ -581,14 +600,15 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt) {
+async function build(scene, asphalt, props) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, facadeTex, roofTex, stripeTex,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
-  else if (DIST === 'park') await buildPark(TK); else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene, asphalt);
+  else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, maxAniso });
+  else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene, asphalt);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
@@ -1075,8 +1095,10 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
-  const [, asphalt] = await Promise.all([loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null]);
-  await build(scene, asphalt);
+  const [, asphalt, props] = await Promise.all([
+    loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null, loadDistrictModel(),
+  ]);
+  await build(scene, asphalt, props);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
@@ -1084,7 +1106,9 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST, heroLevel: heroLv, heroEq, music: setMusic, shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST,
+    djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
+    shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
