@@ -1818,3 +1818,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - Six Blender models cover cassette, portable PA, twin tower, plywood crate, stage stack and industrial enclosures. Crew units carry the crew accent. The cypher, power contest, mall show, Park jam and underground ring have their own sound systems.
 - `city3d-sound.js` uses the performance anchors after the district and its crews are assembled. It faces the units toward the floor and checks their footprints against the existing objects and dance space. The cone movement and indicator glow follow the city's beat clock.
+
+## 26.11.2026 — Graffiti lettering and concrete walls
+
+- The 3D city uses `CITY_GFX.graf` with `mural: true`. It measures the whole painted silhouette including extensions and emblems, and wraps around a nearby word boundary when it can use significantly larger lettering. It uses the full profile nickname or saved graffiti word, up to 24 characters.
+- The Blender build script exports the bevelled wall and bakes a concrete and paint abrasion atlas with a tile for each district. In the game the generated paint is composited onto the concrete. The 3D camera faces the wall during the spray reveal, with framing based on the current screen aspect.
