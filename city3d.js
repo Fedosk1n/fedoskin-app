@@ -1,6 +1,6 @@
 // «Город» в 3D — первая сцена (owner 14.11.2026: референс — объёмный вид сверху, тёплый свет фонарей, скупая палитра).
 // Только картинка и прогулка: двор вечером, круг би-боев, фонари, ящики, разметка. Механики переносим потом, по одной.
-// Всё строится кодом: модели из простых форм, текстуры рисуются на canvas. Одежда героя — из hero.js (HERO.topDown).
+// Модели и большинство текстур строятся кодом. Асфальт запечён в Blender. Одежда героя — из hero.js (HERO.topDown).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -11,7 +11,7 @@ import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GA
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
 import { initGame } from './city3d-game.js?v=43';
 import { buildProm } from './city3d-prom.js?v=3';
-import { buildCenter } from './city3d-center.js?v=5';
+import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=4';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
@@ -91,11 +91,55 @@ function concreteTex() {
   [0, 128].forEach(p => { rx.fillStyle = '#fff'; rx.fillRect(p - 1, 0, 2, 256); rx.fillRect(0, p - 1, 256, 2); });
   return { map: tex(c, { repeat: [1, 1] }), rough: tex(rc, { color: false, repeat: [1, 1] }), bump: tex(c, { color: false, repeat: [1, 1] }) };
 }
-function asphaltTex() {
-  const S = 512, c = can(S, S), x = c.getContext('2d'), r = rng(31);
-  x.fillStyle = '#16181d'; x.fillRect(0, 0, S, S); blotch(x, S, S, 40, 'rgba(0,0,0,A)', 20, 90, .3, r); grain(c, 28, 9);
-  for (let i = 0; i < 3000; i++) { x.fillStyle = `rgba(${150 + r() * 60},${150 + r() * 60},${160 + r() * 60},${.05 + r() * .12})`; x.fillRect(r() * S, r() * S, 1.5, 1.5); }
-  return tex(c, { repeat: [1, 1] });
+async function loadAsphalt() {
+  const loader = new THREE.TextureLoader();
+  const load = async (name, srgb, repeat) => {
+    try {
+      const t = await loader.loadAsync(new URL(`./img/asphalt-${name}.webp?v=1`, import.meta.url).href);
+      if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+      if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = maxAniso;
+      return t;
+    } catch (_) {
+      return null;
+    }
+  };
+  const [color, surface, repair] = await Promise.all([load('color', true, true), load('surface', false, true), load('repair', true, false)]);
+  return { color, surface, repair };
+}
+function asphaltMaterial(assets, width, length, tint, bumpScale) {
+  // Both maps cover the same physical area. Clones share an image and GPU upload with different repeats.
+  const tiled = texture => {
+    if (!texture) return null;
+    const copy = texture.clone();
+    copy.repeat.set(width / 5.6, length / 5.6);
+    return copy;
+  };
+  const surface = tiled(assets.surface);
+  return new THREE.MeshStandardMaterial({
+    color: assets.color ? tint : '#23242b', map: tiled(assets.color),
+    // Blender packs height into red (Three's bump channel) and roughness into green.
+    bumpMap: surface, bumpScale, roughnessMap: surface, roughness: surface ? 1 : .88,
+  });
+}
+function asphaltRepairs(scene, assets, sites, y) {
+  if (!assets.repair) return;
+  const mat = new THREE.MeshStandardMaterial({
+    map: assets.repair, roughness: .92, transparent: true, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+  });
+  const patches = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, sites.length);
+  patches.name = 'Asphalt repairs';
+  patches.receiveShadow = true;
+  const plane = new THREE.Object3D();
+  for (const [i, [x, z, width, length, angle]] of sites.entries()) {
+    plane.position.set(x, y, z);
+    plane.rotation.set(-Math.PI / 2, 0, angle);
+    plane.scale.set(width, length, 1);
+    plane.updateMatrix();
+    patches.setMatrixAt(i, plane.matrix);
+  }
+  scene.add(patches);
 }
 function woodFaceTex(tone) {
   const S = 512, c = can(S, S), x = c.getContext('2d'), r = rng(tone === 'dark' ? 41 : 42);
@@ -537,27 +581,34 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene) {
+async function build(scene, asphalt) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
-    lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, asphaltTex, facadeTex, roofTex, stripeTex,
+    lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, facadeTex, roofTex, stripeTex,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
-  if (DIST === 'center') await buildCenter(TK); else if (DIST === 'park') await buildPark(TK); else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene);
+  if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
+  else if (DIST === 'park') await buildPark(TK); else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene, asphalt);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
-async function buildYard(scene) {
+async function buildYard(scene, asphalt) {
 
   // ground
-  const con = concreteTex(); [con.map, con.rough, con.bump].forEach(t => t.repeat.set(70 / 6, 70 / 6));
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshStandardMaterial({ map: con.map, roughnessMap: con.rough, bumpMap: con.bump, bumpScale: 1.2, roughness: .92 }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), asphaltMaterial(asphalt, 70, 70, '#e8e1dd', .045));
+  ground.name = 'Yard asphalt';
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   // the street on the east
-  const asp = asphaltTex(); asp.repeat.set(2, 12);
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 70), new THREE.MeshStandardMaterial({ map: asp, roughness: .85 })); road.rotation.x = -Math.PI / 2; road.position.set(18.5, .006, 0); road.receiveShadow = true; scene.add(road);
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 70), asphaltMaterial(asphalt, 9, 70, '#c4c9d2', .03));
+  road.name = 'East asphalt street';
+  road.rotation.x = -Math.PI / 2; road.position.set(18.5, .006, 0); road.receiveShadow = true; scene.add(road);
+  asphaltRepairs(scene, asphalt, [
+    [-1.05, -3.4, 3.75, 2.2, .28], [4.9, .45, 2.2, 2.9, -.37], [-6.8, -6.5, 3.4, 2.95, -.21],
+    [4.8, -10.25, 4.45, 2.1, .42], [-9.25, 1.6, 2.1, 3.3, .8], [1.6, 8.25, 3.1, 1.3, -.12],
+    [8.4, 5.15, 1.75, 2.4, .35], [17.0, -1.3, 2.7, 4.1, .12], [19.8, 12.3, 1.8, 3.5, -.05],
+  ], .009);
   const curb = new THREE.Mesh(new THREE.BoxGeometry(.25, .15, 70), M('#5d6066', .9)); curb.position.set(13.95, .075, 0); curb.receiveShadow = true; scene.add(curb);
   for (let z = -34; z < 34; z += 4.5) decal(scene, paintCanvas(32, 256, (x, w, h) => { x.fillStyle = PAINT_W; x.fillRect(0, 0, w, h); }, .25, z * 3 | 0), .16, 2.2, 18.5, z);
 
@@ -1024,8 +1075,8 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
-  await loadMocap();
-  await build(scene);
+  const [, asphalt] = await Promise.all([loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null]);
+  await build(scene, asphalt);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);

@@ -6,7 +6,7 @@
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 export async function buildCenter(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, TOUCH, OR, PAINT_W, M, glowMat, tex, can, grain, blotch, rng, lerp, clamp, decal, paintCanvas, shadowAll, box, circ,
-    lamp, lamps, dust, trashBag, car, asphaltTex, facadeTex, roofTex, stripeTex, mocapPerson, bodyOf, stride, standPose, HERO, GFX } = TK;
+    lamp, lamps, dust, trashBag, car, asphalt, asphaltMaterial, asphaltRepairs, facadeTex, roofTex, stripeTex, mocapPerson, bodyOf, stride, standPose, HERO, GFX } = TK;
   const P = 48, PI = Math.PI;
   const mesh = (geo, mat, x, y, z, par = scene) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; par.add(m); return m; };
   const glowPlane = (c, w, h, x, y, z, ry = 0, k = 1) => { const t = tex(c), m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, color: new THREE.Color(k, k, k) }));
@@ -44,8 +44,12 @@ export async function buildCenter(TK) {
     x.lineWidth = 4; for (let i = 0; i < 24; i++) { const a = i / 24 * PI * 2; x.beginPath(); x.moveTo(cx + Math.cos(a) * 372, cx + Math.sin(a) * 372); x.lineTo(cx + Math.cos(a) * 488, cx + Math.sin(a) * 488); x.stroke(); } }, .5, 12), 13.4, 13.4, FX, FZ, 0, { op: .42 });
 
   // ---------- the street on the east ----------
-  { const asp = asphaltTex(); asp.repeat.set(2, 12);
-    const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 70), new THREE.MeshStandardMaterial({ map: asp, roughness: .8 })); road.rotation.x = -PI / 2; road.position.set(18.5, .006, 0); road.receiveShadow = true; scene.add(road);
+  { const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 70), asphaltMaterial(asphalt, 9, 70, '#d6dbe2', .032));
+    road.name = 'East asphalt street';
+    road.rotation.x = -PI / 2; road.position.set(18.5, .006, 0); road.receiveShadow = true; scene.add(road);
+    asphaltRepairs(scene, asphalt, [
+      [16.2, -11.1, 2.8, 3.5, .06], [20.4, -.6, 2.45, 3.2, -.10], [16.7, 8.7, 1.9, 3.0, .12], [20.8, 16.1, 2.4, 4.2, .12],
+    ], .009);
     mesh(new THREE.BoxGeometry(.25, .15, 70), M('#6a6e75', .9), 13.95, .075, 0);
     for (let z = -34; z < 34; z += 4.5) if (z < .5 || z > 5.5) decal(scene, paintCanvas(32, 256, (x, w, h) => { x.fillStyle = PAINT_W; x.fillRect(0, 0, w, h); }, .25, z * 3 | 0), .16, 2.2, 18.5, z);
     // zebra
