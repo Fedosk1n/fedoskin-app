@@ -1,6 +1,6 @@
-// Dancers driven by real motion capture (Mixamo, licensed for use in this app; converted to anim/bboy.json:
-// 22 bones, rest pose + 30 fps tracks, quats ×1000, hips cm). Our own low-poly body and clothes hang on the bones,
-// so the moves play exactly as recorded — no hand-posed angles. Look = HERO.topDown(level, acc).
+// Dancers share a 22-bone skeleton and packed 30 fps tracks (quaternions ×1000, hips in cm).
+// Licensed Mixamo capture is in anim/bboy.json. Original phrases use the same rig in anim/city-breaking.json.
+// The low-poly body and clothes follow those bones. Look = HERO.topDown(level, acc).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
