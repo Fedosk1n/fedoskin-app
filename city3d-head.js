@@ -1,5 +1,6 @@
 // Sculpted skulls and fitted headwear in Head bone space. Y is up, Z points towards the face.
 import * as THREE from 'three';
+import { CITY_ANATOMY } from './city3d-anatomy.js?v=1';
 
 const TAU = 2 * Math.PI;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -46,8 +47,13 @@ function skullSlice(y, profile) {
   }
   let i = 1;
   while (i < SKULL.length - 1 && SKULL[i][0] < y) i++;
-  const a = SKULL[i - 1], b = SKULL[i], p = clamp((y - a[0]) / (b[0] - a[0]), 0, 1);
-  const s = a.map((v, j) => v + (b[j] - v) * p);
+  const a = SKULL[i - 1], b = SKULL[i], prev = SKULL[Math.max(0, i - 2)], next = SKULL[Math.min(i + 1, SKULL.length - 1)];
+  const span = b[0] - a[0], t = clamp((y - a[0]) / span, 0, 1), mix = t*t*(3 - 2*t);
+  const s = a.map((v, j) => {
+    if (j === 0) return y;
+    const entering = (b[j] - prev[j]) / (b[0] - prev[0]), leaving = (next[j] - v) / (next[0] - a[0]);
+    return THREE.MathUtils.lerp(v, b[j], mix) + span*t*(1-t)*(entering*(1-t) - leaving*t);
+  });
   const upper = smooth(.004, .095, y);
   s[3] *= (1 - upper) * profile.jaw + upper * profile.temple;
   return s;
@@ -64,23 +70,20 @@ function outline(slice, angle, frontPower = .89, sidePower = .91) {
 function facePoint(slice, angle, profile) {
   const p = outline(slice, angle, .69 + .24 * smooth(.102, .163, slice[0]));
   const [x, y] = p, front = Math.max(0, Math.sin(angle)), f2 = front ** 3;
-  const nose = .018 * bell(y - .064, .020) * bell(x, .013) + .010 * bell(y - .084, .032) * bell(x, .0085);
-  const brow = .005 * bell(y - .119, .010) * bell(Math.abs(x) - .035, .042);
-  const eye = bell(Math.abs(x) - .035, .019) * bell(y - .102, .013);
-  const cheek = .0037 * bell(Math.abs(x) - .055, .018) * bell(y - .074, .015);
-  const wings = bell(Math.abs(x) - .011, .006) * bell(y - .051, .008);
-  const nostril = bell(Math.abs(x) - .010, .005) * bell(y - .045, .0036);
-  const lips = bell(x, .025) * (1 - smooth(.025, .036, Math.abs(x)));
-  const bow = .027 + .0025 * bell(Math.abs(x) - .009, .0045);
-  const upperLip = lips * bell(y - bow, .0038), lowerLip = lips * bell(y - .0195, .0046);
-  const lipLine = lips * bell(y - .0235, .0021);
-  p[2] += f2 * (nose * (profile.girl ? .85 : 1) + brow - .006 * eye + cheek + .005 * wings
-    - .0023 * nostril + .0038 * upperLip + .005 * lowerLip - .0019 * lipLine);
-  const shadow = (1 - .15 * eye * front) * (1 - .2 * (1 - smooth(-.039, .029, y)));
-  const mouth = (.8 * upperLip + .5 * lowerLip) * front ** 4;
-  const crease = (1 - .37 * lipLine * f2) * (1 - .42 * nostril * f2);
-  const skin = shadow * crease;
-  return [...p, [skin * (1 - .12 * mouth), skin * (1 - .30 * mouth), skin * (1 - .25 * mouth)]];
+  const shadow = .81 + .19 * smooth(-.039, .029, y);
+  const { cols, rows, xStep, yStep, yStart, samples } = CITY_ANATOMY.face;
+  const u = Math.abs(x) / xStep, v = (y - yStart) / yStep;
+  if (f2 === 0 || u >= cols - 1 || v < 0 || v >= rows - 1) return [...p, [shadow, shadow, shadow]];
+  const i = Math.floor(u), j = Math.floor(v), sx = u - i, sy = v - j;
+  const k = (j * cols + i) * 4, stride = cols * 4;
+  const sample = channel => {
+    const a = k + channel;
+    const top = THREE.MathUtils.lerp(samples[a], samples[a+4], sx);
+    const bottom = THREE.MathUtils.lerp(samples[a+stride], samples[a+stride+4], sx);
+    return THREE.MathUtils.lerp(top, bottom, sy) * f2 / 10000;
+  };
+  p[2] += sample(0) * (profile.girl ? .89 : 1);
+  return [...p, [1, 2, 3].map(channel => shadow * (1 + sample(channel)))];
 }
 
 function rings(rows, segments, sample, capTop = null, capBottom = null) {
@@ -118,8 +121,11 @@ function rings(rows, segments, sample, capTop = null, capBottom = null) {
 }
 
 function skinGeometry(profile) {
-  const ys = [...new Set([...SKULL.map(row => row[0]), -.025, -.004, .016, .020, .024, .029, .040, .045, .051, .055, .072, .098, .103, .118])].sort((a, b) => a - b);
-  return rings(ys.map(y => skullSlice(y, profile)), 48, (s, a) => facePoint(s, a, profile), [0, HEAD_TOP, -.025], [0, -.05, .068, .77]);
+  const ys = [...new Set([...SKULL.map(row => row[0]), -.025, -.004, .004, .011, .016, .020, .024, .027, .030,
+    .035, .040, .046, .051, .055, .060, .069, .075, .080, .095, .100, .105, .109, .117, .123, .130])].sort((a, b) => a - b);
+  // Allocate more of the ring to the nose and mouth while keeping its back under the hair and headwear.
+  const faceAngle = angle => angle + .48 * Math.cos(angle);
+  return rings(ys.map(y => skullSlice(y, profile)), 72, (s, a) => facePoint(s, faceAngle(a), profile), [0, HEAD_TOP, -.025], [0, -.05, .068, .77]);
 }
 
 function faceZ(x, y, profile) {
@@ -133,12 +139,13 @@ function faceZ(x, y, profile) {
   return facePoint(s, (lo + hi) / 2, profile)[2];
 }
 
-function eyeGeometry(x, y, width, height, offset, profile) {
-  const geo = new THREE.CircleGeometry(1, 12);
+function eyeGeometry(x, y, width, height, offset, profile, almond = false) {
+  const geo = new THREE.CircleGeometry(1, 16);
   const vertices = geo.attributes.position;
   for (let i = 0; i < vertices.count; i++) {
     const rx = vertices.getX(i), ry = vertices.getY(i);
-    const px = x + rx * width, py = y + ry * height + Math.sign(x) * rx * .0014;
+    const px = x + rx * width;
+    const py = y + ry * height * (almond ? 1 - .34 * Math.abs(rx) : 1) + (almond ? Math.sign(x) * rx * .0012 : 0);
     vertices.setXYZ(i, px, py, faceZ(px, py, profile) + offset + (i === 0 ? .0007 : 0));
   }
   geo.computeVertexNormals();
@@ -171,20 +178,24 @@ function faceGeometry(profile) {
   if (HEADS.has(profile.key)) return HEADS.get(profile.key);
   const skin = skinGeometry(profile);
   const eyes = [-1, 1].map(side => {
-    const x = .034 * side, y = .1025;
-    const brow = [-1, 0, 1].map((k, i) => {
-      const bx = x + k * .016, by = .121 + (i === 1 ? .003 : 0) - .0018 * side * k;
+    const x = .035 * side, y = .102;
+    const brow = [-1, -.38, .34, 1].map((k, i) => {
+      const bx = x + k * side * .016, by = .121 + [.001,.004,.005,-.002][i];
       return new THREE.Vector3(bx, by, faceZ(bx, by, profile) + .0025);
     });
     return {
-      lid: eyeGeometry(x, y, .0143, .0063, .0018, profile),
-      white: eyeGeometry(x, y, .0122, .0045, .0031, profile),
-      iris: eyeGeometry(x + .0006 * side, y, .0047, .0043, .0044, profile),
-      pupil: eyeGeometry(x + .0006 * side, y, .0025, .0031, .0053, profile),
-      brow: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(brow), 7, profile.girl ? .002 : .0026, 5),
+      lid: eyeGeometry(x, y, .0157, .0069, .0019, profile, true),
+      white: eyeGeometry(x, y, .0133, .0050, .0031, profile, true),
+      iris: eyeGeometry(x + .0005 * side, y, .0052, .0048, .0044, profile),
+      pupil: eyeGeometry(x + .0005 * side, y, .00255, .00315, .0051, profile),
+      glint: eyeGeometry(x - .0016, y + .0016, .0011, .0011, .0059, profile),
+      brow: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(brow), 9, profile.girl ? .00155 : .00195, 5),
     };
   });
-  const face = { skin, beard: profile.girl ? null : beardGeometry(skin), eyes };
+  const mouth = [[-.023,.0228],[-.011,.0247],[0,.0238],[.011,.0247],[.023,.0228]]
+    .map(([x,y]) => new THREE.Vector3(x,y,faceZ(x,y,profile)+.0016));
+  const face = { skin, beard: profile.girl ? null : beardGeometry(skin), eyes,
+    lipLine: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(mouth), 12, .00085, 5) };
   HEADS.set(profile.key, face);
   return face;
 }
@@ -465,12 +476,16 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
     ear.rotation.x = -.23;
   }
   for (const eye of face.eyes) {
-    add(eye.lid, M('#322521', .9));
-    add(eye.white, M('#CFC5B6', .9));
+    const lid = '#' + new THREE.Color(C.skin).lerp(new THREE.Color('#241515'), .66).getHexString();
+    add(eye.lid, M(lid, .9));
+    add(eye.white, M('#DDD3C6', .9));
     add(eye.iris, M(body.old ? '#6A5949' : '#554031', .79));
     add(eye.pupil, M('#211916', .8));
+    add(eye.glint, M('#EEE0CE', .65));
     add(eye.brow, hair);
   }
+  const lips = '#' + new THREE.Color(C.skin).lerp(new THREE.Color('#542823'), .5).getHexString();
+  add(face.lipLine, M(lips, .92));
   if (body.beard && face.beard) add(face.beard, hair);
 
   const hat = C.hat ? look.hat : null;
