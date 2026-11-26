@@ -5,12 +5,13 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=23';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=24';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=13';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=14';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
+import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { performDJ } from './city3d-dj.js?v=1';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
@@ -184,69 +185,16 @@ const GOALS = [
   { id: 'pwin', t: 'Победи банду Парка', n: 1, p: 1 }, { id: 'jam', t: 'Выиграй хотя бы один раунд джема на эстраде', n: 1, p: 1 }, { id: 'og', t: 'Покажи Маятнику, что учился сегодня', n: 1, p: 1 },
 ];
 GOALS.forEach(g => (g.t = _t(g.t)));
-const TOP = ['Breakdance_Uprock', 'Breakdance_Uprock_Var_1', 'Bboy_Uprock', 'Brooklyn_Uprock', 'Breakdance_Uprock_Var_2'];
-// FOOTWORK VARIETY (owner 17.11.2026 «добавь вариаций футворка во время батлов (слишком однообразно начинают и делают всё)»).
-// Was: everyone went down with the same drop and played one of three whole recordings. Now a dancer's footwork is a COMBO of
-// phrases cut from the real capture, each danced to the left or to the right (mirrored copies «_M», city3d-mocap.js), at his own
-// speed, and the body turns as footwork does — the drop lands facing a new way, every phrase change turns him further round.
-// All three recordings start and end in the same crouch (the end of the drop); Footwork_1 passes it again at 1.5 s — those are the
-// clean joints. The other cuts (Footwork_3 in two halves, the first steps of the chair-freeze recording) are covered by the cross-fade.
-const FW = [
-  { c: 'Breakdance_Footwork_1', a: 0, b: 1.5 }, { c: 'Breakdance_Footwork_1', a: 1.5, b: 3.17 }, { c: 'Breakdance_Footwork_2', a: 0, b: 1.6 },
-  { c: 'Breakdance_Footwork_3', a: 0, b: 2.3 }, { c: 'Breakdance_Footwork_3', a: 2.3, b: 4.57 }, { c: 'Breakdance_Footwork_To_Freeze', a: 0, b: 1.25 },
-];
-const side = (c, m) => (m ? c + '_M' : c);
-// power: level needed, points, how risky (adds to the fall chance), display name
-const POWER = [
-  { id: 'swipe', c: 'Breakdance_Swipes', lv: 1, pts: 2, risk: 0, nm: 'SWIPES' },
-  { id: 'headspin', c: 'Head_Spinning', lv: 2, pts: 3, risk: .05, nm: 'HEADSPIN', pre: 'Headspin_Start', post: 'Headspin_End' },
-  { id: 'flare', c: 'Flair', lv: 3, pts: 3.5, risk: .08, nm: 'FLARE' },
-  { id: 'ninety', c: 'Breakdance_1990', lv: 4, pts: 4, risk: .1, nm: '1990' },
-];
 const FOOT_OPTION = { id: 'footwork', c: 'Breakdance_Footwork_2', lv: 1, pts: 2, risk: 0, nm: 'FOOTWORK' };
-const TOPNM = { Breakdance_Uprock: 'CROSS STEP', Breakdance_Uprock_Var_1: 'KICK STEP', Bboy_Uprock: 'TOPROCK', Brooklyn_Uprock: 'BROOKLYN ROCK', Breakdance_Uprock_Var_2: 'INDIAN STEP' };
-// Final holds come from captured freezes. A = entry after a floor or power phrase, len = through the end of the hold.
-const FREEZE = [
-  { c: 'Breakdance_Footwork_To_Freeze', at: 1.3, len: 2.3, nm: 'CHAIR FREEZE' },
-  { c: 'Crossleg_Freeze', at: 0, len: 2.0, nm: 'CROSSLEG FREEZE' },
-  { c: 'Breakdance_Freeze_Var_2', at: 1.4, len: 1.75, nm: 'AIR FREEZE', lv: 2, risk: .03 },
-  { c: 'Breakdance_Freeze_Var_1', at: 1.5, len: 1.3, nm: 'AIR FREEZE', lv: 2, risk: .03 },
-  { c: 'Breakdance_Freeze_Var_4', at: 1.2, len: 1.8, nm: 'BABY FREEZE' },
-  { c: 'Breakdance_Freeze_Var_3', at: 1.2, len: 2.3, nm: 'BABY FREEZE' },
-];
-// straight down from the toprock into a held freeze (the «drop» shape): a = the last standing beat before the clip goes down, b = end of the hold
-const FDROP = [
-  { c: 'Breakdance_Freeze_Var_4', a: .8, b: 2.9, nm: 'BABY FREEZE' },
-  { c: 'Breakdance_Freeze_Var_3', a: .8, b: 3.5, nm: 'BABY FREEZE' },
-  { c: 'Breakdance_Freeze_Var_2', a: .9, b: 3.0, nm: 'AIR FREEZE', lv: 2 },
-  { c: 'Breakdance_Freezes', a: 1.6, b: 3.85, nm: 'AIR FREEZE', lv: 2 },
-];
-// floorStart opens on the floor and rises into toprock; rebound goes back up for a second toprock;
-// freezeBreak holds a short freeze between two floor phrases.
-const SHAPES = ['classic', 'rock', 'drop', 'powerFirst', 'floorStart', 'rebound', 'freezeBreak'];
-const ENTRIES = [{ bend: 0, len: 1.28 }, { bend: -.68, len: 1.62 }, { bend: .68, len: 1.62 }];
-// turn a dancer by d (rad) round his HIPS: the body turns in place instead of swinging round the middle of the circle
-const _yv = new THREE.Vector3(), _UP = new THREE.Vector3(0, 1, 0);
-function turnBy(J, d) { if (!d) return; J.root.rotation.y += d; _yv.set(J.dx || 0, 0, J.dz || 0).applyAxisAngle(_UP, -d); J.dx = _yv.x; J.dz = _yv.z; }
-// the turns written into a set (s.yaw rad over s.yt s from the start of the step), applied bit by bit every frame
-function spinTick(J, T, t) { for (const s of T.seq) if (s.yaw && t >= s.a && (s.yk || 0) < 1) { const k = ease(clamp((t - s.a) / s.yt, 0, 1)); turnBy(J, s.yaw * (k - (s.yk || 0))); s.yk = k; } }
-
+const battleBpm = id => window.RB?.LOOPS.find(loop => loop.id === id)?.bpm || 112;
+const activeBpm = () => battleBpm(window.RB?.bgmId() || 'yard');
+const currentBeat = () => window.RB?.audioState() === 'running' ? RB.bgmBeat() : null;
 const $ = s => document.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const ease = t => t * t * (3 - 2 * t);
 const today = () => { const d = new Date(); return d.getFullYear() * 1e4 + (d.getMonth() + 1) * 100 + d.getDate(); };
 const pick = (a, r) => a[Math.floor(r() * a.length) % a.length];
-// Use every option before refilling the pool, including across rounds. Avoid a repeat at the refill boundary.
-function rotation(memory, key, options, r) {
-  const last = memory[key];
-  const pending = memory[key + 'Pending']?.length ? memory[key + 'Pending'] : options.slice();
-  const next = pick(pending.length > 1 ? pending.filter(x => x !== last) : pending, r);
-  pending.splice(pending.indexOf(next), 1);
-  memory[key] = next;
-  memory[key + 'Pending'] = pending;
-  return next;
-}
 function rng(seed) { let a = seed >>> 0 || 1; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const sfx = k => { try { window.RB && RB.sfx && RB.sfx(k); } catch (_) {} };
 const lessonSec = () => { try { return +(JSON.parse(localStorage.getItem('fedoskin-stats') || '{}').sec || 0); } catch (_) { return 0; } };
@@ -472,7 +420,7 @@ export function initGame(ctx) {
         : { x: g.x + flank * 1.92, z: g.z + (i < 3 ? flank * .35 : -flank * 1.02) };
       J.root.position.set(J.home.x, 0, J.home.z);
       J.root.rotation.y = Math.atan2(g.x - J.home.x, g.z - J.home.z);
-      J.play(i === 0 ? pick(TOP, r) : 'Breakdance_Ready', { at: r() * 2, speed: .9 + r() * .2 });
+      J.play(i === 0 ? pick(TOP, r)[0] : 'Breakdance_Ready', { at: r() * 2, speed: .9 + r() * .2 });
       scene.add(J.root); g.people.push(J); ctx.circ(J.home.x, J.home.z, .3);
     });
     // ground ring + floating name
@@ -884,7 +832,8 @@ export function initGame(ctx) {
   // a turn of my own in the cypher (free once a day): the same random set as in battles, the crew watches
   function startShow() {
     const H = W.hero, r = rng(Date.now() >>> 0), { x, z } = H.root.position;
-    const T = makeTurn(H, ctx.heroLevel(), r, 'me', buff(), null, Math.hypot(C0.x - x, C0.z - z));
+    const T = makeTurn(H, ctx.heroLevel(), r, 'me', buff(), null, Math.hypot(C0.x - x, C0.z - z), false, activeBpm());
+    alignEntry(T);
     W.walk.start(H);
     A = { kind: 'show', T, c: C0, t0: performance.now() / 1000, from: { x, z } };
     S.showDay = today(); save(); W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: .42 }; document.body.classList.add('g3fight');
@@ -894,7 +843,8 @@ export function initGame(ctx) {
   // If he gets close while I dance (his red ring reaches me), the show is over and almost nothing is earned.
   function startMall() {
     const H = W.hero, r = rng(Date.now() >>> 0), bf = buff(), { x, z } = H.root.position;
-    const T = makeTurn(H, ctx.heroLevel(), r, 'me', { ...bf, fall: bf.fall + BAL.mallFloor }, null, Math.hypot(CN.show.x - x, CN.show.z - z));
+    const T = makeTurn(H, ctx.heroLevel(), r, 'me', { ...bf, fall: bf.fall + BAL.mallFloor }, null, Math.hypot(CN.show.x - x, CN.show.z - z), false, activeBpm());
+    alignEntry(T);
     S.en -= energyCost(BAL.mall); if (S.mallDay.day !== today()) S.mallDay = { day: today(), n: 0 }; S.mallDay.n++; save(); paintHud();
     W.walk.start(H);
     A = { kind: 'show', mall: true, T, c: CN.show, t0: performance.now() / 1000, from: { x, z } };
@@ -974,7 +924,7 @@ export function initGame(ctx) {
       const si = T.seq.findIndex(s => t < s.b);
       if (t >= T.enter && si >= 0 && si !== T.si) { const s = T.seq[si]; T.si = si; if (s.c) H.play(s.c, { fade: s.fade ?? .35, at: s.at, speed: s.sp }); if (s.nm) mvText(s); }
       const s = si >= 0 ? T.seq[si] : null;
-      if (si >= 0) spinTick(H, T, t);
+      if (si >= 0) spinTick(H, T.seq, t);
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) { s.done = true;
         if (s.fail) { fallStart(H); sfx('crash'); mvText(s, ['bad', _t('Срыв!')]); A.clean = false; } else { sfx('hit'); mvText(s, ['ok', _t('Чисто!')]); } }
       if (H.fall) fallTick(H, dt, s && s.soft); if (s && s.kind !== 'fall' && H.fall && H.fall.up) fallEnd(H);
@@ -1087,116 +1037,65 @@ export function initGame(ctx) {
       step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin, spinTol: gear.spin, elbow: gear.elbow }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
-  function timeSteps(seq, from, t) {
-    for (let i = from; i < seq.length; i++) {
-      const step = seq[i]; step.a = t; t += step.len; step.b = t;
-    }
-    return t + OUT;
+  function alignEntry(T) {
+    T.enter = beatEntry(T.enter, T.bpm, currentBeat());
+    T.len = setTimes(T.seq, 0, T.enter) + OUT;
+    if (T.pending) T.pending.at = T.seq.at(-1).b;
   }
-  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12, choosePower = false) {
-    const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
+  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12, choosePower = false, bpm, profile) {
     const me = who === 'me';
     let memory = me ? heroChoreo : opponentChoreo.get(J);
     if (!memory) { memory = {}; opponentChoreo.set(J, memory); }
-    const shape = me && SHAPES.includes(W.forceSet) ? W.forceSet : rotation(memory, 'shape', SHAPES, r);
-    const entry = rotation(memory, 'entry', ENTRIES, r), enter = Math.max(entry.len, .36 + distance / 2);
-    const st = Math.round((bf.step || 0) * 100) / 100, top = rotation(memory, 'top', TOP, r), topMirror = r() < .5;
-    const topStep = (c, mirror, len, scored) => push(side(c, mirror), len, r() * clipLen(c), {
-      nm: TOPNM[c], pts: scored ? 1 + st : 0, kind: scored ? 'top' : 'top2', fade: .35,
-    });
-    const extraTop = () => topStep(pick(TOP.filter(c => c !== top), r), !topMirror, 1.3 + r() * .5, false);
-    let m = r() < .5, held = '';
-    const dir = m ? -1 : 1, DOWN = 'Breakdance_Uprock_To_Ground';
-    const down = (speed, direction = dir) => {
-      const len = clipLen(DOWN) / speed - .035;
-      push(side(DOWN, m), len, 0, { kind: 'down', sp: speed, yaw: direction * (.26 + r() * .7), yt: len });
-    };
-    const rise = () => push(side('Crossleg_Freeze', m), 1.26, .75, { kind: 'rise', fade: .4, yaw: -dir * .44, yt: .9 });
-    // the footwork combo: 2–3 phrases, ~2.7–3.5 s, never the same phrase twice in a row; the side switches now and then (a slower
-    // cross-fade, the weight goes over); between phrases he keeps turning round (mostly the same way)
-    let prev = '', turn = dir;
-    const combo = (want, scored, out, fade0) => { let tot = 0, first = true;
-      while (tot < want - .6 || first) {
-        const P = pick(FW.filter(p => p.c !== prev), r), sw = !first && r() < .35;
-        prev = P.c; if (sw) m = !m;
-        // a phrase is cut to what is left of the combo, but never shorter than .9 s (no flicks) and not cut for the last half second
-        const sp = fsp * (.95 + r() * .1), full = (P.b - P.a) / sp, rest = want - tot, len = full - rest < .5 ? full : Math.max(.9, rest);
-        if (!first && r() < .25) turn = -turn;
-        out.push(Object.assign({ c: side(P.c, m), len, at: P.a, sp, fade: first && fade0 ? fade0 : sw ? .45 : .32 }, first && scored ? { nm: 'FOOTWORK', pts: Math.round((1.5 + st) * 100) / 100, kind: 'foot' }
-          : { kind: 'foot2', yaw: turn * (.2 + r() * .5), yt: .5 }));
-        tot += len; first = false;
-      } };
-    const fsp = .92 + r() * .24;
-    if (shape === 'floorStart') {
-      down(1.2 + r() * .16);
-      combo(1.9 + r() * .5, true, seq);
-      rise();
-      topStep(top, topMirror, 1.65 + r() * .55, true);
-      m = !m;
-      down(1.13 + r() * .16, -dir);
-    } else {
-      topStep(top, topMirror, (shape === 'classic' ? 1.9 : 1.5) + r() * .7, true);
-      if (shape === 'rock') extraTop();
-      if (shape === 'drop') {
-        const F = pick(FDROP.filter(f => (f.lv || 1) <= lv), r); held = F.nm;
-        push(side(F.c, m), F.b - F.a, F.a, { nm: F.nm, pts: .5, kind: me ? 'freeze' : 'hold', fail: false, fade: .4, yaw: dir * (.15 + r() * .35), yt: .9 });
-      } else down(.95 + r() * .2);
-      const fwWant = shape === 'classic' ? 2.7 : shape === 'powerFirst' || shape === 'freezeBreak' ? 1.25 : 1.9;
-      combo(fwWant + r() * .6, true, seq, shape === 'drop' ? .5 : 0);
-      if (shape === 'rebound') { rise(); extraTop(); m = !m; down(1.15 + r() * .16, -dir); }
-      if (shape === 'freezeBreak') {
-        const F = pick(FREEZE.filter(f => f.nm === 'BABY FREEZE' || f.nm === 'CHAIR FREEZE'), r); held = F.nm;
-        push(side(F.c, m), F.len - .45, F.at, { nm: F.nm, kind: 'hold', fade: .42 });
-        m = !m;
-        combo(1.2 + r() * .4, false, seq, .48);
-      }
-    }
+    const opening = breakingOpening({ memory, lv, r, duration: clipLen, bpm, profile, distance,
+      force: me && SHAPES.includes(W.forceSet) ? W.forceSet : undefined, step: Math.round((bf.step || 0) * 100) / 100 });
+    const { seq, shape, enter, bend } = opening;
+    const step = (c, len, at = 0, options = {}) => ({ c, len, at, ...options });
+    const push = (...args) => seq.push(step(...args));
     if (choosePower && gear?.move) {
       push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: 6, kind: 'power', gear });
       gear = null;
     }
     function appendPower(selected) {
-      const pw = POWER.filter(p => p.lv <= lv);
       const forced = me && W.forcePM && POWER.find(p => p.nm === W.forcePM);
-      const P = selected || forced || pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
+      const P = selected || forced || pickPower(memory, r, lv, clipLen, profile);
       const need = selected ? BattleStudy.levels[P.id] || P.lv : P.lv;
       const failP = clamp(.13 + P.risk - .06 * (lv - need) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
       const pFail = r() < failP && !gear && P !== FOOT_OPTION;
       if (P.pre && !gear?.move) push(P.pre, 1.6, 1.0, { kind: 'pre' });
-      if (P.c === 'Breakdance_1990' && !gear?.move) rise();
-      const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
+      if (P.id === 'ninety' && !gear?.move) opening.rise();
+      const reps = selected ? Math.max(1, Math.round(2.6 / clipLen(P.c)))
+        : P.id === 'backspin' ? 1 : Math.max(1, Math.round((2.2 + r() * .8) / clipLen(P.c)));
       const failAt = .45 + r() * .35;
       if (gear?.move) push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: P.pts + 6, kind: 'power', gear });
-      else push(P.c, reps * clipLen(P.c), 0, { nm: P === FOOT_OPTION ? _t('Футворк') : P.nm, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: need, gear });
+      else push(side(P.c, P.id === 'backspin' && r() < .5), reps * clipLen(P.c), 0, { nm: P === FOOT_OPTION ? _t('Футворк') : P.nm, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: need, gear });
       // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
-      const pwS = seq[seq.length - 1], mk = (c, len, at, o = {}) => Object.assign({ c, len, at: at || 0 }, o), ok = [], bad = [mk(null, 2.2, 0, { kind: 'fall' })];
-      if (P.post && !gear?.move) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
-      // «powerFirst»: after the power move he goes back down into footwork (no extra points), then the freeze
-      if (shape === 'powerFirst') combo(1.6 + r() * .6, false, ok, .45);
-      const F = pick(FREEZE.filter(f => (f.lv || 1) <= lv && f.nm !== memory.freeze && f.nm !== held), r);
-      if (!pFail || me) memory.freeze = F.nm;
+      const pwS = seq[seq.length - 1], ok = [], bad = [step(null, 2.2, 0, { kind: 'fall' })];
+      if (P.post && !gear?.move) ok.push(step(P.post, 1.4, 0, { kind: 'post' }));
+      opening.afterPower(ok);
+      const F = pickHold(pFail && !me ? { ...memory } : memory, lv, r, opening.held, clipLen);
       const fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0) + (me ? F.risk || 0 : 0), .03, .2);
       const mirror = r() < .5;
-      const armSupport = F.nm === 'CHAIR FREEZE' || F.nm === 'BABY FREEZE' ? bf.elbow || 0 : 0;
+      const armSupport = ['CHAIR FREEZE', 'BABY FREEZE', 'SHOULDER FREEZE'].includes(F.nm) ? bf.elbow || 0 : 0;
       const balance = selected ? {
         at: Math.min(.8, F.len * .5), direction: mirror ? -1 : 1,
         tolerance: Math.min(26, 20 - (F.risk ? 3 : 0) + Math.max(0, lv - 1) * .45 + (bf.fz || 0) * 40 + bf.fall * 12) + armSupport,
       } : null;
-      ok.push(mk(side(F.c, mirror), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', balance, fail: fFail, failAt: .55 }));
-      if (fFail && !balance) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
+      ok.push(step(side(F.c, mirror), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', balance, fail: fFail, failAt: .55 }));
+      if (fFail && !balance) ok.push(step(null, 1.6, 0, { kind: 'fall', soft: true }));
       seq.push(...(pFail ? bad : ok)); pwS.tails = { ok, bad };
     }
     if (!choosePower) appendPower(null);
-    const T = { J, who, seq, shape, enter, bend: entry.bend, len: timeSteps(seq, 0, enter), score: 0,
+    const T = { J, who, seq, shape, enter, bend, bpm, len: setTimes(seq, 0, enter) + OUT, score: 0,
       style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
     if (choosePower) {
       // The power suffix is built once the player picks. The entry and scored steps stay in place.
-      const at = seq.at(-1).b, from = seq.length;
-      T.pending = { at, resolve(move) {
+      const from = seq.length;
+      T.pending = { at: seq.at(-1).b, resolve(move) {
         if (!T.pending) return;
+        const { at } = T.pending;
         T.pending = null;
         appendPower(move);
-        T.len = timeSteps(seq, from, at);
+        T.len = setTimes(seq, from, at) + OUT;
       } };
     }
     return T;
@@ -1205,6 +1104,8 @@ export function initGame(ctx) {
     if (!g.c.tour) S.en -= energyCost(BAL.battle); S.fights++; save(); paintHud();
     // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
     const beatId = g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id;
+    const bpm = battleBpm(beatId);
+    const profile = crewStyle(g.c.id) || (g.c.ringB ? 'power' : ['groove', 'ground', 'shapes'][JM?.i]);
     if (ctx.music) ctx.music(beatId);
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
     const opp = g.people[0], cx = g.x, cz = g.z;
@@ -1214,11 +1115,11 @@ export function initGame(ctx) {
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq), choices = availablePower();
     for (let i = 0; i < rounds; i++) {
       const gear = HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
-      turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true));
+      turns.push(makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, profile));
+      turns.push(makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm));
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
-    const bpm = RB.LOOPS.find(loop => loop.id === beatId)?.bpm || 120;
     B = { g, opp, turns, choices, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
@@ -1324,7 +1225,7 @@ export function initGame(ctx) {
       }
       const s = si >= 0 ? T.seq[si] : null;
       mythCut(T, s, t);
-      if (si >= 0) spinTick(J, T, t);
+      if (si >= 0) spinTick(J, T.seq, t);
       if (s?.balance && elapsed >= freezeAt && !FZ.active()) {
         B.t0 = now - freezeAt;
         J.act.time = Math.min(s.at + s.balance.at, clipLen(s.c) - .01);
@@ -1410,7 +1311,7 @@ export function initGame(ctx) {
   function nextTurn() {
     B.i++; const H = W.hero; H.ws = B.opp.ws = null;
     if (B.i >= B.turns.length) { judge(); return; }
-    const T = B.turns[B.i]; B.t0 = performance.now() / 1000; T.si = -1;
+    const T = B.turns[B.i]; alignEntry(T); B.t0 = performance.now() / 1000; T.si = -1;
     const other = T.who === 'me' ? B.opp : H; other.play('Breakdance_Ready', { fade: .4, speed: 1.05 });
     W.walk.start(T.J);
     $('#g3turn').textContent = (T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name })) + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });

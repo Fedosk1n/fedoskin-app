@@ -12,3 +12,6 @@ page; three.js + FBXLoader come from a CDN; Claude reads `window.OUT` (already p
 `fbx2clip.py` (17.11.2026) does the same conversion offline in Python (binary FBX parser + FBXLoader's euler 'ZYX' / pre-rotation maths):
 `python3 tools/mocap/fbx2clip.py Walking.fbx` — checked track by track against drop.html (all 46 tracks of Walking/Running identical).
 To add a clip: import it, `convert(path)` → `(clip, rest)`, put `clip` into anim/bboy.json `clips[name]` (compact JSON, same format), bump `?v=`.
+
+Run `node tools/mocap/build_city_breaking.mjs` from the repository root to rebuild the original city choreography in `anim/city-breaking.json`.
+Its hand-authored floor poses use the same rig and packed 30 fps format. The library adds reflected tracks at load time.

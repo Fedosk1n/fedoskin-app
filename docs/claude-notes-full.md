@@ -1828,3 +1828,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - The southeast pad uses a Blender slide with perforated tower guards, a ladder, stepping pods, pull-up and dip bars, and a low bench. The baked rubber surface follows the rounded perimeter and shows the two entrances and the footwork circle. Equipment has close-fitting colliders and the pad stays flush at each entry.
 - The existing Park warm-up uses the centre of the circle. The model and rubber finish load only in the Park. Missing rubber has a solid colour and a missing model falls back to the procedural workout corner.
+
+## 26.11.2026 — Breaking choreography in the 3D city
+
+- `city3d-breaking.js` shares twelve arrangements and six walk-ins between the Yard cypher, crew battles, the Park jam, the ring and solo shows. Four preferences favour standing groove, work on the ground, shape accents and power respectively. Each dancer remembers the last four arrangements plus recent moves and entries. The first phrase can begin on the beat or half beat and the phrase lengths follow the current tempo.
+- Eight original clips cover a sweep drop, shoulder roll, floor sweep, flexibility reach, leg thread, kick switch, backspin and shoulder freeze. `tools/mocap/build_city_breaking.mjs` bakes hand-authored poses and two-bone limb solves on the existing rig. The backspin appears in automatic sets from level 3. The existing manual move chooser and freeze balance continue to use their own timing. The authored tracks load as an optional second pack.
+- Choreography references include the Red Bull BC One guide to rounds and transitions, the B-Boy Dojo teaching material on footwork and powerflow, and the breaking time-motion analysis that describes floorrock separately within floor-level movement.
