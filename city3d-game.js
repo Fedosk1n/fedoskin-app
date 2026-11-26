@@ -7,9 +7,10 @@
 import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=22';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=11';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=12';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
-import { initWheel } from './city3d-wheel.js?v=1';
+import { initWheel } from './city3d-wheel.js?v=2';
+import { initPowerModes } from './city3d-power-modes.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -44,6 +45,11 @@ export const BAL = {
   // the drawn power move (city3d-power.js): ИДЕАЛЬНО = the move's points ×1.5; the first perfect one of each move = +5 ★ once
   perfMul: 1.5, perfFirst: 5, extraTurn: .3,
 };
+function powerPoints(move, res, failed = .5) {
+  if (res.grade === 'miss' || res.grade === 'auto') return failed;
+  const base = res.grade === 'perfect' ? move.pts * BAL.perfMul : move.pts;
+  return Math.round((base + Math.max(0, res.turns - 1) * BAL.extraTurn) * 10) / 10;
+}
 // ---------- CUSTOM (owner 16.11.2026 «добавь механику улучшения одежды (продумай что именно улучшать, может быть какие нашивки)») ----------
 // Four parts of the hero's outfit, three details each. Every detail is SEEN on the hero (city3d-mocap.js look.cus) and gives a small
 // permanent plus in the city's battles where it makes sense for breaking: sneakers → steps, patches → style, knees → freezes,
@@ -252,6 +258,7 @@ function load() {
   s.turf = s.turf || {}; s.last = s.last || {}; s.goals = s.goals || null; s.word = s.word || '';
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
+  s.powerContest = s.powerContest || { best: 0, wins: 0 };
   s.cus = Object.assign({ kicks: 0, top: 0, pants: 0, head: 0 }, s.cus || {});
   s.gearProgress = s.gearProgress || {
     dj: Number(Boolean(s.djDay)),
@@ -341,7 +348,8 @@ body:has(#g3wheel[open]) #g3sc{top:calc(max(10px,env(safe-area-inset-top)) + 44p
 #g3mv .ok{color:#3BD16F}#g3mv .bad{color:#FF5A4F}#g3mv .gold{color:#FFD23F}
 #g3myth{position:absolute;left:50%;top:48%;width:min(38vw,220px);transform:translate(-50%,-50%);padding:12px;background:radial-gradient(ellipse,#66171f,#180a11 78%);border:1px solid #ee6971;border-radius:18px;pointer-events:none}
 #g3myth svg{display:block;width:100%;height:auto;overflow:visible}
-#g3skip{position:absolute;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));pointer-events:auto;border:1px solid rgba(255,255,255,.2);background:rgba(12,14,19,.7);color:#F2EFE8;border-radius:18px;padding:9px 14px;font:600 13px Inter,sans-serif}
+#g3skip,#g3modeExit{position:absolute;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));pointer-events:auto;border:1px solid rgba(255,255,255,.2);background:rgba(12,14,19,.7);color:#F2EFE8;border-radius:18px;padding:9px 14px;font:600 13px Inter,sans-serif}
+#g3modeExit{left:12px;right:auto}
 #g3res{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);opacity:0;transition:.3s;z-index:8;width:min(340px,88vw);background:rgba(14,16,21,.94);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:18px;font-family:Inter,sans-serif;color:#F2EFE8;text-align:center;pointer-events:none}
 #g3res.on{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}
 #g3res h3{margin:2px 0 4px;font:400 34px Anton,sans-serif;letter-spacing:.04em}#g3res h3.w{color:#3BD16F}#g3res h3.l{color:#FF5A4F}
@@ -357,6 +365,7 @@ body:has(#g3wheel[open]) #g3sc{top:calc(max(10px,env(safe-area-inset-top)) + 44p
 #g3info h4{margin:0 0 8px;font:400 22px Anton,sans-serif;letter-spacing:.04em;color:#F2EFE8}#g3info b{color:#F2EFE8}#g3info .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)}
 #g3info button{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:800 15px Inter,sans-serif;background:#E2611A;color:#0B0D12}
 #g3info button.sec{background:#262a33;color:#F2EFE8}
+#g3info button:disabled{opacity:.55}
 #g3info .cu{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)}#g3info .cu>i{font-style:normal;font-size:26px;width:34px;text-align:center}
 #g3info .cu>div{flex:1;min-width:0}#g3info .cu small{display:block;color:#9a968e;font-size:12.5px;line-height:1.35}#g3info .cu small.n{color:#D9D4CA}#g3info .cu .dots{color:#E2611A;letter-spacing:2px;margin-left:6px;font-size:12px}
 #g3info .cu button{margin:0;width:auto;flex:none;padding:10px 12px;font-size:13.5px;border-radius:12px;white-space:nowrap}#g3info .cu button:disabled{background:#262a33;color:#7d7a74}
@@ -372,7 +381,7 @@ function ui() {
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
 <div id="g3hud2"><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
 <button id="g3act" type="button"></button>
-<div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button></div>
+<div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button><button id="g3modeExit" type="button" hidden>${_t('В город')}</button></div>
 <div id="g3res"></div><div id="g3toast"></div><div id="g3info"><div></div></div>`;
   [...h.children].forEach(c => document.body.appendChild(c));
 }
@@ -402,6 +411,8 @@ export function initGame(ctx) {
   const PM = initPower({ W, camera: ctx.camera, sfx });
   const FZ = initFreeze(), wheel = initWheel(), wheelAnchor = new THREE.Vector3();
   let choosing = null;
+  const powerModes = initPowerModes({ W, PM, wheel, playMusic: ctx.music, sfx, fallStart, fallTick, fallEnd,
+    score: (move, res) => powerPoints(move, res, 0), record: recordContest, onEnd: endAct });
   if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
   if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
   if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
@@ -537,8 +548,9 @@ export function initGame(ctx) {
   }
 
   // ---------- places with actions (16.11.2026 «добавляй локации и действия») ----------
-  const freeNear = (px, pz, clear) => { for (let ring = 0; ring < 6; ring++) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, x = px + Math.cos(a) * ring * .8, z = pz + Math.sin(a) * ring * .8;
+  const freeNear = (px, pz, clear, avoid = []) => { for (let ring = 0; ring < 6; ring++) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, x = px + Math.cos(a) * ring * .8, z = pz + Math.sin(a) * ring * .8;
       if (x < Bd.x0 + .8 || x > Bd.x1 - .8 || z < Bd.z0 + .8 || z > Bd.z1 - .8) continue;
+      if (avoid.some(o => Math.hypot(x - o.x, z - o.z) < o.r)) continue;
       if ((ctx.colliders || []).every(c => c.r !== undefined ? Math.hypot(x - c.x, z - c.z) > c.r + clear : Math.hypot(x - clamp(x, c.x0, c.x1), z - clamp(z, c.z0, c.z1)) > clear)) return { x, z }; }
     return { x: px, z: pz }; };
   const M = (c, r = .7, m = 0, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m, emissive: e || '#000', emissiveIntensity: e ? 1.6 : 0 });
@@ -601,11 +613,22 @@ export function initGame(ctx) {
   mk(gate, new THREE.PlaneGeometry(2.9, .36), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gSign), transparent: true, toneMapped: false }), 0, 3.1, .21);
   const chain = mk(gate, new THREE.BoxGeometry(2.5, .06, .06), M('#c9c4b8', .3, .9), 0, 1.1, 0);
   ctx.circ && ctx.circ(gAt.x - 1.4, gAt.z, .3); ctx.circ && ctx.circ(gAt.x + 1.4, gAt.z, .3); ctx.box && ctx.box(gAt.x, gAt.z, 2.4, .2);
+  const arena = freeNear(4.4, 2.8, 1.8, [
+    ...crews.map(g => ({ x: g.x, z: g.z, r: 3.8 })),
+    { ...C0, r: 4.2 }, { ...matAt, r: 4.6 },
+  ]);
+  const paintRing = new THREE.Mesh(new THREE.RingGeometry(1.58, 1.66, 64),
+    new THREE.MeshBasicMaterial({ color: '#FFAA5A', transparent: true, opacity: .88, toneMapped: false, side: THREE.DoubleSide }));
+  paintRing.rotation.x = -Math.PI / 2;
+  paintRing.position.set(arena.x, .026, arena.z);
+  scene.add(paintRing);
+  const arenaLabel = label('ПАУЭРМУВ-КОНТЕСТ', '#FFAE5D', arena.x, arena.z, 2.25);
   const PLACES = [
+    { id: 'powerContest', x: arena.x, z: arena.z, r: 2.15 },
     { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
     { id: 'atelier', x: atFront.x, z: atFront.z, r: 1.6 },
   ];
-  return { recs, strip, djP, djLab, matAt, matLab, chain, atP, atLab, atSign, atFront, PLACES }; })();
+  return { recs, strip, djP, djLab, matAt, matLab, arena, arenaLabel, chain, atP, atLab, atSign, atFront, PLACES }; })();
   const { recs = [], strip = null, djP = null, djLab = null, matAt = null, matLab = null, chain = null, atP = null, atLab = null, atSign = null, atFront = null } = Y || {};
   // the Centre's places are built by city3d-center.js (W.center); here is only what they do
   const CN = W.center || null;
@@ -641,7 +664,8 @@ export function initGame(ctx) {
     const t = today();
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
     if (pl.id === 'dj') return S.djDay === t ? { off: true, h: _t('🎧 Бит качает до конца дня'), s: _t('Меньше срывов и больше стиля в батлах') } : { h: _t('🎧 Заказать бит · −{n} ⚡', { n: energyCost(BAL.dj) }), s: _t('На весь день: меньше срывов, больше стиля'), low: S.en < energyCost(BAL.dj) };
-    if (pl.id === 'mat') { const n = S.form.day === t ? S.form.n : 0; return n >= BAL.trainMax ? { off: true, h: _t('💪 Форма на максимуме сегодня'), s: _t('Срывов в батлах меньше на {n}%', { n: 3 * n }) } : { h: _t('💪 Тренировать пауэр · −{n} ⚡', { n: energyCost(BAL.train) }), s: _t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax }), low: S.en < energyCost(BAL.train) }; }
+    if (pl.id === 'mat') return { h: _t('Тренировочный коврик'), s: _t('Траектории пауэрмувов · тренировка формы') };
+    if (pl.id === 'powerContest') return { h: _t('Пауэрмув-контест'), s: _t('Три раунда против Вихря') };
     if (pl.id === 'atelier') { const left = CUS.reduce((a, c) => a + 3 - (S.cus[c.id] || 0), 0);
       return { h: _t('🧵 Ателье «Игла» — кастом шмота'), s: left ? _t('Нашивки, шнурки, спин-пад: вещи становятся сильнее в батлах') : _t('Весь кастом сделан — зайди полюбоваться') }; }
     if (pl.id === 'gate') { const rk = rankOf(S.rep); return rk < BAL.gateRank ? { off: true, h: _t('🔒 Центр — со звания «{r}»', { r: BAL.ranks[BAL.gateRank] }), s: _t('Сейчас: {r} · {a} / {b} ★', { r: BAL.ranks[rk], a: S.rep, b: BAL.rep[BAL.gateRank] }) } : { h: _t('🚪 Войти в Центр'), s: _t('Банды 3–5 уровня · ТЦ · метро') }; }
@@ -675,7 +699,8 @@ export function initGame(ctx) {
       save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 });
       toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards); paintAct();
     }
-    if (pl.id === 'mat') startTrain();
+    if (pl.id === 'mat') openPractice();
+    if (pl.id === 'powerContest') openContest();
     if (pl.id === 'atelier') startAtelier();
     if (pl.id === 'show') startShow();
     if (pl.id === 'gate') travel('center');
@@ -734,6 +759,57 @@ export function initGame(ctx) {
     else { JM.over = true; lines.push(i ? _t('Джем окончен на {i}-м раунде. За сегодня +{n} ★', { i: i + 1, n: JM.rep }) : _t('Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); }
     const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
     return lines; }
+  function openModeInfo(html) {
+    choosing = true; W.lock = true; paintAct();
+    info(html + `<button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>`);
+    $('#g3choiceBack').onclick = closeChoice;
+  }
+  function openPractice() {
+    const n = S.form.day === today() ? S.form.n : 0, cost = energyCost(BAL.train);
+    openModeInfo(`<h4>${_t('Тренировочный коврик')}</h4>
+      <p>${_t('Выбери пауэрмув и обведи траекторию. Начни с жёлтой точки. Можно повторять бесплатно.')}</p>
+      <button type="button" id="g3tracePractice">${_t('Тренировать траектории')}</button>
+      <button type="button" class="sec" id="g3formPractice" ${n >= BAL.trainMax ? 'disabled' : ''}>
+        ${n >= BAL.trainMax ? _t('💪 Форма на максимуме сегодня') : _t('💪 Тренировать пауэр · −{n} ⚡', { n: cost })}</button>
+      <p>${_t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax })}</p>`);
+    $('#g3tracePractice').onclick = () => {
+      closeChoice();
+      A = { kind: 'powerPractice' };
+      powerModes.start(matAt, POWER.filter(p => PM.can(p.c)).map(move => ({ move, name: move.nm, locked: false })));
+    };
+    $('#g3formPractice').onclick = () => {
+      closeChoice();
+      if (S.en < cost) location.href = './';
+      else if (S.form.day !== today() || S.form.n < BAL.trainMax) startTrain();
+    };
+  }
+  let contestOpponent;
+  function openContest() {
+    const { options, fallback } = availablePower(false);
+    openModeInfo(`<h4>${_t('Пауэрмув-контест')}</h4>
+      <p>${_t('Три раунда против Вихря. В каждом ты выбираешь пауэрмув, и вы оба крутите его. Побеждает сумма очков за точность и обороты.')}</p>
+      <p>${_t('Твой рекорд: {n} очк.', { n: S.powerContest.best })} · ${_t('Побед: {n}', { n: S.powerContest.wins })}</p>
+      ${fallback ? `<button type="button" id="g3startContest">${_t('Начать контест')}</button>`
+        : `<p>${_t('Открой SWIPES или другой пауэрмув на уроках, чтобы участвовать.')}</p>
+          <button type="button" id="g3contestLessons">${_t('🎬 К урокам')}</button>`}`);
+    if (!fallback) { $('#g3contestLessons').onclick = () => { location.href = './'; }; return; }
+    $('#g3startContest').onclick = () => {
+      closeChoice();
+      if (!contestOpponent) {
+        contestOpponent = mocapPerson(HERO.topDown(4, ['c:acidBucket']), { body: bodyOf(4, { type: 'athl' }) });
+        scene.add(contestOpponent.root);
+      }
+      A = { kind: 'powerContest' };
+      powerModes.start(Y.arena, options, contestOpponent);
+    };
+  }
+  function recordContest(points, won) {
+    const result = S.powerContest;
+    result.best = Math.max(result.best, points);
+    if (won) result.wins++;
+    save();
+    return result.best;
+  }
   // practice: the hero runs one power move on the mat; the form point is given whatever happens
   function startTrain() {
     S.en -= energyCost(BAL.train); if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
@@ -794,6 +870,7 @@ export function initGame(ctx) {
   }
   function actTick(dt) {
     const H = W.hero;
+    if (A.kind === 'powerPractice' || A.kind === 'powerContest') { powerModes.tick(dt); return; }
     if (A.kind === 'atelier') { A.t += dt; const k = ease(clamp(A.t / .7, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
       // a slow turntable: front → back → front (a fresh back patch is shown from behind first)
       A.ty = (A.ty || 0) + dt; H.root.rotation.y = (A.spin || 0) + Math.sin(A.ty * .55) * 1.9;
@@ -884,7 +961,7 @@ export function initGame(ctx) {
   // ---------- the battle ----------
   let B = null;
   const lessons = BattleStudy.catalog(window.LESSONS_DATA);
-  function availablePower() {
+  function availablePower(footwork = true) {
     const read = key => { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { return {}; } };
     const stats = read('fedoskin-stats'), coverage = read('fedoskin-ulcov'), lv = ctx.heroLevel();
     const progress = l => ({ views: BattleStudy.views(l, stats), full: BattleStudy.full(l, BattleStudy.coverageFraction(l, BattleStudy.bits(l, coverage))) });
@@ -896,7 +973,7 @@ export function initGame(ctx) {
       const best = swipes.sort((a, b) => b.views - a.views)[0];
       state.hint.swipe = { p: Math.floor(best.views * 10) / 10, full: best.full, lvOk: true };
     }
-    const options = POWER.map(move => {
+    const options = POWER.filter(move => footwork || PM.can(move.c)).map(move => {
       const lvNeed = BattleStudy.levels[move.id] || move.lv;
       const locked = move.id === 'swipe' || BattleStudy.levels[move.id]
         ? !state.allow.includes(move.id) : lv < lvNeed;
@@ -909,12 +986,12 @@ export function initGame(ctx) {
       return { move, locked, reason: gates.join(' · '), name: move.nm };
     });
     const unlocked = options.filter(o => !o.locked);
-    if (!unlocked.length) {
+    if (footwork && !unlocked.length) {
       const starter = options[0];
       options[0] = { move: FOOT_OPTION, locked: false, name: _t('Футворк') };
       options.push(starter);
     }
-    const fallback = unlocked.find(o => o.move.nm === W.forcePM)?.move || unlocked.at(-1)?.move || FOOT_OPTION;
+    const fallback = unlocked.find(o => o.move.nm === W.forcePM)?.move || unlocked.at(-1)?.move || (footwork ? FOOT_OPTION : null);
     return { options, fallback };
   }
   function closeChoice() {
@@ -1247,9 +1324,7 @@ export function initGame(ctx) {
     T.seq = T.seq.slice(0, i + 1).concat(ok ? s.tails.ok : s.tails.bad);
     s.len = res.len; s.b = s.a + s.len; let tt = s.b; for (let k = i + 1; k < T.seq.length; k++) { const x = T.seq[k]; x.a = tt; tt += x.len; x.b = tt; }
     T.len = tt + OUT; B.t0 = now - (s.a + res.rel + .001); B.ln = now;
-    const base = res.grade === 'perfect' ? s.pts * BAL.perfMul : s.pts;
-    const bonus = Math.max(0, res.turns - 1) * BAL.extraTurn;
-    const pts = ok ? Math.round((base + bonus) * 10) / 10 : .5;
+    const pts = powerPoints(s, res);
     T.score += pts; paintScore(T);
     B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade, turns: res.turns, pts });
     if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', _t('Срыв! +0.5 за попытку')]); B.clean = false; }
@@ -1355,7 +1430,7 @@ export function initGame(ctx) {
     if (P) paintTick(dt);
     if (A) actTick(dt);
     if (Y) { recs.forEach(r => r.rotation.y += dt * 3.5); strip.material.emissiveIntensity = 1 + Math.sin(performance.now() / 160) * .6; djP.tick(dt);
-      chain.visible = rankOf(S.rep) < BAL.gateRank; matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
+      chain.visible = rankOf(S.rep) < BAL.gateRank; Y.arenaLabel.visible = matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
       atP.tick(dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) { PZ.gateClub.chain.visible = true; }
