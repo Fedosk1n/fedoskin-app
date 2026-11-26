@@ -1787,3 +1787,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - 26.11.2026 — 3D city move wheel (`city3d-wheel.js`): immediately before each player power step in crew battles, the ring and the jam.
   Four fixed directions per page, tap or drag and release, locked moves explain their requirements. The existing prefix and score are kept
   when the chosen power clip and its endings are appended. Battle confirmation still introduces the freeze on first use.
+
+- 26.11.2026 — Yard power move modes (`city3d-power-modes.js`): the blue mat offers free tracing with unlimited wait before the first touch,
+  accuracy/turn feedback and instant retries, or the existing conditioning session. The orange contest floor runs three rounds against Whirlwind.
+  Both sides use the same selected move per round. Contest selection uses the shared unlock rules, and a missed or unstarted attempt scores zero.
+  Contest best and wins are saved in `S.powerContest`.

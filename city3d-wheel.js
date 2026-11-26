@@ -53,6 +53,7 @@ export function initWheel() {
           <button type="button" class="wheel-next" aria-label="${_t('Следующие элементы')}">›</button>
         </div>
         <button type="button" class="wheel-auto">${_t('Автовыбор')}</button>
+        <button type="button" class="wheel-auto wheel-back" hidden>${_t('В город')}</button>
       </div>
     </div>`;
   document.body.appendChild(panel);
@@ -60,6 +61,7 @@ export function initWheel() {
   const canvas = get('canvas'), paint = canvas.getContext('2d');
   const help = get('.wheel-help'), pager = get('.wheel-pager'), count = get('.wheel-count');
   const prev = get('.wheel-prev'), next = get('.wheel-next');
+  const auto = get('.wheel-auto'), back = get('.wheel-back');
   const instructions = _t('Веди палец к элементу и отпусти или нажми на сектор');
   const buttons = ANGLES.map((_, i) => {
     const b = document.createElement('button');
@@ -71,7 +73,7 @@ export function initWheel() {
     return b;
   });
 
-  let options, onChoose, preferred, page = 0, pageCount = 0, shown = [];
+  let options, onChoose, onBack, preferred, page = 0, pageCount = 0, shown = [];
   let pointer, finger, active = -1, geometry;
 
   function paintWheel() {
@@ -162,7 +164,7 @@ export function initWheel() {
   }
   function close() {
     if (!panel.open) return;
-    onChoose = null;
+    onChoose = onBack = null;
     pointer = finger = undefined;
     active = -1;
     buttons.forEach(b => b.removeAttribute('data-active'));
@@ -210,7 +212,10 @@ export function initWheel() {
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => panel.addEventListener(type, release));
   panel.addEventListener('focusin', paintWheel);
   panel.addEventListener('focusout', () => requestAnimationFrame(paintWheel));
-  panel.addEventListener('cancel', e => e.preventDefault());
+  panel.addEventListener('cancel', e => {
+    e.preventDefault();
+    back.click();
+  });
   function changePage(i) {
     const wasPrev = document.activeElement === prev, wasNext = document.activeElement === next;
     showPage(i);
@@ -219,15 +224,23 @@ export function initWheel() {
   }
   prev.onclick = () => changePage(page - 1);
   next.onclick = () => changePage(page + 1);
-  get('.wheel-auto').onclick = () => {
+  back.onclick = () => {
+    if (!onBack) return;
+    const leave = onBack;
+    close();
+    leave();
+  };
+  auto.onclick = () => {
     if (!onChoose) return;
     const choose = onChoose;
     close();
     choose(preferred);
   };
   return {
-    open(choices, fallback, last, choose) {
-      options = choices; preferred = fallback; onChoose = choose;
+    open(choices, fallback, last, choose, leave) {
+      options = choices; preferred = fallback; onChoose = choose; onBack = leave;
+      back.hidden = !leave;
+      auto.hidden = !!leave;
       pageCount = Math.ceil(options.length / ANGLES.length);
       const first = options.findIndex(o => o.move === last || (!last && !o.locked));
       panel.showModal();

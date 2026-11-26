@@ -91,6 +91,21 @@ function timeAt(T, psi) {
 const turnsAt = p => Math.min(MAX_TURNS, Math.floor(p.idx / (p.N - 1) * MAX_TURNS + 1e-6));
 const cutTime = (T, t) => T.a0 + t % T.seg;
 
+// Animate a scored CPU attempt using the same measured clip loops as the trace.
+function demonstration(J, move, turns) {
+  const T = table(move.c);
+  const duration = timeAt(T, turns * TAU);
+  let elapsed = -T.a0;
+  J.play(move.c, { fade: .22 });
+  J.act.timeScale = 0;
+  return dt => {
+    elapsed += dt;
+    const time = Math.min(elapsed, Math.max(0, duration - .002));
+    J.act.time = time < 0 ? T.a0 + time : cutTime(T, time);
+    return elapsed >= duration;
+  };
+}
+
 export function initPower({ W, camera, sfx = () => {} }) {
   // ---------- the layer the line is drawn on (over the 3D picture, under the battle panel) ----------
   const st = document.createElement('style');
@@ -165,7 +180,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
   }
 
   // ---------- the battle asks ----------
-  // arm(J, step, opt): the step's power clip has just started on J. opt = { first, tolAdd (px), timeAdd (s), onEnd(res) }.
+  // arm(J, step, opt): the step's power clip has just started on J. opt = { first, tolAdd (px), timeAdd (s), wait (s), required, onEnd(res) }.
   // res.grade: 'auto' (nobody drew — the old outcome), 'perfect' | 'good' | 'miss'; res.rel = where the step's time goes on from,
   // res.len = the step's new length, res.rec = the replay.
   function arm(J, s, opt) {
@@ -183,7 +198,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
     p.phi0 = T.ang0 - p.ry;                                     // the legs' angle in the world (the hero may face any way)
     p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, T.cfg.strict ? 4 : 9)) * scl();
     p.limit = T.len / SLOW + .7 + (p.opt.timeAdd || 0);
-    p.wait = p.opt.first ? WAIT_NEW : WAIT;
+    p.wait = p.opt.wait ?? (p.opt.first ? WAIT_NEW : WAIT);
     p.camZ = W.camT && W.camT.zoom;
     if (W.camT) {
       W.camT.zoom = .34; W.camT.x = p.C.x; W.camT.z = p.C.z - .555 * p.C.y + .25;
@@ -251,7 +266,9 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (W.camT) { W.camT.x = p.C.x; W.camT.z = p.C.z - .555 * p.C.y + .25; W.camT.zoom = .34; }
     if (p.st === 'hold') {
       p.h += dt; J.act.timeScale = 0;
-      if (p.h > p.wait) {   // nobody drew: he spins by himself, as before
+      if (p.h > p.wait) {
+        if (p.opt.required) { end('no-start'); return; }
+        // In a regular battle, an untouched move keeps its automatic outcome.
         J.act.timeScale = p.s.sp || 1; restoreCam(); const cb = p.opt.onEnd; P = null; cv.classList.remove('on'); document.body.classList.remove('g3draw'); dirty = true;
         FL = { txt: _t('САМ КРУТИТ'), col: '#c9c4bb', t: 0, small: true };
         cb({ grade: 'auto' });
@@ -305,10 +322,11 @@ export function initPower({ W, camera, sfx = () => {} }) {
     restoreCam(); cv.classList.remove('on'); document.body.classList.remove('g3draw'); dirty = true;
     const bins = new Float32Array(40); for (let i = 0; i < 40; i++) bins[i] = p.binN[i] ? p.bins[i] / p.binN[i] : 0;
     const rel = ok ? T.a0 + p.stopAt : T.a0;
-    const res = { grade: p.grade, acc: p.acc, cover: p.cover, nm: p.s.nm, turns: p.turns, rel, len: ok ? rel : rel + .001,
+    const res = { grade: p.grade, acc: p.acc, cover: p.cover, nm: p.s.nm, turns: p.turns, reason: p.reason, rel, len: ok ? rel : rel + .001,
       rec: ok ? { c: p.s.c, t0: T.a0, len: p.stopAt, pre: T.cfg.pre || 0, ry: p.ry, dx: p.dx, dz: p.dz, cx: p.C.x, cz: p.C.z, grade: p.grade, bins, cover: p.cover, nm: p.s.nm } : null };
     FL = p.grade === 'perfect' ? { txt: _t('ИДЕАЛЬНО!'), col: GOLD, t: 0 } : p.grade === 'good' ? { txt: _t('ЧИСТО'), col: GREEN, t: 0 } : { txt: _t('СРЫВ'), col: RED, t: 0 };
     if (p.reason === 'off-track') FL.detail = _t('Выход за линию');
+    if (p.reason === 'no-start') FL.detail = _t('Попытка не начата');
     if (ok) FL.detail = _t('Обороты: {n}', { n: p.turns });
     last = { grade: res.grade, reason: p.reason, turns: p.turns, acc: +res.acc.toFixed(3), cover: +res.cover.toFixed(3), n: p.n, t: +p.t.toFixed(2), limit: p.limit };
     const cb = p.opt.onEnd; P = null; cb(res);
@@ -317,6 +335,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
   function cancel() {
     if (R) endReplay(true);
     if (P) { const J = P.J; J.rig.rotation.x = J.rig.rotation.z = 0; if (J.act && P.st !== 'arm') J.act.timeScale = P.s.sp || 1; restoreCam(); P = null; }
+    fing.down = false; fing.id = null;
     FL = null; cv.classList.remove('on'); document.body.classList.remove('g3draw'); dirty = true;
   }
   function spark(J) {
@@ -488,7 +507,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
   }
 
   return {
-    can: canDraw, arm, tick, post, cancel, replay,
+    can: canDraw, arm, tick, post, cancel, replay, demonstration,
     holds: () => !!R || !!(P && P.st !== 'arm'),
     state: () => (R ? 'replay' : P ? P.st : null), last: () => last,
     // tests: where the line is now (screen px), the progress, the target

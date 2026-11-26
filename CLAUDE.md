@@ -93,6 +93,9 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   endings (`s.tails`), `drawn()` re-times the set. Test drawing with `GAME._pm()` / `_pmLast()`.
   The city wheel (`city3d-wheel.js`) pauses each player turn before the power move in crew battles, the ring and the jam. Pick by release or tap.
   The wheel shows four moves per page and checks the same lesson and level requirements as the battle catalogue. `?pm=FLARE` prefers an unlocked FLARE for auto-pick.
+  In the yard, the training mat has free trajectory practice for every traced move and the original conditioning action. The marked contest floor
+  runs three rounds against Whirlwind using unlocked moves, the same move for both sides each round and points for accuracy and completed turns.
+  `city3d-power-modes.js` owns both sessions. Contest best score and wins are stored in `S.powerContest`.
 - City 3D MUSIC (17.11, iPhone silent until the 🎵 button was toggled): on a phone no sound before the first real touch (touchend / pointerup / click),
   the loop restarts once `RB.audioState()` is running, after the background the next touch makes a new context (`RB.fresh`). Zoom tip `#ztip`: once ever (`fedoskin-city3d-ztip`).
 - City 3D WALK / RUN = real mocap (Mixamo «Walking» + «Running» in anim/bboy.json, `gaitPose` in city3d-mocap.js) blended by speed in `stride()` (city3d.js) for
