@@ -417,7 +417,7 @@ body.chatmode .tabs{display:none}
 .wdstage::after{content:"";position:absolute;z-index:-1;inset:0;opacity:.23;background:repeating-linear-gradient(118deg,transparent 0 7px,#ffffff09 8px,transparent 10px 13px);pointer-events:none}
 .wdhero{position:relative;align-self:stretch;display:grid;place-items:center;min-width:0}
 .wdhero #mHero{width:100%}
-.wdhero svg{display:block;width:100%;height:212px;filter:drop-shadow(0 5px 5px #0a0808ae)}
+.wdhero svg{display:block;width:100%;height:clamp(218px,60vw,263px);filter:drop-shadow(0 5px 5px #0a0808ae)}
 .wdpreview{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:1;padding:4px 9px;border-radius:16px;background:#171416;color:#ffc098;font-size:10px;font-weight:750;letter-spacing:.14px}
 .wdside{display:grid;gap:5px}
 .wdslot{position:relative;min-width:0;min-height:51px;padding:4px 2px;border:1px solid #4c4141;border-radius:10px;background:#19181bdf;color:var(--fg);cursor:pointer;font:inherit;text-align:center}
@@ -1860,7 +1860,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="battle-study.js?v=1"></script>
-<script src="hero.js?v=23"></script>
+<script src="hero.js?v=24"></script>
 <script src="rhythm.js?v=32"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -5369,7 +5369,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     $('#lvlBar').style.width = v.pct + '%';
     $('#lvlHint').textContent = v.next ? T('Ещё {t} тренировок — и новый образ: {perk}', {t: hmFmt(v.left), perk: T(HERO.PERKS[v.level])}) : T('Максимальный уровень — ты легенда');
     const hk = v.level + '|' + myLook().join(',');
-    if (heroDrawn !== hk) { heroDrawn = hk; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myLook()}); }
+    if (heroDrawn !== hk) { heroDrawn = hk; $('#heroImg').innerHTML = HERO.svg(v.level, {uid: 'p', acc: myLook(), wardrobe: true}); }
     lvlCheck();
     renderProgress();
   }
@@ -5830,7 +5830,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function wdStage(selected, level, cur){
     const fitting = selected && !myEq.includes(selected.id);
     const eq = fitting ? eqWith(myEq, selected.id) : myEq;
-    $('#mHero').innerHTML = HERO.svg(level, { uid: 'mh', bg: false, acc: withLook(eq) });
+    $('#mHero').innerHTML = HERO.svg(level, { uid: 'mh', bg: false, acc: withLook(eq), wardrobe: true });
     $('#wdPreview').hidden = !fitting;
     const worn = new Map(myEq.map(HERO.itemOf).filter(Boolean).map(item => [item.slot, item]));
     const base = HERO.baseSlots(cur);
@@ -5847,7 +5847,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     button.dataset.item = it.id;
     button.dataset.rarity = it.rar;
     button.setAttribute('aria-pressed', String(it.id === wdChosen));
-    button.innerHTML = HERO.svg(3, { uid, bg: it.slot === 'bg' || it.slot === 'fx', acc: [it.id] });
+    const level = it.slot === 'neck' ? 1 : 3;
+    button.innerHTML = HERO.svg(level, { uid, bg: it.slot === 'bg' || it.slot === 'fx', acc: [it.id], wardrobe: true });
     const svg = button.firstElementChild;
     svg.setAttribute('viewBox', WD_SLOTS[it.slot][2]);
     svg.setAttribute('aria-hidden', 'true');
@@ -5914,7 +5915,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       const l = i + 1, open = l <= level, worn = l === cur;
       const d = document.createElement('button'); d.type = 'button';
       d.className = 'herolook wdlook' + (open ? '' : ' lock') + (worn ? ' cur' : '');
-      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)) });
+      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)), wardrobe: true });
       wdText(d, 'b', T('Ур. {n}', { n: l }) + ' · ' + T(HERO.NAMES[i]));
       wdText(d, 'small', worn ? T('Надето') : open ? T('Надеть') : T('Через {t}', { t: hmFmt(need - stats.sec / 60) }));
       d.disabled = !open || worn;

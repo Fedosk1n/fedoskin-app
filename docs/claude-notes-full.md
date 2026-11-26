@@ -1798,3 +1798,7 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - My Items shows owned gear with fitting previews, individual equipment slots and bonuses. The storefront shows purchasable items and keeps the existing price and online win-day checks. Thirteen city rewards unlock through activities and show their cards when found.
 - The illustrated hero has longer legs and knee pads that bend with the knee in rhythm battles. Outward-facing sneakers and the three lace patterns share the same independent footwear and lace slots in the wardrobe and 3D city. The pad for headspins and elbow protection widen the matching manual control zones.
 - Admin 57 checks Worker 2. The Worker registers the 13 city items for sharing equipment with online battle opponents and reports catalog 4.
+
+## 26.11.2026 — Wardrobe illustration details
+
+- The wardrobe uses the original character poses with extra fabric and accessory shading. Preview, item cards and level looks share the same details. Battle rigs and small portraits keep their original drawing.
