@@ -1802,3 +1802,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 ## 26.11.2026 — Wardrobe illustration details
 
 - The wardrobe uses the original character poses with extra fabric and accessory shading. Preview, item cards and level looks share the same details. Battle rigs and small portraits keep their original drawing.
+
+## 26.11.2026 — Asphalt in the Yard and Centre
+
+- Blender bakes tileable asphalt colour and a shared height and roughness map. The Yard uses weathered asphalt on the main ground and a cooler asphalt on the east street. The Centre uses the same material on its east street. The plaza, park paths and industrial concrete retain their own materials.
+- Repairs with ragged seams and tar-filled cracks use one instanced decal layer per district, below the scene's markings. The textures load alongside the character animations. A missing map can fall back without preventing the district from opening.
