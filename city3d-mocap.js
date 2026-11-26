@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead } from './city3d-head.js?v=2';
+import { addCityHead } from './city3d-head.js?v=3';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 
 let DATA = null;

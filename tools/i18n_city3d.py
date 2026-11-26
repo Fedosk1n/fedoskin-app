@@ -380,6 +380,12 @@ t("и веди по стрелкам — ноги пойдут за пальце
 t("Начни с жёлтой точки", "Start at the yellow dot", "Empieza en el punto amarillo", "Comece pelo ponto amarelo", "Commence au point jaune", "Fang beim gelben Punkt an", "黄色い点から始めよう", "노란 점에서 시작해", "从黄点开始")
 t("Не останавливайся!", "Don’t stop!", "¡No te detengas!", "Não pare!", "Ne t’arrête pas !", "Nicht anhalten!", "止まるな！", "멈추지 마!", "别停！")
 t("Держи линию!", "Stay on the line!", "¡Mantén la línea!", "Fique na linha!", "Reste sur la ligne !", "Bleib auf der Linie!", "線をキープ！", "선을 지켜!", "沿着线！")
+t("Выход за линию — срыв", "Leave the lane and you fall", "Si sales del carril, caes", "Se sair da faixa, você cai", "Si tu sors de la piste, tu tombes", "Verlässt du die Spur, stürzt du", "ラインを外れると失敗", "선을 벗어나면 실패", "离开轨道即失败")
+t("Выход за линию", "Left the lane", "Te saliste del carril", "Saiu da faixa", "Tu es sorti de la piste", "Spur verlassen", "ラインを外れた", "선을 벗어남", "偏离轨道")
+t("Обороты: {n}", "Turns: {n}", "Giros: {n}", "Voltas: {n}", "Tours : {n}", "Drehungen: {n}", "回転数：{n}", "회전: {n}", "转数：{n}")
+t("Начни с жёлтой точки и веди по стрелкам", "Start at the yellow dot and follow the arrows", "Empieza en el punto amarillo y sigue las flechas", "Comece no ponto amarelo e siga as setas", "Pars du point jaune et suis les flèches", "Starte am gelben Punkt und folge den Pfeilen", "黄色い点から矢印に沿ってなぞる", "노란 점에서 시작해 화살표를 따라 움직이기", "从黄点开始，沿箭头移动")
+t("После первого оборота отпусти палец на дорожке для выхода", "After one full turn, lift while on the lane to finish", "Tras un giro completo, levanta el dedo dentro del carril para salir", "Depois de uma volta, solte o dedo dentro da faixa para sair", "Après un tour complet, relâche le doigt sur la piste pour sortir", "Nach einer vollen Drehung kannst du auf der Spur loslassen", "1回転したらライン上で指を離すと終了", "한 바퀴 돈 뒤 선 위에서 손을 떼면 마무리", "转完一圈后，在轨道内松手即可结束")
+t("Отпусти палец для выхода", "Lift your finger to finish", "Levanta el dedo para salir", "Solte o dedo para sair", "Relâche le doigt pour sortir", "Zum Beenden loslassen", "指を離して終了", "손을 떼면 마무리", "松手即可结束")
 t("ПОВТОР", "REPLAY", "REPETICIÓN", "REPLAY", "RALENTI", "REPLAY", "リプレイ", "리플레이", "回放")
 t("нажми — дальше", "tap to continue", "toca para seguir", "toque para continuar", "touche pour continuer", "tippen zum Weitermachen", "タップで次へ", "탭하면 다음으로", "点击继续")
 
