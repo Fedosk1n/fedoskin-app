@@ -5,9 +5,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=21';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=22';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=10';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=11';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
@@ -41,7 +41,7 @@ export const BAL = {
   // level 3 «Авторитет». Per level: toprock/footwork +.15 pts, style +.15, freezes −2% falls, power −2% falls (headspin another −2%)
   cusCost: [25, 50, 80], cusRank: [0, 1, 3], cusStep: .15, cusStyle: .15, cusFreeze: .02, cusPower: .02, cusSpin: .02,
   // the drawn power move (city3d-power.js): ИДЕАЛЬНО = the move's points ×1.5; the first perfect one of each move = +5 ★ once
-  perfMul: 1.5, perfFirst: 5,
+  perfMul: 1.5, perfFirst: 5, extraTurn: .3,
 };
 // ---------- CUSTOM (owner 16.11.2026 «добавь механику улучшения одежды (продумай что именно улучшать, может быть какие нашивки)») ----------
 // Four parts of the hero's outfit, three details each. Every detail is SEEN on the hero (city3d-mocap.js look.cus) and gives a small
@@ -1204,9 +1204,11 @@ export function initGame(ctx) {
     T.seq = T.seq.slice(0, i + 1).concat(ok ? s.tails.ok : s.tails.bad);
     s.len = res.len; s.b = s.a + s.len; let tt = s.b; for (let k = i + 1; k < T.seq.length; k++) { const x = T.seq[k]; x.a = tt; tt += x.len; x.b = tt; }
     T.len = tt + OUT; B.t0 = now - (s.a + res.rel + .001); B.ln = now;
-    const pts = res.grade === 'perfect' ? Math.round(s.pts * BAL.perfMul * 10) / 10 : ok ? s.pts : .5;
+    const base = res.grade === 'perfect' ? s.pts * BAL.perfMul : s.pts;
+    const bonus = Math.max(0, res.turns - 1) * BAL.extraTurn;
+    const pts = ok ? Math.round((base + bonus) * 10) / 10 : .5;
     T.score += pts; paintScore(T);
-    B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade });
+    B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade, turns: res.turns, pts });
     if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', _t('Срыв! +0.5 за попытку')]); B.clean = false; }
     else {
       T.rec = res.rec;

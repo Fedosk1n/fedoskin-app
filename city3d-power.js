@@ -5,23 +5,23 @@
 // How it works. When the hero comes to his power move the battle's clock STOPS — he hangs in the air — and a line appears AROUND him:
 // the way his legs will go. The finger LEADS THE LEGS: the recording runs exactly as far as the finger has gone along the line, so the
 // legs are always on the finger's side of the circle and the eyes never leave the dancer — drawing the flare IS doing the flare.
-// A slow finger = slow motion, off the line = the body wobbles, a stop (or the finger lifted) for .6 s = he loses momentum and falls.
+// A slow finger slows the move. Lift on the lane after a full turn to land, or ride the guide to its ten-turn limit.
 // How close the finger stayed → PERFECT (×1.5 points, gold) / CLEAN / FALL. Nothing touched → after a few seconds he spins by himself,
 // as before (the old random outcome). After the set a short replay at the REAL tempo from a lower camera shows how it came out
 // (a light trail from the feet: gold = perfect) — the «see it without drawing» half.
 // The line is not invented: it is MEASURED from the same motion capture (the angle of the legs round the hips, frame by frame), and
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
-import { mocapPerson, getClip } from './city3d-mocap.js?v=21';
+import { mocapPerson, getClip } from './city3d-mocap.js?v=22';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 // the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
 // recording is drawn (`a…b`, or `loops` whole loops), the corridor (px on a 390-px-wide phone; harder moves — narrower)
 export const DRAW = {
-  Breakdance_Swipes: { sig: 'yaw', a: 1.9, b: 2.8, tol: 30, pre: .45 },   // the wind-up plays by itself — you draw the swipe (~1¼ turns)
-  Head_Spinning: { sig: 'RightFoot', loops: 2, tol: 26 },                // the recording = 2 turns → 4 turns
-  Flair: { sig: 'mid', loops: 3, tol: 24 },                              // the middle between the legs, 3 turns
-  Breakdance_1990: { sig: 'RightFoot', loops: 4, tol: 21 },              // the straight leg, 4 turns
+  Breakdance_Swipes: { sig: 'yaw', a: 1.9, b: 2.8, tol: 30, pre: .45 }, // wind-up, then one measured loop
+  Head_Spinning: { sig: 'RightFoot', tol: 26 },
+  Flair: { sig: 'mid', tol: 24 },
+  Breakdance_1990: { sig: 'RightFoot', tol: 13, radius: .8, strict: true },
 };
 const PERF = .42;         // within ~0.4 of the corridor = «perfect» for that bit of the line (~10 px on a flare)
 const PERF_ACC = .82;     // the average needed for ИДЕАЛЬНО (a shaky ±half-corridor finger is CLEAN, not perfect)
@@ -32,6 +32,7 @@ const WAIT = 2.6, WAIT_NEW = 7;   // how long the hero hangs waiting for the fin
 // the replay camera: lower than the normal one (0, 15.5, 8.6 = ~61° down) — ~54° down, ~7 m away, slowly going round the dancer
 const REP_EL = .95, REP_DIST = 6.3, REP_A0 = .55, REP_A1 = -.25;
 const TAU = Math.PI * 2, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const MAX_TURNS = 10;
 const GOLD = '#FFD23F', RED = '#FF5A4F', GREEN = '#3BD16F';
 
 const TR = {}; let probe = null;
@@ -64,18 +65,31 @@ function table(name) {
   // the legs only go one way round: small back-swings are flattened, so every point of the line has exactly one moment of the recording
   const dir = Math.sign(ang[n] - ang[0]) || 1, m = new Float32Array(n + 1); let best = 0;
   for (let i = 0; i <= n; i++) { best = Math.max(best, dir * (ang[i] - ang[0])); m[i] = best + i * 1e-6; }
-  const turn = m[n], loops = cfg.loops || 1;
-  return (TR[name] = { name, cfg, a0, seg: b0 - a0, L, n, m, dir, ang0: ang[0], turn, loops, tot: turn * loops, len: (b0 - a0) * loops,
-    h: h / (n + 1), r: r / (n + 1), tol: cfg.tol, turns: Math.max(1, Math.round(turn * loops / TAU)) });
+  const measuredLen = b0 - a0;
+  const turn = cfg.b ? Math.min(TAU, m[n]) : m[n];
+  const angle = TAU * Math.max(1, Math.round(turn / TAU));
+  const seg = cfg.b ? measuredTime(m, measuredLen, turn) : measuredLen;
+  const T = { name, cfg, a0, seg, measuredLen, m, dir, ang0: ang[0], turn, angle, tot: TAU * MAX_TURNS,
+    h: h / (n + 1), r: r / (n + 1), tol: cfg.tol };
+  T.len = timeAt(T, T.tot);
+  return (TR[name] = T);
 }
-// the moment of the drawn part (seconds from its start) when the legs have gone psi radians round
+function measuredTime(m, duration, angle) {
+  let lo = 0, hi = m.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (m[mid] < angle) lo = mid; else hi = mid;
+  }
+  const f = m[hi] > m[lo] ? clamp((angle - m[lo]) / (m[hi] - m[lo]), 0, 1) : 0;
+  return (lo + f) / (m.length - 1) * duration;
+}
+// Match exact turns on the guide to their measured timing in each repeated recording.
 function timeAt(T, psi) {
-  psi = clamp(psi, 0, T.tot);
-  const k = Math.min(T.loops - 1, Math.floor(psi / T.turn)), rem = psi - k * T.turn, m = T.m;
-  let lo = 0, hi = T.n; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (m[mid] < rem) lo = mid; else hi = mid; }
-  const f = m[hi] > m[lo] ? clamp((rem - m[lo]) / (m[hi] - m[lo]), 0, 1) : 0;
-  return k * T.seg + (lo + f) / T.n * T.seg;
+  const n = clamp(psi, 0, T.tot) / T.angle, loops = Math.floor(n + 1e-9);
+  return loops * T.seg + measuredTime(T.m, T.measuredLen, Math.max(0, n - loops) * T.turn);
 }
+const turnsAt = p => Math.min(MAX_TURNS, Math.floor(p.idx / (p.N - 1) * MAX_TURNS + 1e-6));
+const cutTime = (T, t) => T.a0 + t % T.seg;
 
 export function initPower({ W, camera, sfx = () => {} }) {
   // ---------- the layer the line is drawn on (over the 3D picture, under the battle panel) ----------
@@ -114,7 +128,17 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (!fing.down || e.pointerId !== fing.id) return; e.preventDefault();
     const list = (e.getCoalescedEvents && e.getCoalescedEvents()) || []; (list.length ? list : [e]).forEach(q => move(q.clientX, q.clientY));
   }, { passive: false });
-  const up = e => { if (e.pointerId !== fing.id) return; fing.down = false; fing.id = null; };
+  const up = e => {
+    if (e.pointerId !== fing.id) return;
+    fing.down = false; fing.id = null;
+    if (P?.st !== 'draw') return;
+    if (e.type === 'pointercancel') { end('cancel'); return; }
+    move(e.clientX, e.clientY);
+    if (P?.st !== 'draw') return;
+    if (P.idx === P.N - 1) end('done');
+    else if (turnsAt(P) && P.onTrack) end('exit');
+    else end('release');
+  };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
   function move(x, y) {
@@ -122,8 +146,8 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (P.st === 'hold') { fing.lx = fing.x = x; fing.ly = fing.y = y; tryStart(x, y); return; }
     if (P.st !== 'draw') return;
     // fill the gaps between finger samples every 5 px, so a fast swipe can't jump over the line
-    const dx = x - fing.lx, dy = y - fing.ly, n = Math.min(40, Math.ceil(Math.hypot(dx, dy) / 5));
-    for (let i = 1; i <= n; i++) feed(fing.lx + dx * i / n, fing.ly + dy * i / n);
+    const dx = x - fing.lx, dy = y - fing.ly, n = clamp(Math.ceil(Math.hypot(dx, dy) / 5), 1, 40);
+    for (let i = 1; i <= n && P?.st === 'draw'; i++) feed(fing.lx + dx * i / n, fing.ly + dy * i / n);
     fing.lx = x; fing.ly = y;
   }
 
@@ -133,11 +157,10 @@ export function initPower({ W, camera, sfx = () => {} }) {
     p.cx = (_a.x + 1) / 2 * CW; p.cy = (1 - _a.y) / 2 * CH;
     _b.copy(p.C); _b.x += 1; _b.project(camera); const pxm = Math.max(1, Math.abs((_b.x + 1) / 2 * CW - p.cx));
     _c.copy(p.C); _c.z += 1; _c.project(camera); p.kz = clamp(Math.abs((1 - _c.y) / 2 * CH - p.cy) / pxm, .5, 1.1);
-    p.rad = clamp(p.T.r * pxm * 1.35, .24 * md(), .35 * md());   // round the body, never smaller than a comfortable circle
-    const N = p.N, a = p.pts;
-    for (let k = 0; k < N; k++) {
-      const u = k / (N - 1), f = p.phi0 + p.T.dir * u * p.T.tot, rr = p.rad * (.94 + .12 * u);   // a slow spiral: the laps don't lie on each other
-      a[k * 2] = p.cx + rr * Math.cos(f); a[k * 2 + 1] = p.cy + p.kz * rr * Math.sin(f);
+    p.rad = clamp(p.T.r * pxm * 1.35, .24 * md(), .35 * md()) * (p.T.cfg.radius || 1);
+    const a = p.pts, unit = p.unit, height = p.kz * p.rad;
+    for (let k = 0; k < a.length; k += 2) {
+      a[k] = p.cx + p.rad * unit[k]; a[k + 1] = p.cy + height * unit[k + 1];
     }
   }
 
@@ -158,36 +181,55 @@ export function initPower({ W, camera, sfx = () => {} }) {
     p.C = new THREE.Vector3(_a.x, T.h + (J.lift || 0), _a.z);
     p.ry = J.root.rotation.y; p.dx = J.dx; p.dz = J.dz; p.rx = J.root.position.x; p.rz = J.root.position.z;
     p.phi0 = T.ang0 - p.ry;                                     // the legs' angle in the world (the hero may face any way)
-    p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, 9)) * scl();
+    p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, T.cfg.strict ? 4 : 9)) * scl();
     p.limit = T.len / SLOW + .7 + (p.opt.timeAdd || 0);
     p.wait = p.opt.first ? WAIT_NEW : WAIT;
-    p.camZ = W.camT && W.camT.zoom; if (W.camT) { W.camT.zoom = .34; W.camT.x = p.C.x; W.camT.z = p.C.z - .555 * p.C.y + .25; }
-    p.N = 0; p.rad = .3 * md(); p.N = Math.max(60, Math.ceil(T.tot * p.rad * 1.06 / 6)); p.pts = new Float32Array(p.N * 2);
+    p.camZ = W.camT && W.camT.zoom;
+    if (W.camT) {
+      W.camT.zoom = .34; W.camT.x = p.C.x; W.camT.z = p.C.z - .555 * p.C.y + .25;
+      // Settle the tighter path before the player can start tracing it.
+      if (T.cfg.strict) { W.zoom = W.camT.zoom; W.camSnap = true; }
+    }
+    p.rad = .3 * md() * (T.cfg.radius || 1);
+    p.N = Math.max(60, Math.ceil(T.tot * p.rad * 1.06 / 6)); p.pts = new Float32Array(p.N * 2);
+    p.unit = new Float32Array(p.pts.length);
+    for (let k = 0; k < p.N; k++) {
+      const u = k / (p.N - 1), a = p.phi0 + T.dir * u * T.tot, r = .94 + .12 * u;
+      p.unit[k * 2] = r * Math.cos(a); p.unit[k * 2 + 1] = r * Math.sin(a);
+    }
     Object.assign(p, { st: 'hold', h: 0, idx: 0, at: 0, n: 0, sum: 0, q: 1, wob: 0, lastIdx: 0, lastProg: 0, lap: 0, trail: [],
-      bins: new Float32Array(40), binN: new Float32Array(40), pulse: 0, nudge: 0 });
+      bins: new Float32Array(40), binN: new Float32Array(40), pulse: 0, nudge: 0, onTrack: false });
     cv.classList.add('vis', 'on'); document.body.classList.add('g3draw'); dirty = true;
     if (fing.down) tryStart(fing.x, fing.y);
   }
   function tryStart(x, y) {
     const p = P; if (!p || p.st !== 'hold' || !p.pts) return;
     geo();
-    if (Math.hypot(p.pts[0] - x, p.pts[1] - y) <= Math.max(60, p.tol * 2.6)) {
+    const startRadius = p.T.cfg.strict ? p.tol : Math.max(60, p.tol * 2.6);
+    if (Math.hypot(p.pts[0] - x, p.pts[1] - y) <= startRadius) {
       p.st = 'draw'; p.t = 0; p.lastProg = 0; fing.lx = x; fing.ly = y; feed(x, y);
     } else p.nudge = .8;   // «start at the yellow dot»
   }
   // one finger sample: how far from the line, and how far along it got
   function feed(x, y) {
-    const p = P, a = p.pts, N = p.N; let best = 1e9, far = -1;
-    const tol = p.idx < 3 ? p.tol * 1.6 : p.tol;
-    for (let j = Math.max(0, p.idx - 3), e = Math.min(N - 1, p.idx + 6); j <= e; j++) {
-      const d = Math.hypot(a[j * 2] - x, a[j * 2 + 1] - y);
-      if (d < best) best = d;
-      if (d <= tol) far = j;
+    const p = P, a = p.pts, N = p.N; let best = Infinity, nearest = p.idx;
+    const strict = p.T.cfg.strict;
+    if (p.idx === N - 1) return;
+    const tol = !strict && p.idx < 3 ? p.tol * 1.6 : p.tol;
+    for (let j = Math.max(0, p.idx - 5), e = Math.min(N - 2, p.idx + 12); j <= e; j++) {
+      const ax = a[j * 2], ay = a[j * 2 + 1];
+      const dx = a[j * 2 + 2] - ax, dy = a[j * 2 + 3] - ay;
+      const len2 = dx * dx + dy * dy;
+      const u = len2 ? clamp(((x - ax) * dx + (y - ay) * dy) / len2, 0, 1) : 0;
+      const d = Math.hypot(ax + u * dx - x, ay + u * dy - y);
+      if (d < best) { best = d; nearest = j + u; }
     }
+    if (strict && best > tol) { end('off-track'); return; }
+    p.onTrack = best <= p.tol;
     const sc = best <= p.tol * PERF ? 1 : best <= tol ? .5 : 0;
     p.n++; p.sum += sc; p.q += (sc - p.q) * .25;
     const bin = Math.min(39, Math.floor(p.idx / N * 40)); p.bins[bin] += 1 - sc; p.binN[bin]++;
-    if (far > p.idx) p.idx = far;
+    if (best <= tol) p.idx = Math.max(p.idx, Math.round(nearest));
     p.trail.push({ x, y, t: clock, s: sc });
   }
 
@@ -219,14 +261,14 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (p.st === 'draw') {
       p.t += dt;
       if (p.idx > p.lastIdx) { p.lastIdx = p.idx; p.lastProg = p.t; }
-      const lap = Math.floor(p.idx / (p.N - 1) * T.tot / TAU + 1e-6);
+      const lap = turnsAt(p);
       if (lap > p.lap) { p.lap = lap; p.pulse = 1; sfx('whoosh'); try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} }
       const cover = p.idx / (p.N - 1);
       if (p.idx >= p.N - 1) end('done');
       else if (p.t - p.lastProg > (p.idx < 4 ? STALL * 2 : STALL)) end('stall');
       else if (p.t > p.limit) end('time');
       if (!P) return;                                           // a fall ends it at once
-      drive(dt, p.st === 'finish' ? T.len : timeAt(T, cover * T.tot));
+      drive(dt, p.st === 'finish' ? p.stopAt : timeAt(T, cover * T.tot));
       // a sloppy finger = a shaky body (the eyes on the dancer see it at once)
       p.wob += ((1 - p.q) - p.wob) * (1 - Math.exp(-dt * 8));
       const w = p.st === 'draw' ? p.wob : 0;
@@ -235,32 +277,40 @@ export function initPower({ W, camera, sfx = () => {} }) {
       return;
     }
     if (p.st === 'finish') {
-      drive(dt, T.len, true);
-      if (p.at >= T.len - 1e-4) done();
+      if (p.at >= p.stopAt - 1e-4) done();
+      else drive(dt, p.stopAt, true);
     }
   }
   // the legs follow the finger: smooth, never back, never faster than RATE × the real tempo
   function drive(dt, want, fast) {
     const p = P, J = p.J; if (dt <= 0) { J.act.timeScale = 0; return; }
     const d = Math.max(0, want - p.at), step = Math.min(fast ? d : d * (1 - Math.exp(-dt * 14)), RATE * dt);
-    p.at += step; J.act.timeScale = step / dt;   // the mixer moves the clip by exactly this much in J.tick (root motion included)
+    p.at += step;
+    if (p.T.cfg.b) { J.act.time = cutTime(p.T, p.at); J.act.timeScale = 0; }
+    else J.act.timeScale = step / dt;
   }
   function end(why) {
     const p = P, cover = p.idx / (p.N - 1), acc = p.n ? p.sum / p.n : 0;
-    p.grade = why === 'done' ? (acc >= PERF_ACC ? 'perfect' : 'good') : cover >= .85 ? 'good' : 'miss';
+    const ok = why === 'done' || why === 'exit';
+    p.grade = ok ? (acc >= PERF_ACC ? 'perfect' : 'good') : 'miss';
+    p.stopAt = ok ? timeAt(p.T, cover * p.T.tot) : p.at;
+    p.turns = ok ? turnsAt(p) : 0;
+    p.reason = why;
     p.acc = acc; p.cover = cover; p.J.rig.rotation.x = p.J.rig.rotation.z = 0;
     if (p.grade === 'miss') done(); else p.st = 'finish';
   }
   function done() {
-    const p = P, J = p.J, T = p.T, cfg = T.cfg, ok = p.grade !== 'miss';
+    const p = P, J = p.J, T = p.T, ok = p.grade !== 'miss';
     J.rig.rotation.x = J.rig.rotation.z = 0; J.act.timeScale = p.s.sp || 1;
     restoreCam(); cv.classList.remove('on'); document.body.classList.remove('g3draw'); dirty = true;
     const bins = new Float32Array(40); for (let i = 0; i < 40; i++) bins[i] = p.binN[i] ? p.bins[i] / p.binN[i] : 0;
-    const res = { grade: p.grade, acc: p.acc, cover: p.cover, nm: p.s.nm,
-      rel: ok ? T.a0 + T.len : T.a0, len: ok ? T.a0 + T.len + (cfg.b ? T.L - cfg.b : 0) : T.a0 + .001,
-      rec: ok ? { c: p.s.c, t0: T.a0, len: T.len, pre: cfg.pre || 0, ry: p.ry, dx: p.dx, dz: p.dz, cx: p.C.x, cz: p.C.z, grade: p.grade, bins, nm: p.s.nm } : null };
+    const rel = ok ? T.a0 + p.stopAt : T.a0;
+    const res = { grade: p.grade, acc: p.acc, cover: p.cover, nm: p.s.nm, turns: p.turns, rel, len: ok ? rel : rel + .001,
+      rec: ok ? { c: p.s.c, t0: T.a0, len: p.stopAt, pre: T.cfg.pre || 0, ry: p.ry, dx: p.dx, dz: p.dz, cx: p.C.x, cz: p.C.z, grade: p.grade, bins, cover: p.cover, nm: p.s.nm } : null };
     FL = p.grade === 'perfect' ? { txt: _t('ИДЕАЛЬНО!'), col: GOLD, t: 0 } : p.grade === 'good' ? { txt: _t('ЧИСТО'), col: GREEN, t: 0 } : { txt: _t('СРЫВ'), col: RED, t: 0 };
-    last = { grade: res.grade, acc: +res.acc.toFixed(3), cover: +res.cover.toFixed(3), n: p.n, t: +p.t.toFixed(2), limit: p.limit };
+    if (p.reason === 'off-track') FL.detail = _t('Выход за линию');
+    if (ok) FL.detail = _t('Обороты: {n}', { n: p.turns });
+    last = { grade: res.grade, reason: p.reason, turns: p.turns, acc: +res.acc.toFixed(3), cover: +res.cover.toFixed(3), n: p.n, t: +p.t.toFixed(2), limit: p.limit };
     const cb = p.opt.onEnd; P = null; cb(res);
   }
   function restoreCam() { if (W.camT && P) W.camT.zoom = P.camZ || .4; }
@@ -288,7 +338,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
     J.play(rec.c, { fade: .01, at: t0 || .0001, raw: true }); if (J.act) J.act.timeScale = 1;
     // a cut: the camera jumps (W.camSnap) to a lower view at the side and slowly goes round him; the battle panel hides
     W.camT = { x: rec.cx, z: rec.cz, zoom: 1, off: new THREE.Vector3() }; W.zoom = 1; W.camSnap = true; orbit(0);
-    R = { J, rec, sv, t: 0, pre: rec.t0 - t0, len: rec.t0 - t0 + rec.len, onDone, feet: [[], []] };
+    R = { J, rec, T: table(rec.c), sv, t: 0, pre: rec.t0 - t0, len: rec.t0 - t0 + rec.len, onDone, feet: [[], []] };
     flash = 1; FL = null; cv.classList.add('vis', 'on'); document.body.classList.add('g3rep'); dirty = true;
   }
   function orbit(k) {
@@ -297,9 +347,11 @@ export function initPower({ W, camera, sfx = () => {} }) {
   }
   function replayTick(dt) {
     const r = R, J = r.J; r.t += dt; orbit(clamp(r.t / (r.len + .35), 0, 1)); if (W.camT) W.camT.zoom = 1;
-    const u = clamp((r.t - r.pre) / r.rec.len, 0, 1), w = r.t > r.pre && r.t < r.len ? r.rec.bins[Math.min(39, Math.floor(u * 40))] : 0;
+    const u = clamp((r.t - r.pre) / r.rec.len, 0, 1), w = r.t > r.pre && r.t < r.len ? r.rec.bins[Math.min(39, Math.floor(u * r.rec.cover * 40))] : 0;
     J.rig.rotation.x = w * .14 * Math.sin(clock * 17); J.rig.rotation.z = w * .14 * Math.cos(clock * 13);
-    if (r.t >= r.len && J.act) J.act.timeScale = 0;            // the last frame of the move holds for a moment
+    if (J.act && r.T.cfg.b && r.t >= r.pre) {
+      J.act.time = cutTime(r.T, u * r.rec.len); J.act.timeScale = 0;
+    } else if (r.t >= r.len && J.act) J.act.timeScale = 0;
     if (r.skip || r.t >= r.len + .35) endReplay();
   }
   function endReplay(silent) {
@@ -339,7 +391,9 @@ export function initPower({ W, camera, sfx = () => {} }) {
     const k = f.t, pop = k < .12 ? .7 + 2.5 * k : 1, a = k > (f.small ? .8 : 1) ? clamp(1 - (k - (f.small ? .8 : 1)) / .3, 0, 1) : 1;
     g.save(); g.globalAlpha = a; g.translate(CW / 2, CH * .3); g.scale(pop, pop);
     if (!f.small) { g.shadowColor = f.col; g.shadowBlur = 18; }
-    text(f.txt, 0, 0, f.small ? 22 : 44, f.col); g.restore();
+    text(f.txt, 0, 0, f.small ? 22 : 44, f.col);
+    if (f.detail) text(f.detail, 0, 36, 15, '#fff', 'Inter', 700);
+    g.restore();
   }
   function guide(dt) {
     const p = P, a = p.pts, N = p.N, T = p.T, cx = p.cx, cy = p.cy;
@@ -347,11 +401,20 @@ export function initPower({ W, camera, sfx = () => {} }) {
     const sp = g.createRadialGradient(cx, cy, p.rad * .95, cx, cy, Math.max(CW, CH) * .75);
     sp.addColorStop(0, 'rgba(5,6,9,0)'); sp.addColorStop(1, 'rgba(5,6,9,.5)'); g.fillStyle = sp; g.fillRect(0, 0, CW, CH);
     g.lineCap = g.lineJoin = 'round';
-    // the whole way, faint
-    g.beginPath(); for (let k = 0; k < N; k++) k ? g.lineTo(a[k * 2], a[k * 2 + 1]) : g.moveTo(a[0], a[1]);
+    // Show the active revolution only. Later laps follow the same guide.
+    const lapN = (N - 1) / MAX_TURNS, i0 = p.idx, i1 = Math.min(N - 1, i0 + Math.round(lapN * .85));
+    const lapEnd = Math.min(N - 1, i0 + Math.round(lapN));
+    g.beginPath(); g.moveTo(a[i0 * 2], a[i0 * 2 + 1]);
+    for (let k = i0 + 1; k <= lapEnd; k++) g.lineTo(a[k * 2], a[k * 2 + 1]);
     g.strokeStyle = 'rgba(255,255,255,.13)'; g.lineWidth = 2; g.stroke();
     // what's next: ~0.85 of a turn ahead, bright → fading, with arrows
-    const lapN = (N - 1) * TAU / T.tot, i0 = p.idx, i1 = Math.min(N - 1, i0 + Math.round(lapN * .85));
+    if (T.cfg.strict) {
+      const lead = Math.max(0, i0 - 5);
+      g.beginPath(); g.moveTo(a[lead * 2], a[lead * 2 + 1]);
+      for (let k = lead + 1; k <= i1; k++) g.lineTo(a[k * 2], a[k * 2 + 1]);
+      g.strokeStyle = 'rgba(255,210,63,.66)'; g.lineWidth = p.tol * 2 + 2; g.stroke();
+      g.strokeStyle = '#302A1B'; g.lineWidth = p.tol * 2; g.stroke();
+    }
     const wd = Math.max(7, p.tol * .55);
     for (let k = i0; k < i1; k++) {
       const f = 1 - (k - i0) / Math.max(1, i1 - i0);
@@ -383,19 +446,21 @@ export function initPower({ W, camera, sfx = () => {} }) {
       g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3; g.beginPath(); g.arc(dx, dy, 19, -Math.PI / 2, -Math.PI / 2 + TAU * left); g.stroke();
       const ring = (clock * 1.4) % 1; g.strokeStyle = `rgba(255,210,63,${1 - ring})`; g.lineWidth = 2; g.beginPath(); g.arc(dx, dy, 12 + 26 * ring, 0, TAU); g.stroke();
       text(p.s.nm, cx, bot + 8, 28, '#fff');
-      text(T.cfg.sig === 'yaw' ? _t('Веди ноги пальцем · свайп') : _t(T.turns < 5 ? 'Веди ноги пальцем · {n} оборота' : 'Веди ноги пальцем · {n} оборотов', { n: T.turns }), cx, bot + 36, 14, '#e8e4dc', 'Inter', 600);
-      if (p.opt.first) { text(_t('Положи палец на жёлтую точку'), cx, bot + 64, 15, GOLD, 'Inter', 700); text(_t('и веди по стрелкам — ноги пойдут за пальцем'), cx, bot + 84, 13, '#e8e4dc', 'Inter', 600); }
+      text(_t('Начни с жёлтой точки и веди по стрелкам'), cx, bot + 36, 14, '#e8e4dc', 'Inter', 600);
+      text(_t('После первого оборота отпусти палец на дорожке для выхода'), cx, bot + 60, 13, '#e8e4dc', 'Inter', 600);
+      if (T.cfg.strict) text(_t('Выход за линию — срыв'), cx, bot + 82, 15, GOLD, 'Inter', 700);
       if (p.nudge > 0) { p.nudge -= dt; text(_t('Начни с жёлтой точки'), dx, dy - 34, 14, GOLD, 'Inter', 700); }
     } else {
       // turns, time
       const left = clamp(1 - p.t / p.limit, 0, 1), bw = 150, bx = cx - bw / 2;
       g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(bx, bot, bw, 5);
       g.fillStyle = left < .3 ? RED : '#FFB547'; g.fillRect(bx, bot, bw * left, 5);
-      if (T.turns > 1) text(`${Math.min(T.turns, p.lap + 1)} / ${T.turns}`, cx, bot + 28, 24 + 6 * p.pulse, p.pulse > 0 ? GOLD : '#fff');
+      text(`${p.lap} / ${MAX_TURNS}`, cx, bot + 28, 24 + 6 * p.pulse, p.pulse > 0 ? GOLD : '#fff');
       p.pulse = Math.max(0, p.pulse - dt * 3);
       if (p.st === 'draw') {
         if (p.t - p.lastProg > .28) text(_t('Не останавливайся!'), cx, bot + 58, 15, RED, 'Inter', 700);
-        else if (p.q < .35) text(_t('Держи линию!'), cx, bot + 58, 15, '#FFB547', 'Inter', 700);
+        else if (!p.onTrack) text(_t('Держи линию!'), cx, bot + 58, 15, '#FFB547', 'Inter', 700);
+        else if (p.lap) text(_t('Отпусти палец для выхода'), cx, bot + 58, 15, '#e8e4dc', 'Inter', 700);
       }
     }
   }
@@ -427,6 +492,6 @@ export function initPower({ W, camera, sfx = () => {} }) {
     holds: () => !!R || !!(P && P.st !== 'arm'),
     state: () => (R ? 'replay' : P ? P.st : null), last: () => last,
     // tests: where the line is now (screen px), the progress, the target
-    _probe: () => P && P.pts ? { st: P.st, N: P.N, idx: P.idx, tol: P.tol, cx: P.cx, cy: P.cy, rad: P.rad, kz: P.kz, pts: Array.from(P.pts), at: P.at, len: P.T.len, q: P.q, acc: P.n ? P.sum / P.n : 0, limit: P.limit } : null,
+    _probe: () => P && P.pts ? { st: P.st, N: P.N, idx: P.idx, turns: turnsAt(P), tol: P.tol, cx: P.cx, cy: P.cy, rad: P.rad, kz: P.kz, pts: Array.from(P.pts), at: P.at, len: P.T.len, q: P.q, acc: P.n ? P.sum / P.n : 0, limit: P.limit } : null,
   };
 }

@@ -232,43 +232,30 @@ const knitCuff = [
   [.104,.131,-.143,.098,-.022], [.109,.136,-.149,.103,-.022], [.131,.139,-.152,.105,-.023],
   [.148,.137,-.153,.104,-.025], [.153,.133,-.148,.101,-.027],
 ];
-const bucket = [
-  [.139,.138,-.151,.105,-.022], [.155,.139,-.152,.106,-.023], [.194,.130,-.146,.103,-.027],
-  [.234,.110,-.134,.094,-.028], [.249,.082,-.106,.080,-.025], [.252,.054,-.080,.059,-.022],
-  [.253,.020,-.048,.032,-.016],
+// The round bucket profile follows a single axis from the underside of its brim to its crown.
+const BUCKET_Z = -.006, BUCKET_TOP = .262, BUCKET_X = .94;
+const bucketProfile = [
+  [.14, .13], [.168, .114], [.2, .096], [.206, .102], [.196, .111], [.166, .131], [.139, .148],
+  [.137, .17], [.133, .2], [.123, .23], [.104, .249], [.07, .259],
 ];
-const bucketBand = [
-  [.144,.142,-.156,.108,-.022], [.151,.143,-.156,.109,-.022],
-  [.164,.141,-.154,.108,-.024], [.169,.138,-.151,.106,-.025],
-];
-const bucketBrim = [
-  [.138,.136,-.150,.104,-.022], [.126,.162,-.175,.126,-.022], [.105,.191,-.205,.154,-.022],
-  [.103,.199,-.211,.159,-.022], [.109,.2,-.212,.16,-.022], [.117,.185,-.198,.146,-.022],
-  [.132,.162,-.175,.127,-.022], [.145,.140,-.154,.108,-.022],
-];
+const bucketBand = [[.1405, .149], [.141, .153], [.140, .167], [.1395, .171]];
+const roundBucket = ([radius, y], a) => [radius * Math.cos(a) * BUCKET_X, y, BUCKET_Z + radius * Math.sin(a)];
+const BUCKET_STITCH = new THREE.TorusGeometry(.180, .0028, 6, 40).rotateX(Math.PI / 2).scale(BUCKET_X, 1, 1);
 
 function cloth(rows, type, top) {
   const fine = type === 'cuff';
-  const brim = type === 'brim';
   return rings(rows, fine ? 56 : HAT_SIDES, (row, a) => {
     const c = Math.cos(a), s = Math.sin(a);
     const p = outline(row, a, .74, .9);
-    const seam = Math.abs(Math.sin(a * 3));
     const edge = 1 - smooth(.155, .243, row[0]);
     if (type === 'cap') {
-      const piping = 1 - smooth(.02, .25, seam);
+      const piping = 1 - smooth(.02, .25, Math.abs(Math.sin(a * 3)));
       p[1] += .021 * Math.max(0, s) * edge + .0011 * piping;
       return [...p, 1 - .18 * piping];
     }
-    if (fine || type === 'knit') {
-      p[1] += .017 * s * edge + .006 * Math.sin(2 * a + .65) * edge;
-      p[0] += c * (fine ? .0011 : .0019) * Math.cos((fine ? 28 : 7) * a);
-      return [...p, .86 + .11 * Math.cos((fine ? 28 : 7) * a)];
-    }
-    const drape = (.0035 * Math.sin(a * 3 + .5) + .0038 * Math.sin(a - .7)) * edge;
-    p[1] += drape * (brim ? 1.55 : 1);
-    const stitch = brim ? bell(row[3] - .145, .004) * (.15 + .08 * Math.cos(a * 12)) : 0;
-    return [...p, brim ? .92 + .05 * Math.cos(a * 2 + .75) + stitch : .94 + .06 * seam];
+    p[1] += .017 * s * edge + .006 * Math.sin(2 * a + .65) * edge;
+    p[0] += c * (fine ? .0011 : .0019) * Math.cos((fine ? 28 : 7) * a);
+    return [...p, .86 + .11 * Math.cos((fine ? 28 : 7) * a)];
   }, top);
 }
 
@@ -287,7 +274,7 @@ function capParts() {
 const BRIMS = {
   cap: capParts(),
   beanie: [cloth(beanie, 'knit', [0, .266, -.03]), cloth(knitCuff, 'cuff')],
-  bucket: [cloth(bucket, 'bucket', [0, .254, -.014]), cloth(bucketBand, 'bucket'), cloth(bucketBrim, 'brim')],
+  bucket: [rings(bucketProfile, 40, roundBucket, [0, BUCKET_TOP, BUCKET_Z]), rings(bucketBand, 40, roundBucket)],
 };
 const BILL = (() => {
   const shape = new THREE.Shape();
@@ -509,7 +496,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
 
   const hairTop = { afro: .291, top: .285, curly: .273, mohawk: .271, short: .264, buzz: .249, bald: HEAD_TOP };
   let crown = hairTop[style] || .259;
-  let crownZ = -.025, bandY = .135, bandX = .099, bandZ = .141;
+  let crownZ = -.025, bandY = .135, bandX = .099, bandZ = .141, bandCenter = -.015;
   if (hat) {
     const [main, trim = main] = C.hat;
     const clothMat = color => MV(color, .93);
@@ -531,10 +518,11 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       add(LABEL, M(main, .93), .033, .14, .126).rotation.y = .37;
       crown = .266; crownZ = -.031; bandY = .136; bandZ = .148; bandX = .106;
     } else if (hat === 'bucket') {
-      add(BRIMS.bucket[0], clothMat(main), 0, 0, 0, true);
+      add(BRIMS.bucket[0], clothMat(main), 0, 0, 0, true).name = 'BucketHat';
       add(BRIMS.bucket[1], clothMat(trim), 0, 0, 0, true);
-      add(BRIMS.bucket[2], clothMat(main), 0, 0, 0, true);
-      crown = .254; crownZ = -.014; bandY = .162; bandZ = .151; bandX = .109;
+      add(BUCKET_STITCH, M(trim, .93), 0, .123, BUCKET_Z);
+      crown = BUCKET_TOP; crownZ = BUCKET_Z;
+      bandY = .162; bandZ = .143; bandX = bandZ * BUCKET_X; bandCenter = BUCKET_Z;
     } else if (hat === 'bandana') {
       add(WRAP, clothMat(main), 0, 0, 0, true);
       add(PRINT, M(trim, .92));
@@ -557,7 +545,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
   if (tier) {
     const accent = look.acc || '#E2611A';
     if (hat) {
-      const pin = add(PIN, M('#E7B23C', .39, .75), .063, hat === 'bucket' ? .177 : .171, .107);
+      const pin = add(PIN, M('#E7B23C', .39, .75), .063, hat === 'bucket' ? .177 : .171, hat === 'bucket' ? .115 : .107);
       pin.quaternion.setFromUnitVectors(UP, new THREE.Vector3(.58,.2,.79).normalize());
     } else {
       const band = add(HEADBAND, tier >= 3 ? glowOf(accent) : M(accent,.8), 0,.147,-.014);
@@ -567,7 +555,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       add(SPIN_PAD, M(accent, .75), 0, crown + .002, crownZ, true);
       add(SPIN_CENTER, M('#F2EFE8', .78), 0, crown + .003, crownZ);
     }
-    if (tier >= 3 && hat) add(HAT_LIGHT, glowOf(accent), 0,bandY,-.015).scale.set(bandX,.09,bandZ);
+    if (tier >= 3 && hat) add(HAT_LIGHT, glowOf(accent), 0, bandY, bandCenter).scale.set(bandX,.09,bandZ);
   }
   const points = supportMeshes.flatMap(mesh => {
     mesh.updateMatrix();

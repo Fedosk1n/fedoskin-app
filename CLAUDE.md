@@ -66,6 +66,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   starter gate for new players, rare/mythic moves, points for fresh lessons, coach bridge.
 - Manual rhythm freezes use a four-beat balance check in `rhythm.js`. The first manual round opens with a gesture demo. Freeze gear widens the zone.
 - City crews, the underground ring and the park jam share the move chooser, `battle-study.js` lesson gates and the final hold in `city3d-freeze.js`. A jam uses the same selection in each round.
+- Drawn City power moves finish on an in-lane release after a whole turn, with up to ten turns. Extra turns add points to a successful move. The 1990 has a smaller lane and ends in a fall as soon as the pointer leaves it.
 - Wardrobe rarities are 0–4 (grey → red); equipped slot cards and capped bonuses share `HERO.itemOf/gearBoost/gearChances`. Keep red slots,
   chance thresholds and mythic scores in sync with `BT_GEAR_*` in the Worker. The admin checks `gear: 1` before hiding the Worker update banner.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
