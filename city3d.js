@@ -13,6 +13,7 @@ import { initGame } from './city3d-game.js?v=44';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=5';
+import { addCitySound } from './city3d-sound.js?v=1';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -107,8 +108,7 @@ async function loadAsphalt() {
   const [color, surface, repair] = await Promise.all([load('color', true, true), load('surface', false, true), load('repair', true, false)]);
   return { color, surface, repair };
 }
-async function loadDistrictModel() {
-  const file = { yard: 'yard-dj', park: 'park-paths' }[DIST];
+async function loadBlenderModel(file) {
   if (!file) return null;
   try {
     const response = await fetch(new URL(`./anim/${file}.json?v=1`, import.meta.url));
@@ -382,30 +382,6 @@ function hoop() {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(.23, .02, 6, 20), M(OR, .4, .5)); ring.rotation.x = Math.PI / 2; ring.position.set(0, 2.95, .98); g.add(ring);
   return shadowAll(g);
 }
-function speakers() {
-  const g = new THREE.Group(), cab = M('#141519', .7), cones = [];
-  [[0, .45, .9], [0, 1.15, .5]].forEach(([y, h0, w]) => {
-    const b = new THREE.Mesh(new RoundedBoxGeometry(w, h0 * 1.0 + .2, .5, 2, .03), cab); b.position.y = y + (y ? .12 : 0); g.add(b);
-  });
-  const mk = (y, r) => {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r * .78, r, 24), glowMat(OR, 1.6)); ring.position.set(0, y, .252); g.add(ring);
-    const cone = new THREE.Mesh(new THREE.CircleGeometry(r * .78, 24), M('#08090b', .4, .2)); cone.position.set(0, y, .251); g.add(cone);
-    const dust = new THREE.Mesh(new THREE.CircleGeometry(r * .2, 16), M('#202227', .3, .4)); dust.position.set(0, y, .256); g.add(dust);
-    cones.push({ ring, cone, base: y });
-  };
-  mk(.42, .3); mk(1.26, .16);
-  g.userData.cones = cones;
-  return shadowAll(g);
-}
-function boombox() {
-  const g = new THREE.Group();
-  const b = new THREE.Mesh(new RoundedBoxGeometry(.7, .36, .2, 2, .03), M('#1d1f24', .45, .3)); b.position.y = .18; g.add(b);
-  [-.2, .2].forEach(x => { const c = new THREE.Mesh(new THREE.CircleGeometry(.11, 18), M('#0a0b0d', .3, .3)); c.position.set(x, .18, .101); g.add(c); const r = new THREE.Mesh(new THREE.RingGeometry(.1, .12, 18), M('#c9ced6', .25, .8)); r.position.set(x, .18, .102); g.add(r); });
-  const h = new THREE.Mesh(new THREE.TorusGeometry(.2, .018, 5, 14, Math.PI), M('#c9ced6', .25, .8)); h.position.y = .36; g.add(h);
-  const led = new THREE.Mesh(new THREE.BoxGeometry(.12, .04, .01), glowMat('#47ff9a', 1.2)); led.position.set(0, .26, .102); g.add(led);
-  return shadowAll(g);
-}
-
 // ---------- lamps ----------
 // LAMP_K = how bright the fixtures are. Was 3.2 («добавь больше освещения», 14.11); the owner 16.11.2026: «слегка уменьши яркость освещения
 // от световых приборов (слишком ярко)» ⇒ 2.5 for the spots, the glowing strip 3.2 → 2.5, the fake cone .085 → .066, fill PointLights × FILL_K.
@@ -604,7 +580,7 @@ async function build(scene, asphalt, props) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
-    lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, speakers, boombox, concreteTex, facadeTex, roofTex, stripeTex,
+    lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, concreteTex, facadeTex, roofTex, stripeTex,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, maxAniso });
@@ -724,9 +700,7 @@ async function buildYard(scene, asphalt) {
   [[0, 0, 0], [.9, .35, .5], [-.8, -.5, -.3], [.1, -1.1, 1.4]].forEach(([dx, dz, r]) => { const c = cardboard(1.2, 1.7); c.position.set(cx + dx, .011 + Math.abs(dx) * .003, cz + dz); c.rotation.y = r; scene.add(c); });
   decal(scene, paintCanvas(1024, 1024, (x, w, h) => { x.strokeStyle = OR; x.lineWidth = 26; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 30, 0, 7); x.stroke(); x.lineWidth = 8; x.setLineDash([40, 28]); x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 78, 0, 7); x.stroke(); }, .9, 23), 6.4, 6.4, cx, cz, 0, { op: .9 });
   decal(scene, paintCanvas(1280, 300, (x, w, h) => { x.fillStyle = PAINT_Y; x.font = '400 190px Anton, Impact, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('CYPHER  ZONE', w / 2, h / 2 + 8); x.strokeStyle = PAINT_Y; x.lineWidth = 8; x.strokeRect(10, 10, w - 20, h - 20); }, .8, 24), 5.2, 1.22, cx, cz - 4.9, 0, { op: .85 });
-  const spk = speakers(); put(spk, cx - 3.9, cz - 1.6, .6); box(cx - 3.9, cz - 1.6, 1, .7); W.speakers = [spk];
-  const spk2 = speakers(); put(spk2, cx + 3.9, cz - 1.7, -.6); box(cx + 3.9, cz - 1.7, 1, .7); W.speakers.push(spk2);
-  { const c = crate(.6); c.position.set(cx - 3.2, .3, cz + 1.9); scene.add(c); box(cx - 3.2, cz + 1.9, .6, .6); const bb = boombox(); bb.position.set(cx - 3.2, .6, cz + 1.9); bb.rotation.y = .5; scene.add(bb); }
+  { const c = crate(.6); c.position.set(cx - 3.2, .3, cz + 1.9); scene.add(c); box(cx - 3.2, cz + 1.9, .6, .6); }
   // wooden barrier (like the reference)
   { const f = woodFence(3.4); put(f, 6.6, 1.2, -.25); box(6.6, 1.2, 3.4, .5); const f2 = woodFence(2.2); put(f2, -4.8, -1.6, .15); box(-4.8, -1.6, 2.2, .4); }
   // court corner (south-east)
@@ -1095,8 +1069,9 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
-  const [, asphalt, props] = await Promise.all([
-    loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null, loadDistrictModel(),
+  const [, asphalt, props, soundModels] = await Promise.all([
+    loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
+    loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), loadBlenderModel('sound-systems'),
   ]);
   await build(scene, asphalt, props);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
@@ -1109,6 +1084,7 @@ async function boot() {
   const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  const soundSystem = addCitySound({ scene, W, game: GAME, library: soundModels, colliders });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);
 
@@ -1204,7 +1180,7 @@ async function boot() {
     if (showFps) { hist[histI] = iv; histI = (histI + 1) % hist.length; if (iv > 50) jerks.push(now); while (jerks.length && jerks[0] < now - 10000) jerks.shift(); }
     if (showFps) renderer.info.reset();
     // the beat count of what is heard (each crew loop has its own tempo); no sound yet — the yard's 88 BPM by the page clock
-    const hb = musicOn && musicLive && window.RB && RB.bgmBeat ? RB.bgmBeat() : null;
+    const hb = musicOn && musicLive && window.RB?.audioState?.() === 'running' ? RB.bgmBeat() : null;
     const tb = hb != null && hb >= 0 ? hb : ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
     updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
@@ -1237,7 +1213,7 @@ async function boot() {
       spots.forEach((S, i) => { if (i % turn !== spotN) return; const dx = Math.max(x0 - S.x, 0, S.x - x1), dz = Math.max(z0 - S.z, 0, S.z - z1); if (dx * dx + dz * dz < S.r * S.r) S.l.shadow.needsUpdate = true; }); }
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
-    (W.speakers || []).forEach(sp => sp.userData.cones.forEach(c => { c.cone.position.z = .251 + beat * .03; c.ring.material.color.setRGB(1.75 * (.6 + beat), .45 * (.6 + beat), .12 * (.6 + beat)); }));
+    soundSystem.tick(beat);
     // lamp flicker, dust drift
     lamps.forEach(l => { if (l.flick) { const f = Math.sin(now * .013) + Math.sin(now * .031) > 1.55 ? .25 : 1; l.light.intensity = l.base * f; l.cone.visible = f > .5; } });
     motes.forEach(m => { const a = m.p.geometry.attributes.position, A = a.array, B = m.base; for (let i = 0; i < m.seed.length; i++) { const q = m.seed[i], t = now * .0002 + q; A[i * 3] = B[i * 3] + Math.sin(t * 1.3) * .25; A[i * 3 + 1] = B[i * 3 + 1] + Math.sin(t * .9 + q) * .2; A[i * 3 + 2] = B[i * 3 + 2] + Math.cos(t * 1.1) * .25; } a.needsUpdate = true; });
