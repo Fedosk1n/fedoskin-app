@@ -370,6 +370,7 @@ function earGeometry(side) {
 }
 const EARS = [-1, 1].map(earGeometry);
 const KNOT = new THREE.SphereGeometry(1, 10, 8).scale(.023, .014, .014);
+const GEAR_SPIN_PAD = new THREE.CylinderGeometry(.039, .058, .022, 24);
 const LABEL = new THREE.BoxGeometry(.027, .014, .006);
 const EARCUP = new THREE.CylinderGeometry(.032,.034,.024,14).rotateZ(Math.PI / 2);
 const EARCUP_INLAY = new THREE.CylinderGeometry(.021,.023,.006,14).rotateZ(Math.PI / 2);
@@ -517,6 +518,10 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       add(BRIMS.beanie[1], clothMat(trim), 0, 0, 0, true);
       add(LABEL, M(main, .93), .033, .14, .126).rotation.y = .37;
       crown = .266; crownZ = -.031; bandY = .136; bandZ = .148; bandX = .106;
+      if (C.spinPad) {
+        add(GEAR_SPIN_PAD, M(C.spinPad, .69), 0, .267, crownZ, true);
+        crown = .278;
+      }
     } else if (hat === 'bucket') {
       add(BRIMS.bucket[0], clothMat(main), 0, 0, 0, true).name = 'BucketHat';
       add(BRIMS.bucket[1], clothMat(trim), 0, 0, 0, true);

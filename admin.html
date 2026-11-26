@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 56</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 57</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -320,7 +320,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   <!-- ===== основное ===== -->
   <section id="main" hidden>
     <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
-      <b style="font-size:15px">Обновите код сервера для перехода к батлу по уведомлению</b>
+      <b style="font-size:15px">Обновите код сервера для нового гардероба, магазина и экипировки в батлах</b>
       <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
         <li><button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> <a class="btn btn-sm" href="server/push-worker.js" download="fedoskin-push.js" style="margin:2px 0;min-height:32px">Скачать код</a></li>
         <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
@@ -2910,7 +2910,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#svCopy').addEventListener('click', () => $('#visCopy').click());
   // Match WORKER_VERSION in server/push-worker.js for each release that requires a Worker deploy.
-  const REQUIRED_WORKER_VERSION = 1;
+  const REQUIRED_WORKER_VERSION = 2;
   let workerVersionCheck;
   async function checkWorkerUpdate(manual = false){
     workerVersionCheck?.abort();

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead } from './city3d-head.js?v=3';
+import { addCityHead } from './city3d-head.js?v=4';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 
 let DATA = null;
@@ -728,7 +728,12 @@ export function mocapPerson(look, opt = {}) {
         st.push([E + offset, depth * size, width * size, low]);
       }
       const cf = sleeveLong && C.cuff ? C.cuff : null, wb = !sleeveLong && look.wrist && s === 'Left' ? look.wrist : null;
-      if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1],
+      if (C.wristband) {
+        st.push([Wd - .065, .043 * fa, .043 * fa, low], [Wd - .065, .049 * fa, .049 * fa, C.wristband, 1],
+          [Wd - .030, .048 * fa, .048 * fa, C.wristband], [Wd - .030, .042 * fa, .042 * fa, cf || low, 1],
+          [Wd - .014, .040 * fa, .040 * fa, cf || low]);
+      }
+      else if (cf) st.push([Wd - .062, .042 * fa, .042 * fa, low], [Wd - .062, .046 * fa, .046 * fa, cf, 1],
         [Wd - .053, .0465 * fa, .0465 * fa, cf, 0, 1.06], [Wd - .022, .0445 * fa, .0445 * fa, cf], [Wd - .014, .044 * fa, .044 * fa, cf, 0, .79]);
       else if (wb) st.push([Wd - .075, .041 * fa, .041 * fa, low], [Wd - .075, .0445 * fa, .0445 * fa, wb, 1], [Wd - .04, .0435 * fa, .0435 * fa, wb], [Wd - .04, .039 * fa, .039 * fa, low, 1], [Wd - .014, .037 * fa, .037 * fa, low]);   // wristband
       else st.push([Wd - .04, .041 * fa, .041 * fa, low], [Wd - .014, (sleeveLong ? .041 : .037) * fa, (sleeveLong ? .041 : .037) * fa, low]);
@@ -741,6 +746,11 @@ export function mocapPerson(look, opt = {}) {
       G.bridge(sleeves[s === 'Left' ? 0 : 1], arm[0], uc !== slC ? uc : null);
       const outer = arm.v.y > 0 ? Math.PI / 2 : -Math.PI / 2;
       if (track && C.trim) G.strip(arm, outer, .017, C.trim, .115, cf ? Wd - .062 : Wd - .014);
+      if (C.elbow) {
+        G.panel(arm, outer, [[E - .048, .38, .005], [E - .027, .65, .011], [E, .72, .016],
+          [E + .036, .60, .010], [E + .052, .30, .005]], C.elbow);
+        G.trace(arm, [[E - .026, outer - .28], [E + .004, outer], [E + .026, outer + .28]], C.elbowTrim, .075, .018);
+      }
       if (look.gloves) G.panel(arm, outer, [[Wd + .010 * hs,.33,.002],[Wd + .019 * hs,.68,.004],[Wd + .025 * hs,.67,.003]], C.gloveTrim || shadeOf(hc, 1.75));
       if (cus.top >= 2) patches.arm.push({ rings: arm, station: sleeveLong ? .143 : .095, angle: outer, arc: .48, height: sleeveLong ? .034 : .025 });
       const hand = bn('Hand'), nail = mixOf(tipC, '#F1C5A5', .20);
@@ -792,7 +802,10 @@ export function mocapPerson(look, opt = {}) {
         G.panel(lg, Math.PI, [[.112,.50,.003],[.146,.57,.005],[.235,.49,.005],[.255,.28,.003]], shadeOf(pc, .79));
       }
       if (look.knee) {
-        G.panel(lg, 0, [[K - .068, .36, .005], [K - .046, .66, .015], [K, .72, .022], [K + .047, .63, .016], [K + .067, .36, .005]], C.knee || '#18181B');
+        const pad = C.knee || '#353540';
+        G.panel(lg, 0, [[K - .078, .42, .006], [K - .052, .76, .016], [K, .82, .024], [K + .052, .73, .017], [K + .074, .42, .006]], '#1F2027');
+        G.panel(lg, 0, [[K - .061, .33, .013], [K - .038, .63, .022], [K, .67, .03], [K + .039, .60, .023], [K + .057, .33, .013]], pad);
+        G.trace(lg, [[K - .032, -.43], [K - .042, 0], [K - .032, .43]], mixOf(pad, '#EBE7E1', .36), .038, .031);
       }
       if (cus.pants >= 2) {
         G.panel(lg, outer, [[.135, .5, .012], [.16, .65, .018], [.25, .65, .017], [.276, .47, .008]], mixOf(pc, '#9aa0ab', .17));
@@ -805,6 +818,7 @@ export function mocapPerson(look, opt = {}) {
       const up = C.shoe, cap = C.shoe2 || up, laceC = C.lace || '#F2EFE8';
       const tread = gum ? '#C98A45' : shadeOf(soleC, .49), canvas = look.shoe === 'canvas', runner = look.shoe === 'runner';
       const soleEdge = shadeOf(soleC, .84);
+      const xAt = (z, offset = 0) => x0 + offset + (Math.sign(x0) || sg) * .065 * smooth(.13, .95, (z - zH) / len);
       const wOf = (z, y) => {
         const toe = smooth(T0.z - .03, T0.z + .03, z);
         const ankle = (highT ? .8 : .44) * smooth(.045, .11 + highT * .35, y) * (1 - toe);
@@ -825,7 +839,7 @@ export function mocapPerson(look, opt = {}) {
           const pts = [], cols = [], ws = [], shs = [];
           for (let i = 0; i < n; i++) {
             const a = i / n * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
-            const x = x0 + Math.sign(cs) * Math.abs(cs) ** (sole ? .5 : .72) * width;
+            const x = xAt(z, Math.sign(cs) * Math.abs(cs) ** (sole ? .5 : .72) * width);
             const y = sn >= 0 ? mid + (top - mid) * sn ** (sole ? .45 : .8) : mid + (bot - mid) * (-sn) ** (sole ? .45 : .6);
             pts.push(new THREE.Vector3(x, y, z));
             ws.push(wOf(z, y));
@@ -835,11 +849,11 @@ export function mocapPerson(look, opt = {}) {
           }
           const ring = G.loop(pts, cols, ws, shs, sole ? .92 : canvas ? .96 : runner ? .83 : .74);
           if (prev) G.join(prev, ring);
-          else G.pole(ring, new THREE.Vector3(x0, (top + bot) / 2, zH), c0, wOf(zH, 0), true);
+          else G.pole(ring, new THREE.Vector3(xAt(zH), (top + bot) / 2, zH), c0, wOf(zH, 0), true);
           (sole ? outsole : upper).push(pts);
           prev = ring;
         }
-        G.pole(prev, new THREE.Vector3(x0, sole ? yB + .03 : yB + .045, zT), sole ? soleC : cap, [[bn('ToeBase'), 1]], false);
+        G.pole(prev, new THREE.Vector3(xAt(zT), sole ? yB + .03 : yB + .045, zT), sole ? soleC : cap, [[bn('ToeBase'), 1]], false);
       };
       part(true); part(false);
       // Stitch the panels, laces and tread to the same deformed surface as the shoe.
@@ -860,31 +874,39 @@ export function mocapPerson(look, opt = {}) {
           G.quad(a, b, c0, d, c, wOf(a.z, a.y), wOf(c0.z, c0.y));
         }
       };
-      const tongue = shadeOf(up, canvas ? .83 : .71);
-      for (const [t0, t1] of [[.245,.35],[.35,.47],[.47,.575],[.575,.632]]) shoeBand(upper, () => [t0,t1], 2, 6, tongue, .003);
+      for (const [t0, t1] of [[.245,.35],[.35,.47],[.47,.575],[.575,.647]]) shoeBand(upper, () => [t0,t1], 1, 7, '#24232A', .003);
       shoeBand(upper, i => {
         const edge = .700 + .046 * Math.sin(i * Math.PI / 8);
         return [edge, edge + .019];
       }, 0, 8, mixOf(shadeOf(up,.59), cap, .54), .0035);
-      const laceWidth = cus.kicks >= 1 ? .023 : .013;
-      const eyelets = mixOf(shadeOf(up, .46), cap, .34);
-      for (const [row, t] of [.315, .398, .482, .566].entries()) {
-        const direction = row % 2 ? -1 : 1;
-        shoeBand(upper, i => {
-          const center = t + (i - 4) * .011 * direction;
+      const layout = window.HERO.laceLayout(look.laceStyle);
+      const laceWidth = look.laceStyle === 'zigzag' || cus.kicks >= 1 ? .022 : .018;
+      const laceRow = row => .28 + row * .332;
+      const tongueSide = side => (sg < 0 ? 1 - side : side);
+      for (const [row, side] of layout.anchors) {
+        const t = laceRow(row), edge = 1.5 + 4 * tongueSide(side);
+        shoeBand(upper, () => [t - .021, t + .021], edge, edge + 1, '#777780', .005);
+      }
+      for (const [i, [from, to]] of layout.segments.entries()) {
+        const [a, b] = tongueSide(from[1]) === 0 ? [from, to] : [to, from];
+        shoeBand(upper, edge => {
+          const center = laceRow(a[0] + (b[0] - a[0]) * (edge - 2) / 4);
           return [center - laceWidth, center + laceWidth];
-        }, 2, 6, laceC, .007);
-        for (const side of [1.66, 5.66]) shoeBand(upper, i => {
-          const center = t + (Math.round(i) - 4) * .011 * direction;
-          return [center - .022, center + .019];
-        }, side, side + 1, eyelets, .005);
+        }, 2, 6, laceC, .009 + .0003 * i);
       }
       for (const t of [.19,.32,.45,.62,.77,.89]) shoeBand(outsole, () => [t,t+.019], 10, 14, shadeOf(tread, 1.28), .001);
-      [[0, yB, zH + .02], [-.05, yB, T0.z - .01], [.05, yB, T0.z - .01], [0, .11 + highT, A0.z - .04]].forEach(([dx, y, z]) => lpt(s + 'Foot', new THREE.Vector3(x0 + dx, y, z)));
-      [[0, yB + .014, zT - .008], [0, .05, zT - .04], [-.045, yB + .01, T0.z + .04], [.045, yB + .01, T0.z + .04]].forEach(([dx, y, z]) => lpt(s + 'ToeBase', new THREE.Vector3(x0 + dx, y, z)));
+      [[0, yB, zH + .02], [-.05, yB, T0.z - .01], [.05, yB, T0.z - .01], [0, .11 + highT, A0.z - .04]].forEach(([dx, y, z]) => lpt(s + 'Foot', new THREE.Vector3(xAt(z, dx), y, z)));
+      [[0, yB + .014, zT - .008], [0, .05, zT - .04], [-.045, yB + .01, T0.z + .04], [.045, yB + .01, T0.z + .04]].forEach(([dx, y, z]) => lpt(s + 'ToeBase', new THREE.Vector3(xAt(z, dx), y, z)));
       // Custom tier 3 adds glowing strips along the sole.
-      if (cus.kicks >= 3) { const gm = glowOf(look.acc || '#E2611A'); for (const k of [-1, 1]) addW(s + 'Foot', new THREE.BoxGeometry(.007, .013, len * .34), gm, new THREE.Vector3(x0 + k * (.052 * bigS * 1.08 + .001), yB + .022, zH + len * .4));
-        addW(s + 'Foot', new THREE.BoxGeometry(.03, .03, .006), gm, new THREE.Vector3(x0, .075 + highT, zH + .004)); } }
+      if (cus.kicks >= 3) {
+        const gm = glowOf(look.acc || '#E2611A'), z = zH + len * .4;
+        const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(xAt(z + .05) - xAt(z - .05), .1));
+        for (const k of [-1, 1]) {
+          addW(s + 'Foot', new THREE.BoxGeometry(.007, .013, len * .34), gm, new THREE.Vector3(xAt(z, k * (.052 * bigS * 1.08 + .001)), yB + .022, z), turn);
+        }
+        addW(s + 'Foot', new THREE.BoxGeometry(.03, .03, .006), gm, new THREE.Vector3(xAt(zH), .075 + highT, zH + .004));
+      }
+    }
   }
   const bones = names.map(n => B[n]), body = new THREE.SkinnedMesh(G.build(), SKIN_MAT);
   // culled like everything else, with a sphere big enough for any pose (lying, handstand, arms out: the hips never leave the rig's centre,

@@ -1107,6 +1107,37 @@ t('Дни с победой в онлайн-батле · {a}/{b}', 'Days with a
 t('Нужны победы в разные дни', 'Win battles on different days', 'Gana batallas en días distintos', 'Vença batalhas em dias diferentes', 'Gagne des battles sur plusieurs jours', 'Gewinne Battles an verschiedenen Tagen', '別の日にバトルに勝とう', '서로 다른 날에 배틀에서 승리해', '在不同日期赢得对战')
 t('Цена изменилась. Обнови приложение.', 'The price changed. Update the app.', 'El precio cambió. Actualiza la app.', 'O preço mudou. Atualize o app.', 'Le prix a changé. Mets l’appli à jour.', 'Der Preis hat sich geändert. Aktualisiere die App.', '価格が変わりました。アプリを更新してください。', '가격이 바뀌었어. 앱을 업데이트해.', '价格已变更，请更新应用。')
 
+# ---- wardrobe equipment ----
+t('Напульсники «Пятый подход»', 'Fifth Set Wristbands', 'Muñequeras Quinta Serie', 'Munhequeiras Quinta Série', 'Poignets Cinquième Série', 'Schweißbänder Fünfter Satz', 'フィフスセットリストバンド', '다섯 번째 세트 손목 밴드', '第五组护腕')
+t('Налокотники «Фанк-щит»', 'Funk Shield Elbow Pads', 'Coderas Escudo Funk', 'Cotoveleiras Escudo Funk', 'Coudières Bouclier Funk', 'Ellbogenschoner Funk-Schild', 'ファンクシールド肘パッド', '펑크 실드 팔꿈치 보호대', '放克盾护肘')
+t('Наколенники «Плитка»', 'Tile Kneepads', 'Rodilleras Baldosa', 'Joelheiras Azulejo', 'Genouillères Carreau', 'Knieschoner Fliese', 'タイルニーパッド', '타일 무릎 보호대', '地砖护膝')
+t('Цепочка «Пятый тег»', 'Fifth Tag Chain', 'Cadena Quinto Tag', 'Corrente Quinta Tag', 'Chaîne Cinquième Tag', 'Kette Fünfter Tag', 'フィフスタグチェーン', '다섯 번째 태그 체인', '第五涂鸦链')
+t('Панама «Витраж»', 'Stained Glass Bucket Hat', 'Sombrero de pescador Vitral', 'Chapéu bucket Vitral', 'Bob Vitrail', 'Fischerhut Buntglas', 'ステンドグラスバケットハット', '스테인드글라스 버킷햇', '彩窗渔夫帽')
+t('Бандана «Кислотный след»', 'Acid Trail Bandana', 'Bandana Rastro Ácido', 'Bandana Rastro Ácido', 'Bandana Trace Acide', 'Bandana Säurespur', 'アシッドトレイルバンダナ', '애시드 트레일 반다나', '酸迹头巾')
+t('Хедспинка «Ось»', 'Axis Headspin Cap', 'Gorro de headspin Eje', 'Gorro de headspin Eixo', 'Bonnet de headspin Axe', 'Headspin-Mütze Achse', 'アクシスヘッドスピンキャップ', '액시스 헤드스핀 캡', '轴心头转帽')
+t('Напульсники «Терракота»', 'Terracotta Wristbands', 'Muñequeras Terracota', 'Munhequeiras Terracota', 'Poignets Terre Cuite', 'Schweißbänder Terrakotta', 'テラコッタリストバンド', '테라코타 손목 밴드', '赤陶护腕')
+t('Налокотники «Амортизатор»', 'Cushion Elbow Pads', 'Coderas Amortiguador', 'Cotoveleiras Amortecedor', 'Coudières Amorti', 'Ellbogenschoner Dämpfer', 'クッション肘パッド', '쿠션 팔꿈치 보호대', '缓冲护肘')
+t('Хедспинка «Графит»', 'Graphite Headspin Cap', 'Gorro de headspin Grafito', 'Gorro de headspin Grafite', 'Bonnet de headspin Graphite', 'Headspin-Mütze Graphit', 'グラファイトヘッドスピンキャップ', '그래파이트 헤드스핀 캡', '石墨头转帽')
+t('Кепка «Полночь»', 'Midnight Cap', 'Gorra Medianoche', 'Boné Meia-Noite', 'Casquette Minuit', 'Cap Mitternacht', 'ミッドナイトキャップ', '미드나이트 캡', '午夜棒球帽')
+t('Шнурки «Кирпич»', 'Brick Laces', 'Cordones Ladrillo', 'Cadarços Tijolo', 'Lacets Brique', 'Schnürsenkel Ziegel', 'ブリックシューレース', '브릭 신발끈', '砖红鞋带')
+t('Кроссы «Площадка»', 'Court Sneakers', 'Zapatillas Cancha', 'Tênis Quadra', 'Baskets Terrain', 'Sneaker Court', 'コートスニーカー', '코트 운동화', '球场运动鞋')
+t('Напульсники', 'Wristbands', 'Muñequeras', 'Munhequeiras', 'Poignets', 'Schweißbänder', 'リストバンド', '손목 밴드', '护腕')
+t('Налокотники', 'Elbow pads', 'Coderas', 'Cotoveleiras', 'Coudières', 'Ellbogenschoner', '肘パッド', '팔꿈치 보호대', '护肘')
+t('Цепочки', 'Chains', 'Cadenas', 'Correntes', 'Chaînes', 'Ketten', 'チェーン', '체인', '链饰')
+t('Примерка', 'Preview', 'Prueba', 'Prévia', 'Essayage', 'Anprobe', '試着', '미리 입기', '试穿')
+t('Экипировка', 'Gear', 'Equipamiento', 'Equipamento', 'Équipement', 'Ausrüstung', '装備', '장비', '装备')
+t('Аксессуары и защита', 'Accessories and protection', 'Accesorios y protección', 'Acessórios e proteção', 'Accessoires et protections', 'Zubehör und Schoner', 'アクセサリーとプロテクター', '액세서리와 보호 장비', '配饰与护具')
+t('В этом слоте пока пусто', 'This slot is empty', 'Esta ranura está vacía', 'Este espaço está vazio', 'Cet emplacement est vide', 'Dieser Platz ist leer', 'このスロットは空です', '이 슬롯은 비어 있어요', '此栏位暂时为空')
+t('Найдено в городе', 'Found in the city', 'Encontrado en la ciudad', 'Encontrado na cidade', 'Trouvé en ville', 'In der Stadt gefunden', '街で入手', '도시에서 획득', '在城市中获得')
+t('Дни с победой в онлайн-батле', 'Days with an online battle win', 'Días con una victoria en un battle online', 'Dias com vitória em batalha online', 'Jours avec une victoire en battle en ligne', 'Tage mit einem Sieg im Online-Battle', 'オンラインバトルで勝利した日数', '온라인 배틀에서 승리한 날', '赢过在线对战的天数')
+t('Магазин недоступен', 'Shop unavailable', 'Tienda no disponible', 'Loja indisponível', 'Boutique indisponible', 'Shop nicht verfügbar', 'ショップを利用できません', '상점을 이용할 수 없어요', '商店暂不可用')
+t('+{n} пкс к обводке хедспина', '+{n} px headspin tracing tolerance', '+{n} px al margen al trazar el headspin', '+{n} px de margem no traçado do headspin', '+{n} px de tolérance pour tracer le headspin', '+{n} px Toleranz beim Nachzeichnen des Headspins', 'ヘッドスピンのなぞり判定幅 +{n}px', '헤드스핀 그리기 허용 범위 +{n}px', '头转描线容差 +{n} 像素')
+t('Baby Freeze и Chair Freeze в городе · зона удержания +{n}', 'Baby Freeze and Chair Freeze in 3D City · hold zone +{n}', 'Baby Freeze y Chair Freeze en la Ciudad 3D · zona de control +{n}', 'Baby Freeze e Chair Freeze na Cidade 3D · zona de controle +{n}', 'Baby Freeze et Chair Freeze dans la Ville 3D · zone de maintien +{n}', 'Baby Freeze und Chair Freeze in der 3D-Stadt · Haltezone +{n}', '3Dシティのベイビーフリーズとチェアフリーズ · キープ範囲 +{n}', '3D 도시의 베이비 프리즈와 체어 프리즈 · 유지 구간 +{n}', '3D城市的 Baby Freeze 和 Chair Freeze · 稳定区 +{n}')
+
+t('Прямая шнуровка', 'Straight bar lacing', 'Cordones en paralelo', 'Amarração reta', 'Laçage droit', 'Gerade Schnürung', '平行結び', '일자 끈 묶기', '平行系带')
+t('Шнуровка крестом', 'Crisscross lacing', 'Cordones cruzados', 'Amarração cruzada', 'Laçage croisé', 'Kreuzschnürung', '交差結び', '십자 끈 묶기', '交叉系带')
+t('Шнуровка зигзагом', 'Zigzag lacing', 'Cordones en zigzag', 'Amarração em zigue-zague', 'Laçage en zigzag', 'Zickzackschnürung', 'ジグザグ結び', '지그재그 끈 묶기', '之字形系带')
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'

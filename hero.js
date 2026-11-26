@@ -20,7 +20,7 @@
   // accessories shop (owner 10.11.2026: points for battle wins and lesson hours, never for money). One item per slot;
   // names are Russian i18n keys. Prices are repeated in server/push-worker.js (SHOP) — keep them equal.
   const SHOP = [
-    { id: 'neon', slot: 'laces', price: 80, rar: 0, name: 'Неоновые шнурки', bt: { win: 3 } },
+    { id: 'neon', slot: 'laces', price: 80, rar: 0, name: 'Неоновые шнурки', f: { laceStyle: 'cross' }, col: { laces: '#B6FF3B' }, bt: { win: 3 } },
     { id: 'gloves', slot: 'hands', price: 100, rar: 0, name: 'Перчатки без пальцев', bt: { cor: 2 } },
     { id: 'cardboard', slot: 'floor', price: 100, rar: 0, name: 'Картонка для брейка' },
     { id: 'knee', slot: 'knees', price: 120, rar: 1, name: 'Наколенники', bt: { hold: 1 } },
@@ -32,7 +32,7 @@
     { id: 'fire', slot: 'fx', price: 500, rar: 3, name: 'Огненная аура' },
     // owner 11.11.2026: not sold — given for turning on notifications (`sub`: shown as «за подписку», no price)
     { id: 'tee', slot: 'top', price: 0, rar: 0, sub: true, name: 'Футболка Fedoskin team', bt: { win: 3 } },
-    { id: 'streetLaces', slot: 'laces', price: 60, rar: 0, catalog: 2, name: 'Шнурки «Песок»', col: { laces: '#DDB882' }, bt: { win: 2, cor: 1 } },
+    { id: 'streetLaces', slot: 'laces', price: 60, rar: 0, catalog: 2, name: 'Шнурки «Песок»', f: { laceStyle: 'bars' }, col: { laces: '#DDB882' }, bt: { win: 2, cor: 1 } },
     { id: 'canvasTeal', slot: 'kicks', price: 100, rar: 0, catalog: 2, name: 'Бирюзовые кеды', f: { shoe: 'canvas' }, col: { shoe: '#218981', shoe2: '#184A4C', sole: '#F4DFB6' }, bt: { win: 6 } },
     { id: 'asphaltPants', slot: 'pants', price: 110, rar: 0, catalog: 2, name: 'Штаны «Асфальт»', f: { pants: 'wind' }, col: { pants: '#43474E', stripe: '#B8BDC4' }, bt: { cor: 2 } },
     { id: 'stripedBeanie', slot: 'head', price: 130, rar: 1, catalog: 2, name: 'Шапка «Полоса»', f: { hat: 'beanie' }, col: { hat: ['#334968', '#F9AF62'] }, bt: { win: 3, cor: 3 } },
@@ -84,7 +84,7 @@
     matPants: { name: 'Штаны «Первый заход»', slot: 'pants', rar: 0, ico: '👖', reward: [['train', 2, 'Во Дворе: проведи {n} тренировки на мате']], f: { pants: 'trackp' }, col: { pants: '#34516A', stripe: '#FF9065' }, bt: { win: 4 } },
     beatGloves: { name: 'Митенки «Первый бит»', slot: 'hands', rar: 0, ico: '🧤', reward: [['dj', 1, 'Закажи бит у диджея во Дворе']], f: { gloves: true }, col: { glove: '#394F73', gloveTrim: '#6CB7FF' }, bt: { win: 3, cor: 1 } },
     cypherCap: { name: 'Кепка «В кругу»', slot: 'head', rar: 0, ico: '🧢', reward: [['show', 1, 'Заверши свой выход в сайфере во Дворе']], f: { hat: 'capBack' }, col: { hat: ['#BA553D', '#EDC598'] }, bt: { win: 5, cor: 1 } },
-    cleanLaces: { name: 'Шнурки «Чистый раунд»', slot: 'laces', rar: 1, ico: '👟', reward: [['clean', 3, 'Выиграй {n} батла без срывов в 3D-городе']], col: { laces: '#A4E9FC' }, bt: { win: 2, cor: 3 } },
+    cleanLaces: { name: 'Шнурки «Чистый раунд»', slot: 'laces', rar: 1, ico: '👟', reward: [['clean', 3, 'Выиграй {n} батла без срывов в 3D-городе']], f: { laceStyle: 'cross' }, col: { laces: '#A4E9FC' }, bt: { win: 2, cor: 3 } },
     paintHoodie: { name: 'Худи «Свежая краска»', slot: 'top', rar: 2, ico: '🎨', reward: [['paint', 3, 'Закрась {n} разные стены банд в 3D-городе']], f: { top: 'hoodie' }, col: { top: '#276855', sleeve: '#276855', cuff: '#C4EF73', trim: '#F0C759' }, bt: { win: 7, cor: 4 } },
     metroBeanie: { name: 'Шапка «Пересадка»', slot: 'head', rar: 1, ico: '🧶', reward: [['center', 1, 'Впервые доберись до Центра']], f: { hat: 'beanie' }, col: { hat: ['#263C57', '#75D7CD'] }, bt: { win: 4, cor: 4 } },
     mallSneakers: { name: 'Кеды «Витрина»', slot: 'kicks', rar: 2, ico: '👟', reward: [['mallClean', 2, 'Заверши {n} шоу у ТЦ без срывов и без встречи с охраной']], f: { shoe: 'leather' }, col: { shoe: '#E9ABBE', shoe2: '#5E4163', sole: '#EEE9DE', lace: '#F8F1D0' }, bt: { win: 11, cor: 5 } },
@@ -96,18 +96,34 @@
     cachePants: { name: 'Штаны «Запасник»', slot: 'pants', rar: 3, ico: '👖', reward: [['stash', 24, 'Тайники Промзоны']], f: { pants: 'wind' }, col: { pants: '#635043', stripe: '#E5CB70' }, bt: { win: 7, cor: 4 } },
     ringKnees: { name: 'Наколенники «Три подряд»', slot: 'knees', rar: 3, ico: '🥇', reward: [['ringBest', 3, 'Победы подряд на подпольном ринге'], ['ringWins', 12, 'Всего побед на подпольном ринге']], f: { knee: true }, col: { knee: '#D58C53' }, bt: { hold: 1, win: 5 } },
     forgeCrown: { name: 'Панама «Последняя плавка»', slot: 'head', rar: 4, ico: '👑', reward: [['wins:forge', 28, 'Победы над бандой «{x}»'], ['perfect:forge', 5, 'Победы с идеально обведённым пауэрмувом против «{x}»'], ['ringBest', 8, 'Победы подряд на подпольном ринге']], f: { hat: 'bucket' }, col: { hat: ['#563B44', '#EC8556'] }, bt: { win: 8, cor: 6 } },
+    matWrist: { name: 'Напульсники «Пятый подход»', slot: 'wrists', rar: 1, ico: '💪', reward: [['train', 5, 'Тренировки на мате во Дворе']], col: { wristband: '#B0D878' }, bt: { win: 4, cor: 1 } },
+    parkElbows: { name: 'Налокотники «Фанк-щит»', slot: 'elbows', rar: 2, ico: '🛡️', reward: [['clean:funk', 3, 'Победы без срывов над бандой «{x}»']], col: { elbow: '#7A4E9B', elbowTrim: '#E6B66A' }, bt: { cor: 4, elbow: 3 } },
+    tileKnees: { name: 'Наколенники «Плитка»', slot: 'knees', rar: 2, ico: '🦵', reward: [['clean:turn', 4, 'Победы без срывов над бандой «{x}»']], f: { knee: true }, col: { knee: '#59A699' }, bt: { hold: 1, cor: 3 } },
+    fourWallsChain: { name: 'Цепочка «Пятый тег»', slot: 'neck', rar: 2, ico: '⛓️', reward: [['paint', 5, 'Разные закрашенные стены банд']], f: { chain: 2 }, col: { gold: '#D6916F' }, bt: { win: 6, cor: 3 } },
+    poolBucket: { name: 'Панама «Витраж»', slot: 'head', rar: 2, ico: '🎩', reward: [['mallClean', 4, 'Шоу у ТЦ без срывов и охраны']], f: { hat: 'bucket' }, col: { hat: ['#2D6266','#E29F66'] }, bt: { win: 3, cor: 6 } },
+    acidRetroBandana: { name: 'Бандана «Кислотный след»', slot: 'head', rar: 1, ico: '🧣', src: 'gang:acid', reward: [['wins:acid', 2, 'Победы над бандой «{x}»']], f: { hat: 'bandana' }, col: { hat: ['#2D5146','#B6E977'] }, bt: { win: 5, cor: 1 } },
+    parkSpinCap: { name: 'Хедспинка «Ось»', slot: 'head', rar: 3, ico: '🧢', reward: [['jamClean', 5, 'Джемы в Парке с победой во всех раундах без срывов']], f: { hat: 'beanie' }, col: { hat: ['#663854','#EA915B'], spinPad: '#F2C485' }, bt: { win: 3, spin: 7 } },
+    terracottaWrist: { name: 'Напульсники «Терракота»', slot: 'wrists', rar: 0, ico: '💪', reward: [['show', 2, 'Завершённые выходы в сайфере во Дворе']], col: { wristband: '#CE6548' }, bt: { win: 3 } },
+    foamElbows: { name: 'Налокотники «Амортизатор»', slot: 'elbows', rar: 1, ico: '🛡️', reward: [['clean', 4, 'Победы без срывов в 3D-городе']], col: { elbow: '#466C8D', elbowTrim: '#95C9D9' }, bt: { cor: 2, elbow: 2 } },
+    spinCapSlate: { name: 'Хедспинка «Графит»', slot: 'head', rar: 2, ico: '🧢', reward: [['headspinWin', 4, 'Победы с идеально обведённым хедспином']], f: { hat: 'beanie' }, col: { hat: ['#3B4351','#8295AF'], spinPad: '#9AA9B9' }, bt: { spin: 5 } },
+    canvasCap: { name: 'Кепка «Полночь»', slot: 'head', rar: 1, ico: '🧢', reward: [['wins:stencil', 2, 'Победы над бандой «{x}»']], f: { hat: 'cap' }, col: { hat: ['#24242F','#7E6798'] }, bt: { win: 4, cor: 2 } },
+    wideLaces: { name: 'Шнурки «Кирпич»', slot: 'laces', rar: 0, ico: '👟', reward: [['dj', 2, 'Заказы бита у диджея во Дворе']], f: { laceStyle: 'zigzag' }, col: { laces: '#ED7155' }, bt: { win: 1, cor: 2 } },
+    courtKicks: { name: 'Кроссы «Площадка»', slot: 'kicks', rar: 2, ico: '👟', reward: [['show', 4, 'Завершённые выходы в сайфере во Дворе']], f: { shoe: 'high' }, col: { shoe: '#D9E1CF', shoe2: '#44685E', sole: '#B68F66', lace: '#ECE2CB' }, bt: { win: 9, cor: 3 } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
   // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
   // cor = wider trajectory corridor (px, cap 12), hold = the freeze is easier to hold, save = one miss of the round is forgiven (becomes GOOD).
-  const BOOST_CAP = { win: 30, cor: 12, hold: 1, save: 1 };
+  const BOOST_CAP = { win: 30, cor: 12, hold: 1, save: 1, spin: 7, elbow: 3 };
   function gearBoost(arr){
-    const b = { win: 0, cor: 0, hold: 0, save: 0 };
+    const b = { win: 0, cor: 0, hold: 0, save: 0, spin: 0, elbow: 0 };
     const worn = wornGear(arr);
     worn.forEach(g => { if (g.bt) for (const x in g.bt) b[x] = (b[x] || 0) + g.bt[x]; });
     for (const x in BOOST_CAP) b[x] = Math.min(BOOST_CAP[x], b[x] || 0);
-    b.any = !!(b.win || b.cor || b.hold || b.save);
+    b.any = Object.keys(BOOST_CAP).some(key => b[key]);
     return b;
+  }
+  function gearTraceBonus(boost, headspin) {
+    return headspin ? Math.min(16, (boost?.cor || 0) + (boost?.spin || 0)) : boost?.cor || 0;
   }
   // any look token → { slot, name, … } (shop item or street gear); null for 'girl' / 'lv<N>' / unknown
   const itemOf = k => { if (typeof k !== 'string') return null; if (k.slice(0, 2) === 'c:') { const g = GEAR[k.slice(2)]; return g ? Object.assign({ id: k, city: true }, g) : null; } return SHOP.find(x => x.id === k) || null; };
@@ -164,18 +180,29 @@
       const g = itemOf(k); if (!g) return;
       const f = g.f || {};
       for (const part of Object.keys(fit)) if (f[part]) fit[part] = f[part];
-      for (const flag of ['phones', 'chain', 'gloves', 'knee']) if (f[flag]) gf[flag] = f[flag];
+      for (const flag of ['phones', 'chain', 'gloves', 'knee', 'laceStyle']) if (f[flag]) gf[flag] = f[flag];
       Object.assign(co, g.col);
     });
     return { L, has, fit, co, gf };
   }
+  // Points have a distance down the tongue (0..1) and a side (0 or 1).
+  const laceRows = [0, 1 / 3, 2 / 3, 1];
+  const laceAnchors = laceRows.flatMap(row => [[row, 0], [row, 1]]);
+  const zigzag = Array.from({ length: 7 }, (_, i) => [i / 6, i % 2]);
+  const LACE_LAYOUTS = {
+    bars: { anchors: laceAnchors, segments: laceRows.map(row => [[row, 0], [row, 1]]) },
+    cross: { anchors: laceAnchors, segments: laceRows.slice(1).flatMap((row, i) =>
+      [[[laceRows[i], 0], [row, 1]], [[row, 0], [laceRows[i], 1]]]) },
+    zigzag: { anchors: zigzag, segments: zigzag.slice(1).map((point, i) => [zigzag[i], point]) },
+  };
+  const laceLayout = style => LACE_LAYOUTS[style] || LACE_LAYOUTS.bars;
   // The same look as plain data for a view from above (city mini-game, 13.11.2026): types + flat colours, no SVG.
   function topDown(level, accArr){
     const k = lookOf(level, accArr), L = k.L, has = k.has, f = k.fit, G = '#E7B23C', t = f.shoe;
     const long = /track|bomber|hoodie/.test(f.top);
     const out = {
-      L, girl: has('girl'), hat: f.hat, top: f.top, pants: f.pants, shoe: f.shoe,
-      phones: L === 4 || L === 5 || !!k.gf.phones, chain: Math.max(L >= 7 ? 2 : L >= 5 ? 1 : 0, k.gf.chain || 0), wrist: L >= 7 ? G : L >= 3 ? OR : null, belt: L >= 8,
+      L, girl: has('girl'), hat: f.hat, top: f.top, pants: f.pants, shoe: f.shoe, laceStyle: k.gf.laceStyle || 'bars',
+      phones: L === 4 || L === 5 || !!k.gf.phones, chain: Math.max(L >= 7 ? 2 : L >= 5 ? 1 : 0, k.gf.chain || 0), wrist: k.co.wristband || (L >= 7 ? G : L >= 3 ? OR : null), belt: L >= 8,
       knee: has('knee') || !!k.gf.knee, gloves: has('gloves') || !!k.gf.gloves, box: L >= 7 || has('box'), fire: has('fire'), card: has('cardboard'),
       col: {
         skin: SKIN, hair: HAIR, ink: INK, gold: G,
@@ -195,7 +222,7 @@
     };
     // street gear colours (same names) and the sleeve of a top that became long through gear
     Object.assign(out.col, k.co);
-    if (k.co.laces || has('neon')) out.col.lace = k.co.laces || '#B6FF3B';
+    if (k.co.laces) out.col.lace = k.co.laces;
     if (long && !out.col.sleeve) out.col.sleeve = out.col.top;
     return out;
   }
@@ -218,7 +245,9 @@
 
     // ---- the outfit of this level ----
     const fit = LK.fit, CO = LK.co || {}, GF = LK.gf || {}, HC = CO.hat || [];   // street gear colours / flags
-    const W = 200, H = 240;
+    const W = 200, H = 254;
+    const legY = y => 146 + (y - 146) * 1.19;
+    const stretchLeg = fn => { o.push('<g transform="translate(0 146) scale(1 1.19) translate(0 -146)">'); fn(); o.push('</g>'); };
     const vb = opt.bust ? [50, 16, 100, 100] : [0, 0, W, H]; // bust = head and shoulders (small icons)
     o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb.join(' ') + '"' + (opt.size ? ' width="' + opt.size + '" height="' + Math.round(opt.size * vb[3] / vb[2]) + '"' : '') + '>');
     o.push('<defs><radialGradient id="' + id + 'g" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="' + RING[L - 1] + '" stop-opacity=".55"/><stop offset="1" stop-color="' + RING[L - 1] + '" stop-opacity="0"/></radialGradient>' +
@@ -236,7 +265,7 @@
       LN('M60 100 v14 M128 100 v18 M152 96 v10', '#3D8BFF', 3, ' opacity=".55"');
       P('M150 20 l4 9 9 1 -7 6 2 9 -8 -5 -8 5 2 -9 -7 -6 9 -1Z', '#F2CC55', ' opacity=".7"');
       o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="url(#' + id + 'g)"/>');
-      o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
+      o.push('<ellipse cx="100" cy="244" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
     } else if (opt.bg !== false && has('city')) {
       o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="#141A33"/>');
       o.push('<circle cx="150" cy="40" r="14" fill="#F2EFE8" opacity=".9"/><circle cx="155" cy="36" r="12" fill="#141A33"/>');
@@ -244,7 +273,7 @@
       const bl = [[4, 120, 26], [30, 96, 22], [52, 132, 18], [70, 84, 24], [94, 110, 20], [114, 74, 26], [140, 104, 22], [162, 90, 34]];
       bl.forEach(b => { o.push('<rect x="' + b[0] + '" y="' + b[1] + '" width="' + b[2] + '" height="' + (234 - b[1]) + '" fill="#0A0D1C"/>'); for (let y = b[1] + 6; y < 200; y += 10) for (let x = b[0] + 4; x < b[0] + b[2] - 3; x += 7) if ((x * 7 + y * 3) % 5 < 2) o.push('<rect x="' + x + '" y="' + y + '" width="3" height="4" fill="#F2CC55" opacity=".65"/>'); });
       o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="url(#' + id + 'g)" opacity=".7"/>');
-      o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
+      o.push('<ellipse cx="100" cy="244" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
     } else if (opt.bg !== false) {
       if (L >= 8) {
         let r = '';
@@ -252,24 +281,28 @@
         o.push('<g fill="#F2CC55" opacity=".16">' + r + '</g>');
       }
       o.push('<circle cx="100" cy="118" r="100" fill="url(#' + id + 'g)"/>');
-      o.push('<ellipse cx="100" cy="231" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
+      o.push('<ellipse cx="100" cy="244" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
     }
 
     // ---- fire aura (shop) ----
     if (has('fire') && !rig) {
-      P('M40 232 Q34 196 52 176 Q50 196 62 200 Q58 170 80 150 Q78 178 92 184 Q94 160 108 146 Q110 172 122 178 Q128 160 144 156 Q138 182 150 192 Q158 178 164 172 Q170 200 160 232 Z', 'url(#' + id + 'fire)', ' opacity=".9"');
-      P('M60 232 Q58 210 70 198 Q72 214 84 216 Q86 196 100 186 Q102 206 114 210 Q120 196 132 194 Q138 214 140 232 Z', '#FFD25A', ' opacity=".55"');
+      stretchLeg(() => {
+        P('M40 232 Q34 196 52 176 Q50 196 62 200 Q58 170 80 150 Q78 178 92 184 Q94 160 108 146 Q110 172 122 178 Q128 160 144 156 Q138 182 150 192 Q158 178 164 172 Q170 200 160 232 Z', 'url(#' + id + 'fire)', ' opacity=".9"');
+        P('M60 232 Q58 210 70 198 Q72 214 84 216 Q86 196 100 186 Q102 206 114 210 Q120 196 132 194 Q138 214 140 232 Z', '#FFD25A', ' opacity=".55"');
+      });
     }
     // ---- cardboard (shop): flattened box under the feet ----
     if (has('cardboard') && !rig) {
+      o.push('<g transform="translate(0 12)">');
       P('M30 222 L170 222 L184 236 L16 236 Z', '#B98A4E', S(1.8));
       LN('M58 222 L50 236 M142 222 L150 236', 'rgba(0,0,0,.25)', 1.2);
       P('M92 222 L108 222 L110 236 L90 236 Z', '#D6B98A', ' opacity=".8"');
       LN('M26 229 H40 M160 229 H174', 'rgba(0,0,0,.25)', 1);
+      o.push('</g>');
     }
     // ---- boombox (7+ or bought), behind the right leg ----
     if ((L >= 7 || has('box')) && !rig) {
-      o.push('<g transform="translate(146 194)">');
+      o.push('<g transform="translate(146 205)">');
       P('M6 0 V-7 Q6 -10 9 -10 H39 Q42 -10 42 -7 V0', 'none', ' stroke="' + INK + '" stroke-width="3.2"');
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V30 Q48 33 45 33 H3 Q0 33 0 30 Z', '#2B2B31', S(2));
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V8 H0 Z', '#3A3A42');
@@ -278,47 +311,40 @@
       o.push('</g>');
     }
 
-    // ---- sneakers (profile, toes out) ----
+    // Both feet turn outward. The visible top of the shoe carries the independent laces.
     const shoe = () => {
       const t = fit.shoe, hi = t === 'high' || t === 'highGold';
-      let up = has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t];
-      let ov = has('red') ? (t === 'highGold' ? GOLD : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t];
-      let mid = { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: GOLD }[t];
-      const out = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
-      let lace = { canvas: WH, leather: WH, runner: WH, high: WH, highGold: '#E7B23C' }[t];
-      if (CO.shoe) { up = CO.shoe; ov = CO.shoe2 || ov; mid = CO.sole || mid; lace = CO.lace || lace; }
-      if (CO.laces || has('neon')) lace = CO.laces || '#B6FF3B';
-      o.push('<g transform="translate(103 230) scale(1.18)">');
-      // outsole + tread
-      P('M-1 0 H40 Q46 0 46 -4 V-6 H-1 Z', out, S(2));
-      LN('M4 -1.5 v-3 M10 -1.5 v-3 M16 -1.5 v-3 M22 -1.5 v-3 M28 -1.5 v-3 M34 -1.5 v-3 M40 -1.5 v-3', 'rgba(0,0,0,.35)', 1.2);
-      // midsole
-      P('M-1 -6 H46 Q46 -10 42 -12 H-1 Z', mid, S(2));
-      if (t !== 'canvas') LN('M3 -9 H38', 'rgba(0,0,0,.22)', 1, ' stroke-dasharray="2 2"');
-      // upper
-      if (hi) P('M0 -12 L-1 -37 Q0 -42 7 -42 L15 -41 Q17 -32 20 -26 Q28 -21 36 -18 Q44 -16 44 -12 Z', up, S(2));
-      else P('M0 -12 L0 -25 Q1 -29 7 -29 L14 -28 Q22 -23 30 -19 Q42 -16 44 -12 Z', up, S(2));
-      // toe box + toe cap
-      P('M31 -12 Q32 -19 38 -18 Q44 -16 44 -12 Z', t === 'canvas' && !CO.shoe2 ? WH_D : ov, S(1.6));
-      if (t === 'canvas') LN('M33 -14 H43', 'rgba(0,0,0,.25)', 1);
-      // heel counter + side overlay
-      if (t !== 'canvas') {
-        P(hi ? 'M0 -12 L-.5 -30 Q6 -28 10 -21 Q12 -15 16 -12 Z' : 'M0 -12 L0 -24 Q6 -22 9 -17 Q11 -13 15 -12 Z', ov, S(1.6));
-        P(hi ? 'M14 -14 Q21 -24 31 -21 Q25 -18 22 -14 Z' : 'M14 -13 Q20 -21 29 -19 Q24 -16 21 -13 Z', t === 'high' ? BLK : t === 'runner' ? WH : ov, S(1.4));
-      } else {
-        P('M0 -12 L0 -24 Q4 -24 6 -21 L6 -12 Z', CO.shoe2 || WH_D, S(1.2));
+      const upper = CO.shoe || (has('red') ? '#C8102E' : { canvas: WH, leather: WH, runner: BLK2, high: OR, highGold: BLK }[t]);
+      const overlay = CO.shoe2 || (has('red') ? (t === 'highGold' ? GOLD : BLK) : { canvas: WH_D, leather: OR, runner: OR, high: WH, highGold: GOLD }[t]);
+      const midsole = CO.sole || { canvas: '#E9E4D8', leather: WH, runner: WH, high: WH, highGold: GOLD }[t];
+      const outsole = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
+      const lace = CO.laces || CO.lace || (t === 'highGold' ? '#E7B23C' : WH);
+      const style = GF.laceStyle || 'bars', height = hi ? 0 : 5;
+      const point = ([row, side]) => {
+        const x = 9 + row * 14 + side * (11 + row * 5);
+        const y = -14 + height + row * (17 - height) - side * (3 + row * 2);
+        return [x.toFixed(2), y.toFixed(2)].join(' ');
+      };
+
+      o.push('<g transform="translate(105 219)">');
+      P('M0 -2 Q3 -6 17 -6 L33 1 Q54 7 51 19 Q49 26 35 27 Q22 24 9 15 Q-2 9 0 -2 Z', outsole, S(2.2));
+      P('M0 -2 Q3 -6 17 -6 L33 0 Q52 6 51 15 Q48 21 36 23 Q24 21 10 12 Q1 7 0 -2 Z', midsole, S(2));
+      LN('M6 10 L7 14 M12 14 L13 18 M19 18 L20 22 M26 21 L27 25 M34 24 V26 M42 23 V25 M47 21 V23', 'rgba(0,0,0,.32)', 1.1);
+      P(hi ? 'M1 2 L0 -16 Q1 -25 12 -25 Q22 -25 24 -18 L28 -7 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z'
+        : 'M1 2 L2 -12 Q3 -19 13 -20 Q21 -20 25 -14 L29 -6 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z', upper, S(2));
+      P('M0 -8 Q4 -7 11 -2 L23 10 L19 13 Q10 9 1 3 Z', overlay, S(1.55));
+      P('M32 0 Q44 1 49 10 Q51 14 44 17 Q35 19 28 14 Z', overlay, S(1.55));
+      if (t === 'canvas') LN('M30 13 Q39 18 46 14', 'rgba(0,0,0,.32)', 1.2);
+      else LN('M4 0 Q10 3 18 9 M33 15 Q41 17 47 13', 'rgba(0,0,0,.36)', 1.05, ' stroke-dasharray="1.6 1.4"');
+      P(hi ? 'M5 -16 Q4 -25 13 -25 L22 -24 Q25 -22 25 -15 L41 -2 Q36 7 27 8 Z'
+        : 'M6 -12 Q5 -19 12 -20 L22 -21 Q25 -19 25 -13 L41 -2 Q36 7 27 8 Z', '#24232A', S(1.6));
+
+      const { anchors, segments } = laceLayout(style);
+      for (const a of anchors) {
+        const [x, y] = point(a).split(' ');
+        o.push('<circle cx="' + x + '" cy="' + y + '" r="' + (style === 'zigzag' ? 2.02 : 1.63) + '" fill="' + (style === 'zigzag' ? '#7085A0' : '#57525B') + '" stroke="' + INK + '" stroke-width=".78"/>');
       }
-      // eyestay + eyelets + laces
-      const ey = hi ? [[9, -39], [12, -34], [15, -29], [19, -25], [24, -22]] : [[9, -27], [14, -25], [19, -22], [24, -20]];
-      LN('M' + ey.map(p => p.join(' ')).join(' L'), 'rgba(0,0,0,.35)', 4.2);
-      ey.forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.1" fill="' + (t === 'highGold' ? '#E7B23C' : '#9A968E') + '"/>'));
-      for (let i = 0; i < ey.length - 1; i++) LN('M' + (ey[i][0] - 2) + ' ' + (ey[i][1] + 2.5) + ' L' + (ey[i + 1][0] + 2) + ' ' + (ey[i + 1][1] - 2.5), lace, 1.6);
-      // collar padding + tongue + pull tab
-      P(hi ? 'M-1 -37 Q3 -44 10 -42 L9 -38 Q4 -39 1 -35 Z' : 'M0 -25 Q3 -30 9 -28 L8 -25 Q4 -26 1 -23 Z', BLK2, S(1.2));
-      P(hi ? 'M8 -42 L11 -47 Q15 -47 15 -43 L13 -39 Z' : 'M8 -28 L10 -32 Q14 -32 14 -29 L13 -26 Z', ov === GOLD ? GOLD : (t === 'canvas' ? WH : ov), S(1.2));
-      if (hi) { P('M1 -31 L14 -33 L15 -29 L2 -27 Z', t === 'highGold' ? '#E7B23C' : BLK, S(1.2)); o.push('<circle cx="12" cy="-31" r=".9" fill="#9A968E"/>'); }
-      // stitch line along the upper
-      LN(hi ? 'M2 -14 Q16 -15 28 -15' : 'M2 -14 Q16 -15 28 -15', 'rgba(0,0,0,.25)', .9, ' stroke-dasharray="1.6 1.6"');
+      for (const [from, to] of segments) LN('M' + point(from) + ' L' + point(to), lace, style === 'zigzag' ? 2.8 : 2.6);
       o.push('</g>');
     };
     const SH_R = cap(shoe), SH_L = cap(() => MIR(shoe));
@@ -326,7 +352,7 @@
 
     // ---- pants ----
     const pants = () => {
-      const t = fit.pants, track = t !== 'jeans', hem = t === 'jeans' ? 207 : t === 'wind' ? 193 : 197;
+      const t = fit.pants, track = t !== 'jeans', hem = t === 'jeans' ? 198 : t === 'wind' ? 193 : 196;
       const col = CO.pants || { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[t];
       // left leg (viewer's left) — the right one is mirrored
       const leg = 'M70 146 L100 146 L100 158 Q100 186 99 ' + hem + ' L73 ' + hem + ' Q67 178 70 146 Z';
@@ -348,16 +374,21 @@
         if (t === 'wind') { LN('M80 156 Q83 172 81 180', 'rgba(255,255,255,.14)', 2.2); LN('M74 ' + (hem - 9) + ' L74 ' + (hem - 20), '#9A968E', 1.4); }
       }
     };
-    const PA_L = cap(pants), PA_R = cap(() => MIR(pants));
+    const paintPants = () => stretchLeg(pants);
+    const PA_L = cap(paintPants), PA_R = cap(() => MIR(paintPants));
     if (!rig) o.push(PA_L, PA_R);
     let KN_L = '', KN_R = '';
     if (has('knee') || GF.knee) {
-      const kp = () => { P('M73 168 Q85 164 97 168 L97 184 Q85 188 73 184 Z', '#141416', S(1.8)); P('M78 171 Q85 169 92 171 L92 181 Q85 183 78 181 Z', CO.knee || OR, S(1)); LN('M75 176 H95', 'rgba(255,255,255,.18)', 1); };
+      const kp = () => stretchLeg(() => {
+        P('M71 169 Q85 165 98 168 L98 184 Q85 188 71 184 Z', '#202127', S(1.6));
+        P('M75 169 Q85 165 94 170 L94 182 Q85 187 75 182 Z', CO.knee || OR, S(1.4));
+        LN('M78 173 Q85 170 92 173 M78 180 Q85 182 92 179', 'rgba(255,255,255,.38)', 1.15);
+      });
       KN_L = cap(kp); KN_R = cap(() => MIR(kp));
       if (!rig) o.push(KN_L, KN_R);
     }
     const FLY0 = o.length;
-    if (fit.pants === 'jeans') { LN('M100 147 V168 Q101 172 104 170', '#2D4A72', 1.6); LN('M103 147 V166', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"'); }
+    if (fit.pants === 'jeans') stretchLeg(() => { LN('M100 147 V168 Q101 172 104 170', '#2D4A72', 1.6); LN('M103 147 V166', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"'); });
 
     const FLY = rig ? o.splice(FLY0).join('') : '';
     // ---- belt of the champion (8) sits on the waist later ----
@@ -384,9 +415,13 @@
         P(big ? 'M56 126 L54 148 L64 149 L66 127 Z' : 'M58 119 L54 148 L64 149 L67 121 Z', SKIN, S());
         LN(big ? 'M63 128 L62 146' : 'M64 123 L62 146', SKIN_D, 1.4);
       }
-      // wristband (3+), watch (7+) on the left wrist only
-      if (L >= 3 && !side) {
-        P('M51.5 140 L64.5 141 L64.5 146 L51.5 145 Z', L >= 7 ? GOLD : OR, S(1.4));
+      if (CO.elbow) {
+        P('M53 115 Q60 112 68 116 L67 132 Q60 135 53 130 Z', CO.elbow, S(1.5));
+        LN('M56 120 Q60 118 65 120 M56 126 H65', CO.elbowTrim, 1.2);
+      }
+      // The base look has a wristband on one side. An equipped pair takes its place.
+      if (CO.wristband || (L >= 3 && !side)) {
+        P('M51.5 140 L64.5 141 L64.5 146 L51.5 145 Z', CO.wristband || (L >= 7 ? GOLD : OR), S(1.4));
         LN('M54 140.5 v4.5 M57 140.7 v4.5 M60 140.9 v4.5 M63 141 v4.5', 'rgba(0,0,0,.18)', .7);
       }
       // hand
@@ -407,6 +442,11 @@
         LN('M146 72 L149 49', GOLD, 2.2);
         P('M138 44 L152 46 L151 54 L137 52 Z', cuffCol, S(1.6));
       }
+      if (CO.elbow) {
+        P('M134 71 Q140 69 149 72 L145 83 Q139 86 132 82 Z', CO.elbow, S(1.5));
+        LN('M136 77 Q141 75 146 77', CO.elbowTrim, 1.2);
+      }
+      if (CO.wristband) P('M138 45 L152 46 L151 53 L137 52 Z', CO.wristband, S(1.4));
       P('M137 44 Q135 30 142 27 Q152 25 155 31 Q157 38 152 45 Z', SKIN, S());
       LN('M140 33 Q146 31 152 33 M140 38 Q146 36 152 38', SKIN_D, 1.2);
       if (has('gloves') || GF.gloves) { P('M137 44 Q136 38 138 36 L155 36 Q156 41 152 45 Z', CO.glove || '#141416', S(1.6)); LN('M139 40 H153', CO.gloveTrim || OR, 1.2); }
@@ -600,6 +640,10 @@
       P('M74 40 Q100 34 126 40 L126 52 Q100 47 74 52 Z', HC[1] || OR, S(1.8));
       for (let x = 78; x <= 122; x += 4) LN('M' + x + ' ' + (41 - Math.abs(100 - x) * -0.05) + ' v9', HC[1] ? 'rgba(0,0,0,.24)' : OR_D, 1.2);
       P('M105 42 h9 v6 h-9 Z', BLK, S(.8)); LN('M107 45 h5', WH, .8);
+      if (CO.spinPad) {
+        P('M86 23 Q88 16 100 16 Q112 16 114 23 Q100 28 86 23 Z', CO.spinPad, S(1.4));
+        LN('M91 22 Q100 19 109 22', WH, .8);
+      }
     } else if (hat === 'bucket') {
       P('M80 46 Q79 22 100 21 Q121 22 120 46 Z', HC[0] || BLK, S());
       LN('M80 40 Q100 36 120 40', HC[1] || OR, 1.2, ' stroke-dasharray="1.6 1.4"');
@@ -637,13 +681,14 @@
       const elY = fit.top === 'teeBig' ? 126 : 120, elX = fit.top === 'teeBig' ? 60 : 61;
       const pCol = { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[fit.pants];
       const eCol = longSleeve ? sleeveCol : SKIN;
-      o.push('<defs><clipPath id="' + id + 'cT" clipPathUnits="userSpaceOnUse"><rect x="-50" y="-50" width="300" height="229"/></clipPath>' +
-        '<clipPath id="' + id + 'cB" clipPathUnits="userSpaceOnUse"><rect x="-50" y="176" width="300" height="120"/></clipPath>' +
+      const kneeY = Math.round(legY(178));
+      o.push('<defs><clipPath id="' + id + 'cT" clipPathUnits="userSpaceOnUse"><rect x="-50" y="-50" width="300" height="' + (kneeY + 51) + '"/></clipPath>' +
+        '<clipPath id="' + id + 'cB" clipPathUnits="userSpaceOnUse"><rect x="-50" y="' + (kneeY - 2) + '" width="300" height="120"/></clipPath>' +
         '<clipPath id="' + id + 'aT" clipPathUnits="userSpaceOnUse"><rect x="-50" y="-50" width="300" height="' + (elY + 51) + '"/></clipPath>' +
         '<clipPath id="' + id + 'aB" clipPathUnits="userSpaceOnUse"><rect x="-50" y="' + (elY - 2) + '" width="300" height="200"/></clipPath></defs>');
       const J = (name, px, py, inner) => '<g data-j="' + name + '" data-p="' + px + ' ' + py + '">' + inner + '</g>';
       const leg = (sd, PA, KN, SH, x) => J('hip' + sd, x, 150, '<g clip-path="url(#' + id + 'cT)">' + PA + '</g>' +
-        J('knee' + sd, x, 178, '<ellipse cx="' + x + '" cy="178" rx="13" ry="6" fill="' + pCol + '"/><g clip-path="url(#' + id + 'cB)">' + PA + '</g>' + KN + J('ank' + sd, x + (sd === 'L' ? 1 : -1), 214, SH)));
+        J('knee' + sd, x, kneeY, '<ellipse cx="' + x + '" cy="' + kneeY + '" rx="13" ry="6" fill="' + pCol + '"/><g clip-path="url(#' + id + 'cB)">' + PA + '</g>' + KN + J('ank' + sd, x + (sd === 'L' ? 1 : -1), 224, SH)));
       const armJ = (sd, AR, sx, ex) => J('sh' + sd, sx, 96, '<g clip-path="url(#' + id + 'aT)">' + AR + '</g>' +
         J('el' + sd, ex, elY, '<circle cx="' + ex + '" cy="' + elY + '" r="6.5" fill="' + eCol + '"/><g clip-path="url(#' + id + 'aB)">' + AR + '</g>'));
       o.push('<g data-j="root">' + leg('R', PA_R, KN_R, SH_R, 115) + leg('L', PA_L, KN_L, SH_L, 85) +
@@ -851,5 +896,5 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, cityRewardValue, baseSlots, gearBoost, gearChances, gearEvent, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, cityRewardValue, baseSlots, gearBoost, gearTraceBonus, gearChances, gearEvent, laceLayout, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
 })();
