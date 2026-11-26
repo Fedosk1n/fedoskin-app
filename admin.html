@@ -293,7 +293,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
 <div class="wrap">
   <header>
     <img src="icons/icon2-180.png" alt="">
-    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 57</span></h1>
+    <h1>Админка <span style="font-family:var(--body);font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none;vertical-align:middle">версия 58</span></h1>
     <a class="btn btn-sm" href="./" target="_blank" rel="noopener" style="white-space:nowrap">Приложение ↗</a>
   </header>
 
@@ -320,7 +320,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   <!-- ===== основное ===== -->
   <section id="main" hidden>
     <div class="card" id="wkNew" hidden style="margin-top:10px;border-color:var(--accent);background:rgba(226,97,26,.08)">
-      <b style="font-size:15px">Обновите код сервера для нового гардероба, магазина и экипировки в батлах</b>
+      <b style="font-size:15px">Обновите код сервера, чтобы видеть статистику отправленных сообщений в чате</b>
       <ol class="small" style="margin:8px 0 0;padding-left:18px;line-height:1.55">
         <li><button class="btn btn-sm btn-accent" id="wkCopy" type="button" style="margin:2px 0;min-height:32px">Скопировать код сервера</button> <a class="btn btn-sm" href="server/push-worker.js" download="fedoskin-push.js" style="margin:2px 0;min-height:32px">Скачать код</a></li>
         <li>Откройте <b>dash.cloudflare.com</b> → слева <b>Workers &amp; Pages</b> → <b>fedoskin-push</b> → кнопка <b>Edit code</b> (справа вверху).</li>
@@ -2842,6 +2842,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
       ['Открыли страницу услуги', soP, soT, false],
       ['Нажали «Написать тренеру»', ppl.tg || 0, taps.tg || 0, false],
     ];
+    const chat = S.chat?.[svPer];
+    if (chat) rows.push(['Написал сообщение', chat.people, chat.messages, false]);
     if (taps.cta || taps.ctas) rows.push(['Пришли из урока по призыву «Не получается?»', null, taps.cta || 0, true]);
     if (taps.cr || taps.crp) { rows.push(['Открыли «Оплатить криптой»', null, taps.cr || 0, true]); rows.push(['Нажали «Я оплатил»', null, taps.crp || 0, true]); }
     const top = Math.max(1, ...rows.map(r => r[1] == null ? r[2] : r[1]));
@@ -2874,7 +2876,8 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
     $('#svSpark').innerHTML = days.map(d => { const n = byDay[d] || 0; return '<i class="' + (n ? '' : 'z') + '" style="height:' + Math.max(4, n / mx * 100) + '%" title="' + fmtDay(d) + ': ' + n + ' чел."></i>'; }).join('');
     $('#svX0').textContent = fmtDay(days[0]);
     const ctaInfo = (taps.cta || taps.ctas) ? ' Призыв в уроке: карточка под видео — ' + nf(taps['cta:card'] || 0) + ' переходов; плашка в плеере показана ' + nf(taps.ctas || 0) + ' раз, нажали ' + nf(taps['cta:chip'] || 0) + '.' : '';
-    $('#svNote').textContent = 'Люди — сколько разных человек (один человек считается один раз за выбранный период). Раз — сколько всего нажатий. Счёт с ' + (S.since ? fmtDay(S.since) : 'сегодняшнего дня') + '; «Написать тренеру» по людям — тоже с этой даты.' + ctaInfo;
+    const chatInfo = chat ? ' В строке «Написал сообщение» показаны число отправителей и общее число сообщений в чате, включая фото и видео.' : '';
+    $('#svNote').textContent = 'Люди — сколько разных человек (один человек считается один раз за выбранный период). Счёт нажатий с ' + (S.since ? fmtDay(S.since) : 'сегодняшнего дня') + '; «Написать тренеру» по людям — тоже с этой даты.' + chatInfo + ctaInfo;
   }
   document.querySelectorAll('#svPer button').forEach(b => b.addEventListener('click', () => { svPer = b.dataset.p; store.set('fedoskin-admin-svper', svPer); renderServices(); }));
 
@@ -2910,7 +2913,7 @@ code{background:var(--surface-2);padding:1px 6px;border-radius:6px;font-size:13p
   $('#srcCopy').addEventListener('click', () => $('#visCopy').click());
   $('#svCopy').addEventListener('click', () => $('#visCopy').click());
   // Match WORKER_VERSION in server/push-worker.js for each release that requires a Worker deploy.
-  const REQUIRED_WORKER_VERSION = 2;
+  const REQUIRED_WORKER_VERSION = 3;
   let workerVersionCheck;
   async function checkWorkerUpdate(manual = false){
     workerVersionCheck?.abort();

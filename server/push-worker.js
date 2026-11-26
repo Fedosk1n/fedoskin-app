@@ -41,7 +41,7 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 // Increment for each release that requires redeploying this Worker.
-const WORKER_VERSION = 2;
+const WORKER_VERSION = 3;
 
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
@@ -1077,6 +1077,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS chat_thr (id TEXT PRIMARY KEY, kh TEXT, name TEXT, lang TEXT, country TEXT, svc TEXT, made INTEGER, last INTEGER, push TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS chat_msg (n INTEGER PRIMARY KEY AUTOINCREMENT, thr TEXT NOT NULL, dir TEXT NOT NULL, kind TEXT NOT NULL, text TEXT, media TEXT, t INTEGER)'),
     db.prepare('CREATE INDEX IF NOT EXISTS chat_msg_thr ON chat_msg (thr, n)'),
+    db.prepare("CREATE INDEX IF NOT EXISTS chat_msg_in_time ON chat_msg (t, thr) WHERE dir = 'in'"),
     db.prepare('CREATE TABLE IF NOT EXISTS chat_map (tg INTEGER PRIMARY KEY, thr TEXT NOT NULL)'),
     db.prepare('CREATE TABLE IF NOT EXISTS tgs (k TEXT PRIMARY KEY, v TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS chat_top (thr TEXT PRIMARY KEY, top INTEGER NOT NULL) WITHOUT ROWID'),
@@ -1202,7 +1203,9 @@ async function visits(env, json) {
   const db = env.DB;
   await schema(db);
   const day = mskDay();
-  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted, svDays, svAll, pT, p7, pA, svSince, coT, co7, coA] = await db.batch([
+  const todayStart = Date.parse(day + 'T00:00:00+03:00');
+  const chatCounts = "SELECT COUNT(DISTINCT thr) AS people, COUNT(*) AS messages FROM chat_msg WHERE dir = 'in' AND t >= ?";
+  const [today, all, devs, days, geoToday, geoAll, plat, srcAll, srcToday, contacted, svDays, svAll, pT, p7, pA, svSince, coT, co7, coA, chatToday, chatWeek, chatAll] = await db.batch([
     db.prepare('SELECT visits, uniq, fresh, app FROM hits WHERE day = ?').bind(day),
     db.prepare('SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(app), 0) AS app, MIN(day) AS since FROM hits'),
     db.prepare('SELECT COUNT(*) AS n FROM devices'),
@@ -1223,6 +1226,9 @@ async function visits(env, json) {
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') AND v.day = ? GROUP BY co, v.e").bind(day),
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') AND v.day >= ? GROUP BY co, v.e").bind(dayAgo(6)),
     db.prepare("SELECT COALESCE(d.country, 'XX') AS co, v.e AS e, COUNT(DISTINCT v.id) AS n FROM evu v LEFT JOIN devices d ON d.id = v.id WHERE v.e IN ('sv','so','tg') GROUP BY co, v.e"),
+    db.prepare(chatCounts).bind(todayStart),
+    db.prepare(chatCounts).bind(todayStart - 6 * 864e5),
+    db.prepare(chatCounts).bind(0),
   ]);
   const t = today.results[0] || { visits: 0, uniq: 0, fresh: 0, app: 0 }, a = all.results[0] || {};
   return json({ bt: 1, rb: 1, pf: 1, tee: 1, lk: 1, wd: 1, ul: 1, sd: 1, crs: 1, cg: 1, gear: GEAR_CATALOG, rb2: RB2.R, // this server knows battles, points, the shop and rhythm rounds (admin uses it to ask for a code update)
@@ -1238,6 +1244,7 @@ async function visits(env, json) {
     // online services interest (07.11.2026): taps per day/kind (30 days), taps all time, distinct people today / 7 days / all
     svc: { days: svDays.results.map(r => [r.day, r.kind, r.n]), all: svAll.results.map(r => [r.kind, r.n]),
       people: { today: pT.results.map(r => [r.e, r.n]), d7: p7.results.map(r => [r.e, r.n]), all: pA.results.map(r => [r.e, r.n]) },
+      chat: { today: chatToday.results[0], d7: chatWeek.results[0], all: chatAll.results[0] },
       since: (svSince.results[0] || {}).since || null,
       countries: { today: coT.results.map(r => [r.co, r.e, r.n]), d7: co7.results.map(r => [r.co, r.e, r.n]), all: coA.results.map(r => [r.co, r.e, r.n]) } },
   });
