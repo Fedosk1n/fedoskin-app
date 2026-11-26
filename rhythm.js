@@ -437,6 +437,15 @@
   // ---- the screen ----
   let D = null, box = null, G = null, raf = 0, built = false;
   const $ = s => box.querySelector(s);
+  const BALANCE_CSS = `.rbrail{position:relative;height:28px;border:1px solid #52615A;border-radius:8px;background:#1A2420}
+.rbzone,.rbdot{position:absolute;top:50%;transform:translate(-50%,-50%)}
+.rbzone{left:var(--zone,50%);width:var(--zone-width,26%);height:22px;border:2px solid #B5F7CA;border-radius:5px;background:#43C87C}
+.rbdot{left:var(--dot,50%);width:16px;height:16px;border:3px solid #14211A;border-radius:50%;background:#FFF8DC}
+.rbrail.out .rbdot{background:#FFA46E}
+.rbholdbar{margin-top:7px;height:5px;border-radius:4px;background:#343D37;overflow:hidden}
+.rbholdbar i{display:block;height:100%;background:#F2CC55;transform:scaleX(var(--progress,0));transform-origin:left center}
+.rbhand{position:absolute;left:var(--dot,50%);top:10px;transform:translateX(-50%);font-size:25px;line-height:1}
+`;
   const CSS = `
 .sheet-bg.rb{background:#0B0B0C}
 .rb .btlbox{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -463,20 +472,12 @@
 .rbtrack{position:relative;height:66px;margin-top:10px;border-radius:14px;background:#141416;border:1px solid #26262A;overflow:hidden}
 .rbtrack canvas{display:block;width:100%;height:100%}
 .rbbalance{position:absolute;inset:0;padding:10px 14px;background:#111613;pointer-events:none}
-.rbrail{position:relative;height:28px;border:1px solid #52615A;border-radius:8px;background:#1A2420}
-.rbzone,.rbdot{position:absolute;top:50%;transform:translate(-50%,-50%)}
-.rbzone{left:var(--zone,50%);width:var(--zone-width,26%);height:22px;border:2px solid #B5F7CA;border-radius:5px;background:#43C87C}
-.rbdot{left:var(--dot,50%);width:16px;height:16px;border:3px solid #14211A;border-radius:50%;background:#FFF8DC}
-.rbrail.out .rbdot{background:#FFA46E}
-.rbholdbar{margin-top:7px;height:5px;border-radius:4px;background:#343D37;overflow:hidden}
-.rbholdbar i{display:block;height:100%;background:#F2CC55;transform:scaleX(var(--progress,0));transform-origin:left center}
-.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px solid #52615A;border-radius:14px;background:#141B17}
+${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px solid #52615A;border-radius:14px;background:#141B17}
 .rbteach h3{margin:0 0 6px;font:24px var(--display);color:var(--fg)}
 .rbteach p{margin:0;font-size:14px;line-height:1.4;color:var(--fg)}
 .rbteach .rbrail{margin:12px 0 29px}
 .rbteach .rbholdbar{margin:0 0 12px}
 .rbteach .btn{width:100%}
-.rbhand{position:absolute;left:var(--dot,50%);top:10px;transform:translateX(-50%);font-size:25px;line-height:1}
 .rbpad{margin-top:10px;height:84px;border-radius:18px;border:2px solid var(--accent);background:rgba(226,97,26,.12);color:var(--accent);font-family:var(--display);font-size:30px;letter-spacing:2px;display:flex;align-items:center;justify-content:center;transition:transform .08s,background .08s}
 .rbpad.balance.out{border-color:#FFA46E;color:#FFA46E}
 .rbpad.hit{background:rgba(226,97,26,.45);transform:scale(.97)}
@@ -1640,5 +1641,5 @@
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { init: d => { D = d; }, unlock: () => audioOn(), audioState: () => (ctx ? ctx.state : 'none'), fresh: audioFresh, open, close, jam, hiss: sprayHiss, bgm, bgmBeat, bgmId: () => (bgN ? bgN.id : null), LOOPS: Object.keys(LOOPS).map(k => ({ id: k, name: LOOPS[k].name, bpm: LOOPS[k].bpm })), _bgmRender: bgmRender, sfx, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { freezeBalance: { css: BALANCE_CSS, rail: balanceRail, bar: balanceBar, drift: freezeDrift, paint: paintBalance }, init: d => { D = d; }, unlock: () => audioOn(), audioState: () => (ctx ? ctx.state : 'none'), fresh: audioFresh, open, close, jam, hiss: sprayHiss, bgm, bgmBeat, bgmId: () => (bgN ? bgN.id : null), LOOPS: Object.keys(LOOPS).map(k => ({ id: k, name: LOOPS[k].name, bpm: LOOPS[k].bpm })), _bgmRender: bgmRender, sfx, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

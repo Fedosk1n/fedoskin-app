@@ -1,7 +1,6 @@
 // City 3D — the game on top of the scene (owner 14.11.2026: «понятная система прогресса, ограниченная энергия, батлы на авто,
 // но красиво — случайные комбинации, случайные исходы, падения»). Tapping stays in the real-people battles tab.
-// Crews stand around the yard; walk up → «Батл» → an automatic dance-off on motion capture: each dancer's turn is a random
-// set toprock → down → footwork → power → freeze; power and freeze can fail (crash / lost freeze). 3 judges decide.
+// Crews stand around the yard. The player chooses a power move before the dance-off and balances their final freeze.
 // Strength = hero level from lessons; energy = 20 per battle, refilled to full every new day; lesson minutes (+5/min) and rewards stack above it.
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
@@ -9,6 +8,7 @@ import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=21';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { initPower } from './city3d-power.js?v=10';   // the hero's power move is DRAWN by the finger (17.11)
+import { initFreeze } from './city3d-freeze.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -189,11 +189,12 @@ const FW = [
 const side = (c, m) => (m ? c + '_M' : c);
 // power: level needed, points, how risky (adds to the fall chance), display name
 const POWER = [
-  { c: 'Breakdance_Swipes', lv: 1, pts: 2, risk: 0, nm: 'SWIPES' },
-  { c: 'Head_Spinning', lv: 2, pts: 3, risk: .05, nm: 'HEADSPIN', pre: 'Headspin_Start', post: 'Headspin_End' },
-  { c: 'Flair', lv: 3, pts: 3.5, risk: .08, nm: 'FLARE' },
-  { c: 'Breakdance_1990', lv: 4, pts: 4, risk: .1, nm: '1990' },
+  { id: 'swipe', c: 'Breakdance_Swipes', lv: 1, pts: 2, risk: 0, nm: 'SWIPES' },
+  { id: 'headspin', c: 'Head_Spinning', lv: 2, pts: 3, risk: .05, nm: 'HEADSPIN', pre: 'Headspin_Start', post: 'Headspin_End' },
+  { id: 'flare', c: 'Flair', lv: 3, pts: 3.5, risk: .08, nm: 'FLARE' },
+  { id: 'ninety', c: 'Breakdance_1990', lv: 4, pts: 4, risk: .1, nm: '1990' },
 ];
+const FOOT_OPTION = { id: 'footwork', c: 'Breakdance_Footwork_2', lv: 1, pts: 2, risk: 0, nm: 'FOOTWORK' };
 const TOPNM = { Breakdance_Uprock: 'CROSS STEP', Breakdance_Uprock_Var_1: 'KICK STEP', Bboy_Uprock: 'TOPROCK', Brooklyn_Uprock: 'BROOKLYN ROCK', Breakdance_Uprock_Var_2: 'INDIAN STEP' };
 // Final holds come from captured freezes. A = entry after a floor or power phrase, len = through the end of the hold.
 const FREEZE = [
@@ -348,7 +349,7 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 #g3toast{position:fixed;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 104px);transform:translateX(-50%);background:rgba(12,14,19,.88);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:9px 14px;font:600 13px Inter,sans-serif;color:#F2EFE8;z-index:9;opacity:0;transition:opacity .3s;pointer-events:none;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;text-align:center;line-height:1.35}
 #g3toast.on{opacity:1}
 #g3info{position:fixed;inset:0;background:rgba(5,6,9,.6);z-index:9;display:none;align-items:flex-end;justify-content:center}#g3info.on{display:flex}
-#g3info>div{width:min(460px,100%);background:#14161b;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));font:500 14px/1.45 Inter,sans-serif;color:#D9D4CA;max-height:80vh;overflow:auto}
+#g3info>div{width:min(460px,100%);background:#14161b;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));font:500 14px/1.45 Inter,sans-serif;color:#D9D4CA;max-height:80vh;overflow:auto;touch-action:pan-y}
 #g3info h4{margin:0 0 8px;font:400 22px Anton,sans-serif;letter-spacing:.04em;color:#F2EFE8}#g3info b{color:#F2EFE8}#g3info .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)}
 #g3info button{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:800 15px Inter,sans-serif;background:#E2611A;color:#0B0D12}
 #g3info button.sec{background:#262a33;color:#F2EFE8}
@@ -358,6 +359,12 @@ body.g3fight #g3hud,body.g3fight #hint,body.g3fight .hud .ttl{opacity:0;pointer-
 #g3info .cu.max button{background:rgba(59,209,111,.14);color:#3BD16F}
 #g3info.cum{background:linear-gradient(rgba(5,6,9,0) 30%,rgba(5,6,9,.55))}#g3info.cum>div{max-height:60vh;padding-top:14px}#g3info.cum p{margin:0 0 4px;font-size:13px}#g3info.cum .cu{padding:8px 0}
 #g3info.cum button#g3cuL{margin-top:8px;padding:10px;font-size:13.5px}
+#g3powerOptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#g3powerOptions button{margin:0;background:#20242a;color:#F2EFE8;border:1px solid #434953;text-align:left;min-height:62px}
+#g3powerOptions button[aria-pressed=true]{border-color:#E2611A;background:#38251e}
+#g3powerOptions button:disabled{color:#C2BEB5;background:#1b1e23}
+#g3powerOptions small{display:block;font:500 12px/1.35 Inter,sans-serif;color:#C2BEB5;margin-top:4px}
+#g3choiceActions{display:grid;grid-template-columns:1fr 2fr;gap:8px}
 `;
 function ui() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
@@ -394,6 +401,8 @@ export function initGame(ctx) {
   NHERE = HERE.length; IDS = HERE.map(c => c.id);
   const W = ctx.W, scene = ctx.scene, notes = refill();
   const PM = initPower({ W, camera: ctx.camera, sfx });
+  const FZ = initFreeze();
+  let choosing = null;
   if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
   if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
   if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
@@ -410,7 +419,11 @@ export function initGame(ctx) {
     <p>${_t('<b>Уроки</b> и награды в городе добавляют энергию сверх {m}: каждая минута урока = <b>+{n} ⚡</b>. Запас копится до {c} ⚡ и не сгорает.', { n: BAL.perMin, m: BAL.enMax, c: BAL.enCap })}</p>
     <p>${_t('Сила твоего би-боя тоже из уроков: чем выше уровень героя, тем сложнее пауэр он крутит и тем реже падает.')}</p><button onclick="location.href='./'">${_t('🎬 К урокам')}</button>`);
   };
-  $('#g3info').onclick = e => { if (e.target.id === 'g3info') e.currentTarget.classList.remove('on'); };
+  $('#g3info').onclick = e => {
+    if (e.target.id !== 'g3info') return;
+    if (choosing) closeChoice(); else e.currentTarget.classList.remove('on');
+  };
+  addEventListener('keydown', e => { if (choosing && e.key === 'Escape') closeChoice(); });
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
     info(`<h4>${_t('★ Прогресс')}</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
     <p style="margin-top:10px">${_t('Побеждай банды — получай уважение и их шмотки (они видны на тебе и помогают в батлах).')}</p>
@@ -851,14 +864,14 @@ export function initGame(ctx) {
   // ---------- proximity button ----------
   let near = null; const act = $('#g3act');
   act.onclick = () => {
-    if (!near || B || P || A) return;
+    if (!near || B || P || A || choosing) return;
     if (near.paint) { startPaint(near.g); return; }
     if (near.place) { placeRun(near.place); return; }
     if (S.en < energyCost(BAL.battle)) { location.href = './'; return; }
-    startBattle(near);
+    chooseBattle(near);
   };
   function paintAct() {
-    if (!near || B || P || A) { act.classList.remove('on'); return; }
+    if (!near || B || P || A || choosing) { act.classList.remove('on'); return; }
     if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? _t('🎬 Мало энергии — посмотри урок') : b.h) + `<small>${b.low ? _t('1 минута урока = +{n} ⚡', { n: BAL.perMin }) : b.s}</small>`; return; }
     if (near.paint) { const low = S.en < energyCost(BAL.paint); act.className = 'on' + (low ? ' low' : '');
       act.innerHTML = _t('🎨 Закрасить стену «{x}» · −{n} ⚡', { x: near.g.c.name, n: energyCost(BAL.paint) }) + `<small>${low ? _t('Мало энергии — посмотри урок') : _t('Твой кусок +{n} ★ каждый день', { n: BAL.turfRep })}</small>`; return; }
@@ -870,6 +883,59 @@ export function initGame(ctx) {
 
   // ---------- the battle ----------
   let B = null;
+  const lessons = BattleStudy.catalog(window.LESSONS_DATA);
+  function availablePower() {
+    const read = key => { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { return {}; } };
+    const stats = read('fedoskin-stats'), coverage = read('fedoskin-ulcov'), lv = ctx.heroLevel();
+    const progress = l => ({ views: BattleStudy.views(l, stats), full: BattleStudy.full(l, BattleStudy.coverageFraction(l, BattleStudy.bits(l, coverage))) });
+    const state = BattleStudy.state(lessons, lv, BattleStudy.legacy(HERO.levelFor((stats.sec || 0) / 60)), progress);
+    const mode = BattleStudy.starterMode();
+    const swipes = mode === 'new' || mode === 'open' ? BattleStudy.matching(lessons, 'swipe').map(progress) : [];
+    if (!swipes.length || swipes.some(p => BattleStudy.studied(p.full, p.views))) state.allow.push('swipe');
+    else {
+      const best = swipes.sort((a, b) => b.views - a.views)[0];
+      state.hint.swipe = { p: Math.floor(best.views * 10) / 10, full: best.full, lvOk: true };
+    }
+    return state;
+  }
+  function closeChoice() {
+    choosing = null; FZ.teach(null); W.lock = false;
+    $('#g3info').classList.remove('on'); paintAct();
+  }
+  function chooseBattle(g) {
+    const state = availablePower(), unlocked = POWER.filter(p => state.allow.includes(p.id));
+    let selected = unlocked[unlocked.length - 1] || FOOT_OPTION;
+    const options = unlocked.length ? POWER : [FOOT_OPTION, ...POWER];
+    const cost = energyCost(BAL.battle);
+    const card = p => {
+      const open = p === FOOT_OPTION || state.allow.includes(p.id), h = state.hint[p.id];
+      const gates = [];
+      if (h && !h.lvOk) gates.push(_t('ур. {n}', { n: h.lv }));
+      if (h && !h.st) gates.push(h.p === 3 && !h.full ? _t('Нужен полный просмотр урока') : _t('Урок · {n}/3', { n: h.p }));
+      const gate = gates.join(' · ');
+      return `<button type="button" data-power="${p.id}" aria-pressed="${p === selected}" ${open ? '' : 'disabled'}>${open ? '' : '🔒 '}${p.nm}<small>${open ? _t('+{n} к счёту', { n: p.pts }) : gate}</small></button>`;
+    };
+    choosing = g; W.lock = true; paintAct();
+    info(`<h4>${_t('Выбери элемент для батла')}</h4><div id="g3powerOptions">${options.map(card).join('')}</div>
+      ${unlocked.length < POWER.length ? '<p>' + _t('Для закрытых элементов нужен уровень и три просмотра урока со звуком. Один — целиком.') + '</p>' : ''}
+      ${S.freezeTip ? '' : FZ.guide()}
+      <div id="g3choiceActions"><button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>
+      <button type="button" id="g3choiceGo">${cost ? _t('Начать батл · −{n} ⚡', { n: cost }) : _t('Начать батл')}</button></div>`);
+    FZ.teach($('#g3ftip'));
+    const cards = Array.from(document.querySelectorAll('#g3powerOptions button'));
+    cards.forEach(b => { b.onclick = () => {
+      selected = options.find(p => p.id === b.dataset.power);
+      cards.forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+    }; });
+    $('#g3choiceBack').onclick = closeChoice;
+    $('#g3choiceGo').onclick = () => {
+      if (choosing !== g) return;
+      closeChoice();
+      if (!shown(g) || S.en < energyCost(BAL.battle)) return;
+      S.freezeTip = true;
+      startBattle(g, selected);
+    };
+  }
   const heroChoreo = {}, opponentChoreo = new WeakMap();
   // today's buffs from the DJ and the practice mat (only for me)
   const buff = () => { const c = S.cus || {};
@@ -878,7 +944,7 @@ export function initGame(ctx) {
       step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
-  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12) {
+  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12, selected = null) {
     const seq = [], push = (c, len, at, o = {}) => seq.push(Object.assign({ c, len, at: at || 0 }, o));
     const me = who === 'me';
     let memory = me ? heroChoreo : opponentChoreo.get(J);
@@ -938,14 +1004,22 @@ export function initGame(ctx) {
     }
     const pw = POWER.filter(p => p.lv <= lv); let P = pw[Math.min(pw.length - 1, Math.floor(r() * pw.length * 1.3))];
     if (me && W.forcePM) P = POWER.find(p => p.nm === W.forcePM) || P;   // tests: ?pm=FLARE
-    const failP = clamp(.13 + P.risk - .06 * (lv - P.lv) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
-    const pFail = r() < failP && !gear;
+    if (selected) {
+      P = selected;
+      if (gear?.move) {
+        push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: 6, kind: 'power', gear });
+        gear = null;
+      }
+    }
+    const need = selected ? BattleStudy.levels[P.id] || 1 : P.lv;
+    const failP = clamp(.13 + P.risk - .06 * (lv - need) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
+    const pFail = r() < failP && !gear && P !== FOOT_OPTION;
     if (P.pre && !gear?.move) push(P.pre, 1.6, 1.0, { kind: 'pre' });
     if (P.c === 'Breakdance_1990' && !gear?.move) rise();
     const reps = Math.max(1, Math.round(2.6 / clipLen(P.c)));
     const failAt = .45 + r() * .35;
     if (gear?.move) push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: P.pts + 6, kind: 'power', gear });
-    else push(P.c, reps * clipLen(P.c), 0, { nm: P.nm, pts: gear?.assist ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: P.lv, gear });
+    else push(P.c, reps * clipLen(P.c), 0, { nm: P === FOOT_OPTION ? _t('Футворк') : P.nm, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: need, gear });
     // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
     const pwS = seq[seq.length - 1], mk = (c, len, at, o = {}) => Object.assign({ c, len, at: at || 0 }, o), ok = [], bad = [mk(null, 2.2, 0, { kind: 'fall' })];
     if (P.post && !gear?.move) ok.push(mk(P.post, 1.4, 0, { kind: 'post' }));
@@ -954,13 +1028,18 @@ export function initGame(ctx) {
     const F = pick(FREEZE.filter(f => (f.lv || 1) <= lv && f.nm !== memory.freeze && f.nm !== held), r);
     if (!pFail || me) memory.freeze = F.nm;
     const fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0) + (me ? F.risk || 0 : 0), .03, .2);
-    ok.push(mk(side(F.c, r() < .5), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', fail: fFail, failAt: .55 }));
-    if (fFail) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
+    const mirror = r() < .5;
+    const balance = selected ? {
+      at: Math.min(.8, F.len * .5), direction: mirror ? -1 : 1,
+      tolerance: Math.min(26, 20 - (F.risk ? 3 : 0) + Math.max(0, lv - 1) * .45 + (bf.fz || 0) * 40 + bf.fall * 12),
+    } : null;
+    ok.push(mk(side(F.c, mirror), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', balance, fail: fFail, failAt: .55 }));
+    if (fFail && !balance) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
     seq.push(...(pFail ? bad : ok)); pwS.tails = { ok, bad };
     let t = enter; seq.forEach(s => { s.a = t; t += s.len; s.b = t; });
     return { J, who, seq, shape, enter, bend: entry.bend, len: t + OUT, score: 0, style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
   }
-  function startBattle(g) {
+  function startBattle(g, selected = null) {
     if (!g.c.tour) S.en -= energyCost(BAL.battle); S.fights++; save(); paintHud();
     // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
     if (ctx.music) ctx.music(g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id);
@@ -972,11 +1051,12 @@ export function initGame(ctx) {
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq);
     for (let i = 0; i < rounds; i++) {
       const gear = HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
-      turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff(), gear));
+      turns.push(makeTurn(opp, c.lv, r, 'op')); turns.push(makeTurn(H, lv, r, 'me', buff(), gear, 2.12, selected));
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
-    B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true };
+    const bpm = RB.LOOPS.find(loop => loop.id === c.id)?.bpm || 120;
+    B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
     $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
@@ -1031,13 +1111,15 @@ export function initGame(ctx) {
       W.walk.move(B.opp, dt, B.opSpot.x, B.opSpot.z, k, Math.atan2(B.cx - B.opSpot.x, B.cz - B.opSpot.z));
       if (k >= 1) { B.phase = 'turn'; B.i = -1; nextTurn(); }
     } else if (B.phase === 'turn') {
-      if (B.skip) { PM.cancel(); finishSkip(); return; }
-      // the battle's clock STANDS while the hero hangs in the air waiting for the finger, while it is drawn, and during the replay
-      if (PM.holds()) B.t0 += now - (B.ln || now);
+      if (B.skip) { PM.cancel(); FZ.cancel(); finishSkip(); return; }
+      // Pause the choreography clock during power drawing, replays and the manual freeze.
+      if (PM.holds() || FZ.active()) B.t0 += now - (B.ln || now);
       // while the swipe winds up towards the drawn part the clock keeps the dancer's time (a slow frame doesn't cut the wind-up short)
       else if (PM.state() === 'arm') B.t0 += Math.max(0, now - (B.ln || now) - dt);
       B.ln = now;
-      const T = B.turns[B.i], J = T.J, t = now - B.t0, home = T.who === 'me' ? B.meSpot : B.opSpot;
+      const T = B.turns[B.i], J = T.J, home = T.who === 'me' ? B.meSpot : B.opSpot;
+      const final = T.seq[T.seq.length - 1], freezeAt = final.balance && !final.done ? final.a + final.balance.at : Infinity;
+      const elapsed = now - B.t0, t = Math.min(elapsed, freezeAt);
       moveTurn(T, t, dt, home, B.cx, B.cz, T.back);
       const other = T.who === 'me' ? B.opp : H; face(other, J.root.position.x, J.root.position.z);
       let si = T.seq.findIndex(s => t < s.b);
@@ -1054,7 +1136,14 @@ export function initGame(ctx) {
       const s = si >= 0 ? T.seq[si] : null;
       mythCut(T, s, t);
       if (si >= 0) spinTick(J, T, t);
-      if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
+      if (s?.balance && elapsed >= freezeAt && !FZ.active()) {
+        B.t0 = now - freezeAt;
+        J.act.time = Math.min(s.at + s.balance.at, clipLen(s.c) - .01);
+        FZ.arm(J, s, { duration: B.freezeDuration, wait: S.freezePlayed ? 3.5 : 5.5, tolerance: s.balance.tolerance,
+          direction: s.balance.direction, onEnd: ok => scoreFreeze(T, s, ok) });
+        S.freezePlayed = true; save();
+      }
+      if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.balance && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
         if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); if (T.who === 'me') B.clean = false; }
         else { T.score += s.pts; mvText(s, s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
@@ -1072,6 +1161,18 @@ export function initGame(ctx) {
       PM.tick(dt);   // sets the speed of the drawn clip just before the dancer moves
     }
     H.tick(dt); B.opp.tick(dt); if (B) [H, B.opp].forEach(J => { if (J.ws) W.walk.pose(J, dt); });
+  }
+  function scoreFreeze(T, s, ok) {
+    s.done = true; s.fail = !ok;
+    if (ok) {
+      T.score += s.pts; sfx('hit'); mvText(s, ['ok', _t('Чисто! +{n}', { n: s.pts })]);
+    } else {
+      B.clean = false;
+      const fall = { a: s.b, b: s.b + 1.6, kind: 'fall', soft: true };
+      T.seq.push(fall); T.len += 1.6;
+      fallStart(T.J); sfx('crash'); mvText(s, ['bad', _t('Не удержал! 0')]);
+    }
+    paintScore(T);
   }
   // ---------- the drawn power move (city3d-power.js) ----------
   function armDraw(T, s) {
@@ -1186,7 +1287,7 @@ export function initGame(ctx) {
     $('#g3ok').onclick = endBattle; const L = $('#g3les'); if (L) L.onclick = () => (location.href = './');
   }
   function endBattle() {
-    PM.cancel();
+    PM.cancel(); FZ.cancel();
     if (ctx.music) ctx.music(null);   // the background comes back (the next jam round asks for its beat again at once — no double switch)
     $('#g3res').classList.remove('on'); $('#g3bt').classList.remove('on');
     const g = B.g; B.opp.root.position.set(B.opp.home.x, 0, B.opp.home.z); B.opp.play('Breakdance_Ready', { fade: .3 });
@@ -1210,11 +1311,12 @@ export function initGame(ctx) {
     if (PZ) { PZ.gateClub.chain.visible = true; }
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
     if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.tick(dt); B.opp.tick(dt); } }
+    FZ.tick(dt);
     crews.forEach(g => {
       if (!g.label.visible && B?.g !== g) return;
       g.people.forEach(J => { if (J !== B?.opp) J.tick(dt); });
     });
-    if (!B && !P && !A) {
+    if (!B && !P && !A && !choosing) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
       crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
       if (!A) PLACES.forEach(pl => { const d = Math.hypot(p.x - pl.x, p.z - pl.z); if (d < pl.r && d < bd) { bd = d; best = { place: pl }; } });
@@ -1225,5 +1327,5 @@ export function initGame(ctx) {
       if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
     }
   }
-  return { update, post: dt => PM.post(dt), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post: dt => PM.post(dt), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }
