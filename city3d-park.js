@@ -30,15 +30,20 @@ export async function buildPark(TK) {
     for (let i = 0; i < 2600; i++) { const px = r() * S, py = r() * S, l = 3 + r() * 5; x.strokeStyle = `hsla(${105 + r() * 30},${30 + r() * 20}%,${16 + r() * 16}%,.7)`; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - .5) * 3, py - l); x.stroke(); }
     grain(c, 14, 5);
     flat(new THREE.PlaneGeometry(80, 60), new THREE.MeshStandardMaterial({ map: tex(c, { repeat: [16, 12] }), roughness: .97 }), 0, 0, 17.8); }
-  // Blender exported a single surface across all crossings, plus one batched border.
+  const loadSurface = (file, mesh) => mesh
+    ? new THREE.TextureLoader().loadAsync(new URL('./img/' + file + '.webp?v=1', import.meta.url).href).catch(() => null)
+    : null;
+  // Start both surface loads together. The textures decorate the baked geometry at their original scale.
   const paths = TK.pathModel, gravel = paths?.getObjectByName('park gravel');
+  const playground = TK.playgroundModel, rubber = playground?.getObjectByName('playground rubber');
+  const [gravelMap, rubberMap] = await Promise.all([loadSurface('park-gravel', gravel), loadSurface('playground-rubber', rubber)]);
+  // Blender exported a single surface across all crossings, plus one batched border.
   if (gravel?.material) {
-    const map = await new THREE.TextureLoader().loadAsync(new URL('./img/park-gravel.webp?v=1', import.meta.url).href).catch(() => null);
-    if (map) {
-      map.colorSpace = THREE.SRGBColorSpace;
-      map.wrapS = map.wrapT = THREE.RepeatWrapping;
-      map.anisotropy = TK.maxAniso;
-      gravel.material.map = map;
+    if (gravelMap) {
+      gravelMap.colorSpace = THREE.SRGBColorSpace;
+      gravelMap.wrapS = gravelMap.wrapT = THREE.RepeatWrapping;
+      gravelMap.anisotropy = TK.maxAniso;
+      gravel.material.map = gravelMap;
     } else gravel.material.color.set('#817567');
     scene.add(paths);
   } else {
@@ -141,9 +146,28 @@ export async function buildPark(TK) {
     point('#ffd49a', 18, OX + .3, 2.6, OZ + .2, 7);
   }
 
-  // ---------- the street-workout corner (south-east): bars and a rubber floor ----------
-  const BX = 7.4, BZ = 8.6;
-  { const c = paintCanvas(256, 256, (x, w, h, r) => { x.fillStyle = '#25413a'; x.fillRect(0, 0, w, h); for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${r() < .5 ? '255,255,255' : '0,0,0'},${.05 + r() * .12})`; x.fillRect(r() * w, r() * h, 2, 2); } x.strokeStyle = 'rgba(242,239,232,.6)'; x.lineWidth = 5; x.strokeRect(8, 8, w - 16, h - 16); }, .2, 9);
+  // ---------- play and workout corner (south-east) ----------
+  const BX = 7.4, BZ = 8.00, bars = { x: BX + .12, z: BZ + .70 };
+  if (rubber?.material) {
+    if (rubberMap) {
+      rubberMap.colorSpace = THREE.SRGBColorSpace;
+      rubberMap.anisotropy = TK.maxAniso;
+      rubber.material.map = rubberMap;
+    } else rubber.material.color.set('#38574f');
+    playground.position.set(BX, 0, BZ);
+    playground.traverse(node => {
+      if (node.isMesh) node.castShadow = node !== rubber;
+    });
+    scene.add(playground);
+    // Match the equipment footprint while keeping both entrances and the footwork circle open.
+    for (const [x, z, w, d] of [[-1.355, -1.72, 1.25, 1.07], [-.50, -1.90, .68, .55],
+      [-1.36, -.22, .84, 2.12], [1.79, .15, .66, 1.77], [1.40, -2.25, 1.76, .46]]) {
+      box(BX + x, BZ + z, w, d);
+    }
+    for (const [x, z, r] of [[.40, -1.38, .115], [1.41, -1.38, .115], [2.16, -1.38, .115],
+      [-2.01, 1.44, .21], [-1.55, 1.85, .21], [-1.10, 2.11, .21]]) circ(BX + x, BZ + z, r);
+  } else {
+    const c = paintCanvas(256, 256, (x, w, h, r) => { x.fillStyle = '#25413a'; x.fillRect(0, 0, w, h); for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${r() < .5 ? '255,255,255' : '0,0,0'},${.05 + r() * .12})`; x.fillRect(r() * w, r() * h, 2, 2); } x.strokeStyle = 'rgba(242,239,232,.6)'; x.lineWidth = 5; x.strokeRect(8, 8, w - 16, h - 16); }, .2, 9);
     flat(new THREE.PlaneGeometry(5.2, 4), new THREE.MeshStandardMaterial({ map: tex(c), roughness: .9 }), BX, .016, BZ);
     const st = M('#c9a52e', .4, .6), bar = (x, z, h, len) => { [-len / 2, len / 2].forEach(k => { mesh(new THREE.CylinderGeometry(.055, .055, h, 10), st, x + k, h / 2, z); circ(x + k, z, .12); }); const b = mesh(new THREE.CylinderGeometry(.035, .035, len, 10), M('#d8dce2', .25, .9), x, h - .06, z); b.rotation.z = PI / 2; };
     bar(BX - 1.1, BZ - 1.5, 2.5, 1.5); bar(BX + .9, BZ - 1.5, 2.1, 1.5);
@@ -214,6 +238,6 @@ export async function buildPark(TK) {
     if (on) { const near = walkers.filter(w => w.v < 2).slice(0, 3); near.forEach((w, i) => { const a = (i - 1) * .55; w.slot = { x: SX + Math.sin(a) * (SR + 1.1), z: SZ + Math.cos(a) * (SR + 1.1) }; w.mode = 'watch'; }); }
     else walkers.forEach(w => { if (w.mode === 'watch') w.mode = 'back'; }); };
 
-  W.park = { stage: { x: SX, z: SZ, r: SR }, dancers, og: { x: OX + .3, z: OZ + 1.6, J: og }, bars: { x: BX - .4, z: BZ + .3 }, crowd,
+  W.park = { stage: { x: SX, z: SZ, r: SR }, dancers, og: { x: OX + .3, z: OZ + 1.6, J: og }, bars, crowd,
     gateCenter: { x: -11.9, z: 1.4, chain: gateCenter.chain }, gateProm: { x: 0, z: 13.7, chain: gateProm.chain } };
 }

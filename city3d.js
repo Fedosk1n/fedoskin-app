@@ -13,7 +13,7 @@ import { initGame } from './city3d-game.js?v=45';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
-import { buildPark } from './city3d-park.js?v=5';
+import { buildPark } from './city3d-park.js?v=6';
 import { addCitySound } from './city3d-sound.js?v=1';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
@@ -577,14 +577,14 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props) {
+async function build(scene, asphalt, props, playgroundModel) {
   try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, concreteTex, facadeTex, roofTex, stripeTex,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
-  else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, maxAniso });
+  else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, playgroundModel, maxAniso });
   else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene, asphalt);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
@@ -1070,12 +1070,13 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
-  const [, asphalt, props, soundModels, wallModel, wallSurface] = await Promise.all([
+  const [, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel] = await Promise.all([
     loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
     loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), loadBlenderModel('sound-systems'),
     loadBlenderModel('graffiti-wall'), loadGraffitiSurface(DIST),
+    DIST === 'park' ? loadBlenderModel('park-playground') : null,
   ]);
-  await build(scene, asphalt, props);
+  await build(scene, asphalt, props, playgroundModel);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);

@@ -1823,3 +1823,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - The 3D city uses `CITY_GFX.graf` with `mural: true`. It measures the whole painted silhouette including extensions and emblems, and wraps around a nearby word boundary when it can use significantly larger lettering. It uses the full profile nickname or saved graffiti word, up to 24 characters.
 - The Blender build script exports the bevelled wall and bakes a concrete and paint abrasion atlas with a tile for each district. In the game the generated paint is composited onto the concrete. The 3D camera faces the wall during the spray reveal, with framing based on the current screen aspect.
+
+## 26.11.2026 — Park playground and workout corner
+
+- The southeast pad uses a Blender slide with perforated tower guards, a ladder, stepping pods, pull-up and dip bars, and a low bench. The baked rubber surface follows the rounded perimeter and shows the two entrances and the footwork circle. Equipment has close-fitting colliders and the pad stays flush at each entry.
+- The existing Park warm-up uses the centre of the circle. The model and rubber finish load only in the Park. Missing rubber has a solid colour and a missing model falls back to the procedural workout corner.
