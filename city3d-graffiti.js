@@ -89,6 +89,7 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
   const base = wallBase(surface, seed, flip);
   const artCanvas = art => {
     const cv = canvas(), x = cv.getContext('2d');
+    x.save();
     if (window.CITY_GFX) {
       const paint = CITY_GFX.graf({ ...art, w: WIDTH, h: HEIGHT, scale: 1, seed: seed + 17, mural: true });
       x.drawImage(paint, 0, 0);
@@ -100,6 +101,7 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
     }
     x.globalCompositeOperation = 'destination-over';
     x.drawImage(base, 0, 0);
+    x.restore();
     return cv;
   };
   const cv = artCanvas(spec), tex = new THREE.CanvasTexture(cv);
