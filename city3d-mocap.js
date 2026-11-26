@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead } from './city3d-head.js?v=4';
+import { addCityHead } from './city3d-head.js?v=5';
+import { CITY_ANATOMY } from './city3d-anatomy.js?v=1';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 
 let DATA = null;
@@ -17,7 +18,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   const [capture, authored] = await Promise.all([
     fetch(url).then(response => response.json()),
-    fetch(new URL('./anim/city-breaking.json?v=2', import.meta.url))
+    fetch(new URL('./anim/city-breaking.json?v=3', import.meta.url))
       .then(response => response.ok ? response.json() : null).catch(() => null),
   ]);
   DATA = capture;
@@ -357,6 +358,24 @@ function skinGeo() {
     vert(_p.copy(c).addScaledVector(u, Math.sign(cs) * Math.pow(Math.abs(cs), e) * ru).addScaledVector(v, Math.sign(sn) * Math.pow(Math.abs(sn), e) * rv), color, w, ao ? ao[0] * (1 - Math.max(0, cs * ao[1] + sn * ao[2])) : 1); } return { i0, n }; };
   // a ring of any shape: points, a colour (or one per point), weights (or a list per point), brightness per point
   G.loop = (pts, cols, ws, shs, rough) => { const i0 = G.n; pts.forEach((p, i) => vert(p, Array.isArray(cols) ? cols[i] : cols, Array.isArray(ws[0][0]) ? ws[i] : ws, shs ? shs[i] : 1, rough)); return { i0, n: pts.length }; };
+  G.fingers = (place, palette, bone, reverse) => {
+    const { positions, indices, slots } = CITY_ANATOMY.hand;
+    const cache = new Map();
+    const vertex = (i, slot) => {
+      const key = i * 3 + slot;
+      if (!cache.has(key)) {
+        const k = 3 * i;
+        cache.set(key, vert(place(positions[k], positions[k+1], positions[k+2]), palette[slot], [[bone, 1]]));
+      }
+      return cache.get(key);
+    };
+    slots.forEach((slot, i) => {
+      const start = i * 3, color = palette[0] === palette[1] && slot === 0 ? 1 : slot;
+      const a = vertex(indices[start], color), b = vertex(indices[start+1], color), c = vertex(indices[start+2], color);
+      if (reverse) idx.push(a, c, b);
+      else idx.push(a, b, c);
+    });
+  };
   const face = (a, b, c, d) => idx.push(a, b, c, b, d, c);
   G.join = (a, b, openings) => {
     for (let i = 0; i < a.n; i++) {
@@ -632,6 +651,13 @@ export function mocapPerson(look, opt = {}) {
   // trouser legs are wide and stack on the shoe (or end in a cuff), and the cloth is shaded by paint (under the arms, between the legs).
   rig.updateMatrixWorld(true);
   const names = Object.keys(R), BI = {}; names.forEach((n, i) => { BI[n] = i; });
+  const hoodBone = hoodie || bd.hood ? new THREE.Bone() : null;
+  if (hoodBone) {
+    hoodBone.name = 'HoodCompression';
+    B.Spine2.add(hoodBone);
+    names.push(hoodBone.name);
+    B[hoodBone.name] = hoodBone;
+  }
   for (const side of ['Left', 'Right']) {
     for (const segment of ['Arm', 'ForeArm', 'UpLeg', 'Leg', 'Foot']) {
       const helper = bendBone(B[side + segment]);
@@ -755,7 +781,7 @@ export function mocapPerson(look, opt = {}) {
       const Jt = [s + 'Arm', s + 'ForeArm', s + 'Hand'].map(JP), d = Jt[2].clone().sub(Jt[0]).normalize(), E = Jt[0].distanceTo(Jt[1]), Wd = E + Jt[1].distanceTo(Jt[2]), fa = A * .7 + .3, hs = (A * .3 + .7) * (hi ? 1.05 : 1);
       const low = sleeveLong ? slC : C.skin, hc = look.gloves ? (C.glove || '#18181B') : C.skin, tipC = C.skin;
       const Kn = Jt[2].clone().addScaledVector(d, .073 * hs).addScaledVector(DOWN, .006 * hs);
-      const palmEnd = Kn.clone().addScaledVector(d, .017 * hs).addScaledVector(DOWN, .006 * hs);
+      const palmEnd = Kn.clone().addScaledVector(d, .012 * hs).addScaledVector(DOWN, .006 * hs);
       const HL = Wd + Jt[2].distanceTo(Kn), palmLength = HL + Kn.distanceTo(palmEnd);
       const ease = hoodie || bomber ? 1.09 : 1;
       const st = [[.055, .066 * A * ease, .065 * A * ease, slC], [.087, .065 * A * ease, .064 * A * ease, slC]];
@@ -780,7 +806,7 @@ export function mocapPerson(look, opt = {}) {
       else st.push([Wd - .04, .041 * fa, .041 * fa, low], [Wd - .014, (sleeveLong ? .041 : .037) * fa, (sleeveLong ? .041 : .037) * fa, low]);
       if (sleeveLong || look.gloves) st.push([Wd - .014, .034 * hs, .033 * hs, C.gloveTrim || hc, 2, .85]);                                  // the sleeve's opening / the glove's edge
       st.push([Wd + .022 * hs, .037 * hs, .020 * hs, hc], [Wd + .048 * hs, .045 * hs, .019 * hs, hc],
-        [HL, .0445 * hs, .0175 * hs, hc], [HL + .009 * hs, .037 * hs, .014 * hs, hc]);
+        [HL - .005 * hs, .044 * hs, .0175 * hs, hc], [HL + .006 * hs, .032 * hs, .013 * hs, hc]);
       const arm = G.limb([Jt[0], Jt[1], Jt[2], Kn, palmEnd], [bn('Arm'), bn('ForeArm'), bn('Hand'), bn('Hand')], bn('Shoulder'), [.11, .084, .028, 0], st, NA, FWD, .84, .055, palmLength, [0, sg * .14], {
         bends: [bn('ArmBend'), bn('ForeArmBend')], openStart: true,
       });
@@ -794,23 +820,12 @@ export function mocapPerson(look, opt = {}) {
       }
       if (look.gloves) G.panel(arm, outer, [[Wd + .010 * hs,.33,.002],[Wd + .019 * hs,.68,.004],[Wd + .025 * hs,.67,.003]], C.gloveTrim || shadeOf(hc, 1.75));
       if (cus.top >= 2) patches.arm.push({ rings: arm, station: sleeveLong ? .143 : .095, angle: outer, arc: .48, height: sleeveLong ? .034 : .025 });
-      const hand = bn('Hand'), nail = mixOf(tipC, '#F1C5A5', .20);
-      for (const [offset, reach, curl, width] of [[-.032,.042,.025,.0086],[-.012,.053,.035,.0098],[.009,.056,.036,.0102],[.031,.050,.030,.010]]) {
-        const base = Kn.clone().addScaledVector(FWD, offset * hs).addScaledVector(d, -.005 * hs);
-        const joint = base.clone().addScaledVector(d, reach * .62 * hs).addScaledVector(DOWN, curl * .29 * hs);
-        const tip = base.clone().addScaledVector(d, reach * hs).addScaledVector(DOWN, curl * hs).addScaledVector(FWD, offset * .09 * hs);
-        const jointS = base.distanceTo(joint), end = jointS + joint.distanceTo(tip), r = width * hs;
-        const stations = [[0, r, .87 * r, hc], [.010 * hs, .99 * r, .85 * r, hc]];
-        if (look.gloves) stations.push([.010 * hs, .97 * r, .83 * r, tipC, 2]);
-        stations.push([jointS, .88 * r, .82 * r, tipC], [end * .78, .76 * r, .73 * r, tipC], [end * .94, .64 * r, .60 * r, tipC]);
-        const finger = G.limb([base, joint, tip], [hand, hand], hand, [0, 0], stations, 8, FWD, .88, -.006 * hs, end);
-        const back = finger.v.y > 0 ? Math.PI / 2 : -Math.PI / 2;
-        G.trace(finger, [[end * .76,back],[end * .87,back]], nail, .54, .001);
-        lpt(s + 'Hand', tip, .0055 * hs);
-      }
-      const ta = Jt[2].clone().addScaledVector(d, .02 * hs).addScaledVector(FWD, .03 * hs).addScaledVector(DOWN, .004), tb = Jt[2].clone().addScaledVector(d, .072 * hs).addScaledVector(FWD, .062 * hs).addScaledVector(DOWN, .016), tl = ta.distanceTo(tb);
-      G.limb([ta, tb], [hand], hand, [0], [[0, .015 * hs, .016 * hs, hc], [tl * .48, .013 * hs, .0135 * hs, hc], [tl * .67, .011 * hs, .011 * hs, tipC], [tl, .0085 * hs, .009 * hs, tipC]], 8, new THREE.Vector3(0, 1, 0), 1, -.010, tl + .008);
-      lpt(s + 'Hand', tb.clone().addScaledVector(tb.clone().sub(ta).normalize(), .006), .008);
+      const dorsal = arm.v.clone().multiplyScalar(Math.sign(arm.v.y)), unit = hs / 10000;
+      const place = (x, y, z) => Jt[2].clone().addScaledVector(arm.u, x * unit)
+        .addScaledVector(d, y * unit).addScaledVector(dorsal, z * unit);
+      const reverse = arm.u.clone().cross(d).dot(dorsal) < 0;
+      G.fingers(place, [hc, tipC, mixOf(tipC, '#F1C5A5', .29)], bn('Hand'), reverse);
+      for (const [x, y, z, radius] of CITY_ANATOMY.hand.contacts) lpt(s + 'Hand', place(x,y,z), radius * unit);
       lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, .039 * hs), .017 * hs);
       lpt(s + 'Hand', Kn.clone().addScaledVector(FWD, -.039 * hs), .017 * hs);
     }
@@ -1004,8 +1019,8 @@ export function mocapPerson(look, opt = {}) {
     add(B.Spine2, new RoundedBoxGeometry(.198, .128, .042, 2, .018), M(shadeOf(bd.pack, .81), .92), 0, -.033, -.236 * dp);
     add(B.Spine2, new RoundedBoxGeometry(.166, .012, .009, 1, .004), M(shadeOf(bd.pack, .46), .88), 0, .013, -.258 * dp);
   }
-  if (hoodie || bd.hood) {
-    const hood = add(B.Spine2, FOLDED_HOOD, MV(C.top, .96), 0, 0, -.009 * dp);
+  if (hoodBone) {
+    const hood = add(hoodBone, FOLDED_HOOD, MV(C.top, .96), 0, 0, -.009 * dp);
     hood.name = 'FoldedHood';
     hood.scale.set(Math.sqrt(cw), 1, Math.sqrt(dp));
   }
@@ -1052,6 +1067,13 @@ export function mocapPerson(look, opt = {}) {
     const k = Math.exp(-dt * (contactMove ? .22 * J.pull : J.pull)); J.dx *= k; J.dz *= k;
     const d = Math.hypot(J.dx, J.dz); if (d > J.maxR) { J.dx *= J.maxR / d; J.dz *= J.maxR / d; }
     rig.position.x = J.dx; rig.position.z = J.dz;
+    if (hoodBone) {
+      // The folded fabric compresses under the shoulder load, using the same bone for the mesh and contact tests.
+      const phase = /^City_Backspin/.test(J.cur) ? a.time / r.dur : 0;
+      const flatten = .91 * smooth(.16, .28, phase) * (1 - smooth(.73, .88, phase));
+      hoodBone.scale.z = 1 - flatten;
+      hoodBone.position.z = -.094 * dp * flatten;
+    }
     // GROUND: nothing of the body may go under the asphalt (owner 14.11 «при падении… не проваливался под землю»).
     // The lowest point of head / hands / elbows / knees / feet / hips / chest is measured each frame; the body is lifted onto the
     // ground, and while lying after a fall (J.rest) it is laid exactly on it.

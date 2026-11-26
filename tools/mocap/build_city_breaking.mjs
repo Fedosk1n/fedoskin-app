@@ -100,9 +100,35 @@ const kick = own([.02,.38,0],[-.69,.16,-.18],[.40,.44,.61],[-.43,.13,.36],[.31,.
 const switchKick = own([-.02,.42,0],[-.80,-.26,.22],[.39,.13,.34],[-.39,.40,.63],[.32,.09,-.14],[-.30,.09,-.12]);
 const squat = own([.05,.57,.10],[-.48,.34,.16],[.37,.14,.34],[-.17,.12,.04],[.24,.43,.16],[-.30,.31,-.04],
   { spine: .55 });
-// The ankles cross at different heights so the calves can pass over one another.
-const coil = own([0,.27,0],[-1.83,0,.05],[-.23,.47,.39],[.26,.65,.34],[.22,.37,.24],[-.23,.36,.21],
-  { spine: .15, head: .27 });
+function backspinCoil() {
+  const pose = { hip: v(0, .49, .13), q: Object.fromEntries(bones.map(n => [n, neutral[n].clone()])) };
+  pose.q.Hips = rotation(-2.38, 0, .035);
+  for (const [bone, curl] of [['Spine', .24], ['Spine1', .31], ['Spine2', .29], ['Neck', .39], ['Head', .29]]) {
+    pose.q[bone].multiply(rotation(curl, 0, 0));
+  }
+  for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
+    const up = side + 'UpLeg', leg = side + 'Leg', foot = side + 'Foot';
+    const upper = skeleton(pose)[up].pos;
+    const knee = v(sign * .13, sign > 0 ? .44 : .46, -.27);
+    aim(pose, up, knee.sub(upper));
+    const kneePosition = skeleton(pose)[leg].pos;
+    // The ankles cross at two heights so each shin has its own space.
+    aim(pose, leg, v(-sign * .23, sign > 0 ? .37 : .84, .06).sub(kneePosition));
+    pose.q[foot] = skeleton(pose)[leg].q.clone().invert().multiply(rotation(-.51, sign * -.6, sign * .24).multiply(shoe[side]));
+    poseLimb(pose, [side + 'Arm', side + 'ForeArm', side + 'Hand'], v(sign * .17, .48, -.22),
+      v(sign * .35, .43, .11), rotation(-.61, sign * -.75, sign * .37));
+  }
+  pose.hip.y -= scapulaOf(pose).y - .014;
+  return pose;
+}
+
+function scapulaOf(pose) {
+  const { pos, q } = skeleton(pose).Spine2;
+  return v(0, .055, -.108).applyQuaternion(q).add(pos);
+}
+
+const coil = backspinCoil();
+const scapularPivot = scapulaOf(coil);
 const shoulderHold = own([.02,.37,.03],[-2.15,.18,-.44],[.46,.87,.44],[-.34,.73,.19],
   [.31,.09,-.10],[-.32,.23,-.22], { spine: .16, head: .28 });
 
@@ -209,12 +235,14 @@ function bake({ n, keys, spin, poseAt }) {
       const [start, a] = keys[next-1], [end, b] = keys[next], k = smooth((u-start)/(end-start));
       pose = { hip: a.hip.clone().lerp(b.hip, k), q: Object.fromEntries(bones.map(bone => [bone, a.q[bone].clone().slerp(b.q[bone], k)])) };
     }
-    const { hip } = pose;
-    t['Hips.p'].push(...hip.toArray().map(x => Math.round(x*100)));
     const spinAngle = spin ? 4*Math.PI*angularProgress(Math.min(1, Math.max(0, (u-.27)/.45))) : 0;
+    const turn = yawRotation(spinAngle);
+    const { hip } = pose;
+    if (spin) hip.sub(scapularPivot).applyQuaternion(turn).add(scapularPivot);
+    t['Hips.p'].push(...hip.toArray().map(x => Math.round(x*100)));
     for (const bone of bones) {
       const q = pose.q[bone].normalize();
-      if (bone==='Hips' && spin) q.premultiply(yawRotation(spinAngle));
+      if (bone==='Hips' && spin) q.premultiply(turn);
       t[bone+'.q'].push(...q.toArray().map(x => Math.round(x*1000)));
     }
   }
