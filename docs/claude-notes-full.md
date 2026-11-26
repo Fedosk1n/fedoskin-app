@@ -1776,3 +1776,5 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 
 - Choose SWIPES, HEADSPIN, FLARE or 1990 before confirming a crew battle. The City and rhythm battles share lesson coverage, views with sound, level gates and existing unlocks through `battle-study.js`. Footwork fills the power slot when every captured power move is locked. The chosen move plays in each player turn. A mythic gear move can accompany it as a bonus.
 - A first-battle gesture demo appears next to the move choices. The final freeze holds its mocap pose while the player presses the panel and tracks the green zone for four beats. A successful hold earns the existing freeze points, and a lost hold plays the fall. City cache versions are city3d.js 39, city3d-game.js 37 and city3d-i18n.js 4.
+
+- The underground ring and park jam now use the same chooser and final hold as crew battles. Confirming starts the event and charges its own energy cost. The chosen move carries into later jam rounds. City links from the app open the versioned page, and hold duration uses each event's actual beat.
