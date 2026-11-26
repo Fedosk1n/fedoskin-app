@@ -12,6 +12,7 @@ import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { performDJ } from './city3d-dj.js?v=1';
+import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -168,7 +169,7 @@ const ART = { rusty: { word: 'RUST', style: 'block', pal: 'rusty', extra: 'cog' 
   stencil: { word: 'STENCIL', style: 'stencil', pal: 'stencil', extra: 'can' }, turn: { word: 'METRO', style: 'tile', pal: 'metro', extra: 'token' }, chrome: { word: 'CHROME', style: 'chrome', pal: 'chrome', extra: 'chromo' },
   funk: { word: 'FUNK', style: 'bubble', pal: 'funk', extra: 'boom' }, roots: { word: 'ROOTS', style: 'wild', pal: 'roots', extra: 'leaf' }, wave: { word: 'WAVE', style: 'd3', pal: 'wave', extra: 'surf' },
   rebar: { word: 'REBAR', style: 'block', pal: 'rebar', extra: 'nut' }, volt: { word: 'VOLT', style: 'wild', pal: 'volt', extra: 'zap' }, forge: { word: 'FORGE', style: 'd3', pal: 'forge', extra: 'drop' } };
-const MYSTYLE = { rusty: 'block', acid: 'bubble', owls: 'wild', gold: 'd3', stencil: 'stencil', turn: 'tile', chrome: 'chrome', funk: 'bubble', roots: 'wild', wave: 'd3', rebar: 'block', volt: 'wild', forge: 'd3' };
+const WRITER_PALETTE = { yard: 'fire', center: 'ice', park: 'candy', prom: 'volt' };
 // daily to-do list: 3 a day from this pool; each +5 ★, all three = +15 ⚡
 const GOALS = [
   { id: 'win', t: 'Выиграй батл', n: 1 }, { id: 'win2', t: 'Выиграй 2 батла', n: 2, k: 'win' }, { id: 'clean', t: 'Выиграй батл без срывов', n: 1 },
@@ -420,7 +421,17 @@ export function initGame(ctx) {
   const previousRewards = collectGear();
   if (previousRewards.length) { notes.push(...previousRewards); save(); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
-  addEventListener('visibilitychange', () => { if (!document.hidden) { const n = refill(); paintHud(); if (n.length) toast(n.join(' · ')); } });
+  addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    const notes = refill(); paintHud();
+    if (notes.length) toast(notes.join(' · '));
+    for (const g of crews) {
+      const mine = Boolean(S.turf[g.c.id]);
+      if (g.wall.mine === mine || P?.g === g) continue;
+      revealGraffiti(g.wall, g.wall.cv, g.wall.artCanvas(wallArt(g.c, mine)), 1);
+      g.wall.mine = mine;
+    }
+  });
   $('#g3en').onclick = () => {
     if (unlimitedEnergy) {
       info(`<h4>${_t('⚡ Энергия')} · ∞</h4><button onclick="this.closest('#g3info').classList.remove('on')">${_t('Понятно')}</button>`);
@@ -479,19 +490,17 @@ export function initGame(ctx) {
     return g;
   });
   // ---------- crew walls (graffiti turf) ----------
-  const wallMat = new THREE.MeshStandardMaterial({ color: '#4d4f55', roughness: .95 }), capMat = new THREE.MeshStandardMaterial({ color: '#2f3136', roughness: .9 });
-  const nick = () => { if (S.word) return S.word; try { const n = (JSON.parse(localStorage.getItem('fedoskin-profile') || '{}').nick || '').replace(/^b[-_ ]?(boy|girl)\s*/i, ''); return (n || 'FT').toUpperCase().slice(0, 8); } catch (_) { return 'FT'; } };
-  function artCanvas(kind, c) {
-    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 480; const x = cv.getContext('2d');
-    // worn concrete under the paint
-    x.fillStyle = '#55575d'; x.fillRect(0, 0, 1024, 480);
-    for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '0,0,0' : '255,255,255'},${Math.random() * .06})`; x.fillRect(Math.random() * 1024, Math.random() * 480, 2 + Math.random() * 30, 2 + Math.random() * 30); }
-    if (window.CITY_GFX && CITY_GFX.graf) {
-      const a = kind === 'me' ? { word: nick(), style: MYSTYLE[c.id], pal: 'fire', extra: 'crown' } : ART[c.id];
-      try { const g = CITY_GFX.graf(Object.assign({ w: 980, h: 420, seed: kind === 'me' ? 11 : 5 }, a)); x.drawImage(g, 22, 30, 980, 420); } catch (_) {}
-    }
-    return cv;
-  }
+  const nick = () => {
+    if (S.word) return S.word;
+    try {
+      const { nick } = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}');
+      return (nick || '').replace(/^b[-_ ]?(?:boy|girl)(?:\s+|$)/i, '');
+    } catch (_) { return ''; }
+  };
+  const wallArt = (c, mine) => mine
+    ? { word: nick(), style: c.id === 'forge' ? 'stencil' : ART[c.id].style,
+      pal: c.id === 'forge' ? 'ochre' : WRITER_PALETTE[D], extra: 'crown' }
+    : ART[c.id];
   function placeWall(g) {
     if (g.c.wall) return { x: g.c.wall[0], z: g.c.wall[1] };
     // a free spot ~2.8 m from the crew, preferring the side away from the middle of the yard
@@ -502,13 +511,12 @@ export function initGame(ctx) {
       if (free) { cands.push({ x, z }); break; } }
     return cands[0] || { x: g.x + Math.cos(out) * 2.9, z: g.z + Math.sin(out) * 2.9 };
   }
-  crews.forEach(g => {
-    const at = placeWall(g), grp = new THREE.Group(); grp.position.set(at.x, 0, at.z); grp.rotation.y = Math.atan2(g.x - at.x, g.z - at.z); scene.add(grp);
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.2, .28), wallMat); slab.position.y = 1.1; slab.castShadow = slab.receiveShadow = true; grp.add(slab);
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(3.75, .12, .38), capMat); cap.position.y = 2.26; grp.add(cap);
-    const cv = artCanvas(S.turf[g.c.id] ? 'me' : 'crew', g.c), tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const art = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.6), new THREE.MeshStandardMaterial({ map: tex, roughness: .85 })); art.position.set(0, 1.12, .145); grp.add(art);
-    g.wall = { grp, at, cv, tex, x: at.x + Math.sin(grp.rotation.y) * 1.2, z: at.z + Math.cos(grp.rotation.y) * 1.2 };
+  crews.forEach((g, i) => {
+    const at = placeWall(g), mine = Boolean(S.turf[g.c.id]);
+    const wall = makeGraffitiWall({ model: ctx.wallModel, surface: ctx.wallSurface, seed: i + 5, spec: wallArt(g.c, mine) });
+    const grp = wall.group;
+    grp.position.set(at.x, 0, at.z); grp.rotation.y = Math.atan2(g.x - at.x, g.z - at.z); scene.add(grp);
+    g.wall = { ...wall, mine, at, x: at.x + Math.sin(grp.rotation.y) * 1.2, z: at.z + Math.cos(grp.rotation.y) * 1.2 };
     if (ctx.box) { const c = Math.cos(grp.rotation.y), sn = Math.abs(Math.sin(grp.rotation.y)); ctx.box(at.x, at.z, 3.6 * Math.abs(c) + .3 * sn + .1, 3.6 * sn + .3 * Math.abs(c) + .1); }
   });
   const canPaint = g => S.beat[g.c.id] === today() && !S.turf[g.c.id];
@@ -516,8 +524,14 @@ export function initGame(ctx) {
   function startPaint(g) {
     if (S.en < energyCost(BAL.paint)) { toast(_t('Нужно {n} ⚡ — посмотри урок', { n: energyCost(BAL.paint) })); return; }
     S.en -= energyCost(BAL.paint); save(); paintHud();
-    const H = W.hero, w = g.wall; P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, old: artCanvas('crew', g.c), neu: artCanvas('me', g.c) };
-    W.lock = true; W.camT = { x: w.at.x, z: w.at.z + .6, zoom: .5 }; document.body.classList.add('g3fight');
+    const H = W.hero, w = g.wall;
+    P = { g, t: 0, from: { x: H.root.position.x, z: H.root.position.z }, old: w.artCanvas(wallArt(g.c, false)), neu: w.artCanvas(wallArt(g.c, true)) };
+    const yaw = w.group.rotation.y;
+    const dist = Math.max(4.6, 2.05 / (ctx.camera.aspect * Math.tan(THREE.MathUtils.degToRad(ctx.camera.fov / 2))));
+    const off = new THREE.Vector3(Math.sin(yaw) * dist, dist * .52, Math.cos(yaw) * dist);
+    W.lock = true; W.camT = { x: w.at.x, y: 1.10, z: w.at.z, zoom: 1, off }; W.zoom = 1; W.camSnap = true;
+    document.body.classList.add('g3fight');
+    for (const crew of crews) crew.label.visible = false;
     H.play('Breakdance_Ready', { fade: .3 }); try { window.RB && RB.hiss && RB.hiss(true); } catch (_) {}
     paintAct();
   }
@@ -525,19 +539,18 @@ export function initGame(ctx) {
     const H = W.hero, w = P.g.wall; P.t += dt; const walk = ease(clamp(P.t / .9, 0, 1)), k = clamp((P.t - 1) / 3.2, 0, 1);
     H.root.position.set(lerp(P.from.x, w.x, walk), 0, lerp(P.from.z, w.z, walk)); H.root.rotation.y = Math.atan2(w.at.x - H.root.position.x, w.at.z - H.root.position.z);
     // the new piece is sprayed over the old one from left to right, with a soft wet edge
-    const x = w.cv.getContext('2d'), W2 = 1024 * k; x.drawImage(P.old, 0, 0); x.save(); x.beginPath(); x.rect(0, 0, W2, 480); x.clip(); x.drawImage(P.neu, 0, 0); x.restore();
-    if (k > 0 && k < 1) { x.fillStyle = 'rgba(255,255,255,.18)'; for (let i = 0; i < 26; i++) x.fillRect(W2 - 6 + Math.random() * 14, Math.random() * 480, 3, 3); }
-    w.tex.needsUpdate = true;
+    if (P.t > 1) revealGraffiti(w, P.old, P.neu, k);
     // a little arm movement while spraying
     H.tick(dt); if (P.t > 1) { const a = Math.sin(P.t * 9) * .35; H.B.RightArm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -1.1 + a)); }
     if (P.t > 4.4) endPaint();
   }
   function endPaint() {
     const g = P.g; P = null; try { window.RB && RB.hiss && RB.hiss(false); } catch (_) {}
-    S.turf[g.c.id] = today(); S.last[g.c.id] = today(); S.rep += BAL.repPaint;
+    S.turf[g.c.id] = today(); S.last[g.c.id] = today(); S.rep += BAL.repPaint; g.wall.mine = true;
     const rewards = collectGear('paint', g.c.id);
     bumpGoal('paint'); save(); paintHud();
     W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); W.hero.play('Bboy_Uprock', { fade: .3 });
+    for (const crew of crews) crew.label.visible = shown(crew);
     toast(_t('🎨 Стена «{x}» теперь твоя! +{a} ★, и +{b} ★ каждый день', { x: g.c.name, a: BAL.repPaint, b: BAL.turfRep }), rewards);
     if (IDS.every(id => S.turf[id])) setTimeout(() => toast(_t(ALLMINE[D] || ALLMINE.yard)), 2800);
     near = null; paintAct();

@@ -543,11 +543,19 @@
       'Э': [[[0, 1], [1, 0], [3, 0], [4, 1], [4, 5], [3, 6], [1, 6], [0, 5]], [[1.6, 3], [4, 3]]], 'Ю': [[[0, 0], [0, 6]], [[0, 3], [1.4, 3]], ['c', [2.2, 0], [3.3, 0], [4, 1], [4, 5], [3.3, 6], [2.2, 6], [1.4, 5], [1.4, 1]]],
       'Я': [[[4, 6], [4, 0], [1, 0], [0, 1], [0, 2.5], [1, 3.5], [4, 3.5]], [[2, 3.5], [0, 6]]]
     };
-    const same = { 'А': 'A', 'В': 'B', 'Е': 'E', 'Ё': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X' }; Object.keys(same).forEach(k => { G[k] = G[same[k]]; });
+    const same = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X' }; Object.keys(same).forEach(k => { G[k] = G[same[k]]; });
+    G['Ё'] = [...G.E, [[.9, -1.3], [1.1, -1.3]], [[2.9, -1.3], [3.1, -1.3]]];
+    G['_'] = [[[0, 6], [4, 6]]];
     return G;
   })();
-  // what can be written: capitals of the two alphabets and digits; accents are dropped, everything else is skipped
-  const grafWord = (s, max) => { let o = ''; try { s = String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) { s = String(s || ''); } for (const ch of s.toUpperCase()) { if (o.length >= (max || 8)) break; if (GLY[ch] || (ch === ' ' && o && o[o.length - 1] !== ' ')) o += ch; } return o.trim(); };
+  const GRAF_MAX = 24, grafSegmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
+  const grafChars = s => grafSegmenter ? Array.from(grafSegmenter.segment(s), part => part.segment) : [...s];
+  const grafWord = (s, max = GRAF_MAX) => {
+    const clean = String(s || '').normalize('NFC').toUpperCase().normalize('NFC')
+      .replace(/\p{Dash_Punctuation}/gu, '-').replace(/[^\p{L}\p{M}\p{Nd} .!_\-\s]/gu, '')
+      .replace(/\s+/g, ' ').trim();
+    return grafChars(clean).filter(ch => !/^\p{M}/u.test(ch)).slice(0, max).join('').trimEnd();
+  };
   // colours of a piece: a main · b light · c deep · o outline · k depth / shadow · bg what is behind · hi shine
   const GRAF_PALS = {
     fire: { a: '#FF7A1F', b: '#FFD23F', c: '#E2261A', o: '#141416', k: '#5A1E08', bg: '#2B3A8F', hi: '#FFF6D8' },
@@ -571,6 +579,7 @@
     // банды Промзоны (16.11.2026)
     rebar: { a: '#FF7A1A', b: '#FFD23F', c: '#B5440C', o: '#120C08', k: '#3A1C08', bg: '#3D4046', hi: '#FFF1D0' },
     volt: { a: '#FFE23F', b: '#FFFFFF', c: '#D9A400', o: '#07080C', k: '#101A44', bg: '#1846B0', hi: '#FFFFFF' },
+    ochre: { a: '#e9a334', b: '#ffc45f', c: '#a96021', o: '#1e1b15', k: '#452b1c', bg: '#433b27', hi: '#ffdf9d' },
     forge: { a: '#FF4A2A', b: '#FFD9A0', c: '#A81C0C', o: '#140604', k: '#4A0E06', bg: '#2A1512', hi: '#FFF3D6' }
   };
   const GRAF_STYLES = ['tag', 'bubble', 'block', 'wild', 'd3'];
@@ -668,8 +677,10 @@
   const star4 = (c, X, Y, r, col) => { c.fillStyle = col; c.beginPath(); c.moveTo(X, Y - r); c.quadraticCurveTo(X, Y, X + r, Y); c.quadraticCurveTo(X, Y, X, Y + r); c.quadraticCurveTo(X, Y, X - r, Y); c.quadraticCurveTo(X, Y, X, Y - r); c.fill(); };
   // spec: { word, style, pal, w, h, seed, extra } — draws into c inside the box 0…w × 0…h
   function grafDraw(c, S) {
-    const P = typeof S.pal === 'string' ? (GRAF_PALS[S.pal] || GRAF_PALS.fire) : S.pal, st = S.style, w = S.w, h = S.h, rnd = grafRnd((S.seed || 1) * 97 + 13);
-    const word = grafWord(S.word, 8) || 'FT', chars = [...word], n = chars.length, ex = S.extra && S.extra !== 'crown' && GRAF_EXTRA[S.extra] && st !== 'tag' ? S.extra : null;
+    const P = (typeof S.pal === 'string' ? GRAF_PALS[S.pal] : S.pal) || GRAF_PALS.fire;
+    const st = S.style, w = S.w, h = S.h, rnd = grafRnd((S.seed || 1) * 97 + 13);
+    const chars = grafChars(grafWord(S.word, S.mural ? GRAF_MAX : 8) || 'FT'), n = chars.length;
+    const ex = S.extra && S.extra !== 'crown' && GRAF_EXTRA[S.extra] && st !== 'tag' ? S.extra : null;
     const exW = ex ? Math.min(h * .95, w * .26) : 0, lx0 = ex && S.exLeft ? exW : 0, lw = w - exW;
     // how the style holds the letters
     // wt — how fat (in grid units of height), f — but never fatter than this share of the letter's width; r — round corners; gap — between letters
@@ -678,6 +689,7 @@
       wild: { wt: 1.45, f: .4, r: .3, gap: -.3, ol: .28, skew: .26, rot: .11, hgt: .56, wide: 1.1 }, d3: { wt: 1.7, f: .44, r: .5, gap: .12, ol: 0, skew: -.12, rot: 0, hgt: .56, wide: 1.4 },
       stencil: { wt: 1.5, f: .4, r: 0, gap: .34, ol: 0, skew: 0, rot: 0, hgt: .58, wide: 1.35 }, chrome: { wt: 2.0, f: .52, r: 1.0, gap: -.22, ol: .3, skew: -.1, rot: .05, hgt: .58, wide: 1.2 },
       tile: { wt: 1.7, f: .46, r: 0, gap: .22, ol: .22, skew: 0, rot: 0, hgt: .6, wide: 1.4 } }[st] || {};
+    if (S.mural && st === 'chrome') Object.assign(K, { wt: 1.72, r: .18, gap: -.08, skew: -.26, rot: .018 });
     // the size: the height of the wall decides how tall the letters are; a long word makes them narrower (and thinner), a short one — wider
     let sy = h * K.hgt / (6 + K.wt), sx, wt;
     const room = lw * (st === 'wild' ? .8 : .9), q = 4 * n + 4 * K.f * ((n - 1) * (1 + K.gap) + 1);
@@ -685,8 +697,20 @@
     wt = Math.min(sy * K.wt, 4 * sx * K.f);
     const ol = Math.max(1.2, wt * K.ol), tot = n * 4 * sx + (n - 1) * (wt * (1 + K.gap)) + wt, x0 = lx0 + (lw - tot) / 2 + wt / 2, y0 = (h - 6 * sy) / 2 + (st === 'block' ? 0 : -h * .02), adv = 4 * sx + wt * (1 + K.gap);
     const L = chars.map((ch, i) => ({ ch, cx: x0 + i * adv + 2 * sx, cy: y0 + 3 * sy + (st === 'bubble' || st === 'wild' ? (i % 2 ? 1 : -1) * h * .035 * (.5 + rnd()) : 0), rot: K.rot ? (rnd() - .5) * 2 * K.rot : 0, skew: st === 'wild' ? (i % 2 ? -1 : 1) * K.skew * (.6 + rnd() * .5) : K.skew, k: st === 'wild' ? .92 + rnd() * .2 : 1 }));
-    const path = (l, dx, dy) => { c.save(); c.translate(l.cx + (dx || 0), l.cy + (dy || 0)); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.scale(l.k, l.k); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); };
-    const stroke = (l, col, lwd, dx, dy) => { if (l.ch === ' ') return; path(l, dx, dy); c.strokeStyle = col; c.lineWidth = lwd; c.stroke(); c.restore(); };
+    const stroke = (l, col, lwd, dx = 0, dy = 0) => {
+      if (l.ch === ' ') return;
+      c.save(); c.translate(l.cx + dx, l.cy + dy); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.scale(l.k, l.k);
+      c.strokeStyle = col; c.lineWidth = lwd;
+      if (GLY[l.ch]) {
+        c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); c.stroke();
+      } else {
+        c.font = `900 ${6.6 * sy}px system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+        const { actualBoundingBoxAscent, actualBoundingBoxDescent } = c.measureText(l.ch);
+        const y = (actualBoundingBoxAscent - actualBoundingBoxDescent) / 2;
+        c.fillStyle = col; c.fillText(l.ch, 0, y, 4 * sx); c.strokeText(l.ch, 0, y, 4 * sx);
+      }
+      c.restore();
+    };
     const all = (col, lwd, dx, dy) => L.forEach(l => stroke(l, col, lwd, dx, dy));
     const round = st !== 'block' && st !== 'stencil' && st !== 'tile'; c.lineCap = round ? 'round' : 'square'; c.lineJoin = round ? 'round' : 'miter'; c.miterLimit = 3;
     const top = y0 - wt / 2, bot = y0 + 6 * sy + wt / 2, left = x0 - wt / 2, right = left + tot, mx = (left + right) / 2, my = (top + bot) / 2;
@@ -744,14 +768,15 @@
       // 3D: no outline — the letters stand out of the wall, the depth runs down to one point
       const g0 = c.createRadialGradient(mx, my, 0, mx, my, tot * .62); g0.addColorStop(0, P.bg); g0.addColorStop(.7, P.bg); g0.addColorStop(1, 'rgba(0,0,0,0)'); c.globalAlpha = .8; c.fillStyle = g0; c.beginPath(); c.ellipse(mx, my + h * .04, tot * .62, (bot - top) * .78, 0, 0, 7); c.fill(); c.globalAlpha = 1;
       const vx = mx, vy = bot + h * .9, N = Math.max(10, Math.round(wt * 1.1));
-      for (let i = N; i >= 1; i--) { const t = i / N * .2, col = mixCol(P.k, P.c, 1 - i / N); L.forEach(l => { if (l.ch === ' ') return; c.save(); c.translate(vx, vy); c.scale(1 - t, 1 - t); c.translate(-vx, -vy); c.translate(l.cx, l.cy); c.rotate(l.rot); c.transform(1, 0, l.skew, 1, 0, 0); c.beginPath(); glyph(c, l.ch, -2 * sx, -3 * sy, sx, sy, K.r); c.strokeStyle = col; c.lineWidth = wt; c.stroke(); c.restore(); }); }
+      for (let i = N; i >= 1; i--) { const t = i / N * .2; c.save(); c.translate(vx, vy); c.scale(1 - t, 1 - t); c.translate(-vx, -vy); all(mixCol(P.k, P.c, 1 - i / N), wt); c.restore(); }
       all(vgrad(P.hi, P.b, P.a), wt); c.save(); c.globalAlpha = .5; all(P.c, wt * .1, wt * .2, wt * .24); c.restore(); shine(wt * .18, 1); stars(5);
     } else if (st === 'stencil') {
       // stencil: a sprayed band with a soft edge, flat letters cut by «bridges», overspray dust and a frame of tape marks
       const bx = left - h * .12, bw = tot + h * .24, by = top - h * .1, bh = bot - top + h * .2;
       c.save(); c.shadowColor = P.bg; c.shadowBlur = h * .07; c.fillStyle = P.bg; c.fillRect(bx, by, bw, bh); c.restore();
       for (let i = 0; i < 90; i++) { c.fillStyle = P.bg; c.globalAlpha = .25 + rnd() * .4; const e = rnd() < .5, X = e ? bx + rnd() * bw : (rnd() < .5 ? bx - rnd() * h * .07 : bx + bw + rnd() * h * .07), Y = e ? (rnd() < .5 ? by - rnd() * h * .07 : by + bh + rnd() * h * .07) : by + rnd() * bh; c.beginPath(); c.arc(X, Y, h * (.004 + rnd() * .009), 0, 7); c.fill(); } c.globalAlpha = 1;
-      c.strokeStyle = P.b; c.lineWidth = Math.max(1.5, h * .012); c.strokeRect(bx + h * .035, by + h * .035, bw - h * .07, bh - h * .07);
+      c.save(); c.globalAlpha = S.mural ? .4 : 1;
+      c.strokeStyle = P.b; c.lineWidth = Math.max(1.5, h * .012); c.strokeRect(bx + h * .035, by + h * .035, bw - h * .07, bh - h * .07); c.restore();
       // the letters go on their own layer so that the bridges can be cut out of them
       const o = document.createElement('canvas'); o.width = Math.ceil(w); o.height = Math.ceil(h); const C0 = c; c = o.getContext('2d'); c.lineCap = 'butt'; c.lineJoin = 'miter'; c.miterLimit = 3;
       all(P.b, wt);
@@ -767,15 +792,26 @@
       // chrome: fat round letters like polished metal — sky on top, a white horizon, a dark ground line and a warm glow below; hard black
       // shadow, a cloud of colour behind and sparkles on the corners
       const cloud = (col, grow) => { c.fillStyle = col; c.beginPath(); const m = Math.max(5, Math.round(tot / (h * .2))); for (let i = 0; i <= m; i++) { const X = left + tot * i / m, r = h * (.13 + (i % 2) * .04) + grow; c.moveTo(X, top); c.arc(X, top, r, 0, 7); c.moveTo(X, bot); c.arc(X, bot, r, 0, 7); } c.rect(left - h * .1 - grow, top, tot + h * .2 + grow * 2, bot - top); c.fill(); };
-      cloud(P.o, ol * .8); cloud(P.bg, 0);
+      if (S.mural) {
+        const X = h * .14, Y = h * .12;
+        const blade = [[left - X, bot + Y], [left + X * .35, top - Y * .60], [right + X * 1.55, top - Y],
+          [right + X * .45, my + Y * .15], [right + X * 1.68, my - Y * .28], [right + X * .55, bot + Y * .62], [left - X * 1.43, bot + Y * 1.2]];
+        c.beginPath(); blade.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+        c.fillStyle = P.bg; c.fill(); c.lineWidth = Math.max(2, ol); c.strokeStyle = P.k; c.stroke();
+      } else { cloud(P.o, ol * .8); cloud(P.bg, 0); }
       c.save(); c.globalAlpha = .22; c.fillStyle = P.hi; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(left + rnd() * tot, top - h * .08 + rnd() * h * .2, h * (.015 + rnd() * .03), 0, 7); c.fill(); } c.restore();
       const dp = Math.max(4, wt * .42); for (let i = Math.ceil(dp); i >= 1; i--) all(P.o, wt + ol * 2, i, i * 1.1);
       all(P.o, wt + ol * 2);
       const g = c.createLinearGradient(0, -3 * sy - wt / 2, 0, 3 * sy + wt / 2); g.addColorStop(0, P.bg); g.addColorStop(.3, P.b); g.addColorStop(.47, P.hi); g.addColorStop(.5, P.k); g.addColorStop(.56, P.c); g.addColorStop(.8, P.a); g.addColorStop(1, P.hi);
       all(g, wt);
       c.save(); c.globalAlpha = .9; all(P.hi, wt * .09, -wt * .26, -wt * .28); c.restore(); shine(wt * .2, 1);
-      L.forEach((l, i) => { if (l.ch === ' ') return; star4(c, l.cx - sx * 1.7 + (i % 2) * sx * 3.2, l.cy - sy * 2.9, h * (.05 + rnd() * .04), P.hi); });
-      stars(3);
+      if (S.mural) {
+        star4(c, left + sx * .5, top - h * .025, h * .065, P.hi);
+        star4(c, right - sx, bot + h * .03, h * .08, P.hi);
+      } else {
+        L.forEach((l, i) => { if (l.ch === ' ') return; star4(c, l.cx - sx * 1.7 + (i % 2) * sx * 3.2, l.cy - sy * 2.9, h * (.05 + rnd() * .04), P.hi); });
+        stars(3);
+      }
     } else if (st === 'tile') {
       // mosaic: a panel of small wall tiles like in an underground hall, the letters are laid out of coloured tiles with grout between them
       const bx = left - h * .12, bw = tot + h * .24, by = top - h * .1, bh = bot - top + h * .2, q = Math.max(4, Math.round(h * .045));
@@ -796,12 +832,70 @@
     if (ex) GRAF_EXTRA[ex](c, S.exLeft ? exW * .5 : w - exW * .52, h * .5, exW * .92, P);
     if (S.extra === 'crown') { const l = L[0], s = Math.min(h * .26, sx * 5 + wt); c.save(); c.translate(l.cx - sx * .6, top - s * .16); c.rotate(-.22); GRAF_EXTRA.crown(c, 0, 0, s, P); c.restore(); }
   }
-  // a finished piece as a picture (kept: the same piece is drawn every frame)
+  function muralLines(word) {
+    const chars = grafChars(word), middle = chars.length / 2;
+    const between = chars.flatMap((ch, i) => /[ -]/.test(ch) && i >= middle * .65 && i <= middle * 1.35 ? [i + 1] : []);
+    const cut = between.length ? between.reduce((a, b) => Math.abs(b - middle) < Math.abs(a - middle) ? b : a) : Math.ceil(middle);
+    return [chars.slice(0, cut).join('').trim(), chars.slice(cut).join('').trim()];
+  }
+
+  function muralRow(S, word, seed, extra) {
+    const cv = document.createElement('canvas');
+    const h = 280, w = 220 + grafChars(word).length * 114 + (extra && extra !== 'crown' ? 210 : 0), pad = 40;
+    cv.height = h + pad * 2;
+    cv.width = w + pad * 2;
+    const c = cv.getContext('2d', { willReadFrequently: true });
+    c.translate(pad, pad);
+    grafDraw(c, { ...S, word, extra, seed, w, h });
+    // Measure the finished shape, including outlines, diacritics, arrows and the crew emblem.
+    const pixels = c.getImageData(0, 0, cv.width, cv.height).data;
+    let l = cv.width, r = 0, t = cv.height, b = 0;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      if (pixels[(y * cv.width + x) * 4 + 3] < 8) continue;
+      l = Math.min(l, x); r = Math.max(r, x); t = Math.min(t, y); b = Math.max(b, y);
+    }
+    return { cv, x: l, y: t, w: r - l + 1, h: b - t + 1 };
+  }
+
+  function grafMural(c, S) {
+    const word = grafWord(S.word) || 'FT', seed = S.seed || 1;
+    const fit = (width, height) => Math.min(S.w * .90 / width, S.h * .84 / height);
+    let rows = [muralRow(S, word, seed, S.extra)], gap = 0;
+    let scale = fit(rows[0].w, rows[0].h);
+    if (grafChars(word).length > 7 && scale * rows[0].h < S.h * .62) {
+      const [a, b] = muralLines(word);
+      const two = [muralRow(S, a, seed, S.extra), muralRow(S, b, seed + 19, null)];
+      const lineGap = S.style === 'wild' ? 4 : 12;
+      const stacked = fit(Math.max(...two.map(row => row.w)), two[0].h + two[1].h + lineGap);
+      if (stacked > scale * 1.12) { rows = two; gap = lineGap; scale = stacked; }
+    }
+    const width = Math.max(...rows.map(row => row.w)) * scale;
+    const height = (rows.reduce((sum, row) => sum + row.h, 0) + gap) * scale;
+    const rnd = grafRnd(seed), palette = (typeof S.pal === 'string' ? GRAF_PALS[S.pal] : S.pal) || GRAF_PALS.fire;
+    let y = (S.h - height) / 2;
+    // Small overspray clouds hug the design and tie two rows into one piece.
+    c.save(); c.fillStyle = palette.a;
+    for (let i = 0; i < 150; i++) {
+      const radius = Math.min(S.w, S.h) * (.0015 + rnd() * .005);
+      const dx = (rnd() - .5) * (width + S.w * .063), dy = (rnd() - .5) * (height + S.h * .09);
+      c.globalAlpha = .09 + rnd() * .34;
+      c.beginPath(); c.arc(S.w / 2 + dx, S.h / 2 + dy, radius, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+    for (const row of rows) {
+      const w = row.w * scale, h = row.h * scale;
+      c.drawImage(row.cv, row.x, row.y, row.w, row.h, (S.w - w) / 2, y, w, h);
+      y += h + gap * scale;
+    }
+  }
+
+  // A finished piece is reused during rendering and the spray animation.
   function graf(S) {
-    const sc = S.scale || dpr || 1, key = [S.word, S.style, typeof S.pal === 'string' ? S.pal : JSON.stringify(S.pal), S.w, S.h, S.seed, S.extra, S.exLeft ? 1 : 0, sc].join('|');
+    if (!GRAF_STYLES.includes(S.style) && !['stencil', 'chrome', 'tile'].includes(S.style)) S = { ...S, style: 'block' };
+    const sc = S.scale || dpr || 1, key = [S.word, S.style, typeof S.pal === 'string' ? S.pal : JSON.stringify(S.pal), S.w, S.h, S.seed, S.extra, S.exLeft ? 1 : 0, sc, !!S.mural].join('|');
     let cv = grafCache.get(key); if (cv) return cv;
     cv = document.createElement('canvas'); cv.width = Math.round(S.w * sc); cv.height = Math.round(S.h * sc); const c = cv.getContext('2d'); c.scale(sc, sc);
-    try { grafDraw(c, S); } catch (_) {}
+    if (S.mural) grafMural(c, S); else grafDraw(c, S);
     if (grafCache.size > 40) grafCache.delete(grafCache.keys().next().value); grafCache.set(key, cv); return cv;
   }
   function smoke(c, px, py, now) { for (let i = 0; i < 4; i++) { const u = ((now / 2600) + i / 4) % 1; c.fillStyle = 'rgba(240,240,244,' + (.34 * (1 - u)).toFixed(3) + ')'; c.beginPath(); c.ellipse(px - u * 16 + Math.sin(u * 6 + i) * 3, py - u * 34, 4 + u * 9, 3 + u * 7, 0, 0, 7); c.fill(); } }

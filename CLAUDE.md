@@ -77,6 +77,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City asphalt uses the Blender maps in `img/asphalt-*.webp`. Rebuild them with `tools/bake_asphalt.py`. The surface map packs height in red and roughness in green.
 - The Yard DJ flight case and Park paths are Blender assets in `anim/`. Rebuild them with `tools/build_city_dj.py` and `tools/build_park_paths.py`.
 - City sound props use `tools/build_city_audio.py` and `city3d-sound.js`. The crews and performance spots supply their actual gameplay anchors for placement.
+- The graffiti renderer in `city-gfx.js` fits the painted silhouettes on one or two lines. `tools/build_city_graffiti.py` makes the 3D concrete wall, the four district finishes and the paint abrasion maps for `city3d-graffiti.js`.
 - City 3D MIRRORED moves «<clip>_M» (`MIRROR` in city3d-mocap.js); battle footwork = random COMBO of phrases (`FW`, `makeTurn`, turns via `spinTick`/`turnBy` round the hips).
 - City 3D HEAD = `addCityHead` in `city3d-head.js`. The skull, hairstyles and headwear have shared geometries shaped for the view from above.
   Fit head accessories to these profiles and include their silhouette in the support points if they touch the ground during headspins.

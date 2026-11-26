@@ -9,7 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=23';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=44';
+import { initGame } from './city3d-game.js?v=45';
+import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=5';
@@ -655,10 +656,10 @@ async function buildYard(scene, asphalt) {
   // big graffiti on the brick wall (same letters as the flat city)
   if (window.CITY_GFX && CITY_GFX.graf) {
     try {
-      const g = CITY_GFX.graf({ word: 'FEDOSKIN', style: 'wild', pal: 'fire', w: 1100, h: 330, seed: 7 });
+      const g = CITY_GFX.graf({ word: 'FEDOSKIN', style: 'wild', pal: 'fire', w: 1100, h: 330, seed: 7, mural: true });
       const gm = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 2.5), new THREE.MeshStandardMaterial({ map: tex(g), transparent: true, roughness: .75, polygonOffset: true, polygonOffsetFactor: -2 }));
       gm.position.set(-4.6, 1.55, -15.94); gm.receiveShadow = true; scene.add(gm);
-      const g2 = CITY_GFX.graf({ word: 'CYPHER', style: 'bubble', pal: 'ice', w: 700, h: 300, seed: 3 });
+      const g2 = CITY_GFX.graf({ word: 'CYPHER', style: 'bubble', pal: 'ice', w: 700, h: 300, seed: 3, mural: true });
       const gm2 = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.55), new THREE.MeshStandardMaterial({ map: tex(g2), transparent: true, roughness: .75, polygonOffset: true, polygonOffsetFactor: -2 }));
       gm2.position.set(4.6, 1.3, -15.94); gm2.receiveShadow = true; scene.add(gm2);
     } catch (e) { console.warn(e); }
@@ -1069,9 +1070,10 @@ async function boot() {
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
     scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
 
-  const [, asphalt, props, soundModels] = await Promise.all([
+  const [, asphalt, props, soundModels, wallModel, wallSurface] = await Promise.all([
     loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
     loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), loadBlenderModel('sound-systems'),
+    loadBlenderModel('graffiti-wall'), loadGraffitiSurface(DIST),
   ]);
   await build(scene, asphalt, props);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
@@ -1081,7 +1083,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, dist: DIST,
+  const GAME = initGame({ scene, W, camera, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   const soundSystem = addCitySound({ scene, W, game: GAME, library: soundModels, colliders });
@@ -1187,7 +1189,7 @@ async function boot() {
     // battles take over with their own close-ups (W.camT) and give it back afterwards
     const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;
     look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
-    if (W.camT) look.set(W.camT.x, 0, W.camT.z);
+    if (W.camT) look.set(W.camT.x, W.camT.y || 0, W.camT.z);
     // W.camSnap: a replay's cut — the camera jumps instead of gliding
     if (W.camSnap) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
     W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
