@@ -90,7 +90,9 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - City 3D DRAWN POWER (17.11, owner «авто скучно, но и в бит тапать не надо… идеально сделать элемент, нарисовав»): `city3d-power.js` — the hero's
   power step in battles hangs (clock stops), the finger leads his legs round a line MEASURED from the mocap (`DRAW` per clip, `table()`/`timeAt()`),
   the clip's time follows the finger; perfect ×1.5 / clean / fall; no touch → old auto outcome; replay at real tempo after. `makeTurn` builds both
-  endings (`s.tails`), `drawn()` re-times the set. Test with `?pm=FLARE` + `GAME._pm()` / `_pmLast()`.
+  endings (`s.tails`), `drawn()` re-times the set. Test drawing with `GAME._pm()` / `_pmLast()`.
+  The city wheel (`city3d-wheel.js`) pauses each player turn before the power move in crew battles, the ring and the jam. Pick by release or tap.
+  The wheel shows four moves per page and checks the same lesson and level requirements as the battle catalogue. `?pm=FLARE` prefers an unlocked FLARE for auto-pick.
 - City 3D MUSIC (17.11, iPhone silent until the 🎵 button was toggled): on a phone no sound before the first real touch (touchend / pointerup / click),
   the loop restarts once `RB.audioState()` is running, after the background the next touch makes a new context (`RB.fresh`). Zoom tip `#ztip`: once ever (`fedoskin-city3d-ztip`).
 - City 3D WALK / RUN = real mocap (Mixamo «Walking» + «Running» in anim/bboy.json, `gaitPose` in city3d-mocap.js) blended by speed in `stride()` (city3d.js) for
