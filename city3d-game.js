@@ -775,6 +775,7 @@ export function initGame(ctx) {
     $('#g3tracePractice').onclick = () => {
       closeChoice();
       A = { kind: 'powerPractice' };
+      paintAct();
       powerModes.start(matAt, POWER.filter(p => PM.can(p.c)).map(move => ({ move, name: move.nm, locked: false })));
     };
     $('#g3formPractice').onclick = () => {
@@ -800,6 +801,7 @@ export function initGame(ctx) {
         scene.add(contestOpponent.root);
       }
       A = { kind: 'powerContest' };
+      paintAct();
       powerModes.start(Y.arena, options, contestOpponent);
     };
   }
