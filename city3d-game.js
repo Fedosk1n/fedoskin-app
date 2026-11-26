@@ -695,10 +695,10 @@ export function initGame(ctx) {
       toast(_t('🧓 Маятник: «Вижу, работаешь. Так и растут» · +{r} ★ и +{e} ⚡', { r: BAL.ogRep, e: add }), rewards); paintAct();
     }
     if (pl.id === 'bars') { const H = W.hero; S.warmDay = today(); save(); A = { kind: 'warm', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: { x: PK.bars.x, z: PK.bars.z } }; W.lock = true; W.camT = { x: PK.bars.x, z: PK.bars.z + .3, zoom: .5 }; document.body.classList.add('g3fight'); paintAct(); }
-    if (pl.id === 'jam') startJam();
+    if (pl.id === 'jam') chooseBattle(BAL.jam, () => !placeBtn(pl).off, startJam, _t('Этот элемент будет во всех раундах джема.'));
     if (pl.id === 'prom') travel('prom');
     if (pl.id === 'zpark') travel('park');
-    if (pl.id === 'ring') startRing();
+    if (pl.id === 'ring') chooseBattle(BAL.ring, () => !placeBtn(pl).off, startRing);
     if (pl.id === 'stash') { const s = PZ.stash[pl.i], big = rng(today() * 13 + pl.i)() < .34; S.stash.got.push(pl.i); s.g.visible = false; PLACES.splice(PLACES.indexOf(pl), 1);
       if (big) S.rep += BAL.stashRep * 2; else { S.en = Math.max(S.en, Math.min(BAL.enCap, S.en + BAL.stashEn)); S.rep += BAL.stashRep; }
       const rewards = collectGear('stash');
@@ -710,9 +710,9 @@ export function initGame(ctx) {
   }
   // THE UNDERGROUND RING of the industrial zone: one battle of one round against a random regular (lv 6–8). Every win in a row makes the
   // next win pay more (the streak is kept across days, up to streakMax steps); a loss resets it. Same battle engine, flag c.ringB.
-  function startRing() { const r = rng(Date.now() >>> 0), d = RING[Math.floor(r() * RING.length)], J = PZ.fighters[Math.floor(r() * PZ.fighters.length)], lv = BAL.ringLv[Math.floor(r() * BAL.ringLv.length)];
+  function startRing(selected) { const r = rng(Date.now() >>> 0), d = RING[Math.floor(r() * RING.length)], J = PZ.fighters[Math.floor(r() * PZ.fighters.length)], lv = BAL.ringLv[Math.floor(r() * BAL.ringLv.length)];
     S.en -= energyCost(BAL.ring); if (S.ringDay.day !== today()) S.ringDay = { day: today(), n: 0 }; S.ringDay.n++; save(); paintHud(); J.busy = true; PZ.crowd(true);
-    startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }); }
+    startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }, selected); }
   function ringResult(win) { const lines = [], rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.gearProgress.ringWins++; S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>`, _t('🔥 Серия побед на ринге: <b>{n}</b>', { n: S.streak }) + (S.streak > 1 ? _t(' — каждая следующая стоит дороже') : '')); }
@@ -722,9 +722,9 @@ export function initGame(ctx) {
   // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
   // what was earned stays. Runs on the same battle engine as the crews — the «crew» is one dancer with the flag tour.
   let JM = null;
-  function startJam() { S.en -= energyCost(BAL.jam); S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true }; PK.crowd(true); jamRound(); }
+  function startJam(selected) { S.en -= energyCost(BAL.jam); S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true, selected }; PK.crowd(true); jamRound(); }
   function jamRound() { const J = PK.dancers[JM.i], d = JAM[JM.i]; J.busy = true;
-    startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
+    startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }, JM.selected); }
   function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; JM.clean &&= B.clean; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span> · ${_t('раунд {i} из 3', { i: i + 1 })}`);
@@ -868,7 +868,8 @@ export function initGame(ctx) {
     if (near.paint) { startPaint(near.g); return; }
     if (near.place) { placeRun(near.place); return; }
     if (S.en < energyCost(BAL.battle)) { location.href = './'; return; }
-    chooseBattle(near);
+    const crew = near;
+    chooseBattle(BAL.battle, () => shown(crew), selected => startBattle(crew, selected));
   };
   function paintAct() {
     if (!near || B || P || A || choosing) { act.classList.remove('on'); return; }
@@ -902,22 +903,25 @@ export function initGame(ctx) {
     choosing = null; FZ.teach(null); W.lock = false;
     $('#g3info').classList.remove('on'); paintAct();
   }
-  function chooseBattle(g) {
+  function chooseBattle(baseCost, canStart, onStart, note = '') {
+    if (B || P || A || choosing) return;
     const state = availablePower(), unlocked = POWER.filter(p => state.allow.includes(p.id));
     let selected = unlocked[unlocked.length - 1] || FOOT_OPTION;
     const options = unlocked.length ? POWER : [FOOT_OPTION, ...POWER];
-    const cost = energyCost(BAL.battle);
+    const cost = energyCost(baseCost);
     const card = p => {
       const open = p === FOOT_OPTION || state.allow.includes(p.id), h = state.hint[p.id];
       const gates = [];
       if (h && !h.lvOk) gates.push(_t('ур. {n}', { n: h.lv }));
+      if (!open && !h) gates.push(_t('ур. {n}', { n: BattleStudy.levels[p.id] || 1 }));
       if (h && !h.st) gates.push(h.p === 3 && !h.full ? _t('Нужен полный просмотр урока') : _t('Урок · {n}/3', { n: h.p }));
       const gate = gates.join(' · ');
       return `<button type="button" data-power="${p.id}" aria-pressed="${p === selected}" ${open ? '' : 'disabled'}>${open ? '' : '🔒 '}${p.nm}<small>${open ? _t('+{n} к счёту', { n: p.pts }) : gate}</small></button>`;
     };
-    choosing = g; W.lock = true; paintAct();
+    choosing = onStart; W.lock = true; paintAct();
     info(`<h4>${_t('Выбери элемент для батла')}</h4><div id="g3powerOptions">${options.map(card).join('')}</div>
       ${unlocked.length < POWER.length ? '<p>' + _t('Для закрытых элементов нужен уровень и три просмотра урока со звуком. Один — целиком.') + '</p>' : ''}
+      ${note ? '<p>' + note + '</p>' : ''}
       ${S.freezeTip ? '' : FZ.guide()}
       <div id="g3choiceActions"><button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>
       <button type="button" id="g3choiceGo">${cost ? _t('Начать батл · −{n} ⚡', { n: cost }) : _t('Начать батл')}</button></div>`);
@@ -929,11 +933,11 @@ export function initGame(ctx) {
     }; });
     $('#g3choiceBack').onclick = closeChoice;
     $('#g3choiceGo').onclick = () => {
-      if (choosing !== g) return;
+      if (choosing !== onStart) return;
       closeChoice();
-      if (!shown(g) || S.en < energyCost(BAL.battle)) return;
+      if (!canStart() || S.en < energyCost(baseCost)) return;
       S.freezeTip = true;
-      startBattle(g, selected);
+      onStart(selected);
     };
   }
   const heroChoreo = {}, opponentChoreo = new WeakMap();
@@ -1042,7 +1046,8 @@ export function initGame(ctx) {
   function startBattle(g, selected = null) {
     if (!g.c.tour) S.en -= energyCost(BAL.battle); S.fights++; save(); paintHud();
     // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
-    if (ctx.music) ctx.music(g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id);
+    const beatId = g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id;
+    if (ctx.music) ctx.music(beatId);
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
     const opp = g.people[0], cx = g.x, cz = g.z;
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
@@ -1055,7 +1060,7 @@ export function initGame(ctx) {
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
-    const bpm = RB.LOOPS.find(loop => loop.id === c.id)?.bpm || 120;
+    const bpm = RB.LOOPS.find(loop => loop.id === beatId)?.bpm || 120;
     B = { g, opp, turns, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();

@@ -387,6 +387,7 @@ t('Вещь в гардеробе: {x}', 'Added to your wardrobe: {x}', 'En tu g
 
 # ---------- choosing a crew battle move and balancing a freeze ----------
 t("Выбери элемент для батла", "Choose your battle move", "Elige tu movimiento para la batalla", "Escolha seu movimento para a batalha", "Choisis ton move pour le battle", "Wähle deinen Move fürs Battle", "バトルで使うムーブを選ぼう", "배틀에서 쓸 무브 선택", "选择斗舞动作")
+t("Этот элемент будет во всех раундах джема.", "This move is used in every round of the jam.", "Usarás este movimiento en todas las rondas de la jam.", "Você usará este movimento em todas as rodadas da jam.", "Tu utiliseras ce move à tous les rounds du jam.", "Dieser Move gilt für alle Runden des Jams.", "このムーブはジャムの全ラウンドで使います。", "잼의 모든 라운드에서 이 무브를 사용해요.", "这个动作会用于本次即兴赛的每一轮。")
 t("Футворк", "Footwork", "Footwork", "Footwork", "Footwork", "Footwork", "フットワーク", "풋워크", "脚步动作")
 t("+{n} к счёту", "+{n} points", "+{n} puntos", "+{n} pontos", "+{n} points", "+{n} Punkte", "+{n} 点", "+{n}점", "+{n} 分")
 t("Урок · {n}/3", "Lesson · {n}/3", "Lección · {n}/3", "Aula · {n}/3", "Leçon · {n}/3", "Lektion · {n}/3", "レッスン · {n}/3", "레슨 · {n}/3", "课程 · {n}/3")
