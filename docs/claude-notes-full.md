@@ -1813,3 +1813,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - The Yard DJ uses a Blender-built flight case with two animated turntables, a mixer, a laptop and a front meter. Separate record, fader and meter parts animate while the rest stays batched by material. The DJ reaches for the controls, scratches, checks a headphone and responds to an order with a short cue. Beat orders keep the existing costs and rewards.
 - The Park promenade, perimeter paths and connectors share one triangulated gravel surface. The granite curb follows the resulting footprint, leaving crossings open. The lightweight fallback also uses edge-to-edge surfaces.
 - `tools/build_city_dj.py` and `tools/build_park_paths.py` export the editable Blender scenes and game assets. Positions, UVs, indices and normalized color and normal buffers are packed in the exported scene files.
+
+## 26.11.2026 — Sound systems at city battle spots
+
+- Six Blender models cover cassette, portable PA, twin tower, plywood crate, stage stack and industrial enclosures. Crew units carry the crew accent. The cypher, power contest, mall show, Park jam and underground ring have their own sound systems.
+- `city3d-sound.js` uses the performance anchors after the district and its crews are assembled. It faces the units toward the floor and checks their footprints against the existing objects and dance space. The cone movement and indicator glow follow the city's beat clock.
