@@ -1771,3 +1771,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - `city3d-hood.js` builds the lowered hood as one surface with pleats, binding and a recessed lining. Its base follows Spine2 and uses the equipped top colour.
 - `city3d-head.js` sculpts the ear rim, bowl and lobe, and adds detail to the face, braids and headwear. Hands, garment seams, drawstrings, pockets and footwear keep their existing skin weights or follow the same bones as the garment.
 - Compared the details in Blender, including a run and a freeze. Cache versions are city3d.js 37, city3d-game.js 35, city3d-mocap.js 21, city3d-power.js 10, city3d-head.js 2 and city3d-hood.js 1.
+
+## 26.11.2026 — City crew battle move choice and freeze balance
+
+- Choose SWIPES, HEADSPIN, FLARE or 1990 before confirming a crew battle. The City and rhythm battles share lesson coverage, views with sound, level gates and existing unlocks through `battle-study.js`. Footwork fills the power slot when every captured power move is locked. The chosen move plays in each player turn. A mythic gear move can accompany it as a bonus.
+- A first-battle gesture demo appears next to the move choices. The final freeze holds its mocap pose while the player presses the panel and tracks the green zone for four beats. A successful hold earns the existing freeze points, and a lost hold plays the fall. City cache versions are city3d.js 39, city3d-game.js 37 and city3d-i18n.js 4.

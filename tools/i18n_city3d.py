@@ -385,6 +385,17 @@ t("нажми — дальше", "tap to continue", "toca para seguir", "toque p
 
 t('Вещь в гардеробе: {x}', 'Added to your wardrobe: {x}', 'En tu guardarropa: {x}', 'No seu guarda-roupa: {x}', 'Dans ton vestiaire : {x}', 'In deiner Garderobe: {x}', 'ワードローブに追加：{x}', '옷장에 추가: {x}', '已加入衣柜：{x}')
 
+# ---------- choosing a crew battle move and balancing a freeze ----------
+t("Выбери элемент для батла", "Choose your battle move", "Elige tu movimiento para la batalla", "Escolha seu movimento para a batalha", "Choisis ton move pour le battle", "Wähle deinen Move fürs Battle", "バトルで使うムーブを選ぼう", "배틀에서 쓸 무브 선택", "选择斗舞动作")
+t("Футворк", "Footwork", "Footwork", "Footwork", "Footwork", "Footwork", "フットワーク", "풋워크", "脚步动作")
+t("+{n} к счёту", "+{n} points", "+{n} puntos", "+{n} pontos", "+{n} points", "+{n} Punkte", "+{n} 点", "+{n}점", "+{n} 分")
+t("Урок · {n}/3", "Lesson · {n}/3", "Lección · {n}/3", "Aula · {n}/3", "Leçon · {n}/3", "Lektion · {n}/3", "レッスン · {n}/3", "레슨 · {n}/3", "课程 · {n}/3")
+t("Нужен полный просмотр урока", "Watch the full lesson once", "Mira una vez la lección completa", "Assista à aula completa uma vez", "Regarde la leçon en entier une fois", "Schau die Lektion einmal ganz an", "レッスンを1回通して見よう", "레슨을 한 번 끝까지 보세요", "请完整观看一次课程")
+t("Для закрытых элементов нужен уровень и три просмотра урока со звуком. Один — целиком.", "Locked moves need the required level and three lesson views with sound. Watch once all the way through.", "Los movimientos bloqueados requieren el nivel indicado y tres vistas de la lección con sonido. Una debe ser completa.", "Movimentos bloqueados exigem o nível indicado e três visualizações da aula com som. Assista uma vez até o fim.", "Les moves verrouillés demandent le niveau indiqué et trois visionnages avec le son, dont un en entier.", "Gesperrte Moves brauchen das angegebene Level und drei Lektionen mit Ton. Schau einmal bis zum Ende.", "ロック中のムーブには指定レベルと音ありで3回の視聴が必要です。1回は最後まで見てください。", "잠긴 무브는 표시된 레벨과 소리를 켠 레슨 시청 3회가 필요해요. 한 번은 끝까지 보세요.", "解锁动作需要达到指定等级并有声观看课程三次，其中一次要完整看完。")
+t("Начать батл · −{n} ⚡", "Start battle · −{n} ⚡", "Empezar batalla · −{n} ⚡", "Começar batalha · −{n} ⚡", "Lancer le battle · −{n} ⚡", "Battle starten · −{n} ⚡", "バトル開始 · −{n} ⚡", "배틀 시작 · −{n} ⚡", "开始斗舞 · −{n} ⚡")
+t("Когда появится зелёная шкала, нажми на панель и держи. Сдвигай палец вбок, чтобы точка оставалась в зоне.", "When the green meter appears, press the panel and hold. Slide sideways to keep the dot in the zone.", "Cuando aparezca la barra verde, mantén pulsado el panel. Desliza el dedo hacia un lado para mantener el punto en la zona.", "Quando aparecer a barra verde, toque e segure o painel. Deslize o dedo para manter o ponto na zona.", "Quand la barre verte apparaît, appuie sur le panneau et maintiens. Glisse sur le côté pour garder le point dans la zone.", "Sobald die grüne Leiste erscheint, drück aufs Feld und halte. Schieb seitwärts, damit der Punkt im grünen Bereich bleibt.", "緑のバーが出たらパネルを押し続けて、指を横に動かし点をゾーンにキープ。", "초록 막대가 나타나면 패널을 누르고 유지하세요. 손가락을 옆으로 움직여 점을 구역 안에 두세요.", "绿色条出现时，按住面板并左右滑动，让圆点留在区域内。")
+t("Нажми и держи здесь", "Press and hold here", "Mantén pulsado aquí", "Toque e segure aqui", "Appuie et maintiens ici", "Hier drücken und halten", "ここを押し続ける", "여기를 누른 채 유지", "按住这里")
+
 # ---------- gear names: taken from the app's i18n.js (the wardrobe uses the same translations) ----------
 REUSE = ['Бандана Ржавых', 'Олимпийка Ржавых', 'Кислотные кроссы', 'Кислотная панама', 'Наушники Совы', 'Худи Ночных сов', 'Цепь «Золотой зуб»', 'Золотая кепка',
          'Бандана Трафаретов', 'Бомбер Трафаретов', 'Панама Турникетов', 'Кроссы «Час пик»', 'Хромовые кроссы', 'Олимпийка «Хром»', 'Олимпийка «Фанк»',
@@ -392,6 +403,8 @@ REUSE = ['Бандана Ржавых', 'Олимпийка Ржавых', 'Ки
          'Штаны «Первый заход»', 'Митенки «Первый бит»', 'Кепка «В кругу»', 'Шнурки «Чистый раунд»', 'Худи «Свежая краска»',
          'Шапка «Пересадка»', 'Кеды «Витрина»', 'Кулон «Отражение»', 'Кепка «Турник»', 'Бомбер «Финал джема»',
          'Наушники «Ритм Маятника»', 'Перчатки «Шлак»', 'Штаны «Запасник»', 'Наколенники «Три подряд»', 'Панама «Последняя плавка»']
+
+REUSE += ['Начать батл', 'Как удержать фриз', 'Держи и веди палец вбок', 'Верни точку в зелёную зону']
 
 L = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh']
 if __name__ == '__main__':

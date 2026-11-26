@@ -1836,8 +1836,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
+<script src="battle-study.js?v=1"></script>
 <script src="hero.js?v=22"></script>
-<script src="rhythm.js?v=30"></script>
+<script src="rhythm.js?v=31"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=8"></script>
@@ -1919,7 +1920,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // ===== real lessons (alpha) =====
   const CFG = Object.assign({alpha:true, alphaBanner:'Все уроки бесплатно на время альфа-теста', tg:'Fe_DoSk1n', wa:'', ig:'', fb:'', usdtTrc20:'', tgMessage:'Привет! Пришёл на онлайн-услуги по брейкингу', reviewRub:2000, reviewUsd:30, onlineRub:4000, onlineUsd:99, coachRub:10000, coachUsd:120, fullRub:50000, fullUsd:1000, consultUsd:20, reviewHours:24, newDays:14, metrikaId:'', pushUrl:''}, window.APP_CONFIG || {});
   // course lessons (sec «course:<id>», 12.11.2026) are not in sections, search or «Новые уроки» — only inside their course
-  const LESSONS = (window.LESSONS_DATA || []).filter(l => !l.hidden && !/^course:/.test(l.sec || ''));
+  const LESSONS = BattleStudy.catalog(window.LESSONS_DATA);
   // subscription prices (paywall comes after the alpha): Russian-language users pay in rubles, everyone else in dollars
   const SUB = LANG === 'ru'
     ? {month: (CFG.subRub || 199) + ' ₽', year: String(CFG.subYearRub || 1990).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽', currency: 'RUB'}
@@ -5122,13 +5123,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // real playback (stats.watched seconds). Its lessons are found by name, so a new lesson «Air chair» opens AIRCHAIR by itself.
   // Moves with no lesson of their own: N watched lessons of a section (UL_SEC). The server accepts them (round.u) only when it
   // says `ul: 1` (/bt/ready, /bt/inbox) — an older server would refuse the round, so then only the level counts.
-  const UL_NEED = { windmill: 3, handstand: 3, airchair: 3, headspin: 5, flare: 5, airflare: 5, ninety: 5, hollowback: 5, babylove: 2, rninety: 6 }; // = rhythm.js NEED (+ RB2.NEED for the v2 moves that have a lesson)
-  const UL_RX = { windmill: /windmill/i, handstand: /handstand/i, airchair: /air\s*-?\s*chair/i, headspin: /head\s*-?\s*spin/i,
-    flare: /(^|[^a-z])flare/i, airflare: /air\s*-?\s*flare|airtwist/i, ninety: /^(?!.*reverse).*1990/i, hollowback: /hollow\s*-?\s*back/i, babylove: /baby\s*-?\s*love/i, rninety: /reverse.*1990/i };
-  const UL_SEC = { airchair: ['Freezes', 2], hollowback: ['Freezes', 3] };
+  const UL_NEED = BattleStudy.levels, UL_SEC = BattleStudy.sections;
   const ulThr = l => Math.max(5, Math.min((l.dur || 0) * 0.5, 120));
   const ulDone = l => (stats.watched[l.id] || 0) >= ulThr(l);
-  const ulLessons = m => UL_RX[m] ? LESSONS.filter(l => UL_RX[m].test(l.name || '')) : [];
+  const ulLessons = m => BattleStudy.matching(LESSONS, m);
   function ulState(){
     const have = [], hint = {};
     Object.keys(UL_NEED).forEach(m => {
@@ -5159,8 +5157,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // Section moves (UL_SEC): N lessons of the section each seen whole once. What was open before this rule stays open
   // (`fedoskin-ul-old`, snapshot at the first run). Coverage = a bit per second of the lesson, `fedoskin-ulcov` {id: base64}.
   let ulCovMap = {}; try { ulCovMap = JSON.parse(localStorage.getItem('fedoskin-ulcov') || '{}') || {}; } catch (_) {}
-  const ulBits = l => { const n = Math.max(1, Math.ceil(l.dur || 1)), a = new Uint8Array(Math.ceil(n / 8)); const s = ulCovMap[l.id];
-    if (s) try { const b = atob(s); for (let k = 0; k < Math.min(b.length, a.length); k++) a[k] = b.charCodeAt(k); } catch (_) {} return a; };
+  const ulBits = l => BattleStudy.bits(l, ulCovMap);
   const ulCovCache = {};
   function ulCovMark(l, a, b){ // seconds [a, b] of lesson l were seen
     const n = Math.max(1, Math.ceil(l.dur || 1)), bits = ulCovCache[l.id] || (ulCovCache[l.id] = ulBits(l));
@@ -5168,36 +5165,29 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   function ulCovSave(l){ const bits = ulCovCache[l.id]; if (!bits) return; let s = ''; for (let k = 0; k < bits.length; k++) s += String.fromCharCode(bits[k]);
     ulCovMap[l.id] = btoa(s); try { localStorage.setItem('fedoskin-ulcov', JSON.stringify(ulCovMap)); } catch (_) {} }
-  function ulCovPct(l){ const n = Math.max(1, Math.ceil(l.dur || 1)), bits = ulCovCache[l.id] || (ulCovCache[l.id] = ulBits(l)); let c = 0;
-    for (let k = 0; k < n; k++) if (bits[k >> 3] & (1 << (k & 7))) c++; return c / n; }
-  const ulFull = l => ulCovPct(l) >= 0.97 || (l.dur > 0 && Math.ceil(l.dur) - Math.round(ulCovPct(l) * Math.ceil(l.dur)) <= 2); // the last second or two may be missed
+  const ulCovPct = l => BattleStudy.coverageFraction(l, ulCovCache[l.id] || (ulCovCache[l.id] = ulBits(l)));
+  const ulFull = l => BattleStudy.full(l, ulCovPct(l)); // the last second or two may be missed
   // only playback WITH SOUND counts for studying (owner 13.11.2026 «без звука не считаются, чтобы не абузили просмотры»; slow motion,
   // where the app itself turns the sound off, counts): stats.ulw = seconds per lesson, coverage marked only then too
   if (!stats.ulw || typeof stats.ulw !== 'object') stats.ulw = {};
-  const ulViews = l => Math.min(3, (stats.ulw[l.id] || 0) / Math.max(1, l.dur || 1));
-  const ulStudied = l => ulFull(l) && ulViews(l) >= 2.98;
-  let ulOld = null; try { ulOld = JSON.parse(localStorage.getItem('fedoskin-ul-old') || 'null'); } catch (_) {}
-  if (!Array.isArray(ulOld)) { // first run with the new rule: keep what this phone could already use
-    const lv0 = (() => { const mins = Math.floor(stats.sec / 60); let v = 1; LEVELS.forEach((x, k) => { if (mins >= x) v = k + 1; }); return v; })();
-    let known = []; try { known = JSON.parse(localStorage.getItem('fedoskin-ul') || '[]') || []; } catch (_) {}
-    ulOld = Object.keys(UL_NEED).filter(m => UL_NEED[m] <= lv0).concat(known.filter(m => UL_NEED[m]));
-    try { localStorage.setItem('fedoskin-ul-old', JSON.stringify(ulOld)); } catch (_) {}
-  }
+  const ulViews = l => BattleStudy.views(l, stats);
+  const ulStudied = l => BattleStudy.studied(ulFull(l), ulViews(l));
+  const ulOld = BattleStudy.legacy(HERO.levelFor(Math.floor(stats.sec / 60)));
   // ===== starter battles (owner 13.11.2026 «для новичков сделай батлы закрытыми с подсказкой… сначала посмотри видео и выучи элемент…
   // Теперь ты выучил кросс степ… но этого мало для полноценного раунда, изучай другие элементы») =====
   // For a NEW phone the basic moves that have a lesson open only by studying it (same rule: 3 views with sound, one of them whole),
   // and battles stay closed until there is a studied move for each part of the round: toprock, footwork, power, freeze.
   // Basic moves with no lesson (salsa, backspin) come free once battles open. Phones that already battled keep everything ('old').
-  const ST_RX = { toprock: /cross\s*-?\s*step/i, kickstep: /kick\s*-?\s*step/i, indian: /indian/i, sixstep: /(^|[^0-9])6\s*-?\s*step|six\s*-?\s*step/i, ccs: /^\s*cc\b/i, swipe: /swipe/i };
+  const ST_RX = { toprock: /cross\s*-?\s*step/i, kickstep: /kick\s*-?\s*step/i, indian: /indian/i, sixstep: /(^|[^0-9])6\s*-?\s*step|six\s*-?\s*step/i, ccs: /^\s*cc\b/i };
   const ST_ROWS = [['TOPROCK', ['toprock', 'kickstep', 'indian']], ['FOOTWORK', ['sixstep', 'ccs']], ['POWER', ['swipe']], ['FREEZE', ['freeze']]];
   const ST_ORDER = [0, 1, 3, 2]; // which part to suggest first: the short lessons first, the long power lesson last
   let stMode = ''; try { stMode = localStorage.getItem('fedoskin-starter') || ''; } catch (_) {}
   try { const q = new URLSearchParams(location.search).get('starter'); if (q === 'new' || q === 'old') { stMode = q; localStorage.removeItem('fedoskin-st-seen'); } } catch (_) {} // for checks
-  if (!stMode) { let old = false; try { old = ['fedoskin-bt-rest', 'fedoskin-rb-beat', 'fedoskin-ul-tip', 'fedoskin-rb-mute', 'fedoskin-eq'].some(x => localStorage.getItem(x) != null); } catch (_) {} stMode = old ? 'old' : 'new'; }
+  if (!stMode) stMode = BattleStudy.starterMode();
   const stSave = () => { try { localStorage.setItem('fedoskin-starter', stMode); } catch (_) {} };
   stSave();
   const stOn = () => stMode === 'new' || stMode === 'open';
-  const stLessons = m => m === 'freeze' ? LESSONS.filter(l => l.sec === 'Freezes') : ST_RX[m] ? LESSONS.filter(l => ST_RX[m].test(l.name || '')) : [];
+  const stLessons = m => m === 'freeze' ? LESSONS.filter(l => l.sec === 'Freezes') : m === 'swipe' ? ulLessons(m) : ST_RX[m] ? LESSONS.filter(l => ST_RX[m].test(l.name || '')) : [];
   const stBest = ls => ls.slice().sort((a, b) => ulViews(b) - ulViews(a) || (a.dur || 0) - (b.dur || 0))[0];
   const stKnows = m => { const ls = stLessons(m); return !ls.length || ls.some(ulStudied); };
   function stState(){
@@ -5213,25 +5203,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const stLocked = () => stMode === 'new' && !stState().open;
   try { if (localStorage.getItem('fedoskin-st-seen') == null) localStorage.setItem('fedoskin-st-seen', JSON.stringify(stState().known)); } catch (_) {}
   function ulState2(){
-    const lvl = statsView().level, allow = [], have = [], hint = {};
-    Object.keys(UL_NEED).forEach(m => {
-      const lvOk = lvl >= UL_NEED[m], old = ulOld.includes(m);
-      if (old) { allow.push(m); if (UL_NEED[m] > lvl) have.push(m); return; }
-      const ls = ulLessons(m);
-      if (ls.length) {
-        const st = ls.find(ulStudied);
-        if (st && lvOk) { allow.push(m); return; }
-        const l = st || ls.slice().sort((a, b) => ulViews(b) - ulViews(a) || (a.dur || 0) - (b.dur || 0))[0];
-        hint[m] = { id: l.id, name: l.name, p: Math.floor(ulViews(l) * 10) / 10, pf: String(Math.floor(ulViews(l) * 10) / 10).replace('.', /^(en|ja|ko|zh)$/.test(LANG) ? '.' : ','), full: ulFull(l), st: !!st, lvOk, lv: UL_NEED[m] }; return;
-      }
-      const s = UL_SEC[m];
-      if (!s) { if (lvOk) allow.push(m); return; } // no lesson for it: the level alone
-      const sl = LESSONS.filter(l => l.sec === s[0]); if (sl.length < s[1]) { if (lvOk) allow.push(m); return; }
-      const n = sl.filter(ulFull).length;
-      if (n >= s[1] && lvOk) { allow.push(m); return; }
-      hint[m] = { sec: s[0], n: Math.min(n, s[1]), need: s[1], st: n >= s[1], lvOk, lv: UL_NEED[m] };
-    });
-    const keys = Object.keys(UL_NEED);
+    const { allow, have, hint, keys } = BattleStudy.state(LESSONS, statsView().level, ulOld, l => ({ full: ulFull(l), views: ulViews(l) }));
+    Object.values(hint).forEach(h => { if (h.id) h.pf = String(h.p).replace('.', /^(en|ja|ko|zh)$/.test(LANG) ? '.' : ','); });
     if (stOn()) ST_ROWS.forEach(([, ms]) => ms.forEach(m => { // a new phone: the basic moves open by their lessons too (no level needed)
       const ls = stLessons(m); if (!ls.length) return; keys.push(m);
       if (ls.some(ulStudied)) { allow.push(m); return; }
@@ -5254,7 +5227,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   ulCheck2(true);
   // the battle moves this lesson opens: moves above level 1 (not already open before the rule) + for a new phone the basic ones
   // (not if that basic move is already studied by another of its lessons)
-  const ulMovesOf = l => Object.keys(UL_RX).filter(m => UL_NEED[m] > 1 && UL_RX[m].test(l.name || '') && !ulOld.includes(m))
+  const ulMovesOf = l => Object.keys(UL_NEED).filter(m => UL_NEED[m] > 1 && BattleStudy.matches(m, l) && !ulOld.includes(m))
     .concat(stOn() ? [].concat(...ST_ROWS.map(r => r[1])).filter(m => stLessons(m).includes(l) && (ulStudied(l) || !stKnows(m))) : []);
   // lesson page: which battle move this lesson opens and how far the person is (3 views, one of them whole)
   function ulPaint(l){
