@@ -5,9 +5,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=22';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=23';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=12';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=13';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -1020,10 +1020,10 @@ export function initGame(ctx) {
   }
   const heroChoreo = {}, opponentChoreo = new WeakMap();
   // today's buffs from the DJ and the practice mat (only for me)
-  const buff = () => { const c = S.cus || {};
+  const buff = () => { const c = S.cus || {}, gear = HERO.gearBoost(ctx.heroEq());
     return { fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0) + (S.warmDay === today() ? BAL.warm : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) + (c.top || 0) * BAL.cusStyle,
       // custom (the tailor): sneakers → steps, knees → freezes, spin pad → power and headspins
-      step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin }; };
+      step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin, spinTol: gear.spin, elbow: gear.elbow }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
   function timeSteps(seq, from, t) {
@@ -1116,9 +1116,10 @@ export function initGame(ctx) {
       if (!pFail || me) memory.freeze = F.nm;
       const fFail = r() < clamp(.14 - .03 * (lv - 1) - bf.fall - (bf.fz || 0) + (me ? F.risk || 0 : 0), .03, .2);
       const mirror = r() < .5;
+      const armSupport = F.nm === 'CHAIR FREEZE' || F.nm === 'BABY FREEZE' ? bf.elbow || 0 : 0;
       const balance = selected ? {
         at: Math.min(.8, F.len * .5), direction: mirror ? -1 : 1,
-        tolerance: Math.min(26, 20 - (F.risk ? 3 : 0) + Math.max(0, lv - 1) * .45 + (bf.fz || 0) * 40 + bf.fall * 12),
+        tolerance: Math.min(26, 20 - (F.risk ? 3 : 0) + Math.max(0, lv - 1) * .45 + (bf.fz || 0) * 40 + bf.fall * 12) + armSupport,
       } : null;
       ok.push(mk(side(F.c, mirror), F.len, F.at, { nm: F.nm, pts: 2, kind: 'freeze', balance, fail: fFail, failAt: .55 }));
       if (fFail && !balance) ok.push(mk(null, 1.6, 0, { kind: 'fall', soft: true }));
@@ -1310,6 +1311,7 @@ export function initGame(ctx) {
       first: (S.drawN || 0) < 2,
       // what makes it easier: the levels from lessons above the move's own (+1 px, +.3 s each), the tailor's spin pad, the warm-up, the DJ, the mat
       tolAdd: Math.min(3, up) + Math.min(6, 30 * (bf.fall + (bf.pw || 0) + (s.c === 'Head_Spinning' ? bf.spin || 0 : 0))),
+      spinTol: s.c === 'Head_Spinning' ? bf.spinTol : 0,
       timeAdd: Math.min(1.2, .3 * up),
       onEnd: res => drawn(T, s, res) });
   }
@@ -1376,8 +1378,9 @@ export function initGame(ctx) {
     else if (win) {
       const was = S.wins[c.id] || 0, rk0 = rkP, rep = BAL.repWin * c.lv + (B.clean ? BAL.repClean : 0);
       S.rep += rep; S.wins[c.id] = was + 1; S.beat[c.id] = today();
-      if (c.id === 'forge' && B.clean) {
-        S.gearProgress['clean:forge'] = (S.gearProgress['clean:forge'] || 0) + 1;
+      if (B.clean) {
+        const key = 'clean:' + c.id;
+        S.gearProgress[key] = (S.gearProgress[key] || 0) + 1;
       }
       if ((c.id === 'volt' || c.id === 'forge') && B.pm?.some(move => move.g === 'perfect')) {
         const key = 'perfect:' + c.id;
@@ -1385,12 +1388,11 @@ export function initGame(ctx) {
       }
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>${B.clean ? _t(' (чистый батл без срывов)') : ''}`);
       const gi = was === 0 ? 0 : was === 2 ? 1 : -1, gid = gi >= 0 ? c.gear[gi] : null;
-      const prize = gid && HERO.GEAR[gid], nextPrize = c.gear[1] && HERO.GEAR[c.gear[1]];
+      const prize = gid && HERO.GEAR[gid];
       if (prize && !prize.reward && !S.own.includes(gid)) {
         S.own.push(gid); B.wear = gid;
         lines.push(`<span class="rw">${prize.ico} ${_t('Новая шмотка: {x} — уже на тебе', { x: _t(prize.name) })}</span>`);
       }
-      else if (nextPrize && !nextPrize.reward && was < 2 && !S.own.includes(c.gear[1])) lines.push(_t(2 - was === 1 ? 'Победи их ещё раз — получишь {x}' : 'Победи их ещё {n} раза — получишь {x}', { n: 2 - was, x: _t(nextPrize.name) }));
       const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
       S.last[c.id] = today(); bumpGoal('win'); if (B.clean) bumpGoal('clean'); if (c.lv >= 2) bumpGoal('strong'); if (c.d === 'center') bumpGoal('cwin'); if (c.d === 'park') bumpGoal('pwin'); if (c.d === 'prom') bumpGoal('zwin');
       if (c.boss && was === 0) lines.unshift(`<span class="rw">${_t('👑 {b} и «{x}» признали тебя: {y}', { b: c.boss, x: c.name, y: c.d === 'prom' ? _t('ты хозяин Промзоны! Остался Клуб') : c.d === 'park' ? _t('ты хозяин Парка! Дорога в Промзону открыта') : _t('ты хозяин Центра! Дорога в Парк открыта') })}</span>`);
@@ -1398,7 +1400,13 @@ export function initGame(ctx) {
     } else {
       lines.push(B.lv < c.lv ? _t('Они сильнее тебя. Уроки поднимают уровень героя — он реже падает и крутит сложнее.') : _t('Не повезло со срывами. Попробуй ещё раз.'));
     }
-    if (win) lines.push(...collectGear(B.clean ? 'clean' : undefined).map(reward => `<span class="rw">${reward}</span>`));
+    if (win) {
+      if (B.pm?.some(move => move.nm === 'HEADSPIN' && move.g === 'perfect')) {
+        S.gearProgress.headspinWin = (S.gearProgress.headspinWin || 0) + 1;
+      }
+      const rewards = collectGear(B.clean ? 'clean' : undefined);
+      lines.push(...rewards.map(reward => `<span class="rw">${reward}</span>`));
+    }
     // the drawn power moves of this battle
     pf.forEach(nm => lines.unshift(`<span class="rw">${_t('✨ Первый идеальный {x}! +{n} ★', { x: nm, n: BAL.perfFirst })}</span>`));
     (B.pm || []).filter(x => x.g === 'perfect' && !pf.includes(x.nm)).forEach(x => lines.push(`<span class="rw">${_t('✨ {x} — идеально (всего {n})', { x: x.nm, n: S.perf[x.nm] })}</span>`));

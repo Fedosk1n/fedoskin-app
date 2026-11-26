@@ -402,66 +402,77 @@ body.chatmode .tabs{display:none}
 .rbic .ico{width:22px;height:22px}
 .rbplay{flex:none;padding:8px 14px;border-radius:12px;background:var(--accent);color:var(--on-accent,#0B0B0C);font-weight:800;font-size:13px}
 .pts{flex:none;font-weight:800;color:#F2CC55;font-size:15px} .pts.big{font-size:18px}
-.shopgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;max-height:60dvh;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
-.shopit{border-radius:16px;background:#1A1A1D;border:1px solid #26262A;padding:6px 8px 10px;display:flex;flex-direction:column;gap:6px;text-align:center}
-.shopit.on{border-color:var(--accent);background:#21160F}
-.shopit svg{display:block;width:100%;height:auto}
-.shopit b{font-size:12.5px;line-height:1.25;min-height:2.5em;display:flex;align-items:center;justify-content:center}
-.shopit button{height:34px;border-radius:12px;border:none;font:800 12.5px var(--body);cursor:pointer;background:var(--accent);color:#0B0B0C}
-.shopit.subit{border-color:rgba(59,209,111,.45);background:linear-gradient(180deg,rgba(59,209,111,.10),#1A1A1D 60%)}
-.shopit .subcap{font-size:11px;line-height:1.3;color:#7BE3A0;font-weight:700;margin-top:-2px}
-.shopit button.subbtn{background:#3BD16F;color:#0B0B0C;height:auto;min-height:34px;padding:6px 6px;line-height:1.2}
-.shopit button.own{background:#26262B;color:var(--fg)} .shopit button.worn{background:transparent;border:1px solid var(--accent);color:var(--accent)}
-.shopit button[disabled]{background:#26262B;color:var(--muted);cursor:default}
-/* street gear from «Город» in the wardrobe (14.11.2026): not sold, won in the city */
-.shopit.cityit{border-color:rgba(124,224,255,.4);background:linear-gradient(180deg,rgba(124,224,255,.09),#1A1A1D 60%)}
-.shopit.cityit.on{border-color:var(--accent)}
-.shopit .citybt{font-size:11px;line-height:1.3;color:#F2CC55;font-weight:700;margin-top:-4px}
-.shopit .citycap{font-size:11px;line-height:1.3;color:#7CE0FF;font-weight:700;margin-top:-2px}
-.shopit.cityit.lock svg{filter:brightness(.35) grayscale(.6)}
-.shopit button.citybtn{background:transparent;border:1px solid rgba(124,224,255,.55);color:#7CE0FF;height:auto;min-height:34px;padding:6px;line-height:1.2}
-/* wardrobe «Мои вещи» (11.11.2026) */
-.wdseg{margin:12px 0 0}
-.wdseg button{height:40px}
-.mtop{display:flex;gap:14px;align-items:center;margin-top:12px;padding:8px 12px 8px 8px;border-radius:16px;background:#1A1A1D;border:1px solid #26262A}
-.mhero{flex:none;width:92px} .mhero svg{display:block;width:100%;height:auto}
-.mtop b{font-size:15px;line-height:1.25} .mtop small{font-size:12px;line-height:1.35}
-.wdslot-head{display:grid;gap:6px;min-width:0;flex:1}
-.wdslots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-.wdslot{color:var(--fg);text-align:left;border:1px solid #414047;border-radius:8px;background:#242428;padding:6px;min-height:44px;overflow-wrap:anywhere;cursor:pointer}
-.wdslot[aria-pressed=true]{border-color:#e2611a;background:#372419}
-.wdslot small,.wdslot strong{display:block;font-size:11px;line-height:1.2}
-.wdslot small{color:#b8b6bc;margin-bottom:2px}
+/* Wardrobe */
+#shopSheet .wd-sheet{width:min(100%,520px);max-height:min(93dvh,880px);display:flex;flex-direction:column;overflow:hidden;padding:10px 12px max(12px,env(safe-area-inset-bottom));background:#121215}
+.wdhead{display:flex;align-items:center;gap:8px;padding:0 2px}
+.wdhead h2{font:400 28px/1.1 var(--display);text-transform:uppercase;margin:0 auto 0 0}
+.wdhead button{width:44px;height:44px;padding:0;font-size:22px;color:var(--fg);background:#242427;border:0;border-radius:12px;cursor:pointer}
+.wdseg{margin:8px 0 6px;flex:none}
+.wdseg button{height:42px;font-size:clamp(11px,3.05vw,14px)}
+.wdseg button[aria-pressed=true]{background:#e87944;color:#151113}
+.wd-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:3px 2px 2px;scrollbar-width:thin}
+.wdstage{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(64px,1fr) minmax(0,2.4fr) minmax(64px,1fr);align-items:center;column-gap:5px;min-height:208px;padding:9px;border:1px solid #463027;border-radius:18px;
+  background:radial-gradient(ellipse at 50% 65%,#523223 0%,#211C1D 47%,#17171A 83%);overflow:hidden}
+.wdstage::before{content:"";position:absolute;z-index:-1;left:50%;top:48%;width:51%;aspect-ratio:1;border:3px solid #b25630;border-radius:50%;transform:translate(-50%,-50%);opacity:.6;box-shadow:inset 0 0 28px #8c452b50,0 0 10px #e2611a30}
+.wdstage::after{content:"";position:absolute;z-index:-1;inset:0;opacity:.23;background:repeating-linear-gradient(118deg,transparent 0 7px,#ffffff09 8px,transparent 10px 13px);pointer-events:none}
+.wdhero{position:relative;align-self:stretch;display:grid;place-items:center;min-width:0}
+.wdhero #mHero{width:100%}
+.wdhero svg{display:block;width:100%;height:212px;filter:drop-shadow(0 5px 5px #0a0808ae)}
+.wdpreview{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:1;padding:4px 9px;border-radius:16px;background:#171416;color:#ffc098;font-size:10px;font-weight:750;letter-spacing:.14px}
+.wdside{display:grid;gap:5px}
+.wdslot{position:relative;min-width:0;min-height:51px;padding:4px 2px;border:1px solid #4c4141;border-radius:10px;background:#19181bdf;color:var(--fg);cursor:pointer;font:inherit;text-align:center}
+.wdslot[aria-pressed=true]{border-color:#f29363;background:#3c261d}
+.wdslot[data-equipped=true]::after{content:"";width:4px;height:12px;position:absolute;top:6px;left:3px;background:var(--wdrare);border-radius:3px}
+.wdslot span{display:block;font-size:17px;line-height:20px}
+.wdslot small{display:block;font-size:clamp(9px,2.65vw,11px);font-weight:680;line-height:1.15;overflow-wrap:anywhere}
+.wdslots{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(77px,24%);gap:5px;margin:7px 0 0;padding-bottom:4px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;scroll-snap-type:x proximity}
+.wdslots .wdslot{scroll-snap-align:start;min-height:44px;display:flex;align-items:center;justify-content:center;gap:4px;padding-inline:4px}
+.wdslots .wdslot span{font-size:14px}
+.wdslot:focus-visible,.wdtile:focus-visible,.wdhead button:focus-visible{outline:2px solid #ffc39e;outline-offset:-3px}
 [data-rarity="0"]{--wdrare:#b6b8c2}
 [data-rarity="1"]{--wdrare:#83b9ff}
 [data-rarity="2"]{--wdrare:#c7a3ff}
 [data-rarity="3"]{--wdrare:#ffd56d}
 [data-rarity="4"]{--wdrare:#ff929e}
-.wdslot strong,.wdrare{color:var(--wdrare,#b6b8c2)}
-.wdmeta{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 8px;color:#b8b6bc;font-size:11px}
-.shopit .wdmeta .wdrare{font-weight:750}
-.shopit[data-rarity]{border-top:2px solid var(--wdrare)}
-.shopit .wdmyth{font-size:11px;line-height:1.25}
-#mItems .shopit svg,#shopPane .shopit svg{max-height:132px}
-.shopit button{min-height:44px;height:auto;margin-top:auto;padding:4px}
-.wdboost{display:grid;gap:4px;margin:10px 0 3px;padding:10px;border-radius:12px;background:#222024;border:1px solid #3c3538}
-.wdboost b{font-size:13px}.wdboost small{font-size:12px;line-height:1.35;color:#c8c5cc}
-.wdboost .wdmyth,.shopit .wdmyth{color:#ff929e}
-.wdfilter{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:12px 0 8px}
-.wdfilter .mh{margin:0}
-.wdleavefilter{min-height:44px}
-.mscroll{max-height:68dvh;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding-bottom:4px}
-.shopscroll .shopgrid{max-height:none;overflow:visible}
-.mh{font:400 20px var(--display);letter-spacing:.3px;text-transform:uppercase;margin:12px 0 2px}
-.mp{font-size:12.5px;line-height:1.4;color:var(--muted);margin:0 0 8px}
-.lookgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wdsection{display:flex;align-items:center;justify-content:space-between;gap:5px;min-height:40px;margin-top:6px}
+.wdsection h3{font:400 18px/1.15 var(--display);text-transform:uppercase;margin:0}
+.wdsection button{min-height:44px}
+.wdrail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(87px,28%);gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;scrollbar-width:thin;padding:1px 1px 6px}
+.wdrail:empty{display:none}
+.wdtile{scroll-snap-align:start;position:relative;display:grid;align-content:start;gap:4px;border:1px solid #434047;border-top:2px solid var(--wdrare);border-radius:12px;background:linear-gradient(153deg,#292529,#1a191d 78%);padding:5px;cursor:pointer;color:var(--fg);font:inherit;text-align:left}
+.wdtile[aria-pressed=true]{border-color:var(--wdrare);background:#332627;box-shadow:inset 0 0 0 1px var(--wdrare)}
+.wdtile svg{display:block;width:100%;height:55px}
+.wdtile b{font-size:11px;line-height:1.22;overflow-wrap:anywhere}
+.wdtile small{font-size:10px;line-height:1.2;color:#c7c2c9}
+.wddetail{margin-top:5px;display:grid;gap:8px;padding:11px;border:1px solid #49373d;border-top:2px solid var(--wdrare);border-radius:14px;background:linear-gradient(120deg,#252022,#1b1a1e 75%)}
+.wddetail h4{font:400 22px/1.12 var(--display);margin:0;overflow-wrap:anywhere}
+.wdmeta,.wdeffects,.wdmyth{font-size:12px;line-height:1.35}
+.wdmeta{color:var(--wdrare);font-weight:700}
+.wdeffects{display:grid;gap:4px;color:#e4d7cb}
+.wdmyth{color:#ffabb2}
+.wdgoal{display:grid;gap:4px;color:#e5dfdf;font-size:11px}
+.wdgoal>span{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.wdgoal b{color:var(--wdrare);font-variant-numeric:tabular-nums}
+.wdgoal progress{width:100%;height:5px;appearance:none;border:0;background:#42383d;border-radius:6px;overflow:hidden;color:var(--wdrare)}
+.wdgoal progress::-webkit-progress-bar{background:#42383d}
+.wdgoal progress::-webkit-progress-value{background:var(--wdrare)}
+.wdgoal progress::-moz-progress-bar{background:var(--wdrare)}
+.wddetail button{min-height:44px;width:100%}
+.wddetail button:disabled{background:#312b32;border-color:#423a43;color:#c4bdc4;cursor:default}
+.wdempty{border:1px dashed #50474b;border-radius:12px;text-align:center;padding:10px;font-size:13px;color:#ccc4c8}
+.wdempty p{margin:2px 0}
+.wdempty button{margin-top:6px}
+.wdfold{margin:8px 0 0;border:1px solid #3c3438;border-radius:11px;padding:0 9px;background:#201d20}
+.wdfold summary{padding:0;min-height:44px;line-height:44px;cursor:pointer;font-size:13px;font-weight:700}
+.wdfold>div,.wdfold>p,.wdfold>ul{padding-bottom:8px}
+.wdboost{display:grid;gap:4px}
+.wdboost small,.wdlooks p{font-size:12px;line-height:1.35;color:#ccc6cd;margin:0}
+.wdboost .wdmyth{color:#ffabb2}
+.lookgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
 .wdlook{font:inherit;color:inherit;cursor:pointer;padding:4px 6px 8px}
 .wdlook b{font-size:11.5px;line-height:1.25} .wdlook small{font-size:11px}
 .wdlook:not(.lock):not(.cur) small{color:var(--fg);font-weight:700}
 .wdlook.lock{cursor:default}
-.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.mempty{padding:12px;border-radius:14px;border:1px dashed #333338;text-align:center}
-.mempty p{font-size:13px;line-height:1.4;color:var(--muted);margin:0 0 10px}
 .btbtn{flex:none;display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 12px var(--body);letter-spacing:.3px;text-transform:uppercase;cursor:pointer}
 /* rating as a grid of hero cards, 3 in a row (owner 11.11.2026); places 1–3 gold / silver / bronze */
 .lbgrid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;margin-top:10px!important}
@@ -1460,11 +1471,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <section class="screen" id="city" aria-label="Город" hidden></section>
 <section class="screen" id="cityhub" aria-label="Город" hidden>
   <h1>Город</h1>
-  <a class="card c3card" href="city3d.html?v=44" id="c3Card">
+  <a class="card c3card" href="city3d.html?v=45" id="c3Card">
     <span class="c3img" style="background-image:url(img/city3d.jpg?v=1)"><span class="alphatag">α ALPHA</span><b>3D-город</b></span>
     <span class="c3tx">Гуляй по районам, перетанцуй уличные банды, закрась их стены своим граффити и собери уникальный шмот — он работает и в батлах. Энергию для города дают твои уроки.</span>
   </a>
-  <a class="btn btn-accent" href="city3d.html?v=44" id="c3Go">Войти в город</a>
+  <a class="btn btn-accent" href="city3d.html?v=45" id="c3Go">Войти в город</a>
   <div class="alphacard">
     <span class="alphatag" style="background:var(--bg);color:var(--accent)">α ALPHA</span>
     <p>Город — ранняя альфа-версия, мы строим его прямо сейчас. Возможны ошибки и подтормаживания на слабых телефонах, баланс и награды будут меняться, а прогресс в городе может обнулиться после больших обновлений.</p>
@@ -1716,34 +1727,46 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   </div>
 </div>
 <div class="sheet-bg" id="shopSheet" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
-    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
-    <div class="row" style="justify-content:space-between;align-items:center"><h2 id="shopTitle" style="font-size:24px">Гардероб</h2><span class="pts big" id="shopPtsBox">⭐ <b id="shopPts">0</b></span></div>
-    <div class="seg wdseg" role="group" aria-label="Мои вещи или магазин" id="wdSeg"><button type="button" data-tab="mine" aria-pressed="true">Мои вещи</button><button type="button" data-tab="shop" aria-pressed="false">Магазин</button></div>
-    <div id="minePane">
-      <div class="mscroll" id="mScroll">
-        <div class="mtop"><span class="mhero" id="mHero" aria-hidden="true"></span><div class="wdslot-head"><span class="label">Сейчас на тебе</span><b id="mLv"></b><div class="wdslots" id="mSlots" role="group"></div></div></div>
-        <div class="wdboost" id="mBoost"></div>
-        <div id="mAcc">
-          <div class="wdfilter"><h3 class="mh" id="mItemTitle">Мои вещи</h3><button type="button" class="btn btn-ghost wdleavefilter" id="mAll" hidden>Все вещи</button></div>
-          <div class="mgrid" id="mItems"></div>
-          <div class="mempty" id="mEmpty" hidden><p>Вещи можно выиграть в городе или купить за звёзды.</p><button type="button" class="btn btn-ghost" id="mToShop">В магазин</button></div>
-        </div>
-        <h3 class="mh">Образ</h3>
-        <p class="mp">Новые образы открываются за время тренировок по урокам. Носи любой открытый.</p>
-        <div class="lookgrid" id="mLooks"></div>
+  <div class="sheet wd-sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="wdhead">
+      <button type="button" id="wdClose" aria-label="Закрыть">‹</button>
+      <h2 id="shopTitle">Гардероб</h2>
+      <span class="pts big" id="shopPtsBox">⭐ <b id="shopPts">0</b></span>
+    </div>
+    <div class="seg wdseg" role="group" aria-label="Гардероб" id="wdSeg">
+      <button type="button" data-tab="mine" aria-pressed="true">Мои вещи</button>
+      <button type="button" data-tab="shop" aria-pressed="false">Магазин</button>
+    </div>
+    <div class="wd-scroll" id="wdScroll">
+      <div class="wdstage">
+        <div class="wdside" id="wdLeft" role="group" aria-label="Экипировка"></div>
+        <div class="wdhero"><div id="mHero" aria-hidden="true"></div><span class="wdpreview" id="wdPreview" hidden>Примерка</span></div>
+        <div class="wdside" id="wdRight" role="group" aria-label="Экипировка"></div>
       </div>
-    </div>
-    <div id="shopPane" class="mscroll shopscroll" hidden>
-    <div class="ptsinfo"><b>Как получить ⭐</b>
-      <ul><li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li><li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li><li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в батле</span></li><li><i>🎁</i><span>Футболка Fedoskin team — за подписку на уведомления</span></li></ul>
-      <small>Звёзды нельзя купить за деньги. Бонусы указаны на карточках вещей.</small></div>
-    <div class="shopgrid" id="shopGrid"></div>
-    <div id="cityShop" hidden>
-      <h3 class="mh">Только в городе</h3>
-      <p class="mp">Вещи из города дают за победы над бандами, задания и находки в тайниках.</p>
-      <div class="shopgrid" id="cityGrid"></div>
-    </div>
+      <div class="wdslots" id="mSlots" role="group" aria-label="Аксессуары и защита"></div>
+      <div class="wdsection">
+        <h3 id="mItemTitle" tabindex="-1">Все вещи</h3>
+        <button type="button" class="btn btn-ghost" id="mAll" hidden>Все вещи</button>
+      </div>
+      <div class="wdrail" id="wdItems" role="group" aria-labelledby="mItemTitle"></div>
+      <div class="wdempty" id="mEmpty" hidden>
+        <p id="wdEmptyText">В этом слоте пока пусто</p>
+        <button type="button" class="btn btn-ghost" id="mToShop">В магазин</button>
+      </div>
+      <div class="wddetail" id="wdDetail" hidden></div>
+      <details class="wdfold" id="wdBonus"><summary>Бонусы от надетых вещей</summary><div class="wdboost" id="mBoost"></div></details>
+      <details class="wdfold wdlooks" id="wdLooks">
+        <summary>Образ</summary>
+        <p id="mLv"></p>
+        <div class="lookgrid" id="mLooks"></div>
+      </details>
+      <details class="wdfold" id="wdPoints" hidden><summary>Как получить ⭐</summary>
+        <div class="ptsinfo"><ul>
+          <li><i>+10</i><span>Победа в батле</span></li><li><i>+20</i><span>Каждый час тренировок по урокам</span></li>
+          <li><i>+10</i><span>Новый урок, посмотренный в первый час после выхода</span></li>
+          <li><i>+5</i><span>Золотой редкий приём в авто-батле</span></li><li><i>+10</i><span>Красный мифический приём в батле</span></li>
+        </ul><small>Звёзды нельзя купить за деньги. Бонусы указаны на карточках вещей.</small></div>
+      </details>
     </div>
   </div>
 </div>
@@ -1830,15 +1853,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=6"></script>
+<script src="i18n.js?v=7"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="battle-study.js?v=1"></script>
-<script src="hero.js?v=22"></script>
-<script src="rhythm.js?v=31"></script>
+<script src="hero.js?v=23"></script>
+<script src="rhythm.js?v=32"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
 <script src="city-gfx.js?v=8"></script>
@@ -4196,7 +4219,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try { const lg = await loadImg('logo.png'); const lw = 380, lh = lw * lg.naturalHeight / lg.naturalWidth; g.drawImage(lg, (W - lw) / 2, 160, lw, lh); } catch (_) {}
     // the hero of the person's level (owner 10.11.2026)
     const stv = statsView();
-    try { const hw = 300, hh = hw * 240 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c', acc: myLook()}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
+    try { const hw = 300, hh = hw * 254 / 200; const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HERO.svg(stv.level, {uid: 'c', acc: myLook()}))); g.drawImage(im, (W - hw) / 2, 460, hw, hh); } catch (_) {}
     // nick + alpha badge
     const nick = (prof.nick || T('Брейкер')).toUpperCase();
     g.font = fitFont(nick, 76, W - 160, DISP); g.fillStyle = '#F2EFE8'; g.textAlign = 'center'; g.fillText(nick, W / 2, 890);
@@ -5382,19 +5405,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
   const eqWith = (eq, k) => eq.filter(x => x !== k && slotOf(x) !== slotOf(k)).concat(k);   // put on k, take off what was in its slot
-  function cityGang(id){ try { const ds = (window.CITY_DATA || {}).districts || {}; for (const d in ds) { const g = (ds[d].gangs || []).find(x => x.id === id); if (g) return T(g.name); } } catch (_) {} const c3 = { stencil: 'Трафареты', turn: 'Турникеты', chrome: 'Хромированные', funk: 'Фанк-бригада', roots: 'Корни', wave: 'Волна', rebar: 'Арматура', volt: 'Высоковольтные', forge: 'Литейка' }[id]; return c3 ? T(c3) : id; }
-  function citySrc(g){
-    const s = g.src || '';
-    if (s.startsWith('gang:')) {
-      const gang = s.slice(5), name = cityGang(gang);
-      const items = Object.values(HERO.GEAR).filter(item => item.src === s);
-      return T(items[0].name === g.name ? 'Первая победа над бандой «{x}» в 3D-городе' : 'Третья победа над бандой «{x}» в 3D-городе', { x: name });
-    }
-    if (s === 'mc') return T('Награда MC Рупора за сайфер в городе');
-    if (s === 'dj') return T('Награда диджея Винта в городе');
-    if (s === 'walls') return T('За весь двор в твоих граффити');
-    return T('Только в городе');
-  }
   function wearCity(k, on){ return shopWear(on ? eqWith(myEq, k) : myEq.filter(x => x !== k)); }
   function setMyEq(eq){ myEq = (Array.isArray(eq) ? eq : []).filter(k => !notItem(k)); try { localStorage.setItem('fedoskin-eq', JSON.stringify(myEq)); } catch (_) {} heroDrawn = ''; if (heroShown()) renderStats(); }
   // The city can equip a prize while this page is in the browser's back/forward cache.
@@ -5745,12 +5755,32 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (w.eq.includes('girl') !== (prof.g === 'f') || (slv !== (lookLv() ? 'lv' + lookLv() : '') && !BT.lvTried)) { BT.lvTried = 1; lookSync(); } } // the server still has the old look (an old server drops 'lv' ⇒ tried once)
     if (!$('#shopSheet').hidden) wdPaint();
   }
-  // one item card (shop and «Мои вещи» share it)
   const WD_RARITY = ['Обычная', 'Редкая', 'Эпическая', 'Легендарная', 'Мифическая'];
-  const WD_SLOTS = { head: 'Голова', top: 'Верх', pants: 'Штаны', kicks: 'Кроссы', hands: 'Руки', knees: 'Колени', laces: 'Шнурки', ears: 'Уши', neck: 'Шея', floor: 'Пол', bg: 'Фон', item: 'Реквизит', fx: 'Эффект' };
+  const WD_SLOTS = {
+    head: ['Голова', '🧢', '64 11 72 67'], neck: ['Цепочки', '⛓', '74 82 52 60'],
+    wrists: ['Напульсники', '◉', '44 130 30 33'], top: ['Верх', '🧥', '50 80 100 83'],
+    elbows: ['Налокотники', '◐', '47 107 31 37'], kicks: ['Кроссы', '👟', '39 191 122 61'],
+    pants: ['Штаны', '👖', '63 146 75 74'], knees: ['Наколенники', '🦵', '65 164 70 38'],
+    laces: ['Шнурки', '⌁', '103 196 54 43'], hands: ['Руки', '✋', '46 144 27 25'],
+    ears: ['Уши', '🎧', '69 56 65 61'], floor: ['Пол', '▱', '23 211 154 43'],
+    bg: ['Фон', '▧', '0 0 200 254'], item: ['Реквизит', '▣', '128 191 70 62'],
+    fx: ['Эффект', '✦', '0 0 200 254'],
+  };
+  const WD_LEFT = ['head', 'neck', 'wrists'];
+  const WD_RIGHT = ['top', 'elbows', 'kicks'];
+  const WD_MORE = ['pants', 'knees', 'laces', 'hands', 'ears', 'floor', 'bg', 'item', 'fx'];
+  const WD_LACING = { bars: 'Прямая шнуровка', cross: 'Шнуровка крестом', zigzag: 'Шнуровка зигзагом' };
   const wdPercent = bp => nfmt(bp / 100);
+
   function wdEffects(b){
-    return b ? [b.win && T('+{n} мс к попаданию', { n: b.win }), b.cor && T('+{n} пкс к ширине траектории', { n: b.cor }), b.hold && T('фриз держать легче'), b.save && T('1 промах прощается')].filter(Boolean) : [];
+    return b ? [
+      b.win && T('+{n} мс к попаданию', { n: b.win }),
+      b.cor && T('+{n} пкс к ширине траектории', { n: b.cor }),
+      b.hold && T('фриз держать легче'),
+      b.save && T('1 промах прощается'),
+      b.spin && T('+{n} пкс к обводке хедспина', { n: b.spin }),
+      b.elbow && T('Baby Freeze и Chair Freeze в городе · зона удержания +{n}', { n: b.elbow }),
+    ].filter(Boolean) : [];
   }
   function wdChanceText(chance){
     return [
@@ -5759,138 +5789,210 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ];
   }
   function wdText(parent, tag, value, className){
-    const el = document.createElement(tag); el.textContent = value;
+    const el = document.createElement(tag);
+    el.textContent = value;
     if (className) el.className = className;
-    parent.appendChild(el); return el;
+    parent.appendChild(el);
+    return el;
   }
-  function itemCard(it, pre, citySave){
-    const w = BT.wallet || { pts: 0, owned: [] }, lvl = statsView().level;
-      const city = !!it.city, worn = myEq.includes(it.id), own = city ? cityOwned().includes(it.id.slice(2)) : (worn || (w.owned || []).includes(it.id));
-      const d = document.createElement('div'); d.className = 'shopit' + (worn ? ' on' : '') + (city ? ' cityit' + (own ? '' : ' lock') : '');
-      d.dataset.rarity = it.rar;
-      const keep = myEq.filter(k => k !== it.id && slotOf(k) && slotOf(k) !== it.slot);
-      d.innerHTML = HERO.svg(lvl, { uid: (pre || 'sh') + it.id, acc: withLook(keep.concat(it.id)) });
-      wdText(d, 'b', T(it.name));
-      const meta = wdText(d, 'div', '', 'wdmeta');
-      wdText(meta, 'span', '◆ ' + T(WD_RARITY[it.rar]), 'wdrare');
-      wdText(meta, 'span', T(WD_SLOTS[it.slot]));
-      if (city && it.reward) {
-        const save = citySave || city3dSave();
-        for (const [key, need, hint] of it.reward) {
-          const crew = key.split(':')[1];
-          const label = T(hint, { n: need, x: crew ? cityGang(crew) : '' });
-          const progress = own ? '' : ' · ' + Math.min(need, HERO.cityRewardValue(save, key)) + '/' + need;
-          wdText(d, 'small', label + progress, 'citycap');
-        }
-      } else if (city) wdText(d, 'small', '🏙️ ' + citySrc(it), 'citycap');
-      else if (!it.sub) wdText(d, 'small', '⭐ ' + nfmt(it.price), 'citycap');
-      if (it.winDays && !own) {
-        wdText(d, 'small', T('Дни с победой в онлайн-батле · {a}/{b}', {
-          a: Math.min(it.winDays, w.winDays || 0), b: it.winDays,
-        }), 'citycap');
-      }
-      const effects = wdEffects(it.bt);
-      wdText(d, 'small', effects.length ? effects.join(' · ') : T('Для образа'), 'citybt');
-      const chance = HERO.gearChances([it.id]);
-      if (chance.myth) wdChanceText(chance).forEach(line => wdText(d, 'small', line, 'wdmyth'));
-      const btn = document.createElement('button'); btn.type = 'button'; d.appendChild(btn);
-      if (worn) { btn.className = 'worn'; btn.textContent = T('Снять'); btn.onclick = () => shopWear(myEq.filter(k => k !== it.id)); }
-      else if (city && !own) { btn.className = 'citybtn'; btn.textContent = CITY_ON && window.CITY ? T('В город') + ' →' : T('Только в городе');
-        if (CITY_ON) btn.onclick = () => { $('#shopSheet').hidden = true; setTimeout(() => go('cityhub'), 250); }; else btn.disabled = true; }
-      else if (own) { btn.className = 'own'; btn.textContent = T('Надеть'); btn.onclick = () => shopWear(keep.concat(it.id)); }
-      else if (it.sub) { // not sold: for turning on notifications
-        d.classList.add('subit'); const c = document.createElement('small'); c.className = 'subcap'; c.textContent = '🔔 ' + T('За подписку на уведомления'); d.insertBefore(c, btn);
-        btn.className = 'subbtn'; btn.textContent = T('Включить уведомления');
-        btn.onclick = async () => {
-          const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:';
-          if (!ok) { if (isIOS && !isStandalone()) { $('#shopSheet').hidden = true; setTimeout(openInstall, 350); toast(T('Сначала добавь приложение на экран «Домой» — потом включи уведомления')); } else toast(T('Этот браузер не умеет показывать уведомления')); return; }
-          btn.disabled = true;
-          if (Notification.permission === 'granted' && localStorage.getItem('fedoskin-push') === 'on') await teeAfterPush(); // already on — just link it
-          else if (window.fedoskinPushOn) await window.fedoskinPushOn();
-          btn.disabled = false; wdPaint();
-        };
-      }
-      else if (it.catalog && !(w.catalog >= it.catalog)) { btn.disabled = true; btn.textContent = T('Скоро в продаже'); }
-      else if (it.winDays && (w.winDays || 0) < it.winDays) { btn.disabled = true; btn.textContent = T('Нужны победы в разные дни'); }
-      else if (w.pts >= it.price) { btn.textContent = T('Купить · ⭐ {n}', { n: it.price }); btn.onclick = () => shopBuy(it, btn); }
-      else { btn.disabled = true; btn.textContent = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts }); }
-      return d;
+
+  let wdTab = 'mine', wdSlot = '', wdChosen = '', wdReturn = null, wdBusy = false;
+  function wdOwned(){
+    const shop = new Set([...(BT.wallet?.owned || []), ...myEq.filter(k => !isCityK(k))]);
+    return HERO.SHOP.filter(item => shop.has(item.id))
+      .concat(cityOwned().map(id => HERO.itemOf('c:' + id)).filter(Boolean));
   }
-  function shopPaint(){
-    const w = BT.wallet || { pts: 0, owned: [] }, box = $('#shopGrid');
-    $('#shopPts').textContent = nfmt(w.pts);
-    box.innerHTML = '';
-    HERO.SHOP.slice().sort((a, b) => a.rar - b.rar || a.price - b.price).forEach(it => box.appendChild(itemCard(it)));
-    // gear only the hidden flat 2D city gives (MC, DJ, walls — not in the 3D city) is listed only for those who already have it
-    const own2d = cityOwned(), G = HERO.GEAR || {}, ids = Object.keys(G).filter(id => G[id].stash || !['mc', 'dj', 'walls'].includes(G[id].src) || own2d.includes(id)), cg = $('#cityGrid'); cg.innerHTML = '';
-    $('#cityShop').hidden = !ids.length;
-    const citySave = city3dSave();
-    ids.sort((a, b) => (G[a].rar - G[b].rar)).forEach(id => cg.appendChild(itemCard(HERO.itemOf('c:' + id), 'cg', citySave)));
+  function wdSetSlot(slot){
+    wdSlot = wdSlot === slot ? '' : slot;
+    wdChosen = '';
+    $('#wdItems').scrollLeft = 0;
+    wdPaint();
   }
-  // ===== wardrobe = «Мои вещи» + «Магазин» in one sheet (owner 11.11.2026 «то есть инвентаря не предусмотрено?» → «делай») =====
-  let wdTab = 'mine', wdSlot = '';
-  function minePaint(){
-    const v = statsView(), cur = lookLv() || v.level, w = BT.wallet;
-    $('#mHero').innerHTML = HERO.svg(v.level, { uid: 'mh', acc: myLook() });
-    $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
-    const owned = HERO.SHOP.filter(it => (w ? (w.owned || []) : myEq).includes(it.id))
-      .concat(cityOwned().filter(id => HERO.GEAR && HERO.GEAR[id]).map(id => HERO.itemOf('c:' + id)));
-    const worn = new Map(myEq.map(HERO.itemOf).filter(Boolean).map(it => [it.slot, it]));
-    const slots = $('#mSlots'); slots.replaceChildren(); slots.setAttribute('aria-label', T('Сейчас на тебе'));
-    const activeSlots = new Set(['head', 'top', 'pants', 'kicks', ...worn.keys()]);
+  function wdSlotButton(slot, worn, base){
+    const [label, icon] = WD_SLOTS[slot], name = T(label), item = worn.get(slot);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'wdslot';
+    button.dataset.wdSlot = slot;
+    button.dataset.rarity = item?.rar || 0;
+    button.dataset.equipped = String(Boolean(item));
+    button.setAttribute('aria-pressed', String(slot === wdSlot));
+    button.title = [name, T(item?.name || base[slot] || 'Пусто')].join(' · ');
+    button.setAttribute('aria-label', button.title);
+    wdText(button, 'span', icon).setAttribute('aria-hidden', 'true');
+    wdText(button, 'small', name);
+    button.onclick = () => {
+      wdSetSlot(slot);
+      $('#shopSheet [data-wd-slot="' + slot + '"]').focus({ preventScroll: true });
+    };
+    return button;
+  }
+  function wdStage(selected, level, cur){
+    const fitting = selected && !myEq.includes(selected.id);
+    const eq = fitting ? eqWith(myEq, selected.id) : myEq;
+    $('#mHero').innerHTML = HERO.svg(level, { uid: 'mh', bg: false, acc: withLook(eq) });
+    $('#wdPreview').hidden = !fitting;
+    const worn = new Map(myEq.map(HERO.itemOf).filter(Boolean).map(item => [item.slot, item]));
     const base = HERO.baseSlots(cur);
-    for (const [slot, label] of Object.entries(WD_SLOTS)) {
-      if (!activeSlots.has(slot)) continue;
-      const item = worn.get(slot), button = document.createElement('button'); button.type = 'button'; button.className = 'wdslot';
-      button.dataset.rarity = item ? item.rar : 0; button.dataset.wdSlot = slot; button.setAttribute('aria-pressed', String(slot === wdSlot));
-      wdText(button, 'small', T(label)); wdText(button, 'strong', T(item ? item.name : base[slot] || 'Пусто'));
-      button.onclick = () => { wdSlot = wdSlot === slot ? '' : slot; minePaint(); $('#mSlots [data-wd-slot="' + slot + '"]').focus({ preventScroll: true }); };
-      slots.appendChild(button);
+    for (const [id, slots] of [['#wdLeft', WD_LEFT], ['#wdRight', WD_RIGHT], ['#mSlots', WD_MORE]]) {
+      const box = $(id), left = box.scrollLeft;
+      box.replaceChildren(...slots.map(slot => wdSlotButton(slot, worn, base)));
+      box.scrollLeft = left;
     }
-    const buffs = $('#mBoost'); buffs.replaceChildren();
-    wdText(buffs, 'b', T('Бонусы от надетых вещей'));
-    const effects = wdEffects(HERO.gearBoost(myEq)), chance = HERO.gearChances(myEq);
-    if (effects.length) wdText(buffs, 'small', effects.join(' · '));
-    if (chance.myth) wdChanceText(chance).forEach(line => wdText(buffs, 'small', line, 'wdmyth'));
-    if (!effects.length && !chance.myth) wdText(buffs, 'small', T('Пока без бонусов'));
-    const filtered = wdSlot ? owned.filter(it => it.slot === wdSlot) : owned;
-    $('#mItemTitle').textContent = T(wdSlot ? WD_SLOTS[wdSlot] : 'Мои вещи');
-    $('#mAll').hidden = !wdSlot;
-    const looks = $('#mLooks'); looks.innerHTML = '';
+  }
+  function wdTile(it, uid, owned){
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'wdtile';
+    button.dataset.item = it.id;
+    button.dataset.rarity = it.rar;
+    button.setAttribute('aria-pressed', String(it.id === wdChosen));
+    button.innerHTML = HERO.svg(3, { uid, bg: it.slot === 'bg' || it.slot === 'fx', acc: [it.id] });
+    const svg = button.firstElementChild;
+    svg.setAttribute('viewBox', WD_SLOTS[it.slot][2]);
+    svg.setAttribute('aria-hidden', 'true');
+    wdText(button, 'b', T(it.name));
+    if (myEq.includes(it.id)) wdText(button, 'small', T('Сейчас на тебе'));
+    else if (owned) wdText(button, 'small', T(WD_RARITY[it.rar]));
+    else wdText(button, 'small', '⭐ ' + nfmt(it.price));
+    button.onclick = () => {
+      wdChosen = it.id;
+      wdPaint();
+      [...$('#wdItems').children].find(tile => tile.dataset.item === it.id)?.focus({ preventScroll: true });
+    };
+    return button;
+  }
+  function wdGoal(card, text, value, max){
+    const goal = wdText(card, 'div', '', 'wdgoal'), caption = wdText(goal, 'span', '');
+    wdText(caption, 'span', text);
+    wdText(caption, 'b', nfmt(value) + '/' + nfmt(max));
+    const bar = wdText(goal, 'progress', '');
+    bar.max = max;
+    bar.value = value;
+    bar.setAttribute('aria-label', text);
+  }
+  function wdDetail(it, owned){
+    const card = $('#wdDetail'); card.replaceChildren(); card.hidden = !it;
+    if (!it) return;
+    card.dataset.rarity = it.rar;
+    const w = BT.wallet, worn = myEq.includes(it.id);
+    const source = it.city ? ' · ' + T('Найдено в городе') : it.sub ? '' : ' · ⭐ ' + nfmt(it.price);
+    wdText(card, 'span', '◆ ' + T(WD_RARITY[it.rar]) + source, 'wdmeta');
+    wdText(card, 'h4', T(it.name));
+    if (it.f?.laceStyle) wdText(card, 'span', T(WD_LACING[it.f.laceStyle]), 'wdmeta');
+    const effects = wdEffects(it.bt), panel = wdText(card, 'div', '', 'wdeffects');
+    for (const line of effects.length ? effects : [T('Для образа')]) wdText(panel, 'span', line);
+    const chance = HERO.gearChances([it.id]);
+    if (chance.myth) wdChanceText(chance).forEach(line => wdText(panel, 'span', line, 'wdmyth'));
+    const days = Math.min(it.winDays || 0, w?.winDays || 0);
+    if (!owned && it.winDays) wdGoal(card, T('Дни с победой в онлайн-батле'), days, it.winDays);
+    const button = wdText(card, 'button', '', 'btn btn-accent');
+    button.type = 'button';
+    let label, action;
+    if (worn) { label = T('Снять'); action = () => shopWear(myEq.filter(k => k !== it.id)); }
+    else if (owned) { label = T('Надеть'); action = () => shopWear(eqWith(myEq, it.id)); }
+    else if (!w) label = T('Магазин недоступен');
+    else if (it.catalog && !(w.catalog >= it.catalog)) label = T('Скоро в продаже');
+    else if (it.winDays && days < it.winDays) label = T('Нужны победы в разные дни');
+    else if (w.pts < it.price) label = T('⭐ {n} · не хватает {k}', { n: it.price, k: it.price - w.pts });
+    else { label = T('Купить · ⭐ {n}', { n: it.price }); action = () => shopBuy(it, button); }
+    button.textContent = label;
+    button.disabled = !action || wdBusy;
+    if (action) button.onclick = async () => {
+      if (wdBusy) return;
+      wdBusy = true;
+      button.disabled = true;
+      try { await action(); }
+      finally { wdBusy = false; wdPaint(); }
+    };
+  }
+  function wdLookPaint(level, cur){
+    const looks = $('#mLooks'); looks.replaceChildren();
+    $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
+    if (!$('#wdLooks').open) return;
     HERO.LEVELS.forEach((need, i) => {
-      const l = i + 1, open = l <= v.level, worn = l === cur;
+      const l = i + 1, open = l <= level, worn = l === cur;
       const d = document.createElement('button'); d.type = 'button';
       d.className = 'herolook wdlook' + (open ? '' : ' lock') + (worn ? ' cur' : '');
-      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)) }) + '<b></b><small></small>';
-      d.querySelector('b').textContent = T('Ур. {n}', { n: l }) + ' · ' + T(HERO.NAMES[i]);
-      d.querySelector('small').textContent = worn ? T('Надето') : open ? T('Надеть') : T('Через {t}', { t: hmFmt(need - stats.sec / 60) });
-      if (!open) d.disabled = true;
-      else if (!worn) d.addEventListener('click', () => setLook(l));
+      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)) });
+      wdText(d, 'b', T('Ур. {n}', { n: l }) + ' · ' + T(HERO.NAMES[i]));
+      wdText(d, 'small', worn ? T('Надето') : open ? T('Надеть') : T('Через {t}', { t: hmFmt(need - stats.sec / 60) }));
+      d.disabled = !open || worn;
+      if (!d.disabled) d.onclick = () => setLook(l);
       looks.appendChild(d);
     });
-    const box = $('#mItems'); box.innerHTML = '';
-    filtered.sort((a, b) => b.rar - a.rar).forEach(it => box.appendChild(itemCard(it, 'mi')));
-    $('#mEmpty').hidden = !!filtered.length;
-    $('#mToShop').hidden = !w;
   }
   function wdPaint(){
     if ($('#shopSheet').hidden) return;
-    const shop = !!BT.wallet; // no answer from the server yet ⇒ only the looks
-    if (!shop) wdTab = 'mine';
-    $('#wdSeg').hidden = !shop; $('#shopPtsBox').hidden = !shop; if (shop) $('#shopPts').textContent = nfmt(BT.wallet.pts || 0);
+    const level = statsView().level, cur = lookLv() || level, mine = wdTab === 'mine', w = BT.wallet;
+    const owned = wdOwned(), ownedIds = new Set(owned.map(item => item.id));
+    // Only owned city pieces leave the city's save. The shop contains priced goods with no city rewards.
+    const items = mine ? owned : HERO.SHOP.filter(item => item.price > 0 && !item.sub);
+    const matches = items.filter(it => !wdSlot || it.slot === wdSlot);
+    matches.sort(mine ? (a, b) => Number(myEq.includes(b.id)) - Number(myEq.includes(a.id)) || b.rar - a.rar :
+      (a, b) => a.rar - b.rar || a.price - b.price);
+    const selected = matches.find(it => it.id === wdChosen) || matches[0];
+    wdChosen = selected?.id || '';
+
+    $('#shopPtsBox').hidden = !w;
+    if (w) $('#shopPts').textContent = nfmt(w.pts || 0);
     $('#wdSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === wdTab)));
-    $('#minePane').hidden = wdTab !== 'mine'; $('#shopPane').hidden = wdTab !== 'shop';
-    // the hidden pane is emptied: the same drawings twice ⇒ the same SVG ids, and gradients would be taken from the hidden copy
-    if (wdTab === 'mine') { $('#shopGrid').innerHTML = ''; minePaint(); } else { $('#mItems').innerHTML = ''; $('#mLooks').innerHTML = ''; $('#mHero').innerHTML = ''; shopPaint(); }
+    $('#mItemTitle').textContent = T(wdSlot ? WD_SLOTS[wdSlot][0] : 'Все вещи');
+    $('#mAll').hidden = !wdSlot;
+    $('#mEmpty').hidden = !!selected;
+    $('#wdEmptyText').textContent = T(wdSlot ? 'В этом слоте пока пусто' : 'Вещи можно выиграть в городе или купить за звёзды.');
+    $('#mToShop').hidden = !mine;
+    $('#wdLooks').hidden = !mine;
+    $('#wdPoints').hidden = mine;
+    const rail = $('#wdItems'), left = rail.scrollLeft;
+    rail.replaceChildren(...matches.map((item, i) => wdTile(item, 'wi' + i, ownedIds.has(item.id))));
+    rail.scrollLeft = left;
+    wdStage(selected, level, cur);
+    wdDetail(selected, ownedIds.has(wdChosen));
+
+    const buffs = $('#mBoost'); buffs.replaceChildren();
+    const effects = wdEffects(HERO.gearBoost(myEq)), chance = HERO.gearChances(myEq);
+    effects.forEach(line => wdText(buffs, 'small', line));
+    if (chance.myth) wdChanceText(chance).forEach(line => wdText(buffs, 'small', line, 'wdmyth'));
+    if (!effects.length && !chance.myth) wdText(buffs, 'small', T('Пока без бонусов'));
+    if (mine) wdLookPaint(level, cur);
+  }
+  function wdChangeTab(tab){
+    wdTab = tab;
+    wdChosen = '';
+    $('#wdItems').scrollLeft = 0;
+    wdPaint();
   }
   function openWd(tab){
-    wdTab = tab || wdTab; wdSlot = ''; $('#shopSheet').hidden = false; wdPaint();
-    const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0;
-    if (BT.wallet) btInbox();
+    wdReturn = document.activeElement;
+    wdSlot = '';
+    $('#shopSheet').hidden = false;
+    wdChangeTab(tab || 'mine');
+    $('#wdScroll').scrollTop = 0;
+    $('#wdClose').focus({ preventScroll: true });
+    if (BT.wallet) btInbox(false);
   }
-  $('#wdSeg').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (!b) return; wdTab = b.dataset.tab; wdPaint(); const sc = $(wdTab === 'mine' ? '#mScroll' : '#shopPane'); if (sc) sc.scrollTop = 0; });
-  $('#mToShop').addEventListener('click', () => { wdTab = 'shop'; wdPaint(); });
-  $('#mAll').addEventListener('click', () => { wdSlot = ''; minePaint(); });
+  function closeWd(){
+    $('#shopSheet').hidden = true;
+    wdReturn?.focus({ preventScroll: true });
+  }
+  $('#wdSeg').addEventListener('click', e => {
+    const button = e.target.closest('button[data-tab]');
+    if (button) wdChangeTab(button.dataset.tab);
+  });
+  $('#mToShop').addEventListener('click', () => wdChangeTab('shop'));
+  $('#mAll').addEventListener('click', () => {
+    wdSetSlot(wdSlot);
+    $('#mItemTitle').focus({ preventScroll: true });
+  });
+  $('#wdLooks').addEventListener('toggle', () => {
+    const level = statsView().level;
+    if (!$('#shopSheet').hidden && wdTab === 'mine') wdLookPaint(level, lookLv() || level);
+  });
+  $('#wdClose').addEventListener('click', closeWd);
+  $('#shopSheet').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); closeWd(); }
+  });
   async function shopBuy(it, btn){
     btn.disabled = true;
     try {
@@ -5915,7 +6017,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     wdPaint(); if (lbData) renderLeaders();
   }
   $('#shopRow').addEventListener('click', () => openWd('shop'));
-  $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') $('#shopSheet').hidden = true; });
+  $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') closeWd(); });
   const btPost = (path, body, signal) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})), signal });
   function btPaintScore(sc){
     if (!sc || (!sc.w && !sc.l)) return;

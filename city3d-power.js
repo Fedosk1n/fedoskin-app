@@ -12,7 +12,7 @@
 // The line is not invented: it is MEASURED from the same motion capture (the angle of the legs round the hips, frame by frame), and
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
-import { mocapPerson, getClip } from './city3d-mocap.js?v=22';
+import { mocapPerson, getClip } from './city3d-mocap.js?v=23';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 // the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
@@ -196,7 +196,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
     p.C = new THREE.Vector3(_a.x, T.h + (J.lift || 0), _a.z);
     p.ry = J.root.rotation.y; p.dx = J.dx; p.dz = J.dz; p.rx = J.root.position.x; p.rz = J.root.position.z;
     p.phi0 = T.ang0 - p.ry;                                     // the legs' angle in the world (the hero may face any way)
-    p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, T.cfg.strict ? 4 : 9)) * scl();
+    p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, T.cfg.strict ? 4 : 9) + clamp(p.opt.spinTol || 0, 0, 7)) * scl();
     p.limit = T.len / SLOW + .7 + (p.opt.timeAdd || 0);
     p.wait = p.opt.wait ?? (p.opt.first ? WAIT_NEW : WAIT);
     p.camZ = W.camT && W.camT.zoom;

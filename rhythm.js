@@ -682,7 +682,7 @@ ${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px so
   // what the worn street gear does in this round — said on the setup screen so the player sees why the city matters
   function gearNote() {
     const b = window.HERO && HERO.gearBoost ? HERO.gearBoost(G.eq) : null, T = D.T; if (!b || !b.any) return '';
-    const l = []; if (b.win) l.push(T('+{n} мс к попаданию', { n: b.win })); if (b.cor) l.push(T('шире траектория')); if (b.hold) l.push(T('фриз держать легче')); if (b.save) l.push(T('1 промах прощается'));
+    const l = []; if (b.win) l.push(T('+{n} мс к попаданию', { n: b.win })); if (b.cor) l.push(T('шире траектория')); if (b.spin) l.push(T('+{n} пкс к обводке хедспина', { n: b.spin })); if (b.hold) l.push(T('фриз держать легче')); if (b.save) l.push(T('1 промах прощается'));
     return '<p class="rbgear">👕 ' + T('Бонусы от надетых вещей') + ' · ' + l.join(' · ') + '</p>';
   }
   function setup() {
@@ -1223,7 +1223,11 @@ ${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px so
     airflare: u => { if (u < .6) { const v = u / .6; return [-1 + 2 * v, .1 - Math.abs(Math.sin(3 * Math.PI * v)) * .75]; } const a = (u - .6) / .4 * Math.PI; return [Math.cos(a), .1 + Math.sin(a) * .75]; } }; // three jumps hand to hand, and the way back under
   const drawCan = () => box && box.querySelector('#rbDraw');
   function drawInit() {
-    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0, tol: clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30) + (G.city && G.city.cor && G.picks[2] === 'headspin' ? G.city.cor : 0) + (G.gb ? G.gb.cor : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
+    const headspin = G.picks[2] === 'headspin';
+    const tolerance = clamp(30 - (RB2.mult(G.picks[2]) - 1) * 8, 17, 30);
+    const gear = window.HERO?.gearTraceBonus?.(G.gb, headspin) ?? (G.gb?.cor || 0);
+    G.dr = { n: G.dn, pts: [], idx: 0, on: false, last: null, good: 0, total: 0,
+      tol: tolerance + gear + (headspin ? G.city?.cor || 0 : 0), lab: 0, doneAt: 0, x0: 0, y0: 0, W: 0, H: 0, d: 1 };
     drawCan().hidden = false; drawPlace();
   }
   function drawOff() {

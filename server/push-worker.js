@@ -41,7 +41,7 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 // Increment for each release that requires redeploying this Worker.
-const WORKER_VERSION = 1;
+const WORKER_VERSION = 2;
 
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
@@ -560,14 +560,17 @@ const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', aci
   rebarCap: 'head', voltKicks: 'kicks', forgeChain: 'neck',
   matPants: 'pants', beatGloves: 'hands', cypherCap: 'head', cleanLaces: 'laces', paintHoodie: 'top',
   metroBeanie: 'head', mallSneakers: 'kicks', chromePendant: 'neck', parkVisor: 'head', jamJacket: 'top',
-  pendulumPhones: 'ears', foundryGloves: 'hands', cachePants: 'pants', ringKnees: 'knees', forgeCrown: 'head' };
+  pendulumPhones: 'ears', foundryGloves: 'hands', cachePants: 'pants', ringKnees: 'knees', forgeCrown: 'head',
+  matWrist: 'wrists', parkElbows: 'elbows', tileKnees: 'knees', fourWallsChain: 'neck',
+  poolBucket: 'head', acidRetroBandana: 'head', parkSpinCap: 'head', terracottaWrist: 'wrists',
+  foamElbows: 'elbows', spinCapSlate: 'head', canvasCap: 'head', wideLaces: 'laces', courtKicks: 'kicks' };
 // must match HERO.SHOP in hero.js: id → [slot, price]
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 2400], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0],
   streetLaces: ['laces', 60], canvasTeal: ['kicks', 100], asphaltPants: ['pants', 110], stripedBeanie: ['head', 130],
   amberGloves: ['hands', 145], sandTee: ['top', 145], foamKnees: ['knees', 165], rallyJacket: ['top', 220],
   pulsePhones: ['ears', 235], silverPendant: ['neck', 245], contrastJoggers: ['pants', 265], nightRunner: ['kicks', 325],
   velvetBomber: ['top', 700], electricBucket: ['head', 800], prismPhones: ['ears', 3200] }; // tee = not sold: given for push notifications (owner 11.11.2026)
-const GEAR_CATALOG = 3;
+const GEAR_CATALOG = 4;
 const MYTHIC_WIN_DAYS = { red: 21, prismPhones: 28 };
 // Rows without a recorded payment were bought at the original prices.
 const ORIGINAL_PRICE = { red: 250, prismPhones: 560, velvetBomber: 395, electricBucket: 420 };

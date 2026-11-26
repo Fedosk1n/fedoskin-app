@@ -1792,3 +1792,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   accuracy/turn feedback and instant retries, or the existing conditioning session. The orange contest floor runs three rounds against Whirlwind.
   Both sides use the same selected move per round. Contest selection uses the shared unlock rules, and a missed or unstarted attempt scores zero.
   Contest best and wins are saved in `S.powerContest`.
+
+## 26.11.2026 — Wardrobe and city equipment
+
+- My Items shows owned gear with fitting previews, individual equipment slots and bonuses. The storefront shows purchasable items and keeps the existing price and online win-day checks. Thirteen city rewards unlock through activities and show their cards when found.
+- The illustrated hero has longer legs and knee pads that bend with the knee in rhythm battles. Outward-facing sneakers and the three lace patterns share the same independent footwear and lace slots in the wardrobe and 3D city. The pad for headspins and elbow protection widen the matching manual control zones.
+- Admin 57 checks Worker 2. The Worker registers the 13 city items for sharing equipment with online battle opponents and reports catalog 4.
