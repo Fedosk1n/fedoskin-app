@@ -30,15 +30,27 @@ export async function buildPark(TK) {
     for (let i = 0; i < 2600; i++) { const px = r() * S, py = r() * S, l = 3 + r() * 5; x.strokeStyle = `hsla(${105 + r() * 30},${30 + r() * 20}%,${16 + r() * 16}%,.7)`; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - .5) * 3, py - l); x.stroke(); }
     grain(c, 14, 5);
     flat(new THREE.PlaneGeometry(80, 60), new THREE.MeshStandardMaterial({ map: tex(c, { repeat: [16, 12] }), roughness: .97 }), 0, 0, 17.8); }
-  // gravel alleys: the promenade along the river, the main alley from the south, a cross alley, a ring around the lawns
-  { const S = 512, c = can(S, S), x = c.getContext('2d'), r = rng(8);
-    x.fillStyle = '#6f675b'; x.fillRect(0, 0, S, S);
-    for (let i = 0; i < 5200; i++) { x.fillStyle = `hsla(${28 + r() * 16},${8 + r() * 10}%,${30 + r() * 30}%,.8)`; x.fillRect(r() * S, r() * S, 1 + r() * 2.4, 1 + r() * 2.4); }
-    blotch(x, S, S, 30, 'rgba(0,0,0,A)', 20, 120, .16, r); grain(c, 18, 2);
-    const path = (w, d, px, pz) => { const t = tex(c, { repeat: [w / 3.2, d / 3.2] }); flat(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: t, roughness: .95 }), px, .012, pz);
-      // a low stone kerb on both long sides
-      const kerb = M('#4d5158', .9); if (w > d) [-1, 1].forEach(k => { mesh(new THREE.BoxGeometry(w, .07, .12), kerb, px, .035, pz + k * d / 2).castShadow = false; }); else [-1, 1].forEach(k => { mesh(new THREE.BoxGeometry(.12, .07, d), kerb, px + k * w / 2, .035, pz).castShadow = false; }); };
-    path(30, 2.6, 0, -10.6); path(2.8, 25.6, 0, 2.2); path(27.6, 2.2, 0, 12.3); path(2.2, 21.4, -11.2, 1.1); path(2.2, 21.4, 11.3, 1.1); path(8.4, 1.8, -5.6, 1.4); path(8.6, 1.8, 5.7, -2.4); }
+  // Blender exported a single surface across all crossings, plus one batched border.
+  const paths = TK.pathModel, gravel = paths?.getObjectByName('park gravel');
+  if (gravel?.material) {
+    const map = await new THREE.TextureLoader().loadAsync(new URL('./img/park-gravel.webp?v=1', import.meta.url).href).catch(() => null);
+    if (map) {
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.wrapS = map.wrapT = THREE.RepeatWrapping;
+      map.anisotropy = TK.maxAniso;
+      gravel.material.map = map;
+    } else gravel.material.color.set('#817567');
+    scene.add(paths);
+  } else {
+    // Flat fallback sections meet edge-to-edge, without overlaps at the junctions.
+    const material = M('#817567', .94);
+    for (const [x0, x1, z0, z1] of [
+      [-15, 15, -11.9, -9.3], [-1.38, 1.38, -9.3, 14.66],
+      [-12.3, -10.1, -9.3, 11.2], [10.2, 12.4, -9.3, 11.2],
+      [-12.3, -1.38, 11.2, 13.45], [1.38, 12.4, 11.2, 13.45],
+      [-13.14, -12.3, .45, 2.35], [-10.1, -1.38, .45, 2.35], [1.38, 10.2, -3.35, -1.45],
+    ]) flat(new THREE.PlaneGeometry(x1 - x0, z1 - z0), material, (x0 + x1) / 2, .015, (z0 + z1) / 2);
+  }
 
   // ---------- the embankment and the river (north) ----------
   const QZ = -12;   // the parapet line

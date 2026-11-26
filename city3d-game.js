@@ -11,6 +11,7 @@ import { initPower } from './city3d-power.js?v=13';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
+import { performDJ } from './city3d-dj.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -563,13 +564,39 @@ export function initGame(ctx) {
   const Y = D !== 'yard' ? null : (() => {
   // DJ booth by the cypher: a table, two decks with spinning records, a mixer, a laptop glow and a DJ
   const djAt = freeNear(C0.x + 4.2, C0.z + 2.6, 1.3), dj = new THREE.Group(); dj.position.set(djAt.x, 0, djAt.z); dj.rotation.y = Math.atan2(C0.x - djAt.x, C0.z - djAt.z); scene.add(dj);
-  mk(dj, new THREE.BoxGeometry(1.7, .9, .7), M('#1b1d22', .6), 0, .45, 0); mk(dj, new THREE.BoxGeometry(1.75, .05, .75), M('#2c2f36', .4, .3), 0, .92, 0);
-  const recs = [-.48, .48].map(x => { mk(dj, new THREE.CylinderGeometry(.27, .27, .04, 24), M('#3a3d44', .5, .4), x, .96, 0); const r = mk(dj, new THREE.CylinderGeometry(.24, .24, .02, 24), M('#0c0c0e', .3), x, .99, 0);
-    mk(r, new THREE.CylinderGeometry(.07, .07, .021, 16), M('#E2611A', .5, 0, '#E2611A'), 0, .001, 0); return r; });
-  mk(dj, new THREE.BoxGeometry(.3, .05, .4), M('#25282e', .5), 0, .97, 0);
-  const strip = mk(dj, new THREE.BoxGeometry(1.6, .04, .02), M('#E2611A', .4, 0, '#E2611A'), 0, .2, .36);
-  const djP = mocapPerson(HERO.topDown(6, ['c:djGloves'].filter(k => HERO.itemOf && HERO.itemOf(k))), { body: bodyOf(5, { type: 'heavy', style: 'dreads', beard: true }) }); djP.root.position.set(0, 0, -.75); dj.add(djP.root); djP.play('Breakdance_Ready', { speed: .8 });
-  ctx.circ && ctx.circ(djAt.x, djAt.z, .95); const djLab = label('ДИДЖЕЙ', '#FFB547', djAt.x, djAt.z, 2.3);
+  const booth = ctx.djBooth;
+  let recs = ['record-left', 'record-right'].map(name => booth?.getObjectByName(name));
+  let strip = booth?.getObjectByName('front meter');
+  let faders = [];
+  if (strip?.material && recs.every(Boolean)) {
+    dj.add(booth);
+    faders = ['fader-left', 'fader-right'].map(name => booth.getObjectByName(name));
+    booth.children.forEach(part => {
+      if (part.name === 'matte' || part.name === 'brushed metal') part.castShadow = true;
+    });
+    // Three footprint circles follow the angle of the flight case and leave the front approach open.
+    [-.74, 0, .74].forEach(x => ctx.circ(djAt.x + x * Math.cos(dj.rotation.y), djAt.z - x * Math.sin(dj.rotation.y), .49));
+  } else {
+    mk(dj, new THREE.BoxGeometry(1.7, .9, .7), M('#1b1d22', .6), 0, .45, 0);
+    mk(dj, new THREE.BoxGeometry(1.75, .05, .75), M('#2c2f36', .4, .3), 0, .92, 0);
+    recs = [-.48, .48].map(x => {
+      mk(dj, new THREE.CylinderGeometry(.27, .27, .04, 24), M('#3a3d44', .5, .4), x, .96, 0);
+      const r = mk(dj, new THREE.CylinderGeometry(.24, .24, .02, 24), M('#0c0c0e', .3), x, .99, 0);
+      mk(r, new THREE.CylinderGeometry(.07, .07, .021, 16), M('#E2611A', .5, 0, '#E2611A'), 0, .001, 0);
+      return r;
+    });
+    mk(dj, new THREE.BoxGeometry(.3, .05, .4), M('#25282e', .5), 0, .97, 0);
+    strip = mk(dj, new THREE.BoxGeometry(1.6, .04, .02), M('#E2611A', .4, 0, '#E2611A'), 0, .2, .36);
+    ctx.circ(djAt.x, djAt.z, .95);
+  }
+  const djLook = HERO.topDown(6, ['c:djGloves']);
+  djLook.phones = true;
+  Object.assign(djLook.col, { phones: '#d46732', top: '#292f43', sleeve: '#363b52', cuff: '#c7733e' });
+  const djP = mocapPerson(djLook, { body: bodyOf(5, { type: 'heavy', style: 'dreads', beard: true }) });
+  dj.add(djP.root);
+  const djMix = performDJ(djP, dj, recs, strip, faders);
+  const djSign = dj.localToWorld(new THREE.Vector3(0, 2.83, -.49));
+  const djLab = label('ДИДЖЕЙ', '#FFB547', djSign.x, djSign.z, djSign.y);
   const djFront = { x: djAt.x + Math.sin(dj.rotation.y) * 1.1, z: djAt.z + Math.cos(dj.rotation.y) * 1.1 };
   // practice mat: a padded mat with taped lines and a pair of cones
   const matAt = freeNear(9.6, 3.6, 1.6), mat = new THREE.Group(); mat.position.set(matAt.x, 0, matAt.z); scene.add(mat);
@@ -628,8 +655,8 @@ export function initGame(ctx) {
     { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
     { id: 'atelier', x: atFront.x, z: atFront.z, r: 1.6 },
   ];
-  return { recs, strip, djP, djLab, matAt, matLab, arena, arenaLabel, chain, atP, atLab, atSign, atFront, PLACES }; })();
-  const { recs = [], strip = null, djP = null, djLab = null, matAt = null, matLab = null, chain = null, atP = null, atLab = null, atSign = null, atFront = null } = Y || {};
+  return { djMix, djLab, matAt, matLab, arena, arenaLabel, chain, atP, atLab, atSign, atFront, PLACES }; })();
+  const { djMix = null, djLab = null, matAt = null, matLab = null, chain = null, atP = null, atLab = null, atSign = null, atFront = null } = Y || {};
   // the Centre's places are built by city3d-center.js (W.center); here is only what they do
   const CN = W.center || null;
   const PLACES = Y ? Y.PLACES : !CN ? [] : [
@@ -696,7 +723,7 @@ export function initGame(ctx) {
     if (pl.id === 'dj') {
       S.en -= energyCost(BAL.dj); S.djDay = today();
       const rewards = collectGear('dj');
-      save(); paintHud(); bumpGoal('dj'); sfx('win'); djP.play('Bboy_Uprock', { fade: .3 });
+      save(); paintHud(); bumpGoal('dj'); sfx('win'); djMix.cue();
       toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards); paintAct();
     }
     if (pl.id === 'mat') openPractice();
@@ -1439,7 +1466,7 @@ export function initGame(ctx) {
   function update(dt) {
     if (P) paintTick(dt);
     if (A) actTick(dt);
-    if (Y) { recs.forEach(r => r.rotation.y += dt * 3.5); strip.material.emissiveIntensity = 1 + Math.sin(performance.now() / 160) * .6; djP.tick(dt);
+    if (Y) { djMix.tick(dt);
       chain.visible = rankOf(S.rep) < BAL.gateRank; Y.arenaLabel.visible = matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
       atP.tick(dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
