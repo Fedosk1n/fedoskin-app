@@ -230,6 +230,7 @@
 
   function svg(level, opt){
     opt = opt || {};
+    const wardrobe = !!opt.wardrobe && !opt.rig;
     // an older look chosen in the wardrobe (owner 11.11.2026 «инвентарь»): 'lv<N>' in acc draws the outfit of level N (never higher)
     const LK = lookOf(level, opt.acc), L = LK.L;
     const id = 'h' + L + (opt.uid || '');
@@ -248,13 +249,21 @@
     const W = 200, H = 254;
     const legY = y => 146 + (y - 146) * 1.19;
     const stretchLeg = fn => { o.push('<g transform="translate(0 146) scale(1 1.19) translate(0 -146)">'); fn(); o.push('</g>'); };
-    const vb = opt.bust ? [50, 16, 100, 100] : [0, 0, W, H]; // bust = head and shoulders (small icons)
+    const closer = L >= 7 || has('box') ? [1, 7, 198, 245] : [19, 7, 162, 245];
+    const vb = opt.bust ? [50, 16, 100, 100] : wardrobe && opt.bg === false ? closer : [0, 0, W, H];
+    const shade = name => 'url(#' + id + name + ')';
+    const cloth = shade(wardrobe ? 'cloth' : 'sh');
     o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb.join(' ') + '"' + (opt.size ? ' width="' + opt.size + '" height="' + Math.round(opt.size * vb[3] / vb[2]) + '"' : '') + '>');
     o.push('<defs><radialGradient id="' + id + 'g" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="' + RING[L - 1] + '" stop-opacity=".55"/><stop offset="1" stop-color="' + RING[L - 1] + '" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + id + 'gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE9A0"/><stop offset=".45" stop-color="#E7B23C"/><stop offset="1" stop-color="#A8741A"/></linearGradient>' +
       '<linearGradient id="' + id + 'sh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".08"/></linearGradient>' +
       '<radialGradient id="' + id + 'fire" cx="50%" cy="100%" r="70%"><stop offset="0" stop-color="#FFE38A"/><stop offset=".45" stop-color="#FF8A1F"/><stop offset="1" stop-color="#E2361A" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + id + 'lens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A3A44"/><stop offset="1" stop-color="#08080A"/></linearGradient></defs>');
+    if (wardrobe) o.push('<defs>' +
+      '<linearGradient id="' + id + 'cloth" x1="0%" y1="8%" x2="96%" y2="82%"><stop stop-color="#fff5df" stop-opacity=".18"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#101019" stop-opacity=".28"/></linearGradient>' +
+      '<linearGradient id="' + id + 'edge" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#fff5e1" stop-opacity=".35"/><stop offset=".52" stop-color="#fff5e1" stop-opacity=".06"/><stop offset="1" stop-color="#110e19" stop-opacity=".34"/></linearGradient>' +
+      '<linearGradient id="' + id + 'skin" x1="10%" y1="10%" x2="88%" y2="89%"><stop stop-color="' + SKIN_L + '"/><stop offset=".53" stop-color="' + SKIN + '"/><stop offset="1" stop-color="' + SKIN_D + '"/></linearGradient>' +
+      '<radialGradient id="' + id + 'floor"><stop stop-color="#09080c" stop-opacity=".7"/><stop offset="1" stop-color="#09080c" stop-opacity="0"/></radialGradient></defs>');
 
     // ---- background ----
     if (rig) { /* no background, floor or props in the rig */ } else if (opt.bg !== false && has('wall')) {
@@ -282,7 +291,7 @@
       }
       o.push('<circle cx="100" cy="118" r="100" fill="url(#' + id + 'g)"/>');
       o.push('<ellipse cx="100" cy="244" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
-    }
+    } else if (wardrobe) o.push('<ellipse cx="100" cy="246" rx="62" ry="6" fill="' + shade('floor') + '"/>');
 
     // ---- fire aura (shop) ----
     if (has('fire') && !rig) {
@@ -320,6 +329,9 @@
       const outsole = { canvas: '#CFC8B8', leather: '#B98A4E', runner: BLK, high: '#B98A4E', highGold: BLK }[t];
       const lace = CO.laces || CO.lace || (t === 'highGold' ? '#E7B23C' : WH);
       const style = GF.laceStyle || 'bars', height = hi ? 0 : 5;
+      const toe = 'M32 0 Q44 1 49 10 Q51 14 44 17 Q35 19 28 14 Z';
+      const body = hi ? 'M1 2 L0 -16 Q1 -25 12 -25 Q22 -25 24 -18 L28 -7 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z'
+        : 'M1 2 L2 -12 Q3 -19 13 -20 Q21 -20 25 -14 L29 -6 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z';
       const point = ([row, side]) => {
         const x = 9 + row * 14 + side * (11 + row * 5);
         const y = -14 + height + row * (17 - height) - side * (3 + row * 2);
@@ -330,12 +342,18 @@
       P('M0 -2 Q3 -6 17 -6 L33 1 Q54 7 51 19 Q49 26 35 27 Q22 24 9 15 Q-2 9 0 -2 Z', outsole, S(2.2));
       P('M0 -2 Q3 -6 17 -6 L33 0 Q52 6 51 15 Q48 21 36 23 Q24 21 10 12 Q1 7 0 -2 Z', midsole, S(2));
       LN('M6 10 L7 14 M12 14 L13 18 M19 18 L20 22 M26 21 L27 25 M34 24 V26 M42 23 V25 M47 21 V23', 'rgba(0,0,0,.32)', 1.1);
-      P(hi ? 'M1 2 L0 -16 Q1 -25 12 -25 Q22 -25 24 -18 L28 -7 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z'
-        : 'M1 2 L2 -12 Q3 -19 13 -20 Q21 -20 25 -14 L29 -6 Q43 -3 49 9 Q52 14 43 17 Q33 20 20 12 Z', upper, S(2));
+      if (wardrobe) LN('M11 13 Q20 21 32 23 Q41 24 47 20', '#fff5e1', 1.1, ' opacity=".36"');
+      P(body, upper, S(2));
+      if (wardrobe) P(body, cloth);
       P('M0 -8 Q4 -7 11 -2 L23 10 L19 13 Q10 9 1 3 Z', overlay, S(1.55));
-      P('M32 0 Q44 1 49 10 Q51 14 44 17 Q35 19 28 14 Z', overlay, S(1.55));
+      P(toe, overlay, S(1.55));
       if (t === 'canvas') LN('M30 13 Q39 18 46 14', 'rgba(0,0,0,.32)', 1.2);
       else LN('M4 0 Q10 3 18 9 M33 15 Q41 17 47 13', 'rgba(0,0,0,.36)', 1.05, ' stroke-dasharray="1.6 1.4"');
+      if (wardrobe) {
+        P(toe, shade('edge'));
+        LN('M36 5 Q43 6 46 10 M5 -6 Q11 -3 16 2', '#fffaea', 1.1, ' opacity=".36"');
+        if (t !== 'canvas') LN('M39 10 h.1 M42 11 h.1 M38 12.5 h.1', '#15131c', 1.3, ' opacity=".46"');
+      }
       P(hi ? 'M5 -16 Q4 -25 13 -25 L22 -24 Q25 -22 25 -15 L41 -2 Q36 7 27 8 Z'
         : 'M6 -12 Q5 -19 12 -20 L22 -21 Q25 -19 25 -13 L41 -2 Q36 7 27 8 Z', '#24232A', S(1.6));
 
@@ -343,8 +361,14 @@
       for (const a of anchors) {
         const [x, y] = point(a).split(' ');
         o.push('<circle cx="' + x + '" cy="' + y + '" r="' + (style === 'zigzag' ? 2.02 : 1.63) + '" fill="' + (style === 'zigzag' ? '#7085A0' : '#57525B') + '" stroke="' + INK + '" stroke-width=".78"/>');
+        if (wardrobe) LN('M' + (Number(x) - .6).toFixed(1) + ' ' + (Number(y) - 1.2).toFixed(1) + ' h.1', '#d8d4d1', .85);
       }
-      for (const [from, to] of segments) LN('M' + point(from) + ' L' + point(to), lace, style === 'zigzag' ? 2.8 : 2.6);
+      for (const [from, to] of segments) {
+        const stitch = 'M' + point(from) + ' L' + point(to);
+        if (wardrobe) LN(stitch, INK, 4);
+        LN(stitch, lace, style === 'zigzag' ? 2.8 : 2.6);
+        if (wardrobe) LN(stitch, '#fff5e4', 1.15, ' opacity=".27" transform="translate(0 -.5)"');
+      }
       o.push('</g>');
     };
     const SH_R = cap(shoe), SH_L = cap(() => MIR(shoe));
@@ -356,7 +380,8 @@
       const col = CO.pants || { jeans: '#3E5F8E', trackp: BLK, wind: '#232327', trackpGold: BLK }[t];
       // left leg (viewer's left) — the right one is mirrored
       const leg = 'M70 146 L100 146 L100 158 Q100 186 99 ' + hem + ' L73 ' + hem + ' Q67 178 70 146 Z';
-      P(leg, col, S()); P(leg, 'url(#' + id + 'sh)');
+      P(leg, col, S()); P(leg, cloth);
+      if (wardrobe) P('M98 157 Q94 177 95 ' + (hem - 3) + ' L98 ' + (hem - 1) + ' Z', '#101019', ' opacity=".22"');
       if (t === 'jeans') {
         LN('M73 151 Q81 158 89 150', '#2D4A72', 1.6);                               // front pocket
         LN('M73 153 Q81 160 89 152', '#C9A25A', .8, ' stroke-dasharray="1.4 1.4"');   // pocket stitch
@@ -381,7 +406,12 @@
     if (has('knee') || GF.knee) {
       const kp = () => stretchLeg(() => {
         P('M71 169 Q85 165 98 168 L98 184 Q85 188 71 184 Z', '#202127', S(1.6));
+        if (wardrobe) LN('M72 172 L77 171 M72 181 L77 181 M92 171 L97 171 M92 182 L97 181', '#817681', 1.8);
         P('M75 169 Q85 165 94 170 L94 182 Q85 187 75 182 Z', CO.knee || OR, S(1.4));
+        if (wardrobe) {
+          P('M76 170 Q85 166 93 171 L93 181 Q85 185 76 181 Z', shade('edge'));
+          LN('M76.8 173 V178 M92 176 V180', '#211924', .95, ' opacity=".5"');
+        }
         LN('M78 173 Q85 170 92 173 M78 180 Q85 182 92 179', 'rgba(255,255,255,.38)', 1.15);
       });
       KN_L = cap(kp); KN_R = cap(() => MIR(kp));
@@ -401,13 +431,14 @@
       // side 0 = viewer's left (drawn), right is mirrored unless raised
       if (longSleeve) {
         P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', sleeveCol, S());
-        P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', 'url(#' + id + 'sh)');
+        P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', cloth);
         if (fit.top === 'track') { P('M71 92 Q61 95 58 108 L65 110 Q67 100 73 98 Z', CO.yoke || BLK); LN('M57 112 L54 146', CO.trim || WH, 1.6); }
         if (fit.top === 'trackGold') LN('M57 106 L53 146', GOLD, 2.2);
         if (fit.top === 'bomber') { P('M54 122 L64 123 L63 132 L53 131 Z', BLK2, S(1.2)); LN('M55 125 H63', '#9A968E', .9); LN('M60 104 Q63 116 62 126', 'rgba(255,255,255,.1)', 1.4); }
         P('M52 145 L65 146 L65 154 L52 153 Z', cuffCol, S(1.6));
         if (fit.top === 'bomber') LN('M52.5 148.5 L64.5 149.5', BLK, 1.6);
         LN('M55 146.5 v6 M58 146.8 v6 M61 147 v6', 'rgba(0,0,0,.25)', .8);
+        if (wardrobe) LN('M61 105 Q57 112 57 121 M55 139 L54.5 144 M53.5 147 L63.5 148', '#fff1e2', 1, ' opacity=".22"');
       } else {
         const big = fit.top === 'teeBig';
         P(big ? 'M68 92 Q56 98 53 124 L68 127 L70 108 Z' : 'M71 92 Q60 96 56 116 L68 120 L71 106 Z', sleeveCol, S());
@@ -417,15 +448,20 @@
       }
       if (CO.elbow) {
         P('M53 115 Q60 112 68 116 L67 132 Q60 135 53 130 Z', CO.elbow, S(1.5));
+        if (wardrobe) {
+          P('M54 116 Q60 113 67 117 L66 131 Q60 134 54 130 Z', shade('edge'));
+          LN('M54 127 Q60 131 66 128', INK, 1.2, ' opacity=".45"');
+        }
         LN('M56 120 Q60 118 65 120 M56 126 H65', CO.elbowTrim, 1.2);
       }
       // The base look has a wristband on one side. An equipped pair takes its place.
       if (CO.wristband || (L >= 3 && !side)) {
         P('M51.5 140 L64.5 141 L64.5 146 L51.5 145 Z', CO.wristband || (L >= 7 ? GOLD : OR), S(1.4));
         LN('M54 140.5 v4.5 M57 140.7 v4.5 M60 140.9 v4.5 M63 141 v4.5', 'rgba(0,0,0,.18)', .7);
+        if (wardrobe) LN('M52.5 141.7 L63.6 142.5', '#fff0d4', .9, ' opacity=".42"');
       }
       // hand
-      P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', SKIN, S());
+      P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', wardrobe ? shade('skin') : SKIN, S());
       LN('M54 157 Q57 159 61 158', SKIN_D, 1.2);
       if (has('gloves') || GF.gloves) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', CO.glove || '#141416', S(1.6)); LN('M53 154 H64', CO.gloveTrim || OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
@@ -458,7 +494,7 @@
     const top = fit.top;
     if (top === 'teeTeam') { // the team tee (for notifications): white, an orange round print with «FT» + a black band «FEDOSKIN TEAM»
       const body = 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 150 Q100 153 71 150 Z';
-      P(body, WH, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, WH, S()); P(body, cloth);
       P('M86 86 Q100 97 114 86 L111 85 Q100 93 89 85 Z', WH_D, S(1.4));
       LN('M80 120 Q83 132 80 146 M120 118 Q117 132 120 146', 'rgba(0,0,0,.12)', 1.4);
       LN('M72 146 Q100 149 128 146', 'rgba(0,0,0,.18)', .9, ' stroke-dasharray="1.6 1.6"');
@@ -470,7 +506,7 @@
     } else if (top === 'tee' || top === 'teeBig') {
       const big = top === 'teeBig', col = CO.top || (big ? BLK : '#8E8E95'), print = CO.trim || OR;
       const body = big ? 'M66 94 Q70 87 82 85 L118 85 Q130 87 134 94 L133 156 Q100 160 67 156 Z' : 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 150 Q100 153 71 150 Z';
-      P(body, col, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, col, S()); P(body, cloth);
       // rib collar
       P('M86 86 Q100 97 114 86 L111 85 Q100 93 89 85 Z', big ? '#2A2A2F' : '#7A7A80', S(1.4));
       // folds
@@ -487,7 +523,7 @@
     } else if (top === 'track' || top === 'trackGold') {
       const gold = top === 'trackGold', col = CO.top || (gold ? BLK : OR), trim = CO.trim || (gold ? GOLD : WH);
       const body = 'M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L129 148 L71 148 Z';
-      P(body, col, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, col, S()); P(body, cloth);
       if (!gold) P('M70 93 Q74 87 84 85 L116 85 Q126 87 130 93 L130 106 Q100 112 70 106 Z', CO.yoke || BLK); // contrast yoke
       LN('M70 106 Q100 112 130 106', trim, 1.6);
       // stand collar
@@ -498,6 +534,7 @@
       P('M98 96 h4 v8 q0 2 -2 2 q-2 0 -2 -2 Z', gold ? GOLD : '#C9C5BD', S(1));
       // slash pockets
       LN('M80 128 L86 140 M120 128 L114 140', 'rgba(0,0,0,.45)', 1.6);
+      if (wardrobe) LN('M81.7 128.5 L87 138 M118.5 128.5 L113 138 M77 95 Q83 91 89 91', '#fff5e1', 1, ' opacity=".33"');
       // rib hem
       P('M71 141 L129 141 L129 149 Q100 152 71 149 Z', gold ? BLK2 : BLK, S(1.6));
       LN('M76 142 v6 M82 142 v6.5 M88 142 v7 M94 142 v7 M106 142 v7 M112 142 v7 M118 142 v6.5 M124 142 v6', 'rgba(255,255,255,.1)', .8);
@@ -509,7 +546,7 @@
       }
     } else if (top === 'hoodie') {
       const body = 'M67 94 Q73 87 85 85 Q100 94 115 85 Q127 87 133 94 L131 150 Q100 155 69 150 Z';
-      P(body, CO.top, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, CO.top, S()); P(body, cloth);
       P('M79 90 Q79 76 90 76 L110 76 Q121 76 121 90 Q100 107 79 90 Z', CO.top, S(1.6));
       LN('M84 87 Q100 100 116 87', 'rgba(0,0,0,.34)', 1.8);
       LN('M94 93 Q95 103 92 111 M106 93 Q105 104 108 114', CO.trim, 1.6);
@@ -517,7 +554,7 @@
       LN('M71 146 Q100 151 129 146', CO.cuff, 2);
     } else if (top === 'bomber') {
       const body = 'M68 93 Q73 87 84 85 L116 85 Q127 87 132 93 L131 146 Q100 151 69 146 Z';
-      P(body, CO.top || BLK, S()); P(body, 'url(#' + id + 'sh)');
+      P(body, CO.top || BLK, S()); P(body, cloth);
       // satin shine
       LN('M80 98 Q78 118 82 138', 'rgba(255,255,255,.1)', 3); LN('M122 98 Q124 118 120 138', 'rgba(255,255,255,.06)', 3);
       // striped rib collar
@@ -534,6 +571,7 @@
       P('M105 120 h18 v5 h-18 Z', '#2E2E34', S(1)); LN('M107 122.5 h14', OR, 1.2, ' stroke-dasharray="2 1.2"');
       // slash pockets
       LN('M78 124 L82 136 M122 124 L118 136', 'rgba(255,255,255,.15)', 1.6);
+      if (wardrobe) LN('M75 94 Q82 90 89 89 M76 118 Q76 127 78 132 M123 119 L125 126', '#fff4de', 1.2, ' opacity=".18"');
     }
 
     // ---- champion belt (8) ----
@@ -565,6 +603,7 @@
         P('M100 116 L108 124 L100 134 L92 124 Z', metal, S(1.4));
         P('M100 119 L104.5 124 L100 130 L95.5 124 Z', CO.gold ? WH : '#FFF2C4', ' opacity=".55"');
         LN('M92 124 H108 M100 116 V134', CO.gold ? edge : '#8A5E12', .7);
+        if (wardrobe) LN('M95 122 L99 118 M101 126 L104 126', '#fff4d3', .9, ' opacity=".72"');
       } else o.push('<circle cx="100" cy="111.5" r="3" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".8"/>');
     }
 
@@ -585,7 +624,7 @@
     LN('M76 54 Q78 57 76 59 M124 54 Q122 57 124 59', SKIN_D, 1.2);
     if (girl) { const hc = L >= 5 ? GOLD : '#C9CCD2'; [[76.5, 64], [123.5, 64]].forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.4" fill="none" stroke="' + hc + '" stroke-width="1.5"/>')); } // hoops
     else if (L >= 6) o.push('<circle cx="76" cy="61" r="1.7" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".5"/>'); // stud earring
-    P('M100 28 Q123 28 123 54 Q123 80 100 81 Q77 80 77 54 Q77 28 100 28 Z', SKIN, S());
+    P('M100 28 Q123 28 123 54 Q123 80 100 81 Q77 80 77 54 Q77 28 100 28 Z', wardrobe ? shade('skin') : SKIN, S());
     P('M80 64 Q86 78 100 80 Q90 76 84 64 Z', SKIN_D, ' opacity=".35"');
     // hair: short fade, visible under hats as sideburns
     if (!fit.hat && girl) {
@@ -603,7 +642,9 @@
     // ---- hats ----
     const hat = fit.hat;
     if (hat === 'bandana') {
-      P('M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z', HC[0] || '#C8102E', S());
+      const wrap = 'M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z';
+      P(wrap, HC[0] || '#C8102E', S());
+      if (wardrobe) P(wrap, cloth);
       [[86, 30], [100, 26], [114, 30], [92, 40], [108, 40], [80, 40], [120, 40]].forEach(p => P('M' + p[0] + ' ' + p[1] + ' q3 -3 5 0 q-1 4 -5 3 q-2 -1 0 -3Z', HC[1] || WH, ' opacity=".85"'));
       LN('M78 46 Q100 40 122 46', WH, 1.2, ' stroke-dasharray="2 2"');
       P('M122 40 Q132 40 136 46 Q130 46 126 44 Q130 52 128 58 Q122 50 121 44 Z', HC[0] || '#C8102E', S(1.6));
@@ -616,6 +657,7 @@
       if (hat !== 'capBack') P('M86 49 Q86 26 100 22 Q114 26 114 49 Z', front, S(1.4));
       LN('M100 22 V49', 'rgba(0,0,0,.35)', 1);
       LN('M80 46 Q80 31 88 25 M120 46 Q120 31 112 25', 'rgba(0,0,0,.3)', 1);
+      if (wardrobe) LN('M77.7 42 Q80 28 88 25 M102.5 24 Q108 29 110 35', '#fff7e7', 1.2, ' opacity=".24"');
       o.push('<circle cx="100" cy="21.5" r="2.6" fill="' + (hat === 'capGold' ? BLK : OR) + '" stroke="' + INK + '" stroke-width="1.2"/>');
       [[82, 33], [118, 33]].forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.1" fill="#0A0A0C"/>'));
       if (hat === 'capBack') {
@@ -636,6 +678,7 @@
       }
     } else if (hat === 'beanie') {
       P('M76 50 Q74 20 100 19 Q126 20 124 50 Z', HC[0] || '#2A2A2F', S());
+      if (wardrobe) LN('M78.8 36 Q84 23 96 22 M81 37 Q85 30 89 28', '#fff4e1', 1, ' opacity=".23"');
       LN('M86 46 Q86 28 94 22 M100 46 V20 M114 46 Q114 28 106 22 M80 46 Q79 32 86 24 M120 46 Q121 32 114 24', 'rgba(255,255,255,.1)', 1.2);
       P('M74 40 Q100 34 126 40 L126 52 Q100 47 74 52 Z', HC[1] || OR, S(1.8));
       for (let x = 78; x <= 122; x += 4) LN('M' + x + ' ' + (41 - Math.abs(100 - x) * -0.05) + ' v9', HC[1] ? 'rgba(0,0,0,.24)' : OR_D, 1.2);
@@ -649,6 +692,7 @@
       LN('M80 40 Q100 36 120 40', HC[1] || OR, 1.2, ' stroke-dasharray="1.6 1.4"');
       LN('M100 22 V44', 'rgba(255,255,255,.12)', 1);
       P('M80 45 Q100 41 120 45 L134 58 Q100 50 66 58 Z', HC[0] || BLK, S(1.8));
+      if (wardrobe) LN('M83 28 Q99 20 113 27 M79 48 Q100 43 121 48', '#fff1df', 1.15, ' opacity=".22"');
       LN('M74 52 Q100 45 126 52 M70 55.5 Q100 48 130 55.5', HC[1] || OR, 1, ' stroke-dasharray="1.6 1.4"');
       o.push('<circle cx="86" cy="34" r="1" fill="#9A968E"/><circle cx="114" cy="34" r="1" fill="#9A968E"/>');
     }
