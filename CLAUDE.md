@@ -79,7 +79,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
 - The Park playground is built and textured by `tools/build_park_playground.py`. The footwork circle stays open for the daily warm-up and both entrances join the alleys.
 - City sound props use `tools/build_city_audio.py` and `city3d-sound.js`. The crews and performance spots supply their actual gameplay anchors for placement.
 - The graffiti renderer in `city-gfx.js` fits the painted silhouettes on one or two lines. `tools/build_city_graffiti.py` makes the 3D concrete wall, the four district finishes and the paint abrasion maps for `city3d-graffiti.js`.
-- City 3D MIRRORED moves «<clip>_M» (`MIRROR` in city3d-mocap.js); battle footwork = random COMBO of phrases (`FW`, `makeTurn`, turns via `spinTick`/`turnBy` round the hips).
+- City 3D mirrored moves use `<clip>_M` (`MIRROR` and the authored tracks in `city3d-mocap.js`). `city3d-breaking.js` builds footwork phrases and turns through `spinTick` around the hips.
 - City 3D HEAD = `addCityHead` in `city3d-head.js`. The skull, hairstyles and headwear have shared geometries shaped for the view from above.
   Fit head accessories to these profiles and include their silhouette in the support points if they touch the ground during headspins.
 - City 3D CLOTHING (25.11): sleeve openings and trouser seats join their limbs through `G.bridge`. Shirt hems blend with the hips and thighs.
@@ -121,7 +121,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   customDepthMaterial (else three re-derived the shared depth program ~50×/frame). Boot WARM-UP compiles every shader (render target set, the
   real variant) and uploads every texture. OutputPass + grade = one pass (`out`, old name `fin`). `?fps` shows ЦП ms, jerks/10 s and a frame strip.
   Shadow batcher takes multi-material boxes. `?set=classic|rock|drop|powerFirst` forces the hero's set shape (tests).
-- City 3D SETS: `makeTurn` rotates through seven `SHAPES` and three `ENTRIES` independently for the hero and each opponent. Final holds
+- City 3D sets share 12 arrangements and six walk-ins between battles, performances and the Yard cypher, with individual recent-move memory and beat-based phrasing. Final holds
   use mirrored clips from `FREEZE` (air from lv 2). `?set=<shape>` forces the hero's set for testing.
 - City 3D CAMERA reads `W.hero` every frame (rewear() replaces the hero object — never cache it); player zoom `W.uZoom` (pinch / wheel, .7…3,
   saved), W.camT overrides it in battles/actions. Crew members are dressed one by one (`dress` / `crewLook` in city3d-game.js, yard palettes `CSTY`).

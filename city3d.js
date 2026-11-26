@@ -7,13 +7,14 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=23';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=24';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=45';
+import { initGame } from './city3d-game.js?v=46';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=6';
+import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { addCitySound } from './city3d-sound.js?v=1';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
@@ -792,28 +793,24 @@ function myCustom() {
 
 // ---------- the cypher: one dancer at a time goes into the middle (motion capture) ----------
 // A dancer walks in, performs a set, then returns to their spot at the edge.
-const SETS = [
-  [['Breakdance_Uprock', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_1', 1], ['Breakdance_Swipes', 1], ['Breakdance_Freeze_Var_1', 1, 3.6]],
-  [['Brooklyn_Uprock', 1, 4.2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_2', 1], ['Breakdance_1990', 6], ['Breakdance_Freezes', 1, 4]],
-  [['Breakdance_Uprock_Var_1', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_3', 1], ['Flair', 4], ['Crossleg_Freeze', 1]],
-  [['Bboy_Uprock', 2], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_1', 1], ['Headspin_Start', 1], ['Head_Spinning', 5], ['Headspin_End', 1], ['Breakdance_Freeze_Var_3', 1, 4]],
-  [['Breakdance_Uprock_Var_2', 1, 4], ['Breakdance_Uprock_To_Ground', 1], ['Breakdance_Footwork_To_Freeze', 1]],
-];
-const POWER = /Swipes|1990|Flair|Head_Spinning/, FRZ = /Freeze/;
-// 17.11.2026 (owner «слишком однообразно»): every round the set is danced to the left or to the right at random (mirrored copies
-// «_M» of toprocks, the drop, footwork and floor freezes — city3d-mocap.js), and a plain footwork is any of the three recordings
-function planSet(n) { const s = SETS[n % SETS.length], out = [], m = Math.random() < .5; let t = 0;
-  s.forEach(([c, rep, cut]) => { if (/^Breakdance_Footwork_\d$/.test(c)) c = 'Breakdance_Footwork_' + (1 + Math.floor(Math.random() * 3)); if (m && clipLen(c + '_M')) c += '_M';
-    const len = cut || clipLen(c) * rep; out.push({ c, a: t, b: t + len }); t += len; }); return { list: out, len: t }; }
-function updateCrew(_tb, dt) {
+const cypherMemory = new WeakMap();
+const cypherStyles = ['groove', 'shapes', 'power', 'ground'];
+function updateCrew(beat, dt) {
   if (!W.crew.length || !W.cyph) return;
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
   if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (!isStand(D.cur)) D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
     D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
   const J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
-  if (!T.plan) { T.plan = planSet(T.who); T.start = now; T.seg = -1; T.out = false; walkStart(J); }
-  const bend = (T.who % 3 - 1) * .64, walk = 1.7 + Math.abs(bend) * .35, back = 2.9;
+  if (!T.plan) {
+    if (!cypherMemory.has(J)) cypherMemory.set(J, {});
+    const bpm = window.RB?.LOOPS.find(loop => loop.id === RB.bgmId())?.bpm || 88;
+    T.plan = cypherSet({ memory: cypherMemory.get(J), r: Math.random, lv: 4 + T.who % n % 3, duration: clipLen, bpm,
+      profile: cypherStyles[T.who % n % cypherStyles.length] });
+    T.plan.enter = beatEntry(T.plan.enter, bpm, beat);
+    T.start = now; T.seg = -1; T.out = false; walkStart(J);
+  }
+  const { bend } = T.plan, walk = T.plan.enter, back = 2.9;
   const rel = now - T.start - walk;
   let freezeNow = false;
   if (rel < 0) {
@@ -823,9 +820,10 @@ function updateCrew(_tb, dt) {
     const i = T.plan.list.findIndex(s => rel < s.b); const s = T.plan.list[i];
     if (i !== T.seg) {
       if (J.ws) { walkMove(J, dt, cx, cz, 1, toMid, bend); J.ws = null; }
-      T.seg = i; J.play(s.c, { fade: i ? .3 : .35 });
+      T.seg = i; J.play(s.c, { at: s.at, speed: s.sp, fade: s.fade ?? .35 });
     }
-    freezeNow = FRZ.test(s.c) && rel - s.a > .8; W.power = POWER.test(s.c);
+    spinTick(J, T.plan.list, rel);
+    freezeNow = s.kind === 'hold' && rel - s.a > .65; W.power = s.kind === 'power';
   } else if (rel < T.plan.len + back) {
     // the set is over: he gets up and WALKS back to his place, then turns to the circle again
     if (!T.out) { T.out = true; walkStart(J); }

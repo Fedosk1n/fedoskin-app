@@ -1,6 +1,6 @@
-// Dancers driven by real motion capture (Mixamo, licensed for use in this app; converted to anim/bboy.json:
-// 22 bones, rest pose + 30 fps tracks, quats ×1000, hips cm). Our own low-poly body and clothes hang on the bones,
-// so the moves play exactly as recorded — no hand-posed angles. Look = HERO.topDown(level, acc).
+// Dancers share a 22-bone skeleton and packed 30 fps tracks (quaternions ×1000, hips in cm).
+// Licensed Mixamo capture is in anim/bboy.json. Original phrases use the same rig in anim/city-breaking.json.
+// The low-poly body and clothes follow those bones. Look = HERO.topDown(level, acc).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
@@ -15,8 +15,14 @@ const CLIPS = {};
 const RM = {};
 export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
-  DATA = await (await fetch(url)).json();
-  for (const n of MIRROR) if (DATA.clips[n]) DATA.clips[n + '_M'] = mirrorClip(DATA.clips[n]);
+  const [capture, authored] = await Promise.all([
+    fetch(url).then(response => response.json()),
+    fetch(new URL('./anim/city-breaking.json?v=1', import.meta.url))
+      .then(response => response.ok ? response.json() : null).catch(() => null),
+  ]);
+  DATA = capture;
+  Object.assign(DATA.clips, authored);
+  for (const n of [...MIRROR, ...Object.keys(authored || {})]) if (DATA.clips[n]) DATA.clips[n + '_M'] = mirrorClip(DATA.clips[n]);
   for (const [name, c] of Object.entries(DATA.clips)) {
     // how far the last frame is from the first: degrees of the most-turned bone (hips height: 1 cm ≈ .6°)
     const n = c.n, hp = c.t['Hips.p'], L = (n - 1) * 4;
@@ -41,7 +47,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
     // ONE-SHOT clips: a recording whose last frame is far from its first (going down, a freeze, a transition) must never wrap
     // around — a frame late, it flashed back to its first pose for one frame (the cypher's dancer «jumped» up from the floor
     // between going down and footwork, 1 m in one frame). Played once, it holds its last frame until the next move fades in.
-    CLIPS[name].userData = { seam, once: seam > 15 };
+    CLIPS[name].userData = { seam, once: seam > 15 || name.startsWith('City_') };
   }
   gaitPrep();
   // Different standing loops share the same relaxed base. Keep the legs subtle so planted feet stay near their marks.
@@ -167,7 +173,7 @@ function rmAt(r, t, loop, out) {
   return out;
 }
 const _v = new THREE.Vector3(), lerpTo = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-dt * k));
-const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending/;
+const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending|^City_/;
 
 const mats = new Map();
 // NO GLARE ON PEOPLE (owner 17.11.2026 «снизь отблик от фонарей… сильный пересвет, будто зеркало на кроссовках отражает полностью»).
