@@ -17,7 +17,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   const [capture, authored] = await Promise.all([
     fetch(url).then(response => response.json()),
-    fetch(new URL('./anim/city-breaking.json?v=1', import.meta.url))
+    fetch(new URL('./anim/city-breaking.json?v=2', import.meta.url))
       .then(response => response.ok ? response.json() : null).catch(() => null),
   ]);
   DATA = capture;
@@ -412,18 +412,41 @@ function skinGeo() {
       if (w) weights(si, sw, i, w);
     }
   };
+  const blendWeights = (vertices, blend) => {
+    const influence = new Map();
+    vertices.forEach((vertex, i) => {
+      for (let j = vertex*4; j < vertex*4+4; j++) {
+        if (sw[j] && blend[i]) influence.set(si[j], (influence.get(si[j]) || 0) + sw[j] * blend[i]);
+      }
+    });
+    return [...influence].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  };
+  G.hem = (rings, color) => {
+    const outside = rings[0], points = [], ws = [];
+    for (let i = outside.i0; i < outside.i0 + outside.n; i++) {
+      points.push(new THREE.Vector3().fromArray(pos, i*3).lerp(outside.c, .115).addScaledVector(rings.d, .012));
+      ws.push(blendWeights([i], [1]));
+    }
+    G.join(G.loop(points, color, ws), outside);
+  };
   G.quad = (a, b, c, d, color, wa, wc) => { const i = vert(a, color, wa); vert(b, color, wa); vert(c, color, wc); vert(d, color, wc); idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2); };
   // a limb along the joints P[0..m]: bones[k] drives the piece P[k]→P[k+1], `pre` drives what lies before P[0]; near joint k the
   // two neighbours are blended over ±bz[k] metres. st = stations [s (m along the limb from P[0]), ru (forward), rv (sideways), colour, seam?, brightness?];
   // seam: 1 marks a colour break. Identical rings share normals, raised cuffs keep the faces that close the edge.
   // returns the rings (for stripes). fwd = the body's forward; e = superellipse power (1 = round); side = [towards +u, towards +v] = the shaded side
-  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1, side, { bends, openStart, cut } = {}) => {
+  G.limb = (P, bones, pre, bz, st, n, fwd, e = 1, s0, s1, side, { bends, openStart, cut, endBone } = {}) => {
     const L = [0]; for (let k = 1; k < P.length; k++) L.push(L[k - 1] + P[k].distanceTo(P[k - 1]));
     const d = P[P.length - 1].clone().sub(P[0]).normalize(), u = fwd.clone().addScaledVector(d, -fwd.dot(d)).normalize(), v = d.clone().cross(u);
     const at = s => { if (s <= 0) return P[0].clone().addScaledVector(d, s); for (let k = 1; k < P.length; k++) if (s <= L[k]) return P[k - 1].clone().lerp(P[k], (s - L[k - 1]) / (L[k] - L[k - 1])); return P[P.length - 1].clone().addScaledVector(d, s - L[L.length - 1]); };
+    const end = L.at(-1);
     const wt = s => { for (let k = 0; k < P.length - 1; k++) { const b = bz[k] || 0; if (b && Math.abs(s - L[k]) < b) { let t = .5 + (s - L[k]) / (2 * b); t = t * t * (3 - 2 * t); const a = k ? bones[k - 1] : pre; const mid = bends?.[k];
         if (mid !== undefined) return t < .5 ? [[a, 1 - 2*t], [mid, 2*t]] : [[mid, 2 - 2*t], [bones[k], 2*t - 1]];
         return [[a, 1 - t], [bones[k], t]]; } }
+      if (endBone !== undefined && s > end - .105) {
+        const t = Math.max(0, Math.min(1, (s - end + .105) / .105));
+        const follow = .84 * t*t*(3-2*t);
+        return [[bones.at(-1), 1-follow], [endBone, follow]];
+      }
       let k = 0; while (k < bones.length - 1 && s > L[k + 1]) k++; return [[s < 0 ? pre : bones[k], 1]]; };
     const rings = []; let prev = null;
     st.forEach(([s, ru, rv, color, seam, sh = 1]) => { const ao = side || sh !== 1 ? [sh, side ? side[0] : 0, side ? side[1] : 0] : null, R = G.ring(at(s), u, v, ru, rv, color, wt(s), n, e, ao); R.s = s; R.c = at(s); R.ru = ru; R.rv = rv; R.w = wt(s); R.col = color;
@@ -431,20 +454,28 @@ function skinGeo() {
       else if (!openStart) G.pole(R, at(s0), color, wt(s0), true, sh * .9);
       prev = R; rings.push(R); });
     G.pole(prev, at(s1), st[st.length - 1][3], wt(s1), false, st[st.length - 1][5] || 1); rings.u = u; rings.v = v; rings.d = d; rings.at = at; rings.wt = wt; return rings; };
-  // Sewn details follow the same rings and bone weights as the fabric underneath them.
-  const onRing = (rings, ring, angle, rise) => {
-    const i = ((angle / (Math.PI * 2) * ring.n) % ring.n + ring.n) % ring.n;
-    const k = Math.floor(i), j = (k + 1) % ring.n;
-    return new THREE.Vector3().fromArray(pos, (ring.i0 + k) * 3)
-      .lerp(new THREE.Vector3().fromArray(pos, (ring.i0 + j) * 3), i - k)
-      .addScaledVector(rings.u, Math.cos(angle) * rise).addScaledVector(rings.v, Math.sin(angle) * rise);
+  // Features sample both the surface triangle and its final vertex weights, including reweighted seams.
+  function garmentPoint(rings, a, b, t, angle, lift) {
+    const i = ((angle / (Math.PI * 2) * a.n) % a.n + a.n) % a.n, k = Math.floor(i), u = i-k, j = (k+1)%a.n;
+    const [vertices, blend] = u+t <= 1
+      ? [[a.i0+k, a.i0+j, b.i0+k], [1-u-t, u, t]]
+      : [[a.i0+j, b.i0+k, b.i0+j], [1-t, 1-u, u+t-1]];
+    const p = new THREE.Vector3(), sample = new THREE.Vector3();
+    vertices.forEach((v, i) => p.addScaledVector(sample.fromArray(pos,v*3),blend[i]));
+    p.addScaledVector(rings.u, Math.cos(angle)*lift).addScaledVector(rings.v, Math.sin(angle)*lift);
+    return { p, w: blendWeights(vertices, blend) };
+  }
+  const onRing = (rings, ring, angle, lift) => {
+    return garmentPoint(rings, ring, ring, 0, angle, lift);
   };
   const onSurface = (rings, station, angle, lift) => {
     const k = rings.findIndex(r => r.s > station);
+    if (k <= 0) return onRing(rings, k === 0 ? rings[0] : rings.at(-1), angle, lift);
     const a = rings[k - 1], b = rings[k];
     const t = (station - a.s) / (b.s - a.s);
-    return onRing(rings, a, angle, lift).lerp(onRing(rings, b, angle, lift), t);
+    return garmentPoint(rings, a, b, t, angle, lift);
   };
+  const sewnLoop = (samples, color, shades) => G.loop(samples.map(s => s.p), color, samples.map(s => s.w), shades);
   G.strip = (rings, angle, width, color, start, end, rise = .003) => {
     const edge = (ring, side) => {
       const radius = Math.hypot(ring.ru * Math.sin(angle), ring.rv * Math.cos(angle));
@@ -453,13 +484,14 @@ function skinGeo() {
     for (let i = 1; i < rings.length; i++) {
       const a = rings[i - 1], b = rings[i];
       if (a.s < start - 1e-4 || b.s > end + 1e-4 || b.s - a.s < 1e-4) continue;
-      G.quad(edge(a, -1), edge(a, 1), edge(b, -1), edge(b, 1), color, a.w, b.w);
+      const row = sewnLoop([edge(a, -1), edge(a, 1), edge(b, -1), edge(b, 1)], color);
+      face(row.i0, row.i0 + 1, row.i0 + 2, row.i0 + 3);
     }
   };
   G.trace = (rings, path, color, width, rise = .004) => {
     let last;
     for (const [s, a] of path) {
-      const row = G.loop([onSurface(rings, s, a - width / 2, rise), onSurface(rings, s, a + width / 2, rise)], color, rings.wt(s));
+      const row = sewnLoop([onSurface(rings, s, a - width / 2, rise), onSurface(rings, s, a + width / 2, rise)], color);
       if (last) face(last.i0, last.i0 + 1, row.i0, row.i0 + 1);
       last = row;
     }
@@ -473,7 +505,8 @@ function skinGeo() {
       const s = Math.max(from, Math.min(to, p.x)), a = p.y;
       const normal = rings.u.clone().multiplyScalar(Math.cos(a)).addScaledVector(rings.v, Math.sin(a));
       const across = rings.d.clone().cross(normal).normalize();
-      const row = G.ring(onSurface(rings, s, a, lift), normal, across, radius, radius, color, rings.wt(s), 6);
+      const { p: point, w } = onSurface(rings, s, a, lift);
+      const row = G.ring(point, normal, across, radius, radius, color, w, 6);
       if (last) G.join(last, row);
       last = row;
     }
@@ -489,7 +522,7 @@ function skinGeo() {
         points.push(onSurface(rings, s, theta, lift));
         shades.push(1 - .09 * Math.abs(offset));
       }
-      const row = G.loop(points, color, rings.wt(s), shades);
+      const row = sewnLoop(points, color, shades);
       if (previous) for (let i = 0; i < columns; i++) face(previous.i0 + i, previous.i0 + i + 1, row.i0 + i, row.i0 + i + 1);
       previous = row;
     }
@@ -502,10 +535,10 @@ function skinGeo() {
       for (let i = 0; i < position.count; i++) {
         const s = station + height * position.getY(i);
         const theta = angle + arc * position.getX(i);
-        const p = onSurface(rings, s, theta, .004);
+        const { p, w } = onSurface(rings, s, theta, .004);
         vertices.push(p.x, p.y, p.z);
         coords.push(uv.getX(i), uv.getY(i));
-        weights(indices, strengths, start + i, rings.wt(s));
+        weights(indices, strengths, start + i, w);
       }
       for (const i of BADGE_DISC.index.array) faces.push(start + i);
     }
@@ -600,7 +633,7 @@ export function mocapPerson(look, opt = {}) {
   rig.updateMatrixWorld(true);
   const names = Object.keys(R), BI = {}; names.forEach((n, i) => { BI[n] = i; });
   for (const side of ['Left', 'Right']) {
-    for (const segment of ['Arm', 'ForeArm', 'Leg']) {
+    for (const segment of ['Arm', 'ForeArm', 'UpLeg', 'Leg', 'Foot']) {
       const helper = bendBone(B[side + segment]);
       BI[helper.name] = names.length;
       names.push(helper.name);
@@ -632,16 +665,16 @@ export function mocapPerson(look, opt = {}) {
     const waistWeights = (x, s) => {
       const side = smooth(.021, .133 * bd.hip, Math.abs(x));
       const thigh = .62 * side * (1 - smooth(seatLow, waist, s));
-      return [[BI.Hips, 1 - thigh], [x > 0 ? BI.LeftUpLeg : BI.RightUpLeg, thigh]];
+      return [[BI.Hips, 1 - thigh], [x > 0 ? BI.LeftUpLegBend : BI.RightUpLegBend, thigh]];
     };
     for (const ring of seat) G.rew(ring, x => waistWeights(x, ring.s));
     const crotch = [-1, 0, 1].map(z => seat[0].c.clone().addScaledVector(seat.u, .047 * hd * z).addScaledVector(DOWN, .047 - Math.abs(z) * .017));
-    trousers = G.fork(seat[0], crotch, C.pants, [[BI.Hips, .56], [BI.LeftUpLeg, .22], [BI.RightUpLeg, .22]]);
+    trousers = G.fork(seat[0], crotch, C.pants, [[BI.Hips, .56], [BI.LeftUpLegBend, .22], [BI.RightUpLegBend, .22]]);
     // the top: hem (a big tee hangs lower; jackets end in a rib band) → waist → chest → sloped shoulders → collar
     const rib = sleeveLong && !coat ? C.cuff : null;
     const drop = coat ? .216 : tp === 'teeBig' ? .14 : /^tee/.test(tp) ? .112 : hoodie ? .096 : .048, lo = .04 - drop;
     const ex = (coat ? .041 : tp === 'teeBig' || hoodie ? .021 : .014) * baggy;
-    const layerD = hemD + ex + .013, layerW = hemW + ex * 1.15;
+    const layerD = hemD + ex + .020, layerW = hemW + ex * 1.15 + .006;
     const st = [[lo, layerD, layerW, rib || topC, 0, .8]];
     if (!rib) st.push([lo + .012, layerD + .003, layerW + .002, topC, 0, .94], [lo + .044, layerD - .004, layerW - .002, topC]);
     if (rib) st.push([lo + .032, layerD, layerW, rib, 0, .92], [lo + .032, layerD + .005, layerW + .006, topC, 1, .92]);
@@ -667,6 +700,7 @@ export function mocapPerson(look, opt = {}) {
     }
     const openings = [5, 15];
     const tr = G.limb(P, TB, BI.Hips, TZ, st, NT, FWD, .78, lo - .012, st[st.length - 1][0] + .012, null, {
+      openStart: true,
       cut: (a, b) => a.s >= bottom - 1e-5 && b.s <= shoulder + 1e-5 ? openings : null,
     });
     const rows = tr.slice(socketFirst, socketFirst + section.length);
@@ -682,6 +716,7 @@ export function mocapPerson(look, opt = {}) {
         return [[BI.Spine2, 1 - arm - collar], [BI[side + 'ArmBend'], arm], [BI[side + 'Shoulder'], collar]];
       });
     }
+    G.hem(tr, shadeOf(rib || topC, .65));
     if (track || bomber) {
       const zipStart = lo + (rib ? .032 : .012);
       const zipEnd = nk + (track ? .044 : .026);
@@ -793,7 +828,7 @@ export function mocapPerson(look, opt = {}) {
       if (cuffed) { const cc = mixOf(pc, '#8a8d94', .22); st.push([F - .13, .069 * Lb, .067 * Lb, pc, 0, .93], [F - .085, .072 * Lb, .07 * Lb, pc, 0, .9], [F - .062, .061 * Ls, .06 * Ls, pc, 0, .84], [F - .062, .0605 * Ls, .0595 * Ls, cc, 1], [F - .02, .059 * Ls, .058 * Ls, cc]); }
       else st.push([F - .13, .071 * Lb, .069 * Lb, pc, 0, .94], [F - .09, .077 * Lb, .075 * Lb, pc, 0, .9], [F - .064, .072 * Lb, .07 * Lb, pc, 0, .82], [F - .038, .079 * Lb, .077 * Lb, pc, 0, .9], [F - .01, .075 * Lb, .074 * Lb, pc, 0, .78]);
       const lg = G.limb(Jt, [bn('UpLeg'), bn('Leg')], BI.Hips, [.095, .095], st, NL, FWD, 1, .046, F - (cuffed ? .012 : .004), [0, sg * .2], {
-        bends: [undefined, bn('LegBend')], openStart: true,
+        bends: [bn('UpLegBend'), bn('LegBend')], openStart: true, endBone: bn('FootBend'),
       });
       G.bridge(trousers[s === 'Left' ? 0 : 1], lg[0]);
       const outer = lg.v.x * sg > 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -1013,7 +1048,8 @@ export function mocapPerson(look, opt = {}) {
       rmAt(r, t1, loop, _b); J.dx += (_b[0] - _a[0]) * scale; J.dz += (_b[1] - _a[1]) * scale;
     }
     // stay near the spot: a soft pull back and a hard edge
-    const k = Math.exp(-dt * J.pull); J.dx *= k; J.dz *= k;
+    const contactMove = /^City_(Floorrock_|Backspin)/.test(J.cur);
+    const k = Math.exp(-dt * (contactMove ? .22 * J.pull : J.pull)); J.dx *= k; J.dz *= k;
     const d = Math.hypot(J.dx, J.dz); if (d > J.maxR) { J.dx *= J.maxR / d; J.dz *= J.maxR / d; }
     rig.position.x = J.dx; rig.position.z = J.dz;
     // GROUND: nothing of the body may go under the asphalt (owner 14.11 «при падении… не проваливался под землю»).
@@ -1022,7 +1058,8 @@ export function mocapPerson(look, opt = {}) {
     rig.position.y = 0; root.updateMatrixWorld(true);
     let low = Infinity; for (const q of PTS) { _v.copy(q.p).applyMatrix4(q.m.matrixWorld); const y = _v.y - q.r; if (y < low) low = y; }
     low -= root.position.y;
-    const want = J.rest ? -low : Math.max(0, -low);
+    const contact = contactMove ? a.getEffectiveWeight() : 0;
+    const want = J.rest ? -low : low > 0 ? -Math.min(low, .065) * contact : -low;
     J.lift = want >= (J.lift || 0) ? want : lerpTo(J.lift || 0, want, dt, J.rest ? 14 : 10);   // up at once, down softly
     rig.position.y = J.lift;
   };

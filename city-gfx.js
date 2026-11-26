@@ -833,10 +833,12 @@
     if (S.extra === 'crown') { const l = L[0], s = Math.min(h * .26, sx * 5 + wt); c.save(); c.translate(l.cx - sx * .6, top - s * .16); c.rotate(-.22); GRAF_EXTRA.crown(c, 0, 0, s, P); c.restore(); }
   }
   function muralLines(word) {
-    const chars = grafChars(word), middle = chars.length / 2;
-    const between = chars.flatMap((ch, i) => /[ -]/.test(ch) && i >= middle * .65 && i <= middle * 1.35 ? [i + 1] : []);
-    const cut = between.length ? between.reduce((a, b) => Math.abs(b - middle) < Math.abs(a - middle) ? b : a) : Math.ceil(middle);
-    return [chars.slice(0, cut).join('').trim(), chars.slice(cut).join('').trim()];
+    const chars = grafChars(word), middle = (chars.length - 1) / 2;
+    let cut = -1;
+    for (let i = 0; i < chars.length; i++) {
+      if (chars[i] === ' ' && (cut < 0 || Math.abs(i - middle) < Math.abs(cut - middle))) cut = i;
+    }
+    return cut < 0 ? null : [chars.slice(0, cut).join(''), chars.slice(cut + 1).join('')];
   }
 
   function muralRow(S, word, seed, extra) {
@@ -862,8 +864,9 @@
     const fit = (width, height) => Math.min(S.w * .90 / width, S.h * .84 / height);
     let rows = [muralRow(S, word, seed, S.extra)], gap = 0;
     let scale = fit(rows[0].w, rows[0].h);
-    if (grafChars(word).length > 7 && scale * rows[0].h < S.h * .62) {
-      const [a, b] = muralLines(word);
+    const lines = grafChars(word).length > 7 && scale * rows[0].h < S.h * .62 ? muralLines(word) : null;
+    if (lines) {
+      const [a, b] = lines;
       const two = [muralRow(S, a, seed, S.extra), muralRow(S, b, seed + 19, null)];
       const lineGap = S.style === 'wild' ? 4 : 12;
       const stacked = fit(Math.max(...two.map(row => row.w)), two[0].h + two[1].h + lineGap);

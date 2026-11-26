@@ -5,9 +5,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=24';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=25';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=14';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=15';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -1065,7 +1065,7 @@ export function initGame(ctx) {
       if (P.id === 'ninety' && !gear?.move) opening.rise();
       const reps = selected ? Math.max(1, Math.round(2.6 / clipLen(P.c)))
         : P.id === 'backspin' ? 1 : Math.max(1, Math.round((2.2 + r() * .8) / clipLen(P.c)));
-      const failAt = .45 + r() * .35;
+      const failAt = P.id === 'backspin' ? .84 + r() * .09 : .45 + r() * .35;
       if (gear?.move) push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: P.pts + 6, kind: 'power', gear });
       else push(side(P.c, P.id === 'backspin' && r() < .5), reps * clipLen(P.c), 0, { nm: P === FOOT_OPTION ? _t('Футворк') : P.nm, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fail: pFail, failAt, lv: need, gear });
       // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
