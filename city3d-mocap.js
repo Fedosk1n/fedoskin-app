@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead } from './city3d-head.js?v=6';
+import { addCityHead, cityLocs } from './city3d-head.js?v=7';
 import { CITY_ANATOMY } from './city3d-anatomy.js?v=2';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 
@@ -376,6 +376,14 @@ function skinGeo() {
       else idx.push(a, b, c);
     });
   };
+  G.locMesh = (geometry, matrix, color, weightsAt) => {
+    const start = G.n, p = geometry.attributes.position, c = geometry.attributes.color, point = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      point.fromBufferAttribute(p,i).applyMatrix4(matrix);
+      vert(point,color,weightsAt(p.getY(i)),c.getX(i),.91);
+    }
+    for (const i of geometry.index.array) idx.push(start+i);
+  };
   const face = (a, b, c, d) => idx.push(a, b, c, b, d, c);
   G.join = (a, b, openings) => {
     for (let i = 0; i < a.n; i++) {
@@ -611,7 +619,8 @@ export const BODY_TYPES = {
   big:    { h: 1.13, limb: 1.24, arm: 1.36, chest: 1.3,  waist: 1.18, hip: 1.12, belly: .45, head: .96 },
   small:  { h: .83,  limb: .86,  arm: .86,  chest: .9,   waist: .92,  hip: .94,  belly: 0,   head: 1.13 },
 };
-export const SKINS = ['#F0C8A4', '#E3B088', '#C68A5E', '#A9713F', '#80502E', '#5C3820'];
+export const SKINS = ['#F4D3BB', '#EDC2A4', '#E2B18C', '#D8AB7C', '#C99672', '#BC855F',
+  '#AB744C', '#9C6448', '#88553B', '#744632', '#613B2E', '#4D3029'];
 export const HAIRS = ['#1E1714', '#17120f', '#2e1e14', '#4d3120', '#7a4a22', '#b98d4e', '#dcc9a0', '#a23c1f', '#8d9096', '#e9e9ec'];
 const MEN = ['short', 'short', 'buzz', 'bald', 'afro', 'top', 'mohawk', 'dreads', 'curly', 'long'], WOMEN = ['tail', 'bun', 'long', 'braids', 'afro', 'short', 'curly', 'buns'];
 function mul(seed) { let a = seed >>> 0 || 1; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -701,13 +710,22 @@ export function mocapPerson(look, opt = {}) {
     const drop = coat ? .216 : tp === 'teeBig' ? .14 : /^tee/.test(tp) ? .112 : hoodie ? .096 : .048, lo = .04 - drop;
     const ex = (coat ? .041 : tp === 'teeBig' || hoodie ? .021 : .014) * baggy;
     const layerD = hemD + ex + .020, layerW = hemW + ex * 1.15 + .006;
-    const st = [[lo, layerD, layerW, rib || topC, 0, .8]];
-    if (!rib) st.push([lo + .012, layerD + .003, layerW + .002, topC, 0, .94], [lo + .044, layerD - .004, layerW - .002, topC]);
-    if (rib) st.push([lo + .032, layerD, layerW, rib, 0, .92], [lo + .032, layerD + .005, layerW + .006, topC, 1, .92]);
+    const layered = !!look.layers && /^tee/.test(tp);
+    const under = layered ? '#292632' : null;
+    const st = [];
+    if (layered) {
+      const hem = S('Spine') + .028, d = .10*dp*wd + bl, w = .151*ww;
+      st.push([.045,hemD+.006,hemW+.006,under], [.072,d,w,under], [hem,d,w,under],
+        [hem,d+.014,w+.017,shadeOf(topC,.75),2], [hem+.014,d+.016,w+.019,topC]);
+    } else {
+      st.push([lo, layerD, layerW, rib || topC, 0, .8]);
+      if (!rib) st.push([lo + .012, layerD + .003, layerW + .002, topC, 0, .94], [lo + .044, layerD - .004, layerW - .002, topC]);
+      if (rib) st.push([lo + .032, layerD, layerW, rib, 0, .92], [lo + .032, layerD + .005, layerW + .006, topC, 1, .92]);
+      // A fabric ring at the waistband keeps the trousers under the top when the torso bends.
+      st.push([.055, hemD + ex + bl * .65, hemW + ex, topC], [S('Spine') + .02, .1 * dp * wd + bl, .155 * ww, topC, 0, .93]);
+    }
     const nk = S('Neck'), jx = Math.abs(JP('LeftArm').x), js = S('LeftArm'), ak = .6 * A + .4;
-    // A fabric ring at the waistband keeps the trousers under the top when the torso bends.
-    st.push([.055, hemD + ex + bl * .65, hemW + ex, topC]);
-    st.push([S('Spine') + .02, .1 * dp * wd + bl, .155 * ww, topC, 0, .93], [S('Spine1'), .105 * dp + bl * .6, .167 * (cw * .6 + ww * .4), topC, 0, .97], [S('Spine2'), .115 * dp, jx + .003 * ak, topC]);
+    st.push([S('Spine1'), .105 * dp + bl * .6, .167 * (cw * .6 + ww * .4), topC, 0, .97], [S('Spine2'), .115 * dp, jx + .003 * ak, topC]);
     // Four rows of open faces on each side make room for the continuous sleeve.
     // The two openings sit a little towards the back, over the arm joints.
     const bottom = Math.max(S('Spine2') + .018, js - .089 * ak);
@@ -725,7 +743,7 @@ export function mocapPerson(look, opt = {}) {
       st.push([nk - .006, .076, .087, topC], [nk + .002, .075, .084, binding], [nk + .015, .067, .077, binding, 0, 1.06], [nk + .020, .062, .069, binding]);
     }
     const openings = [5, 15];
-    const tr = G.limb(P, TB, BI.Hips, TZ, st, NT, FWD, .78, lo - .012, st[st.length - 1][0] + .012, null, {
+    const tr = G.limb(P, TB, BI.Hips, TZ, st, NT, FWD, .78, st[0][0] - .012, st[st.length - 1][0] + .012, null, {
       openStart: true,
       cut: (a, b) => a.s >= bottom - 1e-5 && b.s <= shoulder + 1e-5 ? openings : null,
     });
@@ -742,7 +760,7 @@ export function mocapPerson(look, opt = {}) {
         return [[BI.Spine2, 1 - arm - collar], [BI[side + 'ArmBend'], arm], [BI[side + 'Shoulder'], collar]];
       });
     }
-    G.hem(tr, shadeOf(rib || topC, .65));
+    G.hem(tr, shadeOf(under || rib || topC, .65));
     if (track || bomber) {
       const zipStart = lo + (rib ? .032 : .012);
       const zipEnd = nk + (track ? .044 : .026);
@@ -831,11 +849,14 @@ export function mocapPerson(look, opt = {}) {
     }
     { // leg: hip → thigh → knee → shin → hem. Wide legs stack on the shoe; track pants end in a cuff
       const Jt = [s + 'UpLeg', s + 'Leg', s + 'Foot'].map(JP), K = Jt[0].distanceTo(Jt[1]), F = K + Jt[1].distanceTo(Jt[2]), Ls = L * .75 + .25, Lk = (L + Ls) / 2, pc = C.pants, pt = look.pants || 'jeans';
-      const cuffed = /^trackp/.test(pt), Lb = Ls * (pt === 'wind' ? 1.16 : cuffed ? 1.08 : 1.1), kc = cus.pants >= 1 ? mixOf(pc, '#9aa0ab', .36) : pc;
-      const st = [[.046, .096 * L, Math.min(.088 * L, Math.abs(Jt[0].x) - .006), pc, 0, .95], [.11, .096 * L, .089 * L, pc], [.2, .094 * L, .089 * L, pc], [K - .1, .086 * L, .083 * L, pc]];
+      const relaxed = pt === 'wind' && look.layers;
+      const cuffed = /^trackp/.test(pt), Lb = Ls * (relaxed ? 1.33 : pt === 'wind' ? 1.16 : cuffed ? 1.08 : 1.1), kc = cus.pants >= 1 ? mixOf(pc, '#9aa0ab', .36) : pc;
+      const ease = relaxed ? 1.12 : 1;
+      const st = [[.046, .096 * L, Math.min(.088 * L, Math.abs(Jt[0].x) - .006), pc, 0, .95],
+        [.11, .096 * L * ease, .089 * L, pc], [.2, .094 * L * ease, .089 * L * ease, pc], [K - .1, .086 * L * ease, .083 * L * ease, pc]];
       if (kc !== pc) st.push([K - .07, .083 * Lk, .08 * Lk, pc], [K - .07, .086 * Lk, .083 * Lk, kc, 1]);                    // custom: reinforced knees
       for (const [offset, depth, width] of KNEE_PROFILE) {
-        const size = offset <= 0 ? Lk : Lb;
+        const size = offset <= 0 ? Lk * ease : Lb;
         st.push([K + offset, depth * size, width * size, kc]);
       }
       if (kc !== pc) st.push([K + .09, .074 * Lb, .071 * Lb, kc], [K + .09, .072 * Lb, .069 * Lb, pc, 1]);
@@ -856,6 +877,10 @@ export function mocapPerson(look, opt = {}) {
       if (pt === 'jeans') {
         G.strip(lg, outer - .097 * pocketSide, .0045, stitch, .115, F - .036, .0037);
         G.panel(lg, Math.PI, [[.112,.50,.003],[.146,.57,.005],[.235,.49,.005],[.255,.28,.003]], shadeOf(pc, .79));
+      }
+      if (relaxed) {
+        G.panel(lg, outer, [[.160,.48,.003],[.187,.62,.010],[.279,.55,.010],[.294,.40,.005]], shadeOf(pc,.84));
+        G.trace(lg,[[.191,outer-.27],[.180,outer],[.191,outer+.27]],shadeOf(pc,1.23),.074,.012);
       }
       if (look.knee) {
         const pad = C.knee || '#353540';
@@ -963,6 +988,15 @@ export function mocapPerson(look, opt = {}) {
         addW(s + 'Foot', new THREE.BoxGeometry(.03, .03, .006), gm, new THREE.Vector3(xAt(zH), .075 + highT, zH + .004));
       }
     }
+  }
+  if (/Locs$/.test(bd.style || '')) {
+    const headScale = bd.head * .94;
+    const matrix = B.Head.matrixWorld.clone().scale(new THREE.Vector3(headScale,headScale,headScale));
+    const locs = cityLocs(bd.style, !!(look.hat && C.hat), bd.pack ? .098 : hoodie || bd.hood ? .065 : 0);
+    G.locMesh(locs,matrix,C.hair,y => {
+      const head = smooth(-.115,.065,y), back = 1-smooth(-.31,-.09,y);
+      return [[BI.Head,head],[BI.Neck,1-head-back],[BI.Spine2,back]];
+    });
   }
   const bones = names.map(n => B[n]), body = new THREE.SkinnedMesh(G.build(), SKIN_MAT);
   // culled like everything else, with a sphere big enough for any pose (lying, handstand, arms out: the hips never leave the rig's centre,

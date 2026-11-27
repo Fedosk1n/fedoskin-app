@@ -5,9 +5,9 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=28';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=29';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=18';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=19';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -68,9 +68,9 @@ const cusFx = (c, v) => c.un.replace('{v}', v);
 // the crews; d = district ('yard' when absent); gear = HERO.GEAR pieces (1st win → 1st piece, 3rd win → 2nd piece);
 // wall = [x, z] where the crew's wall stands (the yard's walls find a free spot themselves); boss = the owners of the district
 export const CREWS = [
-  { id: 'rusty', bodies: ['stocky', 'slim', 'avg'], name: _t('Ржавые'), lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
-  { id: 'acid', bodies: ['lanky', 'small', 'slim'], name: _t('Кислотные'), lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
-  { id: 'owls', bodies: ['athl', 'slim', 'small'], name: _t('Ночные совы'), lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
+  { id: 'rusty', bodies: ['stocky', 'slim', {type:'avg', skin:'#744632', style:'longLocs'}], name: _t('Ржавые'), lv: 1, col: '#E07A45', at: [-7.2, -9.4], looks: [['c:rustyBandana'], ['c:rustyTrack'], []], gear: ['rustyBandana', 'rustyTrack'] },
+  { id: 'acid', bodies: ['lanky', 'small', {type:'slim',skin:'#D8AB7C',style:'short',face:3,layers:true}], name: _t('Кислотные'), lv: 2, col: '#7CFF4F', at: [8.6, -6.2], looks: [['c:acidBucket'], ['c:acidKicks'], ['c:acidBucket', 'girl']], gear: ['acidKicks', 'acidBucket'] },
+  { id: 'owls', bodies: ['athl', 'slim', {type:'small',skin:'#88553B',style:'tiedLocs',face:1}], name: _t('Ночные совы'), lv: 3, col: '#A98BFF', at: [-8.6, -2.4], looks: [['c:owlHoodie'], ['c:owlPhones'], ['c:owlHoodie', 'girl']], gear: ['owlPhones', 'owlHoodie'] },
   { id: 'gold', bodies: ['heavy', 'big', 'avg', 'stocky'], name: _t('Золотые зубы'), lv: 4, col: '#FFD23F', at: [4.6, 9.2], looks: [['c:goldChain'], ['c:goldCap'], ['c:goldChain', 'girl'], []], gear: ['goldChain', 'goldCap'] },
   // ЦЕНТР (16.11.2026)
   { id: 'stencil', bodies: ['slim', 'athl', 'small'], d: 'center', name: _t('Трафареты'), lv: 3, col: '#FF6B5E', at: [-8, 10.2], wall: [-8, 7.3], base: 3, fix: l => { if (l.col.hat) l.col.hat = l.hat === 'bandana' ? l.col.hat : ['#18181B', '#C8202A']; if (l.top !== 'bomber') l.col.top = '#18181B'; l.col.pants = '#232327'; }, looks: [['c:stencilBandana'], ['c:stencilBomber'], ['c:stencilBandana', 'girl']], gear: ['stencilBandana', 'stencilBomber'] },
@@ -82,10 +82,10 @@ export const CREWS = [
 CREWS.push(
   { id: 'funk', d: 'park', name: _t('Фанк-бригада'), lv: 5, col: '#FF7AD9', at: [-8.2, 8.4], wall: [-8.2, 5.5], base: 5, bodies: [{ type: 'stocky', style: 'afro' }, { type: 'heavy', style: 'top', beard: true }, { type: 'slim', style: 'afro' }],
     fix: l => { l.top = 'track'; Object.assign(l.col, { top: '#7A2FB8', yoke: '#FFD23F', sleeve: '#7A2FB8', cuff: '#FFD23F', trim: '#FFD23F', pants: '#7A2FB8', stripe: '#FFD23F' }); if (l.col.hat) l.col.hat = ['#FFD23F', '#7A2FB8']; }, looks: [['c:funkTrack'], [], ['girl']], gear: ['funkTrack'] },
-  { id: 'roots', d: 'park', name: _t('Корни'), lv: 6, col: '#7CD957', at: [8.2, 2.4], wall: [8.2, -.5], base: 5, bodies: [{ type: 'lanky', style: 'dreads' }, { type: 'slim', style: 'braids' }, { type: 'athl', style: 'dreads', beard: true }, { type: 'small', style: 'dreads' }],
+  { id: 'roots', d: 'park', name: _t('Корни'), lv: 6, col: '#7CD957', at: [8.2, 2.4], wall: [8.2, -.5], base: 5, bodies: [{ type: 'lanky', style: 'longLocs', skin: '#613B2E' }, { type: 'slim', style: 'longLocs', skin: '#88553B', face: 2, layers: true }, { type: 'athl', style: 'dreads', beard: true }, { type: 'small', style: 'dreads' }],
     fix: l => { if (l.top !== 'tee') { l.col.top = '#1f3d24'; if (l.col.sleeve) l.col.sleeve = '#1f3d24'; l.col.cuff = '#FFD23F'; l.col.trim = '#C8202A'; } else l.col.top = '#2F8F3A'; l.col.pants = '#3a3226'; l.col.stripe = null; if (l.col.hat) l.col.hat = ['#2F8F3A', '#FFD23F']; },
     looks: [['c:rootsBeanie'], ['c:rootsBeanie', 'girl'], [], ['c:rootsBeanie']], gear: ['rootsBeanie'] },
-  { id: 'wave', d: 'park', name: _t('Волна'), lv: 7, col: '#3FD6E0', at: [4.2, -5.4], wall: [4.2, -8.3], boss: _t('Кюрасао'), base: 7, bodies: [{ type: 'athl', h: 1.12, style: 'mohawk', dye: '#3FD6E0' }, { type: 'slim', style: 'buns' }, { type: 'big', style: 'buzz', beard: true }, { type: 'lanky', style: 'curly' }],
+  { id: 'wave', d: 'park', name: _t('Волна'), lv: 7, col: '#3FD6E0', at: [4.2, -5.4], wall: [4.2, -8.3], boss: _t('Кюрасао'), base: 7, bodies: [{ type: 'athl', h: 1.12, style: 'mohawk', dye: '#3FD6E0' }, { type: 'slim', style: 'buns', skin: '#AB744C', layers: true }, { type: 'big', style: 'buzz', beard: true }, { type: 'lanky', style: 'curly' }],
     fix: l => { l.col.top = l.top === 'tee' ? '#F2EFE8' : '#0f3a44'; if (l.col.sleeve) l.col.sleeve = '#0f3a44'; l.col.cuff = '#3FD6E0'; l.col.trim = '#3FD6E0'; l.col.pants = '#12262c'; if (l.col.stripe) l.col.stripe = '#3FD6E0'; if (l.col.hat) l.col.hat = ['#19B8C4', '#F2EFE8']; l.col.gold = '#D9DEE6'; },
     looks: [['c:waveKicks'], ['c:waveKicks', 'girl'], [], ['c:waveKicks']], gear: ['waveKicks'] },
 );
@@ -120,13 +120,15 @@ const CSTY = {
   gold: { acc: '#FFD23F', tops: ['#E9E4D8', '#18181B', '#6b4f1d', '#E9E4D8'], pants: ['#E6E1D6', '#18181B', '#2b2620', '#18181B'], hat: ['#18181B', '#E7B23C'],
     shoes: [['#F2EFE8', '#E7B23C', '#F2EFE8'], ['#18181B', '#E7B23C', '#E7B23C'], ['#E9E4D8', '#18181B', '#E9E4D8']], cuts: ['track', 'teeBig', 'bomber', 'tee'], legs: ['trackp', 'wind', 'trackp', 'jeans'], trim: '#E7B23C' },
 };
-const CUTS = ['hoodie', 'tee', 'track', 'bomber', 'teeBig'], HAIRY = /afro|mohawk|dreads|top|bun|curly|braids|long/;
+const CUTS = ['hoodie', 'tee', 'track', 'bomber', 'teeBig'], HAIRY = /afro|mohawk|dreads|top|bun|curly|braids|long|Locs/;
 const tint = (c, k) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
 function dress(l, c, i, acc, body) {
   const slots = new Set(acc.map(k => HERO.itemOf && HERO.itemOf(k)).filter(Boolean).map(g => g.slot)), st = CSTY[c.id], r = rng((c.id.length * 131 + c.id.charCodeAt(0) * 17 + i * 7919) >>> 0), C = l.col;
   const at = (a, k = 0) => a[(i + k) % a.length], A = st ? st.acc : c.col;
   if (!slots.has('top')) {
-    const t = st ? at(st.cuts) : at(CUTS, c.id.length); l.top = t;
+    const t = body.layers ? 'teeBig' : st ? at(st.cuts) : at(CUTS, c.id.length);
+    l.top = t;
+    l.layers = !!body.layers;
     const long = !/^tee/.test(t), top = st ? at(st.tops) : C.top || '#18181B';
     C.top = top; C.sleeve = long ? (t === 'bomber' && st ? at(st.tops, 1) : top) : null; C.yoke = t === 'track' ? (st ? (top === '#18181B' || top === '#141518' ? A : '#18181B') : C.yoke || '#18181B') : null;
     C.cuff = t === 'hoodie' ? tint(top, .8) : t === 'track' ? (st ? '#18181B' : C.cuff || '#18181B') : t === 'bomber' ? (st ? A : C.cuff || A) : null;
@@ -138,6 +140,7 @@ function dress(l, c, i, acc, body) {
     else { l.hat = at([l.hat || 'cap', null, 'beanie', 'capBack', null], c.id.length); }
     C.hat = l.hat ? (st ? st.hat.slice() : C.hat || ['#18181B', A]) : null;
   }
+  if (body.layers && !slots.has('pants')) { l.pants = 'wind'; C.stripe = null; }
   if (st && !slots.has('kicks')) { const [a, b, so] = at(st.shoes); C.shoe = a; C.shoe2 = b; C.sole = so; C.lace = a === '#F2EFE8' || a === '#E9E4D8' ? b : '#F2EFE8'; }
   if (!slots.has('ears')) l.phones = !!l.phones && i % 3 === 2;
   if (!slots.has('neck')) l.chain = i % 3 === 0 ? Math.min(1, l.chain || 0) : 0;
@@ -574,7 +577,7 @@ export function initGame(ctx) {
   const djLook = HERO.topDown(6, ['c:djGloves']);
   djLook.phones = true;
   Object.assign(djLook.col, { phones: '#d46732', top: '#292f43', sleeve: '#363b52', cuff: '#c7733e' });
-  const djP = mocapPerson(djLook, { body: bodyOf(5, { type: 'heavy', style: 'dreads', beard: true }) });
+  const djP = mocapPerson(djLook, { body: bodyOf(5, { type: 'heavy', style: 'longLocs', skin: '#613B2E', beard: true }) });
   dj.add(djP.root);
   const djMix = performDJ(djP, dj, recs, strip, faders);
   const djSign = dj.localToWorld(new THREE.Vector3(0, 2.83, -.49));
