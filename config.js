@@ -25,5 +25,19 @@ window.APP_CONFIG = {
  "fullRub": 50000,
  "fullUsd": 1000,
  "consultUsd": 20,
- "cityEnabled": true
+ "cityEnabled": true,
+ "dubs": {
+  "pw-windmill": {
+   "media": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
+   "tracks": {
+    "en": "dub-pw-windmill-en-47b577f2.mp4"
+   }
+  },
+  "fr-airbaby": {
+   "media": "fr-airbaby-to0b3ely.mp4",
+   "tracks": {
+    "en": "dub-fr-airbaby-en-2593928f.mp4"
+   }
+  }
+ }
 };

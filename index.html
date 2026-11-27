@@ -1314,6 +1314,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="fsk" id="btnMirror" aria-pressed="false" aria-label="Зеркало"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5z"/><path d="m16 7 5 5-5 5z"/></svg></span><span class="fsl">Зеркало</span></button>
     <button class="fsk" id="btnLoop" aria-pressed="true" aria-label="Повтор урока"><span class="fsi"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></span><span class="fsl" id="loopText">Повтор</span></button>
   </div>
+  <label class="row" id="dubChoice" hidden style="justify-content:space-between;margin:8px 0;color:var(--soft)">
+    <span id="dubLabel"></span>
+    <select id="dubLang" aria-labelledby="dubLabel" class="chip" style="min-height:44px;max-width:67%;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:0 10px"></select>
+  </label>
   <!-- the speed choice itself (logic + keyboard); the round «Скорость» button above cycles 1x → 0.5x → 0.25x -->
   <div class="seg" role="group" aria-label="Скорость" id="speedSeg" hidden>
     <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
@@ -2636,7 +2640,94 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // owner 08.11.2026: at 0.5x / 0.25x the sound is always off (slowed speech is useless) and can't be turned on;
   // back at 1x the person's own choice (`soundOff`) returns. The saved choice is never changed by the slow-down.
   const quiet = () => soundOff || (typeof P !== 'undefined' && P.rate < 1);
-  function applyMute(){ const q = quiet(); vid.muted = av === vid ? q : true; vin.muted = av === vin ? q : true; }
+  const dubChoice = $('#dubChoice'), dubLang = $('#dubLang'), dubAudio = new Audio();
+  dubAudio.crossOrigin = 'anonymous';
+  let dubTracks = null, dubSource = '', dubPlay = null, dubWaiting = true;
+  const dubOn = () => !!dubSource && $('#badgeOwn').hidden;
+  function syncDub(){
+    if (!dubOn() || !dubAudio.getAttribute('src') || quiet() || !P.playing || av.paused || av.seeking || dubWaiting || av.readyState < 3) {
+      dubAudio.pause();
+      return;
+    }
+    if (!dubAudio.seeking && (dubAudio.ended || Math.abs(dubAudio.currentTime - av.currentTime) > .14)) {
+      dubAudio.currentTime = av.currentTime;
+    }
+    if (dubAudio.paused && !dubPlay) {
+      const source = dubSource;
+      const playing = dubAudio.play();
+      dubPlay = playing;
+      playing.catch(error => {
+        if (dubPlay !== playing || dubSource !== source || error.name === 'AbortError') return;
+        if (error.name === 'NotAllowedError') {
+          soundOff = true;
+          applyMute();
+          paintMute();
+        } else dubFallback();
+      }).finally(() => { if (dubPlay === playing) dubPlay = null; });
+    }
+  }
+  function applyMute(){
+    const q = quiet() || dubOn();
+    vid.muted = av === vid ? q : true;
+    vin.muted = av === vin ? q : true;
+    syncDub();
+  }
+  function setDub(lang){
+    const key = dubTracks && dubTracks[lang];
+    const source = R2_BASE && typeof key === 'string' && /^[a-z0-9][a-z0-9-]{0,80}\.mp4$/.test(key) ? { key } : '';
+    const unchanged = source && dubSource && source.key === dubSource.key;
+    if (unchanged || (!source && !dubSource)) return;
+    dubSource = source;
+    dubPlay = null;
+    dubAudio.pause();
+    dubAudio.removeAttribute('src');
+    dubAudio.load();
+    if (source) {
+      const usePass = pass => {
+        if (dubSource !== source) return;
+        dubAudio.src = R2_BASE + '/v/' + encodeURIComponent(key) + '?p=' + encodeURIComponent(pass.p);
+        syncDub();
+      };
+      if (passFresh()) usePass(vPass);
+      else getPass().then(usePass).catch(() => { if (dubSource === source) dubFallback(); });
+    }
+    applyMute();
+  }
+  function dubFallback(){
+    dubLang.value = 'original';
+    setDub('original');
+    toast(T('Озвучка не загрузилась. Включён оригинал.'));
+  }
+  function loadDub(lesson){
+    setDub('original');
+    const entry = lesson && CFG.dubs && CFG.dubs[lesson.id];
+    dubTracks = entry && entry.media === (lesson.ks || lesson.r2) ? entry.tracks : null;
+    dubLang.replaceChildren(new Option(T('Оригинал'), 'original'));
+    for (const [code, name] of I18N.langs) {
+      if (dubTracks && dubTracks[code]) dubLang.add(new Option(name, code));
+    }
+    dubChoice.hidden = dubLang.options.length === 1;
+    $('#dubLabel').textContent = T('Озвучка');
+    dubLang.value = LANG !== 'ru' && dubTracks?.[LANG] ? LANG : 'original';
+    setDub(dubLang.value);
+  }
+  dubLang.addEventListener('change', () => setDub(dubLang.value));
+  dubAudio.addEventListener('error', () => { if (dubOn()) dubFallback(); });
+  dubAudio.addEventListener('loadedmetadata', syncDub);
+  dubAudio.addEventListener('seeked', syncDub);
+  for (const video of [vid, vin]) {
+    video.addEventListener('playing', () => { if (av === video) { dubWaiting = false; syncDub(); } });
+    for (const event of ['waiting', 'seeking', 'pause', 'ended']) {
+      video.addEventListener(event, () => { if (av === video) { dubWaiting = true; dubAudio.pause(); } });
+    }
+    video.addEventListener('seeked', () => {
+      if (av === video && !video.paused && video.readyState >= 3) {
+        dubWaiting = false;
+        syncDub();
+      }
+    });
+    video.addEventListener('timeupdate', () => { if (av === video && dubOn()) syncDub(); });
+  }
   const introEnd = () => vin.duration && isFinite(vin.duration) ? vin.duration : 5;
   function clearIntro(){
     introOn = false; av = vid; streamDefer = null; clearTimeout(streamDeferT); vin._tok = null;
@@ -2736,6 +2827,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   vin.addEventListener('error', () => { if (introOn && vin.getAttribute('src')) toStream(vin.currentTime || 0); });
 
   function loadVideo(src, poster, ks, intro){
+    dubWaiting = true;
     const ra = resumeAt && curLesson && resumeAt.id === curLesson.id && resumeAt.t > 3 ? resumeAt.t : 0; resumeAt = null;
     if (ra) intro = ks ? null : intro; // continuing from a moment: no 5-s intro in front of it
     nativeWant = null;
@@ -3080,6 +3172,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const srcInfo = resumeAt && resumeAt.id === l.id && l.ks ? null : introSource(l);
     diag('open ' + l.id + (l.ks ? ' ks' + (ksSaved[l.ks] ? ' saved' : '') + (isApple ? (mmsOk() ? ' mms' : ' apple-player') : '') : ' file') + (resumeAt && resumeAt.id === l.id ? ' from ' + resumeAt.t : ''));
     loadVideo(fileFor(l), jpgUrl(l), l.ks, srcInfo); fcOwn = false;
+    loadDub(l);
     vpnArm(l);
     ldStart(l);
     paint();
@@ -3352,7 +3445,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (introOn) playIntro();
         // with hls.js not attached yet the stream starts itself; under the intro it waits for the intro's end
         else if (!ksPending) playMain();
-      } else { vid.pause(); if (introOn) vin.pause(); hideLoad(); }
+      } else { vid.pause(); if (introOn) vin.pause(); dubAudio.pause(); hideLoad(); }
     }
     P.last = performance.now();
   }
@@ -4170,6 +4263,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#ownVideo').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
     setLoop(null);
+    loadDub(null);
     loadVideo(URL.createObjectURL(f), ''); fcOwn = true; // the viewer's own video: no lesson frames from it
     $('#badgeOwn').hidden = false;
     toast(T('Твоё видео загружено — проверь замедление и зеркало'));

@@ -59,7 +59,7 @@ const APPLE = /iPhone|iPad|iPod|Macintosh/.test(self.navigator.userAgent) && !/C
 const isVideo = u => /\/v\/[^/]+\.mp4$/.test(u.pathname) && !/-p3\.mp4$/.test(u.pathname);
 
 self.addEventListener('fetch', e => {
-  const req = e.request; if (req.method !== 'GET') return;
+  const req = e.request; if (req.method !== 'GET' || req.destination === 'audio') return;
   const u = new URL(req.url); if (!isVideo(u) || (u.origin !== location.origin && u.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(u.hostname))) return;
   // iPhone/iPad/Mac Safari (owner 11.11.2026 «чтобы видео оставались загруженными»): the page saves a watched lesson
   // itself (whole file, in the background) and asks for it with «sv=1» only when it is already saved — only those
