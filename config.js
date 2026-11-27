@@ -30,33 +30,33 @@ window.APP_CONFIG = {
   "pw-windmill": {
    "media": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
    "tracks": {
-    "en": "dub-pw-windmill-en-21950bf9.mp4",
-    "es": "dub-pw-windmill-es-23e49c43.mp4",
-    "pt": "dub-pw-windmill-pt-9dca9e6b.mp4",
-    "fr": "dub-pw-windmill-fr-bde723a8.mp4",
-    "de": "dub-pw-windmill-de-79758c08.mp4",
-    "ja": "dub-pw-windmill-ja-feff79b1.mp4",
-    "ko": "dub-pw-windmill-ko-aecb1df4.mp4",
-    "zh": "dub-pw-windmill-zh-e66dfc6a.mp4"
+    "en": "dub-pw-windmill-en-voice-58266806.mp4",
+    "es": "dub-pw-windmill-es-voice-f4535e82.mp4",
+    "pt": "dub-pw-windmill-pt-voice-2000ede6.mp4",
+    "fr": "dub-pw-windmill-fr-voice-bed0b826.mp4",
+    "de": "dub-pw-windmill-de-voice-b772b530.mp4",
+    "ja": "dub-pw-windmill-ja-voice-fe099e80.mp4",
+    "ko": "dub-pw-windmill-ko-voice-93de4037.mp4",
+    "zh": "dub-pw-windmill-zh-voice-b0aa8a38.mp4"
    },
    "mux": {
-    "en": "dub-pw-windmill-en-1c43a15e.mp4",
-    "es": "dub-pw-windmill-es-mux-23e49c43.mp4",
-    "pt": "dub-pw-windmill-pt-mux-9dca9e6b.mp4",
-    "fr": "dub-pw-windmill-fr-mux-bde723a8.mp4",
-    "de": "dub-pw-windmill-de-mux-79758c08.mp4",
-    "ja": "dub-pw-windmill-ja-mux-feff79b1.mp4",
-    "ko": "dub-pw-windmill-ko-mux-aecb1df4.mp4",
-    "zh": "dub-pw-windmill-zh-mux-e66dfc6a.mp4"
+    "en": "dub-pw-windmill-en-voice-58266806-mux.mp4",
+    "es": "dub-pw-windmill-es-voice-f4535e82-mux.mp4",
+    "pt": "dub-pw-windmill-pt-voice-2000ede6-mux.mp4",
+    "fr": "dub-pw-windmill-fr-voice-bed0b826-mux.mp4",
+    "de": "dub-pw-windmill-de-voice-b772b530-mux.mp4",
+    "ja": "dub-pw-windmill-ja-voice-fe099e80-mux.mp4",
+    "ko": "dub-pw-windmill-ko-voice-93de4037-mux.mp4",
+    "zh": "dub-pw-windmill-zh-voice-b0aa8a38-mux.mp4"
    }
   },
   "fr-airbaby": {
    "media": "fr-airbaby-to0b3ely.mp4",
    "tracks": {
-    "en": "dub-fr-airbaby-en-1f6971fb.mp4"
+    "en": "dub-fr-airbaby-en-voice-cb4f52b4.mp4"
    },
    "mux": {
-    "en": "dub-fr-airbaby-en-892766c5.mp4"
+    "en": "dub-fr-airbaby-en-voice-cb4f52b4-mux.mp4"
    }
   }
  }
