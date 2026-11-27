@@ -9,16 +9,16 @@
   const requested = new URLSearchParams(location.search).get('d');
   const district = ['yard', 'center', 'park', 'club', 'prom'].includes(requested) ? requested : saved?.where;
   let background = district === 'club' ? (saved?.clubTrack === 1 ? 'club_floor' : 'club') : 'yard';
-  let track = background, timer, stale = false, gestureSeen = false, stopped = false;
+  let track = background, timer, stale = false, gestureSeen = false, stopped = false, paused = false;
   const paint = () => {
     button.textContent = wanted ? '🎵' : '🔇';
     button.setAttribute('aria-pressed', String(wanted));
   };
   function play() {
-    if (wanted && !stale && !stopped && !document.hidden && rb?.audioState() === 'running') rb.bgm(true, track);
+    if (wanted && !stale && !stopped && !paused && !document.hidden && rb?.audioState() === 'running') rb.bgm(true, track);
   }
   function wake(gesture = false) {
-    if (!rb || !wanted || stopped || document.hidden) return;
+    if (!rb || !wanted || stopped || paused || document.hidden) return;
     if (gesture) {
       const state = rb.audioState();
       if (stale || (!gestureSeen && state !== 'none' && state !== 'running')) rb.fresh();
@@ -56,6 +56,11 @@
   window.cityMusic = {
     setTrack,
     setBackground(id) { background = id; setTrack(null); },
+    pause(value) {
+      paused = value;
+      if (paused) rb?.bgm(false);
+      else wake();
+    },
     beat: () => rb?.audioState() === 'running' ? rb.bgmBeat() : null,
     state: () => ({ on: rb?.bgmId() != null, live: rb?.audioState() === 'running' && rb.bgmId() != null, stale, id: track, playing: rb?.bgmId() ?? null }),
     stop() { stopped = true; clearTimeout(timer); rb?.bgm(false); },

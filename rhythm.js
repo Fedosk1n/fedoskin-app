@@ -198,13 +198,13 @@
         noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       }
       // not running yet: wake it, and play one silent sample right inside the touch (what makes iPhone open the sound for this page)
-      if (ctx.state !== 'running') { ctx.resume(); try { const sb = ctx.createBufferSource(); sb.buffer = ctx.createBuffer(1, 1, 22050); sb.connect(ctx.destination); sb.start(0); } catch (_) {} }
+      if (ctx.state !== 'running') { ctx.resume().catch(() => {}); try { const sb = ctx.createBufferSource(); sb.buffer = ctx.createBuffer(1, 1, 22050); sb.connect(ctx.destination); sb.start(0); } catch (_) {} }
       return true;
     } catch (_) { return false; }
   }
   // a brand-new sound context at the next audioOn() (the 3D city after the app was in the background: iPhone may keep the old one silent
   // for good — WebKit bug 276016; owner 17.11.2026 «фоновая музыка не играет сразу, пришлось выкл и вкл кнопку»)
-  function audioFresh() { try { bgm(false); } catch (_) {} try { if (ctx && ctx.close) ctx.close(); } catch (_) {} ctx = null; master = null; noise = null; }
+  function audioFresh() { try { bgm(false); } catch (_) {} try { if (ctx && ctx.close) ctx.close().catch(() => {}); } catch (_) {} ctx = null; master = null; noise = null; }
   const env = (g, t, a, d) => { g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(.001, t + d); };
   function tone(out, t, type, f0, f1, a, d) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + d * .5); env(g, t, a, d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + .02); }
   function hiss(out, t, ftype, f, q, a, d) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; fl.type = ftype; fl.frequency.value = f; fl.Q.value = q; env(g, t, a, d); s.connect(fl); fl.connect(g); g.connect(out); s.start(t, Math.random() * .5, d + .02); }
@@ -1123,7 +1123,7 @@ ${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px so
           while (N.at < ctx.currentTime + .6) { loopBar(L, N.rig, out, N.at, N.i, st, bar); N.at += bar; N.i++; }
         };
         bgN = N; fill(); N.tm = setInterval(fill, 200);
-        if (ctx.state !== 'running') { const go = () => { try { ctx.resume(); } catch (_) {} document.removeEventListener('pointerdown', go, true); }; document.addEventListener('pointerdown', go, true); }
+        if (ctx.state !== 'running') { const go = () => { try { ctx.resume().catch(() => {}); } catch (_) {} document.removeEventListener('pointerdown', go, true); }; document.addEventListener('pointerdown', go, true); }
       } else if (bgN) { const N = bgN; bgN = null; bgmOff(N); }
     } catch (_) { bgN = null; }
   }

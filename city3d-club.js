@@ -1,5 +1,5 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
-import { performDJ } from './city3d-dj.js?v=3';
+import { performDJ } from './city3d-dj.js?v=4';
 import { seatedJudge } from './city3d-club-judges.js?v=2';
 const t = window._t;
 export const CLUB_TRACKS = ['club', 'club_floor'];

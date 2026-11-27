@@ -32,7 +32,7 @@ export function performDJ(person, booth, decks, meter, faders = [], { name = 'Ya
   const aimDir = new THREE.Vector3(), currentDir = new THREE.Vector3(), twistUp = new THREE.Vector3();
   const parent = new THREE.Quaternion(), rot = new THREE.Quaternion(), world = new THREE.Quaternion();
   const change = new THREE.Quaternion(), poseEuler = new THREE.Euler();
-  let elapsed = 0, cue = -10;
+  let elapsed = 0, cue = -10, handDeck = -1, handAt = -10;
 
   function aim(bone, to) {
     bone.getWorldPosition(origin);
@@ -71,6 +71,11 @@ export function performDJ(person, booth, decks, meter, faders = [], { name = 'Ya
 
   return {
     cue() { cue = elapsed; },
+    scratch(i, delta) {
+      handDeck = i;
+      handAt = elapsed;
+      decks[i].rotation.y -= delta;
+    },
     tick(dt) {
       elapsed += dt;
       const t = elapsed % 11.6;
@@ -91,7 +96,8 @@ export function performDJ(person, booth, decks, meter, faders = [], { name = 'Ya
       booth.worldToLocal(headPos);
 
       for (const [i, arm] of arms.entries()) {
-        const deck = decks[i], scratch = i ? rightScratch : leftScratch, ear = i ? listen : 0;
+        const held = handDeck === i && elapsed - handAt < .24;
+        const deck = decks[i], scratch = held ? 1 : i ? rightScratch : leftScratch, ear = !held && i ? listen : 0;
         const drag = Math.sin(phase * (sample > .1 ? 2 : 1.5) + i * .68);
         const slide = Math.sin(phase * .5 + arm.sign * .95);
         const controls = faders[i];
@@ -107,7 +113,7 @@ export function performDJ(person, booth, decks, meter, faders = [], { name = 'Ya
         if (ear) active.lerp(pole.set(headPos.x + .152, headPos.y + .069, headPos.z + .028), ear);
         reachTo(arm, active, ear);
         // Cue scratches move the deck both ways. Outside a cue, the platter runs freely.
-        deck.rotation.y += dt * (2.55 * (1 - scratch) + drag * 6.1 * scratch);
+        if (!held) deck.rotation.y += dt * (2.55 * (1 - scratch) + drag * 6.1 * scratch);
       }
       meter.material.emissiveIntensity = .53 + .52 * punch + .24 * sample;
     },

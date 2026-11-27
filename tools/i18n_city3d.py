@@ -491,6 +491,35 @@ t("Ось", "Axis", "Eje", "Eixo", "Axe", "Achse", "アクシス", "액시스", 
 t("Моно", "Mono", "Mono", "Mono", "Mono", "Mono", "モノ", "모노", "单声道")
 t("Фейдер", "Fader", "Fader", "Fader", "Fader", "Fader", "フェーダー", "페이더", "推子")
 
+# ---------- DJ scratch trainer ----------
+t("Скретч с диджеем", "Scratch with the DJ", "Scratch con el DJ", "Scratch com o DJ", "Scratche avec le DJ", "Scratchen mit dem DJ", "DJとスクラッチ", "DJ와 스크래치", "与 DJ 一起搓碟")
+t("Скретч-тренировка и заказ бита", "Scratch practice and beat requests", "Practica scratch y pide un beat", "Treine scratch e peça uma batida", "Entraînement au scratch et demande de beat", "Scratch-Training und Beat-Wunsch", "スクラッチ練習とビートのリクエスト", "스크래치 연습과 비트 신청", "搓碟练习与点拍")
+t("Скретч-тренировка и пластинки Клуба", "Scratch practice and Club records", "Practica scratch y elige discos del Club", "Treine scratch e escolha discos do Clube", "Entraînement au scratch et vinyles du Club", "Scratch-Training und Club-Platten", "スクラッチ練習とクラブのレコード", "스크래치 연습과 클럽 음반", "搓碟练习与俱乐部唱片")
+t("Открываем вертушки…", "Opening the decks…", "Abriendo los platos…", "Abrindo os toca-discos…", "Ouverture des platines…", "Plattenspieler werden geöffnet…", "ターンテーブルを準備中…", "턴테이블을 여는 중…", "正在打开唱盘…")
+t("Вертушки не загрузились. Попробуй ещё раз.", "The decks couldn’t load. Try again.", "No se cargaron los platos. Intenta de nuevo.", "Os toca-discos não carregaram. Tente de novo.", "Les platines n’ont pas chargé. Réessaie.", "Die Plattenspieler konnten nicht geladen werden. Versuche es noch einmal.", "ターンテーブルを読み込めませんでした。もう一度試してください。", "턴테이블을 불러오지 못했어요. 다시 시도하세요.", "未能加载唱盘，请重试。")
+t("По очереди поверни пластинку по часовой и обратно. Здесь можно двигаться в своём темпе.", "Turn the record clockwise, then back. Go at your own pace.", "Gira el disco a la derecha y luego de vuelta. Ve a tu ritmo.", "Gire o disco no sentido horário e volte. Vá no seu ritmo.", "Tourne le disque dans le sens horaire puis reviens. Va à ton rythme.", "Drehe die Platte im Uhrzeigersinn und zurück. Übe in deinem Tempo.", "レコードを時計回りと反時計回りに交互に回そう。自分のペースでOK。", "음반을 시계 방향과 반대 방향으로 번갈아 돌려요. 천천히 해도 돼요.", "把唱片顺时针拨动，再往回拨。按自己的节奏练习。")
+t("Начни движение, когда кольцо вспыхнет. Делай один скретч на каждую вспышку.", "Start moving when the ring flashes. Make one scratch per flash.", "Mueve el disco cuando el aro se ilumine. Haz un scratch por destello.", "Mova o disco quando o anel piscar. Faça um scratch por pulso.", "Bouge le disque quand l’anneau s’allume. Un scratch à chaque flash.", "Bewege die Platte, wenn der Ring aufleuchtet. Ein Scratch pro Signal.", "リングが光ったら動かそう。1回の点滅につき1スクラッチ。", "링이 반짝일 때 움직여요. 한 번 반짝일 때마다 스크래치를 한 번 해요.", "圆环闪亮时滑动。每闪一次搓碟一次。")
+t("Следи за подсвеченной вертушкой. Когда активная сторона поменяется, коснись новой пластинки.", "Watch the highlighted deck. When it switches, touch the new record.", "Mira el plato resaltado. Cuando cambie, toca el otro disco.", "Observe o toca-discos em destaque. Ao mudar, toque o novo disco.", "Surveille la platine éclairée. Quand elle change, touche le nouveau disque.", "Achte auf das markierte Deck. Beim Wechsel berührst du die andere Platte.", "光っているデッキを見よう。切り替わったら新しいレコードに触れよう。", "강조된 턴테이블을 보세요. 바뀌면 새 음반을 터치하세요.", "注意高亮的唱盘。切换时，触碰另一张唱片。")
+t("Звук", "Sound", "Sonido", "Som", "Son", "Ton", "サウンド", "소리", "声音")
+t("Закрыть", "Close", "Cerrar", "Fechar", "Fermer", "Schließen", "閉じる", "닫기", "关闭")
+t("Левая", "Left deck", "Izquierdo", "Esquerda", "Gauche", "Links", "左デッキ", "왼쪽", "左唱盘")
+t("Правая", "Right deck", "Derecho", "Direita", "Droite", "Rechts", "右デッキ", "오른쪽", "右唱盘")
+t("Пластинка", "Record", "Disco", "Disco", "Disque", "Schallplatte", "レコード", "음반", "唱片")
+t("По часовой", "Clockwise", "En sentido horario", "Sentido horário", "Sens horaire", "Im Uhrzeigersinn", "時計回り", "시계 방향", "顺时针")
+t("Против часовой", "Counterclockwise", "En sentido antihorario", "Sentido anti-horário", "Sens antihoraire", "Gegen den Uhrzeigersinn", "反時計回り", "반시계 방향", "逆时针")
+t("Остановить", "Stop", "Detener", "Parar", "Arrêter", "Stoppen", "停止", "중지", "停止")
+t("Ещё раз", "Play again", "Otra vez", "De novo", "Rejouer", "Nochmal", "もう一度", "한 번 더", "再来一次")
+t("Начать задание", "Start drill", "Iniciar ejercicio", "Iniciar exercício", "Commencer l’exercice", "Übung starten", "課題を始める", "연습 시작", "开始练习")
+t("Прижми палец к дорожке и веди его по дуге.", "Touch the groove and drag along the arc.", "Toca el surco y desliza siguiendo el arco.", "Toque o sulco e deslize pelo arco.", "Pose le doigt sur le sillon et suis l’arc.", "Berühre die Rille und ziehe im Bogen.", "溝に触れて弧を描くようになぞろう。", "홈에 손가락을 대고 원호를 따라 움직여요.", "按住唱片纹路，沿弧线滑动。")
+t("Задание выполнено", "Drill complete", "Ejercicio completado", "Exercício concluído", "Exercice terminé", "Übung geschafft", "課題クリア", "연습 완료", "练习完成")
+t("Попробуй ещё раз", "Try again", "Inténtalo de nuevo", "Tente de novo", "Réessaie", "Versuch’s noch einmal", "もう一度挑戦", "다시 시도해 보세요", "请重试")
+t("В точку!", "Right on!", "¡En el punto!", "Na mosca!", "Dans le mille !", "Genau richtig!", "バッチリ！", "정확해요!", "正中节拍！")
+t("Мимо бита", "Missed the beat", "Fuera de ritmo", "Fora da batida", "Beat manqué", "Beat verpasst", "ビートを逃した", "박자를 놓쳤어요", "错过节拍")
+t("В другую сторону", "The other way", "En la otra dirección", "Na outra direção", "Dans l’autre sens", "In die andere Richtung", "反対方向へ", "반대 방향으로", "朝另一方向")
+t("Другая вертушка", "Use the other deck", "Usa el otro plato", "Use o outro toca-discos", "Utilise l’autre platine", "Nutze das andere Deck", "もう一方のデッキへ", "반대쪽 턴테이블을 사용하세요", "请使用另一台唱盘")
+t("Рано — дождись вспышки", "Early — wait for the flash", "Pronto: espera el destello", "Cedo — espere o anel piscar", "Trop tôt — attends le flash", "Zu früh — warte auf das Signal", "早すぎるよ。点滅を待とう", "빨라요. 반짝일 때까지 기다려요", "太早了，请等圆环亮起")
+t("Поздно", "Late", "Tarde", "Tarde", "Trop tard", "Zu spät", "遅い", "늦었어요", "太晚了")
+
 # ---------- gear names: taken from the app's i18n.js (the wardrobe uses the same translations) ----------
 REUSE = ['Бандана Ржавых', 'Олимпийка Ржавых', 'Кислотные кроссы', 'Кислотная панама', 'Наушники Совы', 'Худи Ночных сов', 'Цепь «Золотой зуб»', 'Золотая кепка',
          'Бандана Трафаретов', 'Бомбер Трафаретов', 'Панама Турникетов', 'Кроссы «Час пик»', 'Хромовые кроссы', 'Олимпийка «Хром»', 'Олимпийка «Фанк»',
