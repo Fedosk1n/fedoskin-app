@@ -1,9 +1,10 @@
 import { ACTS, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES } from './city3d-campaign-data.js?v=1';
 import { createPhrase, DIRECTIONS, displayNote, MOVES, postInput, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=1';
-import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=2';
+import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=3';
 import { examCourse, FESTIVAL_CHECKPOINTS, FESTIVAL_OFFICIAL, FESTIVAL_PRIZE, judgeFestivalExam } from './city3d-festival-exams.js?v=1';
 import { FESTIVAL_CAST, FESTIVAL_EPISODES, REVISED_TURNS, STORY_CHOICES, actAvailable, finalOrder, legacyMeeting, recordStoryDecision, storyCourse, storyDecision, storyLine, storyVenue, waitingDancer } from './city3d-festival-story.js?v=1';
 import { COMBOS, REPLY_LINES, SIGNATURES, STYLE_NAMES, comboEvents, comboInput, comboRival, playablePhrase, playableVerdict } from './city3d-festival-combos.js?v=1';
+import { LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
 
 const DIFFICULTY = { training: 'Медленный', normal: 'Обычный', quick: 'Быстрый' };
 const REACTIONS = {
@@ -14,6 +15,16 @@ const REACTIONS = {
 };
 
 const CLIPS = ['Breakdance_Uprock', 'Breakdance_Footwork_2', 'City_Backspin', 'Breakdance_Freeze_Var_4'];
+
+const QUICK_EXAMPLES = {
+  half: ['Кик на «и»', 'Бум → и → бум. Когда между стрелками есть «и», нажми вторую в середине доли. Два отдельных касания.'],
+  hold: ['Фриз · держать и отпустить', 'На «Держи» прижми палец или клавишу. Когда появится «Отпусти», отпусти тот же палец или клавишу.'],
+  reply: ['Ответ на движение', 'Соперник показал рисунок. Выбери другой предложенный ответ на том же акценте, затем сыграй свою дорожку.'],
+};
+function readExamples() {
+  try { return new Set(JSON.parse(localStorage.getItem('fedoskin-city-festival-examples') || '[]')); }
+  catch (_) { return new Set(); }
+}
 
 function createPulse() {
   let audio, noise, nodes = new Set();
@@ -93,13 +104,14 @@ function createPulse() {
   };
 }
 
-export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet, tryPrize, prepareScene, setCast }) {
+export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet, tryPrize, prepareScene, setCast, landmarkPoint }) {
   const tag = document.createElement('style');
   tag.textContent = FESTIVAL_CSS;
   document.head.append(tag);
   const panel = document.createElement('section');
   panel.id = 'g3festival';
   panel.hidden = true;
+  panel.tabIndex = -1;
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-modal', 'true');
   panel.setAttribute('aria-label', t('Городской фестиваль'));
@@ -108,7 +120,8 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   const ordinaryHud = ['#g3hud', '#g3hud2', '#g3act', '#g3storyNear', '#hint', '#ztip', '.hud']
     .map(selector => document.querySelector(selector)).filter(Boolean);
   let run = null, opening = false, atVenue = false, activeSheet = null, practice = null, frame = 0, frameView = -1;
-  let previousDepth = null;
+  let previousDepth = null, returnFocus = null;
+  const taught = readExamples();
   let examRecord = null;
   const current = () => FESTIVAL_EPISODES[state.episode];
   const turnAt = episode => (legacyMeeting(state, episode) ? STORY_TURNS : REVISED_TURNS)[episode];
@@ -119,12 +132,33 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const [district, id] = current() ? location() : storyVenue(58, state.choices);
     return district === D ? places.find(place => place.id === id) : null;
   };
-  function getPoint() {
+  function getAnchor() {
     if (!eligible()) return null;
     const spot = findAnchor();
     if (!spot) return null;
+    if (spot.id === 'zpark') return { id:'festival', x:spot.x+1.38, z:spot.z-.14, r:1.85 };
     const x = spot.x + (spot.x > 0 ? -.65 : .65), z = spot.z + .42;
     return { id: 'festival', x, z, r: 1.85 };
+  }
+
+  function getPoint() {
+    const anchor = getAnchor();
+    if (!anchor) return null;
+    const [, id] = current() ? location() : storyVenue(58, state.choices);
+    return landmarkPoint(id === 'show' ? 'circle' : id,anchor);
+  }
+
+  function guideStep() {
+    if (!eligible()) return null;
+    const chapter = current();
+    const [district, id, landmark] = chapter ? location() : storyVenue(58,state.choices);
+    const art = id === 'show' ? 'circle' : id;
+    const key = chapter ? needsArrival() ? ':prepare' : ':meeting' : ':exams';
+    const instruction = !chapter ? 'Найди «{x}» у финальной площадки. Открой встречу фестиваля и выбери судимые испытания.' :
+      needsArrival() ? 'Найди ориентир «{x}». Нажми «Открыть встречу фестиваля», чтобы сверить место.' :
+        'Подойди к ориентиру «{x}» и нажми «Открыть встречу фестиваля».';
+    return { id:state.episode+key, district, art, title:t(chapter?.title || 'Судимые испытания и мифический комплект'),
+      where:t(landmark), text:t(instruction,{x:t(LANDMARKS[art][0])}) };
   }
 
   const $ = selector => panel.querySelector(selector);
@@ -152,10 +186,12 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     W.camT = previousDepth;
     previousDepth = null;
     lock(false);
+    if (returnFocus?.isConnected && !returnFocus.hidden) returnFocus.focus({preventScroll:true});
+    returnFocus = null;
   }
   const name = (episode, index) => `${index + 1}. ${t(episode.title)}`;
   function drawVenueMap(canvas) {
-    const ctx = canvas.getContext('2d'), box = W.bounds, player = W.hero.root.position, point = getPoint();
+    const step = guideStep(), ctx = canvas.getContext('2d'), box = W.bounds, player = W.hero.root.position, point = getPoint();
     if (!point) return;
     const pad = 13, sx = x => pad + (x - box.x0) * (canvas.width - 2 * pad) / (box.x1 - box.x0);
     const sz = z => pad + (z - box.z0) * (canvas.height - 2 * pad) / (box.z1 - box.z0);
@@ -172,9 +208,16 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     ctx.beginPath(); ctx.moveTo(sx(player.x), sz(player.z)); ctx.lineTo(sx(point.x), sz(point.z)); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#99dafa'; ctx.beginPath(); ctx.arc(sx(player.x), sz(player.z), 5, 0, 2 * Math.PI); ctx.fill();
-    ctx.fillStyle = '#ffc679'; ctx.beginPath(); ctx.moveTo(sx(point.x) - 7, sz(point.z));
-    ctx.lineTo(sx(point.x), sz(point.z) - 8); ctx.lineTo(sx(point.x) + 7, sz(point.z));
-    ctx.lineTo(sx(point.x), sz(point.z) + 8); ctx.fill();
+    const x = Math.min(canvas.width-18,Math.max(18,sx(point.x))), z = Math.min(canvas.height-13,Math.max(13,sz(point.z)));
+    ctx.fillStyle = '#9ce5d4'; ctx.beginPath(); ctx.arc(sx(point.x),sz(point.z),3,0,2*Math.PI); ctx.fill();
+    const image = new Image();
+    image.onload = () => {
+      if (!canvas.isConnected) return;
+      ctx.strokeStyle = '#9ce5d4'; ctx.lineWidth = 2;
+      ctx.strokeRect(x-17,z-10,34,20);
+      ctx.drawImage(image,x-16,z-9,32,18);
+    };
+    image.src = landmarkImage(step.art);
   }
   function chapterNotes() {
     const e = current(), act = ACTS[e.act];
@@ -199,7 +242,8 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         ${button('fExams', t('Судимые испытания и мифический комплект'))}
         ${leaveVisit ? button('fExit', t('Вернуться в обычный город'), true) : ''}${practiceView()}`);
     } else {
-      const [district, , landmark, photo] = location();
+      const [district, , landmark] = location();
+      const step = guideStep();
       const ready = atVenue && district === D;
       const act = ACTS[e.act];
       const selected = Object.entries(STORY_CHOICES).flatMap(([key, decision]) => {
@@ -210,7 +254,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         const option = decision.options.find(item => item.tag === state.choices[key]);
         return option ? [`<p class="festival-payoff">${t(option.consequence)}</p>`] : [];
       }).join('');
-      const navigation = district !== D ? button('fTravel', t('Поехать к площадке')) : ready ? button('fStart', t('Открыть встречу')) : button('fGo', t('Искать метку на карте'));
+      const navigation = district !== D ? button('fTravel', t('Поехать к площадке')) : ready ? button('fStart', t('Открыть встречу')) : button('fGo', t('Выйти к ориентиру'));
       setView('route', `<header><h2>${title}</h2>${button('fClose', '×', true)}</header>
         ${visits}<article class="festival-act" style="--act:${act.color}">${chapterNotes()}
         <h3>${name(e, state.episode)}</h3>
@@ -218,9 +262,9 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         ${needsArrival() ? `<p>${t(storyTurn().before)}</p>` : ''}
         <p>${t('Пьеса {n}/4 · пройдено {beat} из {all} ударов', { n: state.piece + 1, beat: state.beat, all: storyCourse(state.episode, state.piece, state).beats })}</p>
         ${selected}
-        <figure class="festival-tip"><img src="img/story-${photo}.webp?v=1" alt="${t('Ориентир района фестиваля')}">
-          ${district === D ? `<canvas id="fMap" width="340" height="180" aria-label="${t('Карта · синяя точка — ты, золотой ромб — нужная встреча')}"></canvas>` : ''}
-          <figcaption>${t(district === D ? 'Карта · синяя точка — ты, золотой ромб — нужная встреча' : 'Сюжетный маршрут ведёт к площадке встречи. Там ищи золотой ромб.')}</figcaption></figure>
+        <figure class="festival-tip"><img src="${landmarkImage(step.art)}" alt="${t(LANDMARKS[step.art][1])}">
+          ${district === D ? `<canvas id="fMap" width="340" height="180" role="img" aria-label="${t('Карта · синяя точка — ты, миниатюра — {x}',{x:t(LANDMARKS[step.art][0])})}"></canvas>` : ''}
+          <figcaption>${district === D ? t('Карта · синяя точка — ты, миниатюра — {x}',{x:t(LANDMARKS[step.art][0])}) : step.text}</figcaption></figure>
         ${navigation}
         ${button('fExams', t('Подтверждение актов и судимые испытания'), true)}
         ${leaveVisit ? button('fExit', t('Вернуться в обычный город'), true) : ''}</article>${practiceView()}`);
@@ -365,12 +409,30 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     $('#fBack').onclick = route;
     $('#fConfirmLandmark').onclick = () => { state.prepared = true; save(); atVenue = false; route(); };
   }
+  function examples(course) {
+    const needed = new Set();
+    if (course.mode === 'r') needed.add('reply');
+    if (course.combo) for (const i of [0,1,2,3]) {
+      const phrase = playablePhrase(course,Math.ceil(course.beats*i/64)*16,state.choices);
+      if (!phrase.spec) continue;
+      if (phrase.alternate) needed.add('reply');
+      const events = comboEvents(phrase);
+      if (events.some(item => item.kind === 'hold')) needed.add('hold');
+      if (events.some(item => item.at % 1)) needed.add('half');
+    }
+    return [...needed];
+  }
+  function rememberExamples(keys) {
+    if (!keys.some(key => !taught.has(key))) return;
+    keys.forEach(key=>taught.add(key));
+    try { localStorage.setItem('fedoskin-city-festival-examples',JSON.stringify([...taught])); } catch (_) {}
+  }
   function briefing() {
     const key = currentTarget(), e = FESTIVAL_EPISODES[key.episode], course = storyCourse(key.episode, key.piece, state);
     const decisionId = !practice && storyDecision(state);
     const decision = STORY_CHOICES[decisionId];
     const pendingChoice = decision && !state.choices[decisionId];
-    const combo = COMBOS[course.combo];
+    const combo = COMBOS[course.combo], tips = examples(course);
     const lead = key.episode === 0 && state.choices.slot;
     const turn = turnAt(key.episode);
     const line = storyLine(key.episode, state.choices);
@@ -389,6 +451,9 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       ${cueSheet ? `<fieldset><legend>${t('Поставь сигнал на схему входа')}</legend>
         <button type="button" data-sheet="lead">${t('Удар и встречный кик')}</button>
         <button type="button" data-sheet="answer">${t('Пауза и дробный подхват')}</button></fieldset>` : ''}
+      ${tips.length && !pendingChoice && !cueSheet ? `<details class="festival-quick" id="fQuickExample" ${tips.some(key=>!taught.has(key)) ? 'open' : ''}>
+        <summary>${t('Пример перед музыкой')}</summary>
+        ${tips.map(key=>`<p><b>${t(QUICK_EXAMPLES[key][0])}</b> · ${t(QUICK_EXAMPLES[key][1])}</p>`).join('')}</details>` : ''}
       <p><b>${t(combo?.name || MODE_NAMES[course.mode])}</b></p><p>${t(combo?.guide || MODE_GUIDES[course.mode])}</p>
       ${replay ? `<p class="festival-payoff">${t('Соперник запомнил твой ответ «{x}». Попробуй другой рисунок на тот же акцент.', { x: t(STYLE_NAMES[previousTry.style]) })}</p>` : ''}
       ${combo && !pendingChoice && !cueSheet ? `<div class="festival-study" id="fStudy"></div>` : ''}
@@ -411,12 +476,16 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       save();
       briefing();
     }; });
+    const quick = $('#fQuickExample');
+    if (quick) quick.ontoggle = () => { if (!quick.open) rememberExamples(tips); };
     if (combo && !pendingChoice && !cueSheet) playStudy(course);
     if ($('#fDemo')) $('#fDemo').onclick = () => {
+      rememberExamples(tips);
       practice = { ...key };
       start();
     };
     if ($('#fPlay')) $('#fPlay').onclick = () => {
+      rememberExamples(tips);
       if (practice && $('#fPhrase')) practice.beat = Number($('#fPhrase').value);
       start();
     };
@@ -447,7 +516,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     }
   }
   function castFor(key, course) {
-    const point = getPoint();
+    const point = getAnchor();
     if (!point || !atVenue) return;
     if (key.episode === 0 && state.choices.slot) {
       const lead = state.choices.slot;
@@ -732,7 +801,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const next = key.beat + run.phrase.length;
     run.nextPhrase = next < course.beats ? (exam ? createPhrase : playablePhrase)(course, next, state.choices) : null;
     frameView = -3;
-    const point = getPoint();
+    const point = getAnchor();
     if (point && (atVenue || exam)) {
       const act = FESTIVAL_EPISODES[key.episode]?.act ?? 7;
       W.camT = { x: point.x, z: point.z - .8, zoom: act >= 6 ? .79 : .52 };
@@ -750,9 +819,12 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   function open(venue) {
     if (!eligible() || !openAllowed() || !panel.hidden) return;
     atVenue = venue;
+    returnFocus = document.activeElement;
     previousDepth = W.camT;
     lock(true);
     if (venue && current()) enterVenue(); else route();
+    panel.focus({preventScroll:true});
+    return true;
   }
   addEventListener('keydown', event => {
     if (panel.hidden) return;
@@ -761,5 +833,5 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   });
   addEventListener('keyup', event => keyEdge(event, 'up'));
   document.addEventListener('visibilitychange', () => { if (document.hidden && run) pause(); });
-  return { open, close, target: getPoint, busy: () => !panel.hidden };
+  return { open, close, target: getPoint, guide:guideStep, busy: () => !panel.hidden };
 }

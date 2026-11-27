@@ -2,11 +2,13 @@ import * as THREE from 'three';
 
 // This untextured Blender export is a small glTF subset. Using its original packed
 // attributes keeps the mobile stage payload compact and avoids an additional addon.
-export async function loadFestivalStage() {
-  const response = await fetch('./anim/festival-stage.glb?v=1');
-  if (!response.ok) throw new Error('Festival stage unavailable.');
+export function loadFestivalStage() { return loadUntexturedModel('./anim/festival-stage.glb?v=1'); }
+
+export async function loadUntexturedModel(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error('City model unavailable.');
   const binary = await response.arrayBuffer(), header = new DataView(binary);
-  if (header.getUint32(0, true) !== 0x46546c67) throw new Error('Invalid stage model.');
+  if (header.getUint32(0, true) !== 0x46546c67) throw new Error('Invalid city model.');
   const jsonLength = header.getUint32(12, true);
   const gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(binary, 20, jsonLength)));
   const base = 28 + jsonLength;
@@ -21,7 +23,7 @@ export async function loadFestivalStage() {
     const pbr = m.pbrMetallicRoughness || {};
     const tint = new THREE.Color().fromArray(pbr.baseColorFactor || [1, 1, 1]);
     const glow = new THREE.Color().fromArray(m.emissiveFactor || [0, 0, 0]);
-    return new THREE.MeshStandardMaterial({ color: tint, roughness: pbr.roughnessFactor ?? 1,
+    return new THREE.MeshStandardMaterial({ name: m.name, color: tint, roughness: pbr.roughnessFactor ?? 1,
       metalness: pbr.metallicFactor ?? 0, emissive: glow,
       emissiveIntensity: m.extensions?.KHR_materials_emissive_strength?.emissiveStrength ?? 1 });
   });
