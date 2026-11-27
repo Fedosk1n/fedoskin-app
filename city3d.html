@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" id="cityFonts" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap">
 <script type="importmap">
-{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+{ "imports": { "three": "./vendor/three/three.module.js?v=2", "three/addons/": "./vendor/three/addons/" } }
 </script>
-<link rel="modulepreload" href="city3d.js?v=68">
-<link rel="modulepreload" href="vendor/three/three.module.js">
+<link rel="modulepreload" href="city3d.js?v=69">
+<link rel="modulepreload" href="vendor/three/three.module.js?v=2">
 <link rel="modulepreload" href="vendor/three/three.core.js">
 <link rel="preload" as="fetch" crossorigin href="anim/bboy.json?v=2">
 <link rel="preload" as="fetch" crossorigin href="anim/city-breaking.json?v=4">
@@ -23,7 +23,7 @@
   #cityLoading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 4;
     background: linear-gradient(180deg, #10141c, #10141cb8 40%, #10141c), #141923 url("img/city3d.jpg?v=1") center / cover no-repeat; }
   #cityLoading[hidden] { display: none; }
-  #cityLoading:not([hidden]) ~ .hud :is(.ttl, button),
+  #cityLoading:not([hidden]) ~ .hud :is(.ttl, #lookOpen),
   #cityLoading:not([hidden]) ~ :is(#hint, #ztip) { visibility: hidden; }
   .city-load-status { display: grid; justify-items: center; gap: 14px; padding: 18px;
     text-align: center; font: 700 16px/1.4 Inter, system-ui, sans-serif; }
@@ -121,6 +121,8 @@
 <div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
 <script defer src="city3d-i18n.js?v=11"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
+<script defer src="rhythm.js?v=33"></script>
+<script defer src="city3d-audio.js?v=1"></script>
 <script>
 // the app's language (same rule as index.html phoneLang). Since 18.11.2026 (owner «переведи 3д город… на все языки») the WHOLE city is
 // translated: window._t('русский текст', {vars}) looks the text up in city3d-i18n.js (source: tools/i18n_city3d.py); a text with no
@@ -158,6 +160,7 @@
   $('#cityLoadText').textContent = loadCopy[0];
   $('#cityError').textContent = A[5]; $('#err a').textContent = A[6];
   window.cityLoadFailed = (message = loadCopy[1]) => {
+    window.cityMusic?.stop();
     loading.hidden = box.hidden = true;
     $('#cityError').textContent = message;
     err.style.display = 'flex';
@@ -183,8 +186,7 @@
 <script defer src="hero.js?v=24"></script>
 <script defer src="lessons.js"></script>
 <script defer src="battle-study.js?v=1"></script>
-<script defer src="city-gfx.js?v=10"></script>
-<script defer src="rhythm.js?v=32"></script>
-<script type="module" src="city3d.js?v=68" onerror="cityLoadFailed()"></script>
+<script defer src="city-gfx.js?v=11"></script>
+<script type="module" src="city3d.js?v=69" onerror="cityLoadFailed()"></script>
 </body>
 </html>

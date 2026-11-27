@@ -217,12 +217,12 @@ export function buildPark(TK) {
   let jam = false;
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;
-      if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .45), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z; standPose(J); J.tick(dt); stride(J, J.st, w.v, true, w.k, dt); }
+      if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .45), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z; const elapsed = W.ambient.elapsed(J, dt); if (elapsed !== null) { standPose(J); J.tick(elapsed); stride(J, J.st, w.v, true, w.k, elapsed); } }
       else if (w.mode === 'watch') { if (go(J, w.slot.x, w.slot.z, 1.9, dt)) turn(J, Math.atan2(SX - p.x, SZ - p.z), dt); }
       else if (w.mode === 'back') { const t = at(w.u, w.dir * .45); if (go(J, t.x, t.z, 1.6, dt)) w.mode = 'path'; } });
     // the old-timer nods to the beat of his boombox and looks at the hero when he is near
-    { const p = og.root.position, h = W.hero && W.hero.root.position, nearMe = h && Math.hypot(h.x - p.x, h.z - p.z) < 3.4; turn(og, nearMe ? Math.atan2(h.x - p.x, h.z - p.z) : og.home, dt, 3); og.tick(dt); }
-    dancers.forEach(J => { if (!J.busy) J.tick(dt); });
+    { const p = og.root.position, h = W.hero && W.hero.root.position, nearMe = h && Math.hypot(h.x - p.x, h.z - p.z) < 3.4; turn(og, nearMe ? Math.atan2(h.x - p.x, h.z - p.z) : og.home, dt, 3); W.tickAmbient(og, dt); }
+    dancers.forEach(J => { if (!J.busy) W.tickAmbient(J, dt); });
   });
   // the crowd of the jam: people who are not far come to the stage's edge (called by the game)
   const crowd = on => { jam = on;

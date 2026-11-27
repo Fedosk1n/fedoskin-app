@@ -8880,6 +8880,7 @@ const _lookTarget = /*@__PURE__*/ new Vector3();
 function WebGLShadowMap( renderer, objects, capabilities ) {
 
 	let _frustum = new Frustum();
+	const _dynamicShadowLayers = new Layers();
 
 	const _shadowMapSize = new Vector2(),
 		_viewportSize = new Vector2(),
@@ -9136,6 +9137,42 @@ function WebGLShadowMap( renderer, objects, capabilities ) {
 			if ( light.isPointLight !== true ) shadow.updateMatrices( light, camera );
 
 			const layers = ( shadow.camera.layers.mask & 0xFFFFFFFE ) !== 0 ? shadow.camera.layers : camera.layers;
+
+			// An opt-in cache keeps static casters in the same depth space as animated casters.
+			const cache = shadow.staticDepthCache;
+			if ( cache?.active && this.type === PCFShadowMap && ! light.isPointLight && faceCount === 1 ) {
+
+				const shadowCamera = shadow.getCamera( 0 );
+				_frustum = shadow.getFrustum( 0 );
+				if ( ! cache.target || cache.target.width !== shadow.map.width || cache.target.height !== shadow.map.height ) {
+
+					cache.target?.dispose();
+					const depthTexture = new DepthTexture( shadow.map.width, shadow.map.height, shadow.map.depthTexture.type );
+					cache.target = new WebGLRenderTarget( shadow.map.width, shadow.map.height, { format: RedFormat, depthTexture } );
+					cache.matrix = new Matrix4();
+					cache.renderedRevision = - 1;
+
+				}
+
+				if ( cache.renderedRevision !== cache.revision || ! cache.matrix.equals( shadow.matrix ) ) {
+
+					renderer.setRenderTarget( cache.target );
+					renderer.clear();
+					renderObject( scene, camera, shadowCamera, light, cache.layers, this.type );
+					cache.matrix.copy( shadow.matrix );
+					cache.renderedRevision = cache.revision;
+
+				}
+
+				renderer.initRenderTarget( shadow.map );
+				renderer.copyTextureToTexture( cache.target.depthTexture, shadow.map.depthTexture );
+				renderer.setRenderTarget( shadow.map );
+				_dynamicShadowLayers.mask = layers.mask & ~ cache.layers.mask;
+				renderObject( scene, camera, shadowCamera, light, _dynamicShadowLayers, this.type );
+				shadow.needsUpdate = false;
+				continue;
+
+			}
 
 			for ( let face = 0; face < faceCount; face ++ ) {
 

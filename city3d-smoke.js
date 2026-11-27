@@ -234,7 +234,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   }
   function tick(dt, battle, paused) {
     if (!run) {
-      club.dancers.forEach(({ J }) => J.tick(dt));
+      club.dancers.forEach(({ J }) => W.tickAmbient(J, dt));
       return;
     }
     if (!run.overtime && (run.phase === 'watch' || (run.phase === 'player' && !paused))) run.left = Math.max(0, run.left - dt);
@@ -255,10 +255,12 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       run.delay -= dt;
       if (run.delay <= 0) settle(run.winner);
     }
-    for (const { J } of run.entries.values()) {
+    for (const { id, J } of run.entries.values()) {
       if (J === battle?.opp || (J === W.hero && run.phase === 'player')) continue;
-      J.tick(dt);
-      if (J.ws) W.walk.pose(J, dt);
+      if (J === W.hero || J.ws || id === run.line[0] || id === run.line[1]) {
+        J.tick(dt);
+        if (J.ws) W.walk.pose(J, dt);
+      } else W.tickAmbient(J, dt);
     }
     if (run.phase === 'player' || run.phase === 'watch') {
       const seconds = Math.ceil(run.left);
@@ -280,7 +282,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     else { arrange(); paint(); }
   };
   get('g3smokeExit').onclick = exit;
-  return { start, tick, playerVerdict(votes) {
+  return { start, tick, active: () => !!run, playerVerdict(votes) {
     const opponent = run.line[0] === 'me' ? run.line[1] : run.line[0];
     const choices = votes.map(vote => vote === 'me' ? 'me' : opponent);
     verdict(choices.filter(id => id === 'me').length >= 2 ? 'me' : opponent, choices);

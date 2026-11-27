@@ -227,10 +227,10 @@ export async function buildProm(TK) {
     const p = at(w.u, w.dir * .5); J.root.position.set(p.x, 0, p.z); J.setIdle('Stand_Calm'); return w; });
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;
-      if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .5), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z; standPose(J); J.tick(dt); stride(J, J.st, w.v, true, w.k, dt); }
+      if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .5), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z; const elapsed = W.ambient.elapsed(J, dt); if (elapsed !== null) { standPose(J); J.tick(elapsed); stride(J, J.st, w.v, true, w.k, elapsed); } }
       else if (w.mode === 'watch') { if (go(J, w.slot.x, w.slot.z, 1.9, dt)) turn(J, Math.atan2(RX - p.x, RZ0 - p.z), dt); }
       else if (w.mode === 'back') { const t = at(w.u, w.dir * .5); if (go(J, t.x, t.z, 1.6, dt)) w.mode = 'path'; } });
-    fighters.forEach(J => { if (!J.busy) J.tick(dt); }); welder.tick(dt);
+    fighters.forEach(J => { if (!J.busy) W.tickAmbient(J, dt); }); W.tickAmbient(welder, dt);
   });
   // the ring's crowd: the workers come to its open south side (called by the game)
   const crowd = on => { if (on) walkers.slice(0, 3).forEach((w, i) => { w.slot = { x: RX + (i - 1) * 1.5, z: RZ0 + RS + 1.5 + Math.abs(i - 1) * .3 }; w.mode = 'watch'; }); else walkers.forEach(w => { if (w.mode === 'watch') w.mode = 'back'; }); };
