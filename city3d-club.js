@@ -1,5 +1,5 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
-import { performDJ } from './city3d-dj.js?v=2';
+import { performDJ } from './city3d-dj.js?v=3';
 import { seatedJudge } from './city3d-club-judges.js?v=1';
 const t = window._t;
 export const CLUB_TRACKS = ['club', 'club_floor'];
@@ -55,8 +55,12 @@ async function loadClubSurfaces(THREE, load) {
 export async function buildClub(TK) {
   const { THREE, scene, W, box, circ, can, tex, loadSurfaceTexture, mocapPerson, bodyOf, HERO, boothModel, judgeModel } = TK;
   const material = await loadClubSurfaces(THREE, loadSurfaceTexture);
-  const floor = { x: 0, z: -2.4 };
-  const dj = { x: -6.2, z: 1.25, r: 1.8 };
+  const floor = { x: 0, z: -2.4, r: 3.85 };
+  const smokeEntry = { x: floor.x, z: floor.z + floor.r + .15, r: 2.12 };
+  const duelSpots = [1, -1].map(side => {
+    const dx = side * .3, dz = side * -2.1;
+    return { x: floor.x + dx, z: floor.z + dz, yaw: Math.atan2(-dx, -dz) };
+  });
   const records = { x: 6.1, z: 1.35, r: 1.8 };
   const exit = { x: -.1, z: 8.4, r: 1.6 };
   const colors = { gold: '#e7a84f', turquoise: '#48d3ca' };
@@ -103,27 +107,30 @@ export async function buildClub(TK) {
   const steel = material('steel'), dark = material('steel', { tint: '#7c8282' });
   const velvet = material('velvet'), vinyl = material('vinyl');
   const inset = can(1024, 1024), p = inset.getContext('2d');
-  p.lineWidth = 3; p.strokeStyle = 'rgba(235,200,143,.75)';
-  p.strokeRect(30, 30, 964, 964);
-  p.strokeStyle = 'rgba(223,182,119,.38)';
-  p.strokeRect(42, 42, 940, 940);
-  p.lineWidth = 4; p.strokeStyle = 'rgba(244,207,152,.83)';
-  p.beginPath(); p.arc(512, 512, 326, 0, Math.PI * 2); p.stroke();
-  p.setLineDash([20, 17]);
-  p.strokeStyle = 'rgba(220,170,113,.62)';
-  p.beginPath(); p.arc(512, 512, 353, 0, Math.PI * 2); p.stroke();
-  p.setLineDash([]);
-  for (const x of [55, 969]) for (const y of [55, 969]) {
-    p.fillStyle = '#d9af72';
-    p.beginPath(); p.moveTo(x - 7, y); p.lineTo(x, y - 7); p.lineTo(x + 7, y); p.lineTo(x, y + 7); p.closePath();
+  p.lineWidth = 9; p.strokeStyle = 'rgba(62,29,20,.64)';
+  p.beginPath(); p.arc(512, 512, 501, 0, Math.PI * 2); p.stroke();
+  p.lineWidth = 4; p.strokeStyle = 'rgba(244,207,152,.90)';
+  p.beginPath(); p.arc(512, 512, 489, 0, Math.PI * 2); p.stroke();
+  p.lineWidth = 2; p.strokeStyle = 'rgba(223,182,119,.62)';
+  p.beginPath(); p.arc(512, 512, 471, 0, Math.PI * 2); p.stroke();
+  p.fillStyle = '#d9af72';
+  for (let i = 0; i < 4; i++) {
+    p.save();
+    p.translate(512, 512);
+    p.rotate(Math.PI / 4 + i * Math.PI / 2);
+    p.beginPath(); p.moveTo(471, 0); p.lineTo(480, -11);
+    p.lineTo(489, 0); p.lineTo(480, 11); p.closePath();
     p.fill();
+    p.restore();
   }
   p.fillStyle = 'rgba(40,22,16,.33)'; p.font = '900 380px Anton, sans-serif'; p.textAlign = 'center';
   p.fillText('07', 512, 650);
   block(21, .18, 22, material('terrazzo', { repeat: [5, 5] }), 0, -.10, -.8);
-  const wood = mesh(new THREE.PlaneGeometry(7.3, 7.3), material('oak'), floor.x, .018, floor.z);
+  const disk = new THREE.CircleGeometry(floor.r, 96);
+  const wood = mesh(disk, material('oak'), floor.x, .018, floor.z);
+  wood.name = 'Club dance floor';
   wood.rotation.x = -Math.PI / 2;
-  const marks = mesh(new THREE.PlaneGeometry(7.3, 7.3), new THREE.MeshStandardMaterial({
+  const marks = mesh(disk, new THREE.MeshStandardMaterial({
     map: tex(inset), transparent: true, depthWrite: false, roughness: .53,
   }), floor.x, .022, floor.z);
   marks.rotation.x = wood.rotation.x;
@@ -164,8 +171,12 @@ export async function buildClub(TK) {
 
   const booth = new THREE.Group();
   booth.name = 'Club DJ setup';
-  booth.position.set(dj.x, 0, dj.z - 1.60);
+  // Sit outside the parquet, across from the contenders' queue, with a direct view of the circle.
+  booth.position.set(5.75, 0, -4.62);
+  booth.rotation.y = Math.atan2(floor.x - booth.position.x, floor.z - booth.position.z);
   scene.add(booth);
+  const approach = booth.localToWorld(new THREE.Vector3(0, 0, 1.65));
+  const dj = { x: approach.x, z: approach.z, r: 1.6 };
   const walnut = material('oak', { tint: '#9e8e7c' });
   function imported(model) {
     model.traverse(obj => {
@@ -201,9 +212,14 @@ export async function buildClub(TK) {
   Object.assign(djLook.col, { phones: '#c79465', top: '#314851', sleeve: '#455761' });
   const host = mocapPerson(djLook, { body: bodyOf(87, { type: 'slim', girl: true }) });
   booth.add(host.root);
-  const mix = performDJ(host, booth, decks, level, faders, 'Club DJ');
-  box(booth.position.x, booth.position.z, 2.82, .97);
-  circ(booth.position.x, booth.position.z - .61, .32);
+  const mix = performDJ(host, booth, decks, level, faders, { name: 'Club DJ', watchFloor: true });
+  // Along the rotated counter, keeping the floor-side approach open.
+  for (const x of [-1.12, -.56, 0, .56, 1.12]) {
+    const at = booth.localToWorld(new THREE.Vector3(x, 0, 0));
+    circ(at.x, at.z, .47);
+  }
+  const operator = host.root.getWorldPosition(new THREE.Vector3());
+  circ(operator.x, operator.z, .32);
 
   // Archive wall: printed results above a low bench.
   const rz = records.z - 1.35, poster = material('oak', { tint: '#9c8985' });
@@ -212,9 +228,15 @@ export async function buildClub(TK) {
   [0, 1, 2].forEach((n) => sign(['07', '1 VS 1', '7 TO SMOKE'][n], .87, .61, records.x - .93 + n * .93, 1.72, rz - .18));
   block(3.12, .045, .05, flat(colors.gold), records.x, 2.54, rz - .18);
 
-  // The line is visibly outside the floor. Two spot lights stay fixed over the dancers.
-  const slots = Array.from({ length: 7 }, (_, i) => ({ x: -4.02, z: -5.6 + i * 1.25 }));
-  for (const { x, z } of slots) block(.59, .009, .033, flat('#508480'), x, .019, z);
+  // The waiting breakers follow the left edge of the cypher with room for footwork.
+  const queueRadius = floor.r + .87;
+  const slots = CLUB_BREAKERS.map((_, i) => {
+    const angle = (i - (CLUB_BREAKERS.length - 1) / 2) * .26;
+    const x = floor.x - Math.cos(angle) * queueRadius, z = floor.z + Math.sin(angle) * queueRadius;
+    return { x, z, yaw: Math.atan2(floor.x - x, floor.z - z) };
+  });
+  const queueMark = flat('#508480');
+  for (const { x, z, yaw } of slots) block(.59, .009, .033, queueMark, x, .019, z).rotation.y = yaw;
   for (const [color, strength, x, y, z] of [
     ['#ffc895', 47, 0, 5.1, -2.8], ['#70d6ea', 41, -5.4, 3.9, -4.7], ['#e29b8a', 29, 5.2, 3.6, -.15],
     ['#8edde2', 19, dj.x, 2.8, dj.z], ['#fbbb87', 20, records.x, 2.6, records.z],
@@ -226,7 +248,7 @@ export async function buildClub(TK) {
   const dancers = CLUB_BREAKERS.map((b, i) => {
     const J = mocapPerson(HERO.topDown(b.lv, b.gear), { body: bodyOf(602 + i * 31, { type: b.body, girl: b.gear.includes('girl') }) });
     J.clubRest = slots[i];
-    J.root.position.set(slots[i].x, 0, slots[i].z); J.root.rotation.y = Math.PI / 2;
+    J.root.position.set(slots[i].x, 0, slots[i].z); J.root.rotation.y = slots[i].yaw;
     J.play('Breakdance_Ready', { at: .15 * i, speed: .87 + .035 * i }); scene.add(J.root);
     return { ...b, name: t(b.name), J };
   });
@@ -262,10 +284,10 @@ export async function buildClub(TK) {
   for (const x of [-1.91, 1.91]) box(x, judgeZ - .04, .40, .39);
 
   const signs = [
-    label('←  ' + t('Пульт диджея'), -1.95, 1.4, 2.02, '#86e7e5', 2.5),
-    label(t('Стена результатов') + '  →', 1.95, 1.4, 2.02, '#ffce8a', 2.5),
-    label('7 TO SMOKE', floor.x, 2.3, floor.z + 3.5, '#ffce8a'),
-    label(t('Пульт диджея'), dj.x, 1.05, dj.z - .40, '#86e7e5'),
+    label(t('Пульт диджея') + '  ↗', 1.95, 1.4, 2.02, '#86e7e5', 2.5),
+    label(t('Стена результатов') + '  →', 1.95, 1.4, 3.20, '#ffce8a', 2.5),
+    label('7 TO SMOKE', smokeEntry.x, 2.3, smokeEntry.z, '#ffce8a'),
+    label(t('Пульт диджея'), dj.x, 1.05, dj.z, '#86e7e5'),
     label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
     label(t('Выход в Промзону'), exit.x, 2.15, exit.z + .34, '#edb48b'),
   ];
@@ -273,7 +295,7 @@ export async function buildClub(TK) {
     mix.tick(dt);
     judges.forEach(judge => judge.tick(dt));
   });
-  W.club = { floor, dj, records, exit, slots, dancers, board, signs, mix,
+  W.club = { floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, mix,
     showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
     hideVotes: () => judges.forEach(judge => judge.hide()),
   };

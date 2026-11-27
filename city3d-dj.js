@@ -8,7 +8,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const TAU = Math.PI * 2;
 const envelope = (t, start, end) => smooth(t, start, start + .32) * (1 - smooth(t, end - .32, end));
 
-export function performDJ(person, booth, decks, meter, faders = [], name = 'Yard DJ') {
+export function performDJ(person, booth, decks, meter, faders = [], { name = 'Yard DJ', watchFloor = false } = {}) {
   const { root, B } = person;
   root.name = name;
   root.position.set(0, 0, -.62);
@@ -85,7 +85,8 @@ export function performDJ(person, booth, decks, meter, faders = [], name = 'Yard
       person.tick(dt);
       B.Spine1.quaternion.copy(mid).multiply(change.setFromEuler(poseEuler.set(.28 + .035 * punch, -.095 * shift / .06, -.07 * shift / .06)));
       B.Spine2.quaternion.copy(chest).multiply(change.setFromEuler(poseEuler.set(.27 + .03 * punch, -.12 * shift / .06, 0)));
-      B.Head.quaternion.copy(head).multiply(change.setFromEuler(poseEuler.set(-.115 + .16 * punch, -shift * 2, -.11 * listen)));
+      const lookUp = watchFloor ? .38 * (1 - Math.max(leftScratch, rightScratch, listen)) : 0;
+      B.Head.quaternion.copy(head).multiply(change.setFromEuler(poseEuler.set(-.115 - lookUp + .16 * punch, -shift * 2, -.11 * listen)));
       B.Head.getWorldPosition(headPos);
       booth.worldToLocal(headPos);
 
