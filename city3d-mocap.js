@@ -19,7 +19,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   const [capture, authored] = await Promise.all([
     fetch(url).then(response => response.json()),
-    fetch(new URL('./anim/city-breaking.json?v=4', import.meta.url))
+    fetch(new URL('./anim/city-breaking.json?v=5', import.meta.url))
       .then(response => response.ok ? response.json() : null).catch(() => null),
     loadCharacterFinish(),
   ]);
@@ -1238,6 +1238,10 @@ export function mocapPerson(look, opt = {}) {
   J.tick = dt => {
     if (festivalLED) festivalPhase.value = reducedGlow.matches ? 0 : performance.now() / 5700 % 1;
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
+    if (a && J.phraseTime != null) {
+      a.time = J.phraseTime - dt * a.timeScale;
+      J.phraseTime = null;
+    }
     mixer.update(dt);
     if (r && a.timeScale > 0) {
       let t1 = a.time; const loop = J.rmLoop;
@@ -1252,8 +1256,8 @@ export function mocapPerson(look, opt = {}) {
     rig.position.x = J.dx; rig.position.z = J.dz;
     if (hoodBone) {
       // The folded fabric compresses under the shoulder load, using the same bone for the mesh and contact tests.
-      const phase = /^City_Backspin/.test(J.cur) ? a.time / r.dur : 0;
-      const flatten = .91 * smooth(.16, .28, phase) * (1 - smooth(.73, .88, phase));
+      const backspinTime = /^City_Backspin/.test(J.cur) ? a.time : 0;
+      const flatten = .91 * smooth(.35, .62, backspinTime) * (1 - smooth(1.60, 1.91, backspinTime));
       hoodBone.scale.z = 1 - flatten;
       hoodBone.position.z = -.094 * dp * flatten;
     }
@@ -1284,6 +1288,7 @@ export function mocapPerson(look, opt = {}) {
     const once = o.once ?? !!(c.userData && c.userData.once);
     const a = mixer.clipAction(c); a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once;
     a.timeScale = (o.speed || 1) * (STANDS[name] ? STANDS[name].sp : 1); if (o.at) a.time = o.at % c.duration;
+    J.phraseTime = null;
     // the very first clip starts at full weight: a fade-in from 0 showed the T-pose for a moment (new people, the hero after changing clothes)
     a.play(); if (J.act && J.act !== a) J.act.crossFadeTo(a, o.fade ?? .25, false); else if (J.act === a || !J.act) a.setEffectiveWeight(1);
     J.act = a; J.cur = name;

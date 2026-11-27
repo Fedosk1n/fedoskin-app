@@ -12,12 +12,31 @@ const v = (x, y, z) => new Vector3(x, y, z);
 const rotation = (x, y, z) => new Quaternion().setFromEuler(new Euler(x, y, z, 'YXZ'));
 const yawRotation = a => new Quaternion().setFromAxisAngle(UP, a);
 
-function capture(name) {
+function capture(name, time = 0) {
   const c = clips[name];
+  const frame = Math.min(c.n - 1, time * c.fps);
+  const a = Math.floor(frame), b = Math.min(c.n - 1, a + 1), weight = frame - a;
+  const hip = i => new Vector3(...c.t['Hips.p'].slice(i * 3, i * 3 + 3).map(x => x / 100));
+  const joint = (n, i) => new Quaternion().fromArray(c.t[n + '.q'].slice(i * 4, i * 4 + 4).map(x => x / 1000)).normalize();
   return {
-    hip: new Vector3().fromArray(c.t['Hips.p'].slice(0, 3).map(x => x / 100)),
-    q: Object.fromEntries(bones.map(n => [n, new Quaternion().fromArray(c.t[n + '.q'].slice(0, 4).map(x => x / 1000)).normalize()])),
+    hip: hip(a).lerp(hip(b), weight),
+    q: Object.fromEntries(bones.map(n => [n, joint(n, a).slerp(joint(n, b), weight)])),
   };
+}
+
+const smooth = t => t*t*(3-2*t);
+const unit = t => Math.min(1, Math.max(0, t));
+
+function blend(a, b, weight) {
+  return { hip: a.hip.clone().lerp(b.hip, weight),
+    q: Object.fromEntries(bones.map(n => [n, a.q[n].clone().slerp(b.q[n], weight)])) };
+}
+
+function keyed(keys, time) {
+  const end = keys.findIndex(([at], i) => i && time <= at);
+  if (end < 0) return blend(keys.at(-1)[1], keys.at(-1)[1], 0);
+  const [start, a] = keys[end - 1], [finish, b] = keys[end];
+  return blend(a, b, smooth((time - start) / (finish - start)));
 }
 
 const sit = capture('Breakdance_Footwork_2');
@@ -92,8 +111,6 @@ const sweep = own([.06,.26,-.04],[-.92,.28,-.35],[.62,.13,.37],[-.22,.14,.27],[.
 const seated = own([-.08,.29,.02],[-.70,-.32,.34],[.18,.14,.55],[-.58,.17,.35],[.27,.19,-.15],[-.35,.075,-.19]);
 const backspinWhip = own([-.025,.32,.075],[-1.68,-.20,.16],[.21,.33,.43],[-.46,.57,.76],
   [.27,.15,-.17],[-.29,.17,-.20], { spine: .19, head: .24 });
-const backspinRelease = own([.01,.27,.045],[-1.27,.07,.17],[.24,.39,.45],[-.23,.15,.49],
-  [.24,.12,-.15],[-.32,.088,-.14]);
 const twist = own([.04,.32,.03],[-.77,.64,-.45],[.64,.17,.29],[-.27,.13,.42],[.36,.07,-.16],[-.17,.36,.37],
   { spine: -.18, twist: -.52, head: -.12 });
 const flex = own([.04,.39,.01],[-.96,.26,-.51],[.61,.20,.35],[-.06,.56,.70],[.45,.08,-.12],[-.26,.49,.43],
@@ -145,6 +162,59 @@ function scapulaOf(pose) {
 
 const coil = backspinCoil();
 const scapularPivot = scapulaOf(coil);
+
+const backspinEntry = [[0,sit],[.286,seated],[.447,backspinWhip],[.594,coil]];
+const backspinFrames = 82;
+const footworkIn = 1.92;
+// After the second turn, the outside palm catches the floor while the first shoe drops.
+// The other knee stays tucked until it can sweep into the first travelling step.
+const roll = own([.026,.309,.105],[-1.93,-.08,.42], [.00,.58,.06],[.25,.28,.30],
+  [.12,.34,-.19],[-.23,.142,-.14], { spine: .19, head: .29 });
+const catchStep = own([.038,.319,.036],[-1.27,-.13,.65],[.18,.24,.14],[.48,.118,.29],
+  [.005,.43,.26],[-.175,.069,-.043], { spine: .17, head: .23 });
+const pushStep = own([-.018,.398,-.045],[-.73,-.09,.79],[.205,.175,.004],[.57,.117,.295],
+  [-.038,.53,.31],[-.175,.083,-.058], { spine: .12, head: .13 });
+const backspinExit = [[1.54,coil],[1.67,roll],[1.81,catchStep],[footworkIn,pushStep]];
+const catchArm = ['RightArm', 'RightForeArm', 'RightHand'];
+const catchPalm = v(.04, .043, .065);
+const catchPalmRotation = rotation(0, 1.12, -Math.PI/2);
+
+function plantBackspinHand(pose, t) {
+  const weight = smooth(unit((t - 1.68) / .115)) * (1 - smooth(unit((t - 2.06) / .20)));
+  if (!weight) return;
+  const world = skeleton(pose);
+  const wrist = world.RightHand;
+  poseLimb(pose, catchArm, wrist.pos.lerp(catchPalm, weight), world.RightForeArm.pos,
+    wrist.q.slerp(catchPalmRotation, weight));
+}
+
+function backspin(time) {
+  const t = time * (backspinFrames - 1) / 30;
+  const p = unit((t - .594) / .99);
+  const ramp = .12, brake = 1 - ramp;
+  const turnSpeed = 4 * Math.PI / (1 - ramp);
+  const brakeStart = .594 + brake * .99;
+  const exitTurn = .31;
+  let angle;
+  if (t < brakeStart) {
+    angle = turnSpeed * (p < ramp ? p*p / (2*ramp) : p - ramp/2);
+  } else {
+    // Spend the remaining angular momentum on a turn into the hand plant.
+    const u = unit((t - brakeStart) / exitTurn);
+    angle = turnSpeed * (brake - ramp/2 + exitTurn/.99 * (u - u*u*.5));
+  }
+  let pose;
+  if (t < .594) pose = keyed(backspinEntry, t);
+  else if (t < footworkIn) pose = keyed(backspinExit, Math.max(t, backspinExit[0][0]));
+  else pose = blend(pushStep, capture('Breakdance_Footwork_2', t - footworkIn), smooth(unit((t - footworkIn)/.17)));
+
+  const heading = yawRotation(angle);
+  pose.hip.sub(scapularPivot).applyQuaternion(heading).add(scapularPivot);
+  pose.q.Hips.premultiply(heading);
+  // Pin in the stage plane so the slowing turn carries the torso around the supporting palm.
+  plantBackspinHand(pose, t);
+  return pose;
+}
 const shoulderHold = own([.02,.37,.03],[-2.15,.18,-.44],[.46,.87,.44],[-.34,.73,.19],
   [.31,.09,-.10],[-.32,.23,-.22], { spine: .16, head: .28 });
 
@@ -227,38 +297,19 @@ const authored = {
   City_Trick_Thread: { n: 37, keys: [[0,sit],[.25,tuck],[.48,thru],[.74,twist],[1,sit]] },
   City_Trick_KickSwitch: { n: 33, keys: [[0,sit],[.22,kick],[.38,sit],[.62,switchKick],[1,sit]] },
   City_Sweep_Drop: { n: 40, keys: [[0,stand],[.42,squat],[.70,sweep],[1,sit]] },
-  City_Backspin: { n: 67, keys: [[0,sit],[.13,seated],[.203,backspinWhip],[.27,coil],[.75,coil],[.87,backspinRelease],[1,sit]], spin: true },
+  City_Backspin: { n: backspinFrames, poseAt: backspin },
   City_Shoulder_Hold: { n: 62, keys: [[0,sit],[.17,open],[.35,shoulderHold],[1,shoulderHold]] },
 };
 
-const smooth = t => t*t*(3-2*t);
-function angularProgress(t) {
-  const ramp = .12;
-  if (t < ramp) return t*t/(2*ramp*(1-ramp));
-  if (t > 1-ramp) return 1-(1-t)**2/(2*ramp*(1-ramp));
-  return (t-ramp/2)/(1-ramp);
-}
-
-function bake({ n, keys, spin, poseAt }) {
+function bake({ n, keys, poseAt }) {
   const t = Object.fromEntries(['Hips.p', ...bones.map(b => b+'.q')].map(k => [k, []]));
-  let next = 1;
   for (let i = 0; i < n; i++) {
     const u = i / (n-1);
-    let pose;
-    if (poseAt) pose = poseAt(u);
-    else {
-      while (u > keys[next][0]) next++;
-      const [start, a] = keys[next-1], [end, b] = keys[next], k = smooth((u-start)/(end-start));
-      pose = { hip: a.hip.clone().lerp(b.hip, k), q: Object.fromEntries(bones.map(bone => [bone, a.q[bone].clone().slerp(b.q[bone], k)])) };
-    }
-    const spinAngle = spin ? 4*Math.PI*angularProgress(Math.min(1, Math.max(0, (u-.27)/.45))) : 0;
-    const turn = yawRotation(spinAngle);
+    const pose = poseAt ? poseAt(u) : keyed(keys, u);
     const { hip } = pose;
-    if (spin) hip.sub(scapularPivot).applyQuaternion(turn).add(scapularPivot);
     t['Hips.p'].push(...hip.toArray().map(x => Math.round(x*100)));
     for (const bone of bones) {
       const q = pose.q[bone].normalize();
-      if (bone==='Hips' && spin) q.premultiply(turn);
       t[bone+'.q'].push(...q.toArray().map(x => Math.round(x*1000)));
     }
   }

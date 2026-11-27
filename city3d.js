@@ -7,17 +7,17 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=34';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=35';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=68';
+import { initGame } from './city3d-game.js?v=69';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=8';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
 import { buildPark } from './city3d-park.js?v=8';
-import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=2';
+import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=3';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=6';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=7';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';

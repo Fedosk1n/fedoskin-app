@@ -177,6 +177,10 @@ export function setTimes(seq, from, time) {
 // Preserve the dancer's world-space travel when the next phrase changes direction.
 export function spinTick(dancer, seq, time) {
   for (const step of seq) {
+    // Keep the exit on the set clock when a slow frame caps the animation delta.
+    if (step.c?.startsWith('City_Backspin') && dancer.cur === step.c && time >= step.a && time < step.b) {
+      dancer.phraseTime = time - step.a;
+    }
     if (!step.yaw || time < step.a || step.turned === 1) continue;
     const t = clamp((time - step.a) / step.yt, 0, 1), ease = t*t*(3-2*t);
     const d = step.yaw * (ease - (step.turned || 0));
