@@ -175,7 +175,7 @@ function rmAt(r, t, loop, out) {
   if (loop) { const u = t / r.dur; out[0] -= r.end[0] * u; out[1] -= r.end[1] * u; }
   return out;
 }
-const _v = new THREE.Vector3(), lerpTo = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-dt * k));
+const lerpTo = (a, b, dt, k) => a + (b - a) * (1 - Math.exp(-dt * k));
 const _a = [0, 0], _b = [0, 0], TRAVEL = /To_Ground|Footwork|Freeze|Headspin_Start|Headspin_End|Ending|^City_/;
 
 const mats = new Map();
@@ -1195,6 +1195,14 @@ export function mocapPerson(look, opt = {}) {
   { const O = new THREE.Vector3(), pt = (n, r) => PTS.push({ m: B[n], p: O, r: r * scale });
     pt('Hips', .1 * hd); pt('Spine', .1 * dp * wd + bd.belly * .05); pt('Spine1', .105 * dp); pt('Spine2', .116 * dp); pt('Neck', .07);
     for (const s of ['Left', 'Right']) { pt(s + 'Arm', .066 * A); pt(s + 'ForeArm', .05 * A); pt(s + 'Hand', .037 * A); pt(s + 'UpLeg', .092 * L); pt(s + 'Leg', .069 * L); pt(s + 'Foot', .06); } }
+  // Update only the contact points and their ancestors. The renderer updates the rest of the rig.
+  const contactNodes = new Set([root]);
+  function addContactNode(node) {
+    if (contactNodes.has(node)) return;
+    addContactNode(node.parent);
+    contactNodes.add(node);
+  }
+  for (const { m } of PTS) addContactNode(m);
   const mixer = new THREE.AnimationMixer(rig);
   const motion = bd.motion ?? .5, quiet = bd.old || motion < .42;
   const J = { root, rig, B, body, parts, dp, mixer, cur: null, act: null, dx: 0, dz: 0, pull: .55, maxR: .95,
@@ -1225,8 +1233,13 @@ export function mocapPerson(look, opt = {}) {
     // GROUND: nothing of the body may go under the asphalt (owner 14.11 «при падении… не проваливался под землю»).
     // The lowest point of head / hands / elbows / knees / feet / hips / chest is measured each frame; the body is lifted onto the
     // ground, and while lying after a fall (J.rest) it is laid exactly on it.
-    rig.position.y = 0; root.updateMatrixWorld(true);
-    let low = Infinity; for (const q of PTS) { _v.copy(q.p).applyMatrix4(q.m.matrixWorld); const y = _v.y - q.r; if (y < low) low = y; }
+    rig.position.y = 0;
+    for (const node of contactNodes) node.updateWorldMatrix(false, false, true);
+    let low = Infinity;
+    for (const { m, p, r } of PTS) {
+      const e = m.matrixWorld.elements, y = e[1] * p.x + e[5] * p.y + e[9] * p.z + e[13] - r;
+      if (y < low) low = y;
+    }
     low -= root.position.y;
     const contact = contactMove ? a.getEffectiveWeight() : 0;
     const want = J.rest ? -low : low > 0 ? -Math.min(low, .065) * contact : -low;
