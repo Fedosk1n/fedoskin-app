@@ -184,7 +184,7 @@
       const g = itemOf(k); if (!g) return;
       const f = g.f || {};
       for (const part of Object.keys(fit)) if (f[part]) fit[part] = f[part];
-      for (const flag of ['phones', 'chain', 'gloves', 'knee', 'laceStyle']) if (f[flag]) gf[flag] = f[flag];
+      for (const flag of ['phones', 'chain', 'gloves', 'knee', 'laceStyle', 'rgbSole', 'rgbLace']) if (f[flag]) gf[flag] = f[flag];
       Object.assign(co, g.col);
     });
     return { L, has, fit, co, gf };

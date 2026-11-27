@@ -5,9 +5,10 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=33';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=34';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=23';   // the hero's power move is DRAWN by the finger (17.11)
+import { loadFestivalStage } from './city3d-festival-art.js?v=1';
+import { initPower } from './city3d-power.js?v=24';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -688,13 +689,69 @@ export function initGame(ctx) {
     PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
-  let festivalGuest = null;
+  let festivalGuest = null, festivalScene = null, festivalHome = null;
+  let festivalPeople = [];
+  function createFestivalSet(point, act, decisions) {
+    if (festivalScene) return;
+    const layout = new THREE.Group();
+    const centerZ = point.z - (D === 'park' ? 1.72 : D === 'prom' ? 2.8 : .85);
+    layout.position.set(point.x - .32, .045, centerZ);
+    layout.name = 'FestivalIndependentStage';
+    scene.add(layout); festivalScene = layout;
+    festivalHome ||= W.hero.root.position.clone();
+    W.hero.root.position.set(layout.position.x, 0, centerZ);
+    const industrial = decisions.venue === 'prom';
+    const amber = new THREE.PointLight('#ff995c', industrial ? 18 : 10, 8);
+    const side = new THREE.PointLight(decisions.sound === 'relay' ? '#c3a8ff' : '#72cadd', 14, 9);
+    amber.position.set(-2.6, 2.5, .6); side.position.set(2.7, 2.9, -1.4);
+    layout.add(amber, side);
+    loadFestivalStage().then(props => {
+      if (festivalScene !== layout) return;
+      props.scale.setScalar(industrial ? .88 : .70);
+      layout.add(props);
+    }).catch(() => {});
+    const clothes = [['c:stencilBandana'], ['c:waveKicks'], ['girl', 'c:rebarCap'], ['c:rootsBeanie']];
+    const order = decisions.roster === 'crew' ? [2, 0, 3, 1] : [0, 1, 2, 3];
+    for (const [i, n] of order.entries()) {
+      const look = HERO.topDown(act === 7 ? 4 : 6, clothes[n]);
+      const dancer = mocapPerson(look, { body: bodyOf(308 + n * 23, { type:['slim','athl','small','lanky'][n], girl: n === 2 }) });
+      const angle = .27 + i * (Math.PI - .52) / (order.length - 1);
+      dancer.root.position.set(Math.cos(angle) * 2.35, 0, -Math.sin(angle) * 1.95);
+      face(dancer, 0, 0);
+      dancer.play('Breakdance_Ready', { at: i / 4 });
+      layout.add(dancer.root);
+      festivalPeople[n] = dancer;
+    }
+  }
   const festival = initFestival({ t: _t, W, D, places: PLACES, colliders: ctx.colliders || [], state: S.festival,
     eligible: () => S.story.length > 0, save, travel: to => travel(to, true), leaveVisit: festivalVisit ? () => travel(S.where) : null,
     openAllowed: () => !A && !B && !P && !choosing && $('#cityLoading').hidden && $('#alpha').hidden && !$('#lookDialog').open,
-    lock(locked) { W.lock = locked; paintAct(); },
-    displaySet(clip, rival) {
-      if (!rival) { W.hero.play(clip, { fade: .12 }); return; }
+    lock(locked) {
+      W.lock = locked;
+      if (!locked && festivalScene) {
+        if (festivalHome) W.hero.root.position.copy(festivalHome);
+        festivalScene.traverse(mesh => { if (mesh.isMesh && !mesh.geometry.userData.sharedCityGeometry) mesh.geometry.dispose(); });
+        festivalScene.removeFromParent(); festivalScene = festivalHome = null; festivalPeople = [];
+      }
+      paintAct();
+    },
+    prepareScene: createFestivalSet,
+    tryPrize(items) {
+      try {
+        const profile = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}');
+        const own = JSON.parse(localStorage.getItem('fedoskin-wardrobe-owned:' + profile.id) || '[]');
+        if (!items.every(item => own.includes(item))) return;
+        const equipped = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]');
+        const itemSlots = new Set(items.map(item => HERO.itemOf(item).slot));
+        const next = equipped.filter(id => !itemSlots.has(HERO.itemOf(id)?.slot)).concat(items);
+        localStorage.setItem('fedoskin-eq', JSON.stringify(next));
+        ctx.rewear?.();
+        festival.close();
+        toast(_t('Мифический комплект надет'));
+      } catch (_) {}
+    },
+    displaySet(clip, rival, guestIndex) {
+      if (!rival) { (festivalPeople[guestIndex] || W.hero).play(clip, { fade: .12 }); return; }
       if (!festivalGuest) {
         festivalGuest = mocapPerson(HERO.topDown(5, ['c:stencilBandana']), { body: bodyOf(412, { type: 'slim' }) });
         scene.add(festivalGuest.root);
@@ -1779,6 +1836,7 @@ export function initGame(ctx) {
     if (festival.busy()) {
       W.hero.tick(dt);
       if (festivalGuest?.root.visible) festivalGuest.tick(dt);
+      festivalPeople.forEach(person => person.tick(dt));
     } else if (festivalGuest) festivalGuest.root.visible = false;
     const festivalTarget = festival.target();
     if (!B && !P && !A && !choosing && !festival.busy()) {

@@ -137,7 +137,7 @@ export function phraseVerdict(phrase, easy) {
   const errors = Object.keys(phrase.errors).length;
   const silenceErrors = phrase.prompts.reduce((n, prompt, i) => n + Number(prompt.kind === 'rest' && Boolean(phrase.errors[i])), 0);
   const score = Math.max(0, hits - silenceErrors * .5);
-  const threshold = easy ? .48 : .62;
+  const threshold = (easy ? [.48, .50, .54, .56, .60, .63, .65, .68] : [.55, .58, .62, .66, .69, .72, .76, .78])[phrase.course.act] ?? .62;
   const allChoices = choices.every(i => phrase.hits[i]);
   const passed = allChoices && score >= Math.ceil(required * threshold);
   return { passed, hits, required, errors, clean: Number(hits === required && !errors),

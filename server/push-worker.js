@@ -41,7 +41,7 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 // Increment for each release that requires redeploying this Worker.
-const WORKER_VERSION = 4;
+const WORKER_VERSION = 5;
 
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
@@ -563,7 +563,8 @@ const CGEAR = { rustyBandana: 'head', rustyTrack: 'top', acidKicks: 'kicks', aci
   pendulumPhones: 'ears', foundryGloves: 'hands', cachePants: 'pants', ringKnees: 'knees', forgeCrown: 'head',
   matWrist: 'wrists', parkElbows: 'elbows', tileKnees: 'knees', fourWallsChain: 'neck',
   poolBucket: 'head', acidRetroBandana: 'head', parkSpinCap: 'head', terracottaWrist: 'wrists',
-  foamElbows: 'elbows', spinCapSlate: 'head', canvasCap: 'head', wideLaces: 'laces', courtKicks: 'kicks' };
+  foamElbows: 'elbows', spinCapSlate: 'head', canvasCap: 'head', wideLaces: 'laces', courtKicks: 'kicks',
+  prismCypherKicks: 'kicks', prismCypherLaces: 'laces' };
 // must match HERO.SHOP in hero.js: id → [slot, price]
 const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor', 100], knee: ['knees', 120], bandana: ['head', 150], wall: ['bg', 200], city: ['bg', 200], red: ['kicks', 2400], box: ['item', 300], fire: ['fx', 500], tee: ['top', 0],
   streetLaces: ['laces', 60], canvasTeal: ['kicks', 100], asphaltPants: ['pants', 110], stripedBeanie: ['head', 130],
@@ -609,6 +610,304 @@ async function dailyLoot(db, id, claim) {
   }
   const last = await db.prepare('SELECT t, item, rarity, duplicate FROM hero_loot WHERE id = ? ORDER BY t DESC LIMIT 1').bind(id).first();
   return { claimed, last, now, next: last ? last.t + DAILY_LOOT_MS : now, odds: DAILY_LOOT_ODDS, poolSizes: DAILY_LOOT_POOLS.map(pool => pool.length) };
+}
+// Generated from the shared game rules by tools/sync_festival_exams.mjs.
+// BEGIN FESTIVAL_JUDGE
+const FESTIVAL_JUDGE = (() => {
+
+const TEMPOS = { training: .85, normal: 1, quick: 1.12 };
+const PHRASE_BEATS = 16;
+const DIRECTIONS = ['←', '↑', '↓', '→'];
+const MOVES = ['Топрок', 'Футворк', 'Пауэр', 'Фриз'];
+const RUNNERS = ['Трафареты', 'Шуруп', 'Клёпка', 'Маятник'];
+
+// Four groups of eight beats. Each pocket has offbeats, accents and deliberate silence.
+const pockets = [
+  [0, '.', 1, 0, '.', 2, '.', 3], [1, 0, '.', '.', 2, '.', 3, 1],
+  [0, 1, '.', 2, 0, '.', '.', 3], [2, '.', 2, 0, 1, 3, '.', '.'],
+  [3, 1, '.', 0, '.', 2, '.', 1], [0, '.', 3, 2, '.', '.', 1, 0],
+  [2, 1, '.', 3, 1, '.', 0, '.'], [3, '.', 2, '.', 1, 3, 0, '.'],
+  [1, '.', 0, '.', 3, 2, '.', 1], [2, 3, 1, '.', 0, 1, '.', '.'],
+  [0, 2, '.', 1, 3, '.', 2, '.'], [3, '.', 0, 1, '.', 3, '.', 2],
+];
+
+function pieceAt(episodeIndex, pieceIndex, choices) {
+  const ep = EPISODES[episodeIndex];
+  if (!ep || !Number.isInteger(pieceIndex) || pieceIndex < 0 || pieceIndex >= ep.pieces.length) return null;
+  const mode = ep.pieces[pieceIndex];
+  let bpm = ep.bpm;
+  if (ep.act >= 5 && choices.sound === 'relay') bpm += [0, 8, 4, -4][pieceIndex];
+  const flavor = ep.act >= 5 && choices.sound === 'relay' ? pieceIndex + 1 : 0;
+  return { mode, bpm, beats: bpm * 3, flavor, seed: ep.motif, act: ep.act };
+}
+
+function freshCampaign() {
+  return { v: 1, episode: 0, piece: 0, beat: 0, choices: {}, tempo: 'normal', results: [] };
+}
+
+function loadCampaign(value) {
+  const next = freshCampaign();
+  if (value?.v !== 1) return next;
+  const results = Array.isArray(value.results) ? value.results : [];
+  for (const row of results.slice(0, EPISODES.length)) {
+    if (!Number.isInteger(row?.clean) || row.clean < 0 || !Number.isInteger(row?.variation) || row.variation < 0) break;
+    next.results.push({ clean: row.clean, variation: row.variation });
+  }
+  next.episode = next.results.length;
+  for (const [id, decision] of Object.entries(DECISIONS)) {
+    if (decision.options.some(option => option.tag === value.choices?.[id])) next.choices[id] = value.choices[id];
+  }
+  next.tempo = Object.hasOwn(TEMPOS, value.tempo) ? value.tempo : 'normal';
+  if (Number.isInteger(value.lastReply) && value.lastReply >= 0 && value.lastReply < 4) next.lastReply = value.lastReply;
+  const course = pieceAt(next.episode, value.piece, next.choices);
+  if (course && value.episode === next.episode) {
+    next.piece = value.piece;
+    next.beat = Number.isInteger(value.beat) && value.beat >= 0 && value.beat < course.beats && value.beat % PHRASE_BEATS === 0 ? value.beat : 0;
+    next.clean = Number.isInteger(value.clean) && value.clean >= 0 ? value.clean : 0;
+    next.variation = Number.isInteger(value.variation) && value.variation >= 0 ? value.variation : 0;
+    next.prepared = Boolean(value.prepared || value.piece || next.beat);
+  }
+  return next;
+}
+
+function rosterFor(course, choices) {
+  return course.act < 3 || choices.roster !== 'crew' ? [0, 1, 2, 3] : [2, 0, 3, 1];
+}
+
+function notePattern(seed, offset) {
+  return pockets[(seed * 7 + offset * 5) % pockets.length];
+}
+
+function createPhrase(course, start, choices) {
+  const length = Math.min(PHRASE_BEATS, course.beats - start);
+  const index = start / PHRASE_BEATS;
+  const character = (course.seed + index + course.flavor) % 4;
+  const rival = (character + index % 3 + 1) % 4;
+  const desired = [character, (character + (course.seed % 2 ? 1 : 3)) % 4];
+  const roster = rosterFor(course, choices);
+  const rhythm = Array.from({ length }, (_, beat) =>
+    notePattern(course.seed + course.flavor, 2 * index + Math.floor(beat / 8))[beat % 8]);
+  const prompts = rhythm.map((note, beat) => {
+    if (course.mode === 'r' && beat === 0) return { kind: 'reply', rival };
+    if (course.mode === 'b' && beat < 2) return { kind: 'build', desired: desired[beat] };
+    if (course.mode === 'c' && beat % 4 === 0) return { kind: 'cast', favored: roster[(character + Math.floor(beat / 4)) % 4] };
+    if (note === '.') return { kind: 'rest' };
+    if (course.mode === 'd') return { kind: 'deck', note: (note + Math.floor(beat / 4) * 2 + course.flavor) % 4 };
+    return { kind: course.mode === 'g' ? 'groove' : 'perform', note };
+  });
+  return { course, length, start, prompts, selections: {}, hits: {}, errors: {}, latest: { source: '', result: '' }, branch: choices };
+}
+
+function displayNote(phrase, ordinal) {
+  const entry = phrase.prompts[ordinal];
+  if (!entry) return null;
+  if (entry.kind !== 'perform') return entry;
+  if (phrase.course.mode === 'r') {
+    const style = phrase.selections[0];
+    return { ...entry, note: style == null ? entry.note : (entry.note + style + 1) % 4 };
+  }
+  if (phrase.course.mode === 'b') {
+    const style = phrase.selections[ordinal >= Math.ceil(phrase.length / 2) ? 1 : 0];
+    return { ...entry, note: style == null ? entry.note : (entry.note + style) % 4 };
+  }
+  const section = ordinal - ordinal % 4;
+  return { ...entry, note: (entry.note + (phrase.selections[section] ?? 0)) % 4 };
+}
+
+function postInput(phrase, beatPosition, code, tolerance) {
+  const ordinal = Math.round(beatPosition);
+  if (ordinal < 0 || ordinal >= phrase.length || Math.abs(beatPosition - ordinal) > tolerance) return 'early';
+  const event = displayNote(phrase, ordinal);
+  if (phrase.hits[ordinal] || phrase.errors[ordinal]) return 'repeat';
+  let valid = false;
+  let feedback = 'miss';
+  if (event.kind === 'reply' && code.family === 'choice') {
+    valid = code.value !== event.rival &&
+      (phrase.course.act < 4 || code.value !== phrase.branch.lastReply);
+    feedback = valid ? 'variation' : 'copied';
+  } else if (event.kind === 'build' && code.family === 'choice') {
+    valid = code.value === event.desired && code.value !== phrase.selections[0];
+    feedback = valid ? 'variation' : 'fit';
+  } else if (event.kind === 'cast' && code.family === 'choice') {
+    valid = code.value === event.favored && code.value !== phrase.selections[ordinal - 4];
+    feedback = valid ? 'lineup' : 'line';
+  } else if ((event.kind === 'groove' || event.kind === 'perform') && code.family === 'move') {
+    valid = code.value === event.note;
+    feedback = valid ? 'clean' : 'miss';
+  } else if (event.kind === 'deck' && code.family === 'deck') {
+    valid = code.value === event.note;
+    feedback = valid ? 'clean' : 'miss';
+  } else if (event.kind === 'rest') feedback = 'rest';
+  if (valid) {
+    phrase.hits[ordinal] = true;
+    if (code.family === 'choice') phrase.selections[ordinal] = code.value;
+  } else phrase.errors[ordinal] = true;
+  return feedback;
+}
+
+function phraseVerdict(phrase, easy) {
+  const required = phrase.prompts.reduce((count, prompt) => count + Number(prompt.kind !== 'rest'), 0);
+  const choices = phrase.prompts.flatMap((prompt, i) => ['reply', 'build', 'cast'].includes(prompt.kind) ? [i] : []);
+  const hits = Object.keys(phrase.hits).length;
+  const errors = Object.keys(phrase.errors).length;
+  const silenceErrors = phrase.prompts.reduce((n, prompt, i) => n + Number(prompt.kind === 'rest' && Boolean(phrase.errors[i])), 0);
+  const score = Math.max(0, hits - silenceErrors * .5);
+  const threshold = (easy ? [.48, .50, .54, .56, .60, .63, .65, .68] : [.55, .58, .62, .66, .69, .72, .76, .78])[phrase.course.act] ?? .62;
+  const allChoices = choices.every(i => phrase.hits[i]);
+  const passed = allChoices && score >= Math.ceil(required * threshold);
+  return { passed, hits, required, errors, clean: Number(hits === required && !errors),
+    variation: choices.filter(i => phrase.hits[i]).length,
+    reply: phrase.course.mode === 'r' ? phrase.selections[0] : undefined };
+}
+
+function recordPhrase(state, verdict, endingBeat, key) {
+  const { episode, piece } = state;
+  if (!verdict.passed || key.episode !== episode || key.piece !== piece || key.beat !== state.beat) return false;
+  const course = pieceAt(episode, piece, state.choices);
+  const expected = Math.min(course.beats, state.beat + PHRASE_BEATS);
+  if (endingBeat !== expected) return false;
+  state.clean = (state.clean || 0) + verdict.clean;
+  state.variation = (state.variation || 0) + verdict.variation;
+  if (verdict.reply != null) state.lastReply = verdict.reply;
+  if (endingBeat < course.beats) {
+    state.beat = endingBeat;
+    return true;
+  }
+  state.beat = 0;
+  if (piece + 1 < EPISODES[episode].pieces.length) {
+    state.piece++;
+    return true;
+  }
+  state.results.push({ clean: state.clean, variation: state.variation });
+  state.episode++;
+  state.piece = state.clean = state.variation = 0;
+  state.prepared = false;
+  return true;
+}
+
+function recordDecision(state, tag) {
+  const decisionId = EPISODES[state.episode]?.decision;
+  if (!decisionId || state.choices[decisionId] || !DECISIONS[decisionId].options.some(option => option.tag === tag)) return false;
+  state.choices[decisionId] = tag;
+  return true;
+}
+
+
+const FESTIVAL_EXAMS = [
+  { id: 'pulse', name: 'Три паузы Маятника', rival: 'Маятник', bpm: 116, modes: 'ggb', precision: .88, clean: 2, variety: 2, rivalMarks: [.90, 2, 1] },
+  { id: 'answer', name: 'Ответ Клёпке', rival: 'Клёпка', bpm: 120, modes: 'rrb', precision: .87, clean: 2, variety: 4, rivalMarks: [.89, 2, 3] },
+  { id: 'decks', name: 'Смена пульта Винта', rival: 'Винт', bpm: 124, modes: 'ddc', precision: .90, clean: 2, variety: 3, rivalMarks: [.90, 1, 3] },
+  { id: 'final', name: 'Судимый финал · Грань круга', rival: 'Волна', bpm: 132, modes: 'grbdcr', precision: .92, clean: 4, variety: 8, rivalMarks: [.94, 4, 6] },
+];
+const FESTIVAL_CHECKPOINTS = [
+  { id: 'act1', name: 'Проверка открытого входа', rival: 'Винт', bpm: 88, modes: 'gb', precision: .70, clean: 0, variety: 2, rivalMarks: [.61, 0, 1] },
+  { id: 'act2', name: 'Площадка в Центре', rival: 'Трафареты', bpm: 100, modes: 'cg', precision: .74, clean: 0, variety: 3, rivalMarks: [.67, 0, 2] },
+  { id: 'act3', name: 'Ответ двух составов', rival: 'Шуруп', bpm: 108, modes: 'rc', precision: .77, clean: 1, variety: 4, rivalMarks: [.70, 0, 3] },
+  { id: 'act4', name: 'Проверка звука', rival: 'Винт', bpm: 112, modes: 'dg', precision: .79, clean: 1, variety: 0, rivalMarks: [.72, 0, 0] },
+  { id: 'act5', name: 'Последний отбор', rival: 'Клёпка', bpm: 116, modes: 'rb', precision: .80, clean: 1, variety: 3, rivalMarks: [.76, 0, 2] },
+  { id: 'act6', name: 'Репетиция новой афиши', rival: 'Литейка', bpm: 120, modes: 'dc', precision: .81, clean: 1, variety: 3, rivalMarks: [.76, 0, 2] },
+  { id: 'act7', name: 'Двери фестиваля', rival: 'Волна', bpm: 124, modes: 'cbr', precision: .83, clean: 1, variety: 6, rivalMarks: [.79, 0, 5] },
+  { id: 'act8', name: 'Встреча спустя годы', rival: 'Маятник', bpm: 120, modes: 'rgc', precision: .82, clean: 1, variety: 4, rivalMarks: [.78, 0, 3] },
+];
+const FESTIVAL_OFFICIAL = [...FESTIVAL_CHECKPOINTS, ...FESTIVAL_EXAMS];
+const FESTIVAL_PRIZE = ['c:prismCypherKicks', 'c:prismCypherLaces'];
+
+function examPeriod(spec, tempo) { return 60000 / (spec.bpm * TEMPOS[tempo]); }
+function examCourse(spec, seed, phase) {
+  return { mode: spec.modes[phase], bpm: spec.bpm, beats: PHRASE_BEATS, act: 7, flavor: phase % 3,
+    seed: (seed % 999983 + phase * 13) % 999983 };
+}
+
+function judgeFestivalExam(spec, seed, tempo, inputs) {
+  if (!spec || !Object.hasOwn(TEMPOS, tempo) || !Array.isArray(inputs) || inputs.length > 220) return null;
+  const period = examPeriod(spec, tempo), beats = spec.modes.length * PHRASE_BEATS;
+  let previousAt = -500, lastReply, clean = 0, placed = 0, needed = 0, variety = 0, excess = 0;
+  const planned = FESTIVAL_OFFICIAL.includes(spec) && Array.from({ length: spec.modes.length }, () => []);
+  if (!planned) return null;
+  for (const entry of inputs) {
+    if (!Array.isArray(entry) || entry.length !== 2) return null;
+    const [ms, value] = entry;
+    if (!Number.isInteger(ms) || ms < previousAt || ms < -500 || ms >= Math.ceil(period * beats) ||
+        !Number.isInteger(value) || value < 0 || value > 3) return null;
+    previousAt = ms;
+    const beat = Math.round(ms / period), phase = Math.floor(beat / PHRASE_BEATS);
+    if (planned[phase]) planned[phase].push(entry); else excess++;
+  }
+  for (let phase = 0; phase < planned.length; phase++) {
+    const course = examCourse(spec, seed, phase);
+    const phrase = createPhrase(course, 0, { lastReply });
+    for (const [ms, value] of planned[phase]) {
+      const offset = ms / period - phase * PHRASE_BEATS;
+      const note = displayNote(phrase, Math.round(offset));
+      if (!note) { excess++; continue; }
+      const family = ['reply','build','cast'].includes(note.kind) ? 'choice' : course.mode === 'd' ? 'deck' : 'move';
+      const outcome = postInput(phrase, offset, { family, value }, .31);
+      if (outcome === 'repeat' || outcome === 'early') excess++;
+    }
+    placed += Object.keys(phrase.hits).length;
+    needed += phrase.prompts.filter(note => note.kind !== 'rest').length;
+    const misses = phrase.prompts.reduce((n, note, i) => n + Number(note.kind !== 'rest' && !phrase.hits[i]), 0);
+    if (!misses && !Object.keys(phrase.errors).length) clean++;
+    const chosen = Object.values(phrase.selections);
+    if (course.mode === 'r') { lastReply = chosen[0]; if (lastReply != null) variety++; }
+    if (course.mode === 'b' || course.mode === 'c') variety += new Set(chosen).size;
+  }
+  const precision = Math.max(0, (placed - excess) / Math.max(1, needed));
+  const [rivalPrecision, rivalClean, rivalVariety] = spec.rivalMarks;
+  const votes = [precision > rivalPrecision, clean > rivalClean, variety > rivalVariety].map(Number);
+  const passed = precision >= spec.precision && clean >= spec.clean && variety >= spec.variety &&
+    votes.reduce((sum, vote) => sum + vote, 0) >= 2;
+  return { passed, precision, clean, variety, votes };
+}
+
+return { specs: FESTIVAL_OFFICIAL, prize: FESTIVAL_PRIZE, period: examPeriod, judge: judgeFestivalExam };
+})();
+// END FESTIVAL_JUDGE
+async function festivalCompetition(db, id, b) {
+  const passed = ((await db.prepare('SELECT exam FROM hero_festival WHERE id = ?').bind(id).all()).results || []).map(row => row.exam);
+  if (!b.action || b.action === 'status') return { ok: true, passed };
+  const spec = FESTIVAL_JUDGE.specs.find(exam => exam.id === b.exam);
+  if (!spec) return { error: 'exam' };
+  const now = Date.now();
+  if (b.action === 'begin') {
+    const preceding = FESTIVAL_JUDGE.specs.slice(0, FESTIVAL_JUDGE.specs.indexOf(spec)).map(rule => rule.id);
+    if (!preceding.every(exam => passed.includes(exam))) return { error: 'qualify' };
+    const nonce = crypto.randomUUID(), seed = randomBelow(2147483647);
+    const tempo = ['normal', 'quick', 'training'].includes(b.tempo) ? b.tempo : 'normal';
+    await db.prepare(`INSERT INTO hero_festival_attempt (id, exam, nonce, seed, tempo, opened, result) VALUES (?, ?, ?, ?, ?, ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET exam=excluded.exam, nonce=excluded.nonce, seed=excluded.seed, tempo=excluded.tempo,
+        opened=excluded.opened, result=NULL`).bind(id, spec.id, nonce, seed, tempo, now).run();
+    return { ok: true, passed, nonce, seed, tempo };
+  }
+  if (b.action !== 'finish' || typeof b.nonce !== 'string' || b.nonce.length > 50) return { error: 'exam' };
+  const attempt = await db.prepare('SELECT * FROM hero_festival_attempt WHERE id = ? AND exam = ? AND nonce = ?')
+    .bind(id, spec.id, b.nonce).first();
+  if (!attempt) return { error: 'restart' };
+  if (attempt.result) return { ok: true, passed, verdict: JSON.parse(attempt.result) };
+  const minTime = FESTIVAL_JUDGE.period(spec, attempt.tempo) * (spec.modes.length * 16 - 1);
+  if (now - attempt.opened < minTime - 150) return { error: 'too-soon' };
+  const verdict = FESTIVAL_JUDGE.judge(spec, attempt.seed, attempt.tempo, b.inputs);
+  if (!verdict) return { error: 'attempt' };
+  const updates = [db.prepare('UPDATE hero_festival_attempt SET result = ? WHERE id = ? AND nonce = ? AND result IS NULL')
+    .bind(JSON.stringify(verdict), id, b.nonce)];
+  if (verdict.passed) {
+    updates.push(db.prepare(`INSERT OR IGNORE INTO hero_festival (id, exam, t) SELECT id, exam, ?
+      FROM hero_festival_attempt WHERE id = ? AND nonce = ? AND json_extract(result, '$.passed') = 1`).bind(now, id, b.nonce));
+    if (spec.id === 'final') {
+      for (const item of FESTIVAL_JUDGE.prize) {
+        updates.push(db.prepare(`INSERT OR IGNORE INTO hero_own (id, item, t, paid) SELECT id, ?, ?, 0
+          FROM hero_festival WHERE id = ? AND exam = 'final'
+          AND (SELECT COUNT(*) FROM hero_festival WHERE id = ?) = ?`).bind(item, now, id, id, FESTIVAL_JUDGE.specs.length));
+      }
+    }
+  }
+  await db.batch(updates);
+  const updated = await db.prepare('SELECT result FROM hero_festival_attempt WHERE id = ? AND nonce = ?')
+    .bind(id, b.nonce).first();
+  if (!updated?.result) return { error: 'restart' };
+  const resolved = JSON.parse(updated.result);
+  if (resolved.passed && !passed.includes(spec.id)) passed.push(spec.id);
+  return { ok: true, passed, verdict: resolved };
 }
 const GEAR_CATALOG = 4;
 const MYTHIC_WIN_DAYS = { red: 21, prismPhones: 28 };
@@ -893,14 +1192,15 @@ async function battle(req, env, path, json) {
   await lbMigrate(env);
   const db = env.DB, now = Date.now(), identity = await hash('lb:' + secret);
   let me = await lbRow(db, id);
-  if (!me && path === '/hero/loot') {
-    if (b.claim !== true) return json({ ok: true, ...(await dailyLoot(db, id, false)) });
+  if (!me && (path === '/hero/loot' || path === '/hero/festival')) {
+    if (path === '/hero/loot' && b.claim !== true) return json({ ok: true, ...(await dailyLoot(db, id, false)) });
+    if (path === '/hero/festival' && (!b.action || b.action === 'status')) return json({ ok: true, passed: [] });
     // A personal wardrobe uses the existing device identity without joining the public ranking.
     await db.prepare('INSERT OR IGNORE INTO lb (id, h, f, t, lvl, rk, hid) VALUES (?, ?, ?, ?, 1, ?, 1)')
       .bind(id, identity, now, now, randomBelow(1e9)).run();
     me = await lbRow(db, id);
   }
-  if (!me || (me.hid && !['/hero/loot', '/hero/eq'].includes(path)) || me.h !== identity) return json({ error: 'not in rating' }, 403);
+  if (!me || (me.hid && !['/hero/loot', '/hero/festival', '/hero/eq'].includes(path)) || me.h !== identity) return json({ error: 'not in rating' }, 403);
   const inboxTarget = path === '/bt/inbox' && Number.isSafeInteger(b.n) && b.n > 0 ? b.n : null;
   if ((path === '/bt/inbox' && !inboxTarget) || path === '/bt/ready') await btExpire(env, null).catch(() => {});
   const score = async x => (await db.prepare('SELECT w, l FROM bt_score WHERE id = ?').bind(x).first()) || { w: 0, l: 0 };
@@ -1063,6 +1363,10 @@ async function battle(req, env, path, json) {
     const drop = await dailyLoot(db, id, b.claim === true);
     return json({ ok: true, ...drop, ...(await wallet()) });
   }
+  if (path === '/hero/festival') {
+    const result = await festivalCompetition(db, id, b);
+    return result.ok ? json({ ...result, ...(await wallet()) }) : json(result, 409);
+  }
   if (path === '/hero/buy') {
     const item = String(b.item || '');
     if (!Object.hasOwn(SHOP, item)) return json({ error: 'item' }, 400);
@@ -1088,7 +1392,7 @@ async function battle(req, env, path, json) {
   }
   if (path === '/hero/eq') {
     const w = await wallet(), slots = {};
-    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (Object.hasOwn(SHOP, k) && w.owned.includes(k)) slots[SHOP[k][0]] = k; else if (k.slice(0, 2) === 'c:' && Object.hasOwn(CGEAR, k.slice(2))) slots[CGEAR[k.slice(2)]] = k; }); // one per slot
+    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (Object.hasOwn(SHOP, k) && w.owned.includes(k)) slots[SHOP[k][0]] = k; else if (k.slice(0, 2) === 'c:' && Object.hasOwn(CGEAR, k.slice(2)) && (!FESTIVAL_JUDGE.prize.includes(k) || w.owned.includes(k))) slots[CGEAR[k.slice(2)]] = k; }); // one per slot
     const eq = Object.values(slots);
     if ((Array.isArray(b.eq) ? b.eq : []).includes('girl')) eq.push('girl'); // b-girl look (11.11.2026) — not an item, rides along with the items
     const lv = (Array.isArray(b.eq) ? b.eq : []).map(String).find(k => /^lv[1-7]$/.test(k)); // an older level look chosen in the wardrobe (11.11.2026) — drawing never goes above the real level
@@ -1158,6 +1462,8 @@ function schema(db) {
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
     db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, paid INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS hero_loot (id TEXT NOT NULL, t INTEGER NOT NULL, nonce TEXT NOT NULL, item TEXT NOT NULL, rarity INTEGER NOT NULL, duplicate INTEGER NOT NULL, PRIMARY KEY (id, t)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_festival (id TEXT NOT NULL, exam TEXT NOT NULL, t INTEGER NOT NULL, PRIMARY KEY (id, exam)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_festival_attempt (id TEXT PRIMARY KEY, exam TEXT NOT NULL, nonce TEXT NOT NULL, seed INTEGER NOT NULL, tempo TEXT NOT NULL, opened INTEGER NOT NULL, result TEXT) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS hero_eq (id TEXT PRIMARY KEY, eq TEXT) WITHOUT ROWID'),
     // paid courses (12.11.2026): buyer phones (random id + key hash), orders, owned courses, access codes
     db.prepare('CREATE TABLE IF NOT EXISTS crs_dev (id TEXT PRIMARY KEY, kh TEXT, t INTEGER) WITHOUT ROWID'),

@@ -22,6 +22,8 @@ export const FESTIVAL_CSS = `
 .festival-tip figcaption{grid-column:1/-1;color:#d0c9bd;font-size:12px}
 .festival-practice{margin:10px 0;color:#ece5db}
 .festival-practice summary{cursor:pointer;padding:6px 0;font-weight:700}
+.festival-plate,.festival-prizes img{display:block;width:100%;border-radius:8px;aspect-ratio:1.92;object-fit:cover}
+#g3festival button:disabled{opacity:.46;cursor:default}
 #g3festival.playing{background:linear-gradient(transparent 22%,#08091130 60%,#05070f75)}
 #g3festival.playing .festival-inner{background:#171920f5;max-height:58dvh;padding-top:8px}
 #g3festival.playing header small{display:block;color:#ffd998}

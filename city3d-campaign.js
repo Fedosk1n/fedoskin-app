@@ -1,6 +1,7 @@
 import { ACTS, CAST, DECISIONS, EPISODES, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES, venueFor } from './city3d-campaign-data.js?v=1';
 import { createPhrase, DIRECTIONS, displayNote, MOVES, pieceAt, postInput, phraseVerdict, recordDecision, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=1';
 import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=1';
+import { examCourse, FESTIVAL_CHECKPOINTS, FESTIVAL_OFFICIAL, FESTIVAL_PRIZE, judgeFestivalExam } from './city3d-festival-exams.js?v=1';
 
 const DIFFICULTY = { training: 'Медленный', normal: 'Обычный', quick: 'Быстрый' };
 const REACTIONS = {
@@ -9,7 +10,7 @@ const REACTIONS = {
   miss: 'Сигнал пропущен', rest: 'Здесь оставь паузу', early: 'Дождись отметки',
 };
 
-const CLIPS = ['Breakdance_Uprock', 'Breakdance_Footwork_2', 'Breakdance_Uprock_Var_2', 'Breakdance_Baby_Freeze'];
+const CLIPS = ['Breakdance_Uprock', 'Breakdance_Footwork_2', 'City_Backspin', 'Breakdance_Freeze_Var_4'];
 
 function createPulse() {
   let audio, noise, nodes = new Set();
@@ -88,7 +89,7 @@ function createPulse() {
   };
 }
 
-export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet }) {
+export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet, tryPrize, prepareScene }) {
   const tag = document.createElement('style');
   tag.textContent = FESTIVAL_CSS;
   document.head.append(tag);
@@ -104,16 +105,17 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     .map(selector => document.querySelector(selector)).filter(Boolean);
   let run = null, opening = false, atVenue = false, activeSheet = null, practice = null, frame = 0, frameView = -1;
   let previousDepth = null;
+  let examRecord = null;
   const current = () => EPISODES[state.episode];
   const storyTurn = () => STORY_TURNS[state.episode];
   const needsArrival = () => Boolean(storyTurn()?.preparatory && !state.prepared);
   const location = () => needsArrival() ? VENUES[storyTurn().preparatory] : venueFor(current(), state.choices);
   const findAnchor = () => {
-    const [district, id] = location();
+    const [district, id] = current() ? location() : venueFor(EPISODES.at(-1), state.choices);
     return district === D ? places.find(place => place.id === id) : null;
   };
   function getPoint() {
-    if (!eligible() || !current()) return null;
+    if (!eligible()) return null;
     const spot = findAnchor();
     if (!spot) return null;
     const x = spot.x + (spot.x > 0 ? -.65 : .65), z = spot.z + .42;
@@ -179,7 +181,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       return choice ? `<p><b>${t(choice.label)}</b><br>${t(choice.consequence)}</p>` : '';
     }).join('');
     return `<article class="festival-poster"><h3>${t('Афиша независимого фестиваля')}</h3>
-      <img src="img/story-finale.webp?v=1" alt="${t('Гости из Центра, Парка и Промзоны собрались у дворового круга.')}">
+      <img src="img/festival-main.webp?v=1" alt="${t('Открытые входы фестивального круга, настил и две вертушки.')}">
       ${results}
       <p>${t('В журнале остались сыгранные встречи, чистые фразы и собственные вариации. Районы снова собираются на площадке, которую подготовила команда.')}</p></article>`;
   }
@@ -189,6 +191,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const visits = `<p class="festival-counter">${t('Встречи · {n}/{all}', { n: state.episode, all: EPISODES.length })}</p>`;
     if (!e) {
       setView('route', `<header><h2>${title}</h2>${button('fClose', '×', true)}</header>${visits}${verdictPoster()}
+        ${button('fExams', t('Судимые испытания и мифический комплект'))}
         ${leaveVisit ? button('fExit', t('Вернуться в обычный город'), true) : ''}${practiceView()}`);
     } else {
       const [district, , landmark, photo] = location();
@@ -212,6 +215,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
           ${district === D ? `<canvas id="fMap" width="340" height="180" aria-label="${t('Карта · синяя точка — ты, золотой ромб — нужная встреча')}"></canvas>` : ''}
           <figcaption>${t(district === D ? 'Карта · синяя точка — ты, золотой ромб — нужная встреча' : 'Сюжетный маршрут ведёт к площадке встречи. Там ищи золотой ромб.')}</figcaption></figure>
         ${navigation}
+        ${button('fExams', t('Подтверждение актов и судимые испытания'), true)}
         ${leaveVisit ? button('fExit', t('Вернуться в обычный город'), true) : ''}</article>${practiceView()}`);
       if ($('#fMap')) drawVenueMap($('#fMap'));
       if ($('#fTravel')) $('#fTravel').onclick = () => travel(district);
@@ -219,12 +223,117 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       if ($('#fStart')) $('#fStart').onclick = enterVenue;
     }
     if ($('#fExit')) $('#fExit').onclick = leaveVisit;
+    if ($('#fExams')) $('#fExams').onclick = () => examMenu(true);
     $('#fClose').setAttribute('aria-label', t('Закрыть журнал'));
     $('#fClose').onclick = close;
     if ($('#fPractice')) $('#fPractice').onclick = () => {
       practice = { episode: Number($('#fPracticeChoice').value), piece: Number($('#fPracticePiece').value) };
       briefing();
     };
+  }
+  async function examRequest(body) {
+    const base = String(window.APP_CONFIG?.pushUrl || '').replace(/\/+$/, '');
+    if (!base) throw new Error('unavailable');
+    const check = await fetch(base + '/', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    const version = await check.json();
+    if (!check.ok || version.service !== 'fedoskin-push' || version.version < 5) throw new Error('outdated');
+    const profile = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}');
+    if (!/^\d{6,9}$/.test(profile.id || '')) {
+      profile.id = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000);
+      localStorage.setItem('fedoskin-profile', JSON.stringify(profile));
+    }
+    let secret = localStorage.getItem('fedoskin-lb-secret');
+    if (!/^[a-f0-9]{32}$/.test(secret || '')) {
+      secret = Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('fedoskin-lb-secret', secret);
+    }
+    const answer = await fetch(base + '/hero/festival', { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ ...body, id: profile.id, secret }), signal: AbortSignal.timeout(10000) });
+    const data = await answer.json();
+    if (!answer.ok || !data.ok) throw new Error(data.error || 'unavailable');
+    if (Array.isArray(data.owned)) localStorage.setItem('fedoskin-wardrobe-owned:' + profile.id, JSON.stringify(data.owned));
+    return data;
+  }
+  function examError(error) { return t(error.message === 'outdated' ? 'Судимый зачёт откроется после обновления сервера.' : 'Судьи не получили результат. Попробуй ещё раз.'); }
+  function examMenu(refresh = false) {
+    const examined = examRecord?.passed || [], [district] = current() ? location() : venueFor(EPISODES.at(-1), state.choices);
+    const routeCount = Array.from({ length: ACTS.length }, (_, act) => EPISODES.findLastIndex(ep => ep.act === act) + 1);
+    setView('exams', `<header><h2>${t('Судимые испытания и мифический комплект')}</h2>${button('fBack', t('Назад'), true)}</header>
+      <div class="festival-prizes"><img src="img/festival-prism.webp?v=1" alt="${t('Кроссовки «Грань круга» и шнурки «Световой рисунок»')}"></div>
+      <p>${t('Кроссовки «Грань круга» и шнурки «Световой рисунок»')}</p>
+      <p>${t('Для комплекта сыграй кампанию, подтверди восемь актов у судей, затем выиграй три отбора и финал. Офлайн-прогресс сохранится. Пропущенные контрольные можно сдать позже.')}</p>
+      ${district !== D ? button('fTrialTravel', t('Поехать к площадке')) : ''}
+      <div id="fExamNotice" role="status"></div>
+      ${FESTIVAL_OFFICIAL.map((trial, index) => {
+        const chapter = index < FESTIVAL_CHECKPOINTS.length ? index : ACTS.length - 1;
+        const local = state.episode >= routeCount[chapter];
+        const access = local && district === D && FESTIVAL_OFFICIAL.slice(0, index).every(prior => examined.includes(prior.id));
+        return `<article class="festival-act"><h3>${examined.includes(trial.id) ? '✓ ' : ''}${t(trial.name)}</h3>
+          <p>${t('Соперник · {x}', { x: t(trial.rival) })}</p>
+          <p>${t('Минимум {p}% в музыку · чистых фраз {c} · вариаций и передач {v} · 2 из 3 голосов', { p: Math.round(trial.precision * 100), c: trial.clean, v: trial.variety })}</p>
+          <button type="button" data-trial="${trial.id}" data-practice="1" class="festival-secondary"${district !== D || !local ? ' disabled' : ''}>${t('Тренировка')}</button>
+          <button type="button" data-trial="${trial.id}"${!access ? ' disabled' : ''}>${t('Выступить перед судьями')}</button></article>`;
+      }).join('')}`);
+    $('#fBack').onclick = route;
+    if ($('#fTrialTravel')) $('#fTrialTravel').onclick = () => travel(district);
+    panel.querySelectorAll('[data-trial]').forEach(btn => { btn.onclick = () => examBrief(FESTIVAL_OFFICIAL.find(trial => trial.id === btn.dataset.trial), btn.dataset.practice === '1'); });
+    if (refresh) examRequest({ action: 'status' }).then(data => {
+      examRecord = data;
+      if (activeSheet === 'exams') examMenu();
+    }).catch(error => { if (activeSheet === 'exams') $('#fExamNotice').textContent = examError(error); });
+  }
+  function examBrief(spec, practiceOnly) {
+    setView('examBrief', `<header><h2>${t(spec.name)}</h2>${button('fBack',t('Назад'),true)}</header>
+      ${[...new Set(spec.modes)].map(mode => `<p><b>${t(MODE_NAMES[mode])}</b> · ${t(MODE_GUIDES[mode])}</p>`).join('')}
+      <p>${t('Судьи сравнят с соперником попадание в музыку, чистые фразы и разные решения. Проход требует выполнить минимум и взять два голоса.')}</p>
+      <label>${t('Темп')} <select id="fTempo">${Object.keys(TEMPOS).map(id =>
+        `<option ${id === state.tempo ? 'selected' : ''} value="${id}">${t(DIFFICULTY[id])}</option>`).join('')}</select></label>
+      <p id="fExamNotice" role="status"></p>${button('fPlay',t(practiceOnly ? 'Тренировка' : 'Выступить перед судьями'))}`);
+    $('#fBack').onclick = () => examMenu();
+    $('#fTempo').onchange = event => { state.tempo = event.target.value; save(); };
+    $('#fPlay').onclick = async () => {
+      if (opening) return;
+      opening = true;
+      try {
+        const audio = await pulse.open();
+        const trial = practiceOnly ? { seed: 81497, tempo: state.tempo } : await examRequest({ action: 'begin', exam: spec.id, tempo: state.tempo });
+        if (activeSheet !== 'examBrief') return;
+        const course = examCourse(spec, trial.seed, 0);
+        startRun(course, audio, { beat: 0, beatAtStart: 0 }, { spec, practiceOnly, ...trial, inputs: [], phase: 0 });
+      } catch (error) { if (activeSheet === 'examBrief') $('#fExamNotice').textContent = examError(error); }
+      finally { opening = false; }
+    };
+  }
+  function examResult(r) {
+    pulse.stop(); window.cityMusic?.pause(false);
+    const local = judgeFestivalExam(r.exam.spec, r.exam.seed, r.exam.tempo, r.exam.inputs);
+    setView('examResult', `<header><h2>${t(r.exam.spec.name)}</h2>${button('fBack',t('Назад'),true)}</header><div id="fExamNotice" role="status"></div>`);
+    $('#fBack').onclick = () => examMenu(true);
+    const show = verdict => {
+      if (activeSheet !== 'examResult') return;
+      const votes = verdict?.votes.reduce((sum, vote) => sum + vote, 0) || 0;
+      $('#fExamNotice').innerHTML = `<h3>${t(r.exam.practiceOnly ? 'Тренировка завершена' : verdict?.passed ? 'Судьи отдали тебе батл' : 'Судьи выбрали соперника')}</h3>
+        <p>${t('В музыку {n}% · чистых фраз {c} · вариаций и передач {v} · судьи {votes}: {them}', { n: Math.round((verdict?.precision || 0) * 100), c: verdict?.clean || 0, v: verdict?.variety || 0, votes, them: 3 - votes })}</p>
+        ${!r.exam.practiceOnly && !verdict?.passed ? `<p>${t('Соперник сохраняет место на афише. После тренировки можно встретиться с ним ещё раз.')}</p>` : ''}
+        ${!r.exam.practiceOnly && verdict?.passed && r.exam.spec.id === 'final' ? button('fEquip', t('Примерить мифический комплект')) : ''}`;
+      if ($('#fEquip')) $('#fEquip').onclick = () => tryPrize?.(FESTIVAL_PRIZE);
+    };
+    if (r.exam.practiceOnly) show(local);
+    else {
+      const submit = () => {
+        $('#fSendProof')?.remove();
+        examRequest({ action:'finish', exam:r.exam.spec.id, nonce:r.exam.nonce, inputs:r.exam.inputs })
+          .then(data => { examRecord = data; show(data.verdict); })
+          .catch(error => {
+            if (activeSheet !== 'examResult') return;
+            $('#fExamNotice').textContent = examError(error);
+            if (error.message === 'restart') return;
+            $('#fExamNotice').insertAdjacentHTML('afterend', button('fSendProof', t('Отправить результат ещё раз'), true));
+            $('#fSendProof').onclick = submit;
+          });
+      };
+      submit();
+    }
   }
   function practiceView() {
     if (!state.piece && !state.beat && !state.episode) return '';
@@ -243,6 +352,8 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   function enterVenue() {
     if (!needsArrival()) { briefing(); return; }
     setView('opening', `<header><h2>${name(current(), state.episode)}</h2>${button('fBack',t('Назад'),true)}</header>
+      ${state.episode === 0 ? `<img class="festival-plate" src="img/festival-lost.webp?v=1" alt="${t('Ограда на подходе к площадке и свободный проход сбоку.')}">` : ''}
+      ${state.episode === 24 ? `<img class="festival-plate" src="img/festival-rehearsal.webp?v=1" alt="${t('Две вертушки на рабочем пульте и проход для следующего танцора.')}">` : ''}
       <p><b>${t(CAST[current().speaker])}</b></p><p>${t(storyTurn().before)}</p>
       ${button('fConfirmLandmark',t('Сверить ориентир и продолжить'))}`);
     $('#fBack').onclick = route;
@@ -266,12 +377,17 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         `<option ${id === state.tempo ? 'selected' : ''} value="${id}">${t(DIFFICULTY[id])}</option>`).join('')}</select></label>
       ${practice ? practiceOptions ? `<label>${t('Фраза')} <select id="fPhrase">${practiceOptions}</select></label>`
         : `<p>${t('Сначала открой эту пьесу в сюжете.')}</p>` : ''}
-      ${!pendingChoice && (!practice || practiceOptions) ? button('fPlay', t(practice ? 'Тренировать фразу' : 'Играть пьесу')) : ''}`);
+      ${!pendingChoice && (!practice || practiceOptions) ? button('fPlay', t(practice ? 'Тренировать фразу' : 'Играть пьесу')) : ''}
+      ${!practice && !pendingChoice && !key.beat ? button('fDemo', t('Попробовать одну фразу перед выступлением'), true) : ''}`);
     $('#fBack').onclick = () => { practice = null; route(); };
     $('#fTempo').onchange = event => { state.tempo = event.target.value; save(); };
     panel.querySelectorAll('[data-f-choice]').forEach(item => { item.onclick = () => {
       if (recordDecision(state, item.dataset.fChoice)) { save(); briefing(); }
     }; });
+    if ($('#fDemo')) $('#fDemo').onclick = () => {
+      practice = { ...key };
+      start();
+    };
     if ($('#fPlay')) $('#fPlay').onclick = () => {
       if (practice && $('#fPhrase')) practice.beat = Number($('#fPhrase').value);
       start();
@@ -354,20 +470,22 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const index = Math.round(relative);
     const item = displayNote(run.phrase, index);
     if (!item) return;
+    if (run.exam && run.exam.inputs.length < 220) run.exam.inputs.push([Math.round((run.now() - run.epoch) * 1000), value]);
     const family = ['reply', 'build', 'cast'].includes(item.kind) ? 'choice' : run.course.mode === 'd' ? 'deck' : 'move';
-    const reaction = postInput(run.phrase, relative, { family, value }, state.tempo === 'training' ? .43 : .34);
+    const reaction = postInput(run.phrase, relative, { family, value }, run.exam ? .31 : state.tempo === 'training' ? .43 : .34);
     if (reaction === 'repeat') return;
     $('#fResponse').textContent = t(REACTIONS[reaction]);
     if (reaction === 'clean' && run.course.mode === 'd') pulse.scratch(run.audio, value);
     if (reaction === 'clean' && index % 4 === 1) displaySet?.(CLIPS[value], false);
-    if (reaction === 'variation' || reaction === 'lineup') displaySet?.(CLIPS[value], false);
+    if (reaction === 'variation' || reaction === 'lineup') displaySet?.(CLIPS[value], false, reaction === 'lineup' ? value : null);
   }
   function pause() {
     cancelAnimationFrame(frame);
     pulse.stop();
     window.cityMusic?.pause(false);
+    const exam = run?.exam;
     run = null;
-    briefing();
+    if (exam) examBrief(exam.spec, exam.practiceOnly); else briefing();
   }
   function result(verdict, completed, previous) {
     pulse.stop();
@@ -396,6 +514,19 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     }
     const offset = (now - r.phraseStart) / r.period;
     if (offset >= r.phrase.length - .45) {
+      if (r.exam) {
+        if (r.course.mode === 'r' && r.phrase.selections[0] != null) r.lastReply = r.phrase.selections[0];
+        r.exam.phase++;
+        if (r.exam.phase >= r.exam.spec.modes.length) { run = null; examResult(r); return; }
+        r.phraseStart += r.period * r.phrase.length;
+        r.course = examCourse(r.exam.spec, r.exam.seed, r.exam.phase);
+        r.phrase = createPhrase(r.course, 0, { lastReply: r.lastReply });
+        const following = r.exam.phase + 1;
+        r.nextPhrase = following < r.exam.spec.modes.length ? createPhrase(examCourse(r.exam.spec,r.exam.seed,following),0,{}) : null;
+        frameView = -2; courseView(r.course);
+        frame = requestAnimationFrame(playFrame);
+        return;
+      }
       const verdict = phraseVerdict(r.phrase, state.tempo === 'training');
       const beat = r.phrase.start + r.phrase.length;
       const prior = state.episode;
@@ -424,18 +555,25 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const audio = await pulse.open();
     if (!opening || panel.hidden) return;
     opening = false;
+    startRun(course, audio, key);
+  }
+  function startRun(course, audio, key, exam = null) {
     window.cityMusic?.pause(true);
     const now = audio ? () => audio.currentTime : () => performance.now() / 1000;
-    const period = 60 / (course.bpm * TEMPOS[state.tempo]);
+    const period = 60 / (course.bpm * TEMPOS[exam?.tempo || state.tempo]);
     const epoch = now() + period * 2;
     key.beatAtStart = key.beat;
-    run = { key, audio, now, course, period, epoch, phraseStart: epoch, cursor: -1,
-      phrase: createPhrase(course, key.beat, { ...state.choices, lastReply: state.lastReply }) };
+    run = { key, audio, now, course, period, epoch, phraseStart: epoch, cursor: -1, exam,
+      phrase: createPhrase(course, key.beat, exam ? {} : { ...state.choices, lastReply: state.lastReply }) };
     const next = key.beat + run.phrase.length;
     run.nextPhrase = next < course.beats ? createPhrase(course, next, state.choices) : null;
     frameView = -3;
     const point = getPoint();
-    if (point && atVenue) W.camT = { x: point.x, z: point.z - .8, zoom: .52 };
+    if (point && (atVenue || exam)) {
+      const act = EPISODES[key.episode]?.act ?? 7;
+      W.camT = { x: point.x, z: point.z - .8, zoom: act >= 6 ? .79 : .52 };
+      if (act >= 6 || exam) prepareScene?.(point, act, state.choices);
+    }
     courseView(course);
     frame = requestAnimationFrame(playFrame);
   }

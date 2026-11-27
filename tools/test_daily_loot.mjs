@@ -1,37 +1,17 @@
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import worker from '../server/push-worker.js';
+import { workerFixture } from './test_worker_fixture.mjs';
 
-const raw = new DatabaseSync(':memory:');
-class Query {
-  constructor(sql) { this.sql = sql; this.params = []; }
-  bind(...values) { this.params = values; return this; }
-  run() { return { meta: { changes: Number(raw.prepare(this.sql).run(...this.params).changes) } }; }
-  first() { return raw.prepare(this.sql).get(...this.params) || null; }
-  all() { return { results: raw.prepare(this.sql).all(...this.params) }; }
-}
-const DB = {
-  prepare: sql => new Query(sql),
-  async batch(queries) {
-    raw.exec('BEGIN');
-    try { const results = queries.map(query => query.run()); raw.exec('COMMIT'); return results; }
-    catch (error) { raw.exec('ROLLBACK'); throw error; }
-  },
-};
-const env = { DB, PUSH: { get: async key => key === 'lb:mig' ? '1' : null, put: async () => {} } };
-const store = (path, payload) => worker.fetch(new Request('https://test.invalid' + path, {
-  method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload),
-}), env);
+const { raw, fetch, store } = workerFixture();
 if (process.argv.includes('--serve')) {
   const server = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const body = Buffer.concat(chunks).toString();
-    const response = await worker.fetch(new Request('https://test.invalid' + req.url, {
+    const response = await fetch(new Request('https://test.invalid' + req.url, {
       method: req.method, headers: req.headers, ...(req.method === 'POST' ? { body } : {}),
-    }), env);
+    }));
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
   });

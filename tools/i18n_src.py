@@ -1163,6 +1163,10 @@ t('Добавлено в гардероб', 'Added to your wardrobe', 'Añadido 
 
 t('Уже получено', 'Already claimed', 'Ya obtenido', 'Já recebido', 'Déjà récupéré', 'Bereits abgeholt', '受け取り済み', '이미 받음', '已领取')
 
+t('Кроссовки «Грань круга»', 'Circle Edge sneakers', 'Zapatillas Borde del Círculo', 'Tênis Borda da Roda', 'Baskets Bord du Cercle', 'Kreiskante-Sneaker', 'サークルエッジ・スニーカー', '서클 엣지 스니커즈', '舞圈边缘运动鞋')
+t('Шнурки «Световой рисунок»', 'Light Pattern laces', 'Cordones Trama de Luz', 'Cadarços Traço de Luz', 'Lacets Tracé lumineux', 'Lichtmuster-Schnürsenkel', 'ライトパターン・シューレース', '라이트 패턴 신발끈', '光纹鞋带')
+t('Фестиваль', 'Festival', 'Festival', 'Festival', 'Festival', 'Festival', 'フェスティバル', '페스티벌', '街舞节')
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'

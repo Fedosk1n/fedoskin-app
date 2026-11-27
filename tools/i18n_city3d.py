@@ -613,8 +613,12 @@ if __name__ == '__main__':
     s = open(os.path.join(root, 'i18n.js'), encoding='utf-8').read(); app = json.loads(s[s.index('{'):s.rindex('}') + 1])
     for k in REUSE:
         for l in L: D[l][k] = app[l][k]          # KeyError = the gear's name is missing in tools/i18n_src.py
+    from i18n_festival import CAMPAIGN_ROWS
+    current = {r[0] for r in ROWS} | set(REUSE)
+    ROWS.extend(row for row in CAMPAIGN_ROWS if row[0] not in current)
     seen = set()
     for r in ROWS:
+        assert len(r) == len(L) + 1, r[0]
         assert r[0] not in seen, 'twice: ' + r[0]; seen.add(r[0])
         ph = sorted(re.findall(r'\{\w+\}', r[0]))
         for l, v in zip(L, r[1:]):
