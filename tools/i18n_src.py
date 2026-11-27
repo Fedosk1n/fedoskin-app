@@ -1145,6 +1145,8 @@ t('Закрыть карточку', 'Close item details', 'Cerrar detalles', 'F
 t('К образу', 'View outfit', 'Ver atuendo', 'Ver visual', 'Voir la tenue', 'Outfit ansehen', '衣装を見る', '의상 보기', '查看穿搭')
 t('Витрина', 'Shop display', 'Escaparate', 'Vitrine', 'Vitrine', 'Auslage', '商品一覧', '상품 목록', '商品陈列')
 t('В гардеробе пока пусто', 'Your wardrobe is empty', 'Tu armario está vacío', 'Seu guarda-roupa está vazio', 'Ta garde-robe est vide', 'Dein Kleiderschrank ist leer', 'クローゼットは空です', '옷장이 비어 있어요', '衣橱还是空的')
+t('Аура', 'Aura', 'Aura', 'Aura', 'Aura', 'Aura', 'オーラ', '오라', '光环')
+t('Оформление', 'Outfit extras', 'Detalles del atuendo', 'Detalhes do visual', 'Accessoires visuels', 'Outfit-Extras', '外見アイテム', '외형 장식', '外观装饰')
 
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'

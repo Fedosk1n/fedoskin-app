@@ -249,7 +249,8 @@
     const W = 200, H = 254;
     const legY = y => 146 + (y - 146) * 1.19;
     const stretchLeg = fn => { o.push('<g transform="translate(0 146) scale(1 1.19) translate(0 -146)">'); fn(); o.push('</g>'); };
-    const closer = L >= 7 || has('box') ? [1, 7, 198, 245] : [19, 7, 162, 245];
+    const showBox = has('box') || (L >= 7 && !opt.equippedPropsOnly);
+    const closer = L >= 7 || showBox ? [1, 7, 198, 245] : [19, 7, 162, 245];
     const vb = opt.bust ? [50, 16, 100, 100] : wardrobe && opt.bg === false ? closer : [0, 0, W, H];
     const shade = name => 'url(#' + id + name + ')';
     const cloth = shade(wardrobe ? 'cloth' : 'sh');
@@ -309,9 +310,9 @@
       LN('M26 229 H40 M160 229 H174', 'rgba(0,0,0,.25)', 1);
       o.push('</g>');
     }
-    // ---- boombox (7+ or bought), behind the right leg ----
-    if ((L >= 7 || has('box')) && !rig) {
-      o.push('<g transform="translate(146 205)">');
+    // ---- boombox (level outfit or equipped prop), behind the right leg ----
+    if (showBox && !rig) {
+      o.push('<g data-prop="boombox" transform="translate(146 ' + (opt.equippedPropsOnly ? 218 : 205) + ')">');
       P('M6 0 V-7 Q6 -10 9 -10 H39 Q42 -10 42 -7 V0', 'none', ' stroke="' + INK + '" stroke-width="3.2"');
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V30 Q48 33 45 33 H3 Q0 33 0 30 Z', '#2B2B31', S(2));
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V8 H0 Z', '#3A3A42');
