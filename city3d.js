@@ -9,9 +9,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=33';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=64';
+import { initGame } from './city3d-game.js?v=65';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=7';
-import { loadGraffitiSurface } from './city3d-graffiti.js?v=2';
+import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
 import { buildPark } from './city3d-park.js?v=8';
@@ -592,7 +592,7 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade) {
+async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals) {
   if (DIST !== 'club') {
     WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   }
@@ -603,13 +603,13 @@ async function build(scene, asphalt, props, playgroundModel, clubJudges, surface
   else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
   else if (DIST === 'prom') await buildProm(TK);
   else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces });
-  else buildYard(scene, asphalt, facade);
+  else buildYard(scene, asphalt, facade, facadeMurals);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
-function buildYard(scene, asphalt, facadeGeometry) {
+function buildYard(scene, asphalt, facadeGeometry, facadeMurals) {
 
   // ground
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), asphaltMaterial(asphalt, 70, 70, '#e8e1dd', .045));
@@ -668,17 +668,28 @@ function buildYard(scene, asphalt, facadeGeometry) {
   // roller door of a shop in the lower building
   { const c = can(256, 220), x = c.getContext('2d'); x.fillStyle = '#5b6068'; x.fillRect(0, 0, 256, 220); for (let i = 0; i < 220; i += 9) { x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, i, 256, 2); x.fillStyle = 'rgba(255,255,255,.1)'; x.fillRect(0, i + 3, 256, 1); } grain(c, 18, 2); blotch(x, 256, 220, 14, 'rgba(120,60,25,A)', 8, 30, .5, rng(4));
     const d = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.7), new THREE.MeshStandardMaterial({ map: tex(c), roughness: .5, metalness: .5 })); d.position.set(9.5, 1.35, -15.96); d.receiveShadow = true; scene.add(d); }
-  // big graffiti on the brick wall (same letters as the flat city)
-  if (window.CITY_GFX && CITY_GFX.graf) {
-    try {
-      const g = CITY_GFX.graf({ word: 'FEDOSKIN', style: 'wild', pal: 'fire', w: 1100, h: 330, seed: 7, mural: true });
-      const gm = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 2.5), new THREE.MeshStandardMaterial({ map: tex(g), transparent: true, roughness: .75, polygonOffset: true, polygonOffsetFactor: -2 }));
-      gm.position.set(-4.6, 1.55, -15.94); gm.receiveShadow = true; scene.add(gm);
-      const g2 = CITY_GFX.graf({ word: 'CYPHER', style: 'bubble', pal: 'ice', w: 700, h: 300, seed: 3, mural: true });
-      const gm2 = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.55), new THREE.MeshStandardMaterial({ map: tex(g2), transparent: true, roughness: .75, polygonOffset: true, polygonOffsetFactor: -2 }));
-      gm2.position.set(4.6, 1.3, -15.94); gm2.receiveShadow = true; scene.add(gm2);
-    } catch (e) { console.warn(e); }
-  }
+  // The albedo bakes keep the masonry visible at the edges of the spray.
+  const murals = [
+    { word: 'FEDOSKIN', style: 'wild', pal: 'fire', w: 1100, h: 330, seed: 7, size: [8.4, 2.5], pos: [-4.6, 1.55] },
+    { word: 'CYPHER', style: 'bubble', pal: 'ice', w: 700, h: 300, seed: 3, size: [3.6, 1.55], pos: [4.6, 1.3] },
+  ];
+  murals.forEach(async (spec, i) => {
+    const image = await facadeMurals?.[i];
+    let map;
+    if (image) {
+      map = new THREE.Texture(image);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.anisotropy = maxAniso;
+      map.needsUpdate = true;
+    } else if (window.CITY_GFX?.graf) map = tex(CITY_GFX.graf({ ...spec, mural: true }));
+    if (!map) return;
+    const mat = new THREE.MeshStandardMaterial({ map, transparent: true, roughness: .84, polygonOffset: true, polygonOffsetFactor: -2 });
+    const piece = new THREE.Mesh(new THREE.PlaneGeometry(...spec.size), mat);
+    piece.name = spec.word + ' mural';
+    piece.position.set(...spec.pos, -15.94);
+    piece.receiveShadow = true;
+    scene.add(piece);
+  });
   // pipes on the wall with yellow clamps
   [[-13.2, 9.5], [1.2, 6.4]].forEach(([x, h]) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, h, 10), M('#3c4048', .4, .7)); p.position.set(x, h / 2, -15.85); scene.add(shadowAll(p));
     for (let y = .6; y < h; y += 1.6) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, .08, 10), M(PAINT_Y, .5, .3)); c.position.set(x, y, -15.85); scene.add(c); } });
@@ -1151,7 +1162,7 @@ async function boot() {
     pm.dispose();
   }
 
-  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade);
+  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
