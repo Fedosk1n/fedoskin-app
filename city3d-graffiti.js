@@ -11,7 +11,7 @@ const slab = new THREE.BoxGeometry(3.6, 2.2, .28);
 const lip = new THREE.BoxGeometry(3.67, .13, .35);
 const plain = new THREE.MeshStandardMaterial({ color: '#676462', roughness: .94 });
 const cap = new THREE.MeshStandardMaterial({ color: '#626267', roughness: .90 });
-const front = new THREE.PlaneGeometry(3.52, 2.13);
+const front = new THREE.PlaneGeometry(3.59, 2.19);
 
 function canvas(w = WIDTH, h = HEIGHT) {
   const cv = document.createElement('canvas');
@@ -96,7 +96,9 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
       const wear = surface.masks[Number(flip)];
       if (wear) {
         x.globalCompositeOperation = 'destination-out';
+        x.globalAlpha = .48;
         x.drawImage(wear, 0, 0, WIDTH, HEIGHT);
+        x.globalAlpha = 1;
       }
     }
     x.globalCompositeOperation = 'destination-over';

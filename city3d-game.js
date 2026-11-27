@@ -12,10 +12,10 @@ import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=7';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=3';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { performDJ } from './city3d-dj.js?v=3';
-import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
+import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=2';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -667,7 +667,7 @@ export function initGame(ctx) {
     playMusic: ctx.music, record: recordSmoke, end: endAct, sfx });
   if (club) {
     $('#g3tf').hidden = true;
-    ctx.backgroundMusic(CLUB_TRACKS[S.clubTrack]);
+    ctx.backgroundMusic?.(CLUB_TRACKS[S.clubTrack]);
     PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
@@ -819,7 +819,7 @@ export function initGame(ctx) {
     buttons.forEach((button, i) => {
       button.onclick = () => {
         S.clubTrack = i; save();
-        ctx.backgroundMusic(CLUB_TRACKS[i]);
+        ctx.backgroundMusic?.(CLUB_TRACKS[i]);
         club.mix.cue();
         buttons.forEach((b, index) => {
           b.classList.toggle('sec', index !== i);
@@ -1509,7 +1509,7 @@ export function initGame(ctx) {
     if (A) actTick(dt);
     if (Y) { djMix.tick(dt);
       chain.visible = rankOf(S.rep) < BAL.gateRank; Y.arenaLabel.visible = matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
-      atP.tick(dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
+      W.tickAmbient(atP, dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) PZ.gateClub.chain.visible = !S.wins.forge;
     if (club) {
@@ -1525,7 +1525,7 @@ export function initGame(ctx) {
     FZ.tick(dt);
     crews.forEach(g => {
       if (!g.label.visible && B?.g !== g) return;
-      g.people.forEach(J => { if (J !== B?.opp) J.tick(dt); });
+      g.people.forEach(J => { if (J !== B?.opp) W.tickAmbient(J, dt); });
     });
     if (!B && !P && !A && !choosing) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
@@ -1544,5 +1544,5 @@ export function initGame(ctx) {
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
     wheel.position(.5 + wheelAnchor.x / 2, .5 - wheelAnchor.y / 2);
   }
-  return { update, post, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post, shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

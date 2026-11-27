@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 
 export const SHADOW_LAYER = 1;
+const STATIC_SHADOW_LAYER = 2;
 const SHADOW_SIDE = { [THREE.FrontSide]: THREE.BackSide, [THREE.BackSide]: THREE.FrontSide, [THREE.DoubleSide]: THREE.DoubleSide };
 
 // the depth-only stand-ins share one invisible material per shadow side (only the shadow pass draws them: they are on layer 1)
@@ -60,7 +61,7 @@ export function shadowBatcher(scene, opt = {}) {
   const inScene = ob => { for (let q = ob; q; q = q.parent) { if (!q.visible) return false; if (q === scene) return true; } return false; };
   const person = ob => { for (let q = ob; q; q = q.parent) if (q.isBone || q.userData.person) return true; return false; };
   const fits = ob => ob.isMesh && ob.castShadow && !ob.userData.dyn && !ob.userData.shadowBatch && mergeable(ob) && !person(ob) && inScene(ob);
-  let items = [], frame = 0, built = false, rr = 0, nCells = 0;
+  let items = [], frame = 0, built = false, rr = 0, revision = 0;
   const cells = new Map(), dirty = new Set();
   const snap = it => { it.m.set(it.o.matrixWorld.elements); it.ver = it.o.geometry.attributes.position.version; it.geo = it.o.geometry; };
   const changed = it => {
@@ -87,9 +88,11 @@ export function shadowBatcher(scene, opt = {}) {
     if (c) { c.items.delete(it); dirty.add(c); }
   }
   function build(c) {
+    revision++;
     if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; }
     if (!c.items.size) return;
     const m = shadowPiece(mergePositions([...c.items].map(it => ({ geo: it.o.geometry, e: it.m }))), c.side, 'shadow-batch ' + c.key);
+    m.layers.set(STATIC_SHADOW_LAYER);
     m.matrixAutoUpdate = false; scene.add(m); c.mesh = m;
     for (const it of c.items) it.o.castShadow = false;
   }
@@ -100,7 +103,7 @@ export function shadowBatcher(scene, opt = {}) {
       // settling: whatever moves in the first frames (dancers' props, records, boats, the runner) is dynamic for good
       for (const it of items) if (!it.dyn && changed(it)) it.dyn = true;
       // 22.11.2026: the first build is spread over frames (4 cells a frame; it was all ~26 cells in ONE frame — a 20 ms hitch on load)
-      if (frame >= SETTLE) { for (const it of items) if (!it.dyn) place(it); built = true; nCells = cells.size; }
+      if (frame >= SETTLE) { for (const it of items) if (!it.dyn) place(it); built = true; }
       return;
     }
     const n = Math.ceil(items.length / EVERY);
@@ -108,9 +111,49 @@ export function shadowBatcher(scene, opt = {}) {
     for (let k = 0; k < (frame < SETTLE + 30 ? 4 : 1) && dirty.size; k++) { const c = dirty.values().next().value; dirty.delete(c); build(c); }
   }
   // the lights' shadow cameras see the merged pieces (layer 1) as well as everything else (layer 0)
-  function useFor(light) { light.shadow.camera.layers.enable(SHADOW_LAYER); }
+  const staticLayers = new THREE.Layers();
+  staticLayers.set(STATIC_SHADOW_LAYER);
+  function useFor(light) { light.shadow.camera.layers.enable(SHADOW_LAYER); light.shadow.camera.layers.enable(STATIC_SHADOW_LAYER); }
+  function cacheStatic(light, enabled) {
+    const shadow = light.shadow;
+    if (!enabled || !built || dirty.size || !cells.size) {
+      if (shadow.staticDepthCache && !enabled) {
+        shadow.staticDepthCache.target?.dispose();
+        delete shadow.staticDepthCache;
+      }
+      if (shadow.staticDepthCache) shadow.staticDepthCache.active = false;
+      return;
+    }
+    const cache = shadow.staticDepthCache ||= { layers: staticLayers };
+    cache.active = true;
+    cache.revision = revision;
+  }
   init();
-  return { tick, useFor, stats: () => ({ items: items.length, batched: items.filter(i => i.cell).length, dyn: items.filter(i => i.dyn).length, cells: [...cells.values()].filter(c => c.mesh).length, built }) };
+  return { tick, useFor, cacheStatic, stats: () => ({ items: items.length, batched: items.filter(i => i.cell).length, dyn: items.filter(i => i.dyn).length, cells: [...cells.values()].filter(c => c.mesh).length, built }) };
+}
+
+export function ambientPoseScheduler(scene) {
+  const pending = new WeakMap(), frustum = new THREE.Frustum();
+  const projection = new THREE.Matrix4(), envelope = new THREE.Sphere(new THREE.Vector3(), 2.4);
+  let cameraReady = false;
+  return {
+    view(camera, cut) {
+      cameraReady = !cut;
+      if (cameraReady) frustum.setFromProjectionMatrix(projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    },
+    elapsed(J, dt) {
+      const p = J.root.position;
+      envelope.center.set(p.x, p.y + .9, p.z);
+      const elapsed = (pending.get(J) || 0) + dt;
+      if (cameraReady && J.root.parent === scene && J.act && !frustum.intersectsSphere(envelope) && elapsed < .12) {
+        pending.set(J, elapsed);
+        return null;
+      }
+      pending.delete(J);
+      return elapsed;
+    },
+    reset(J) { pending.delete(J); },
+  };
 }
 
 // A PERSON's rigid parts (head, hair, cap, bag, knee pads…) ride on bones and never move against them: the shadow of all the parts on

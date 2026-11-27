@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=33';
-import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=62';
+import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
+import { initGame } from './city3d-game.js?v=63';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=7';
-import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
-import { buildProm } from './city3d-prom.js?v=3';
-import { buildCenter } from './city3d-center.js?v=6';
-import { buildPark } from './city3d-park.js?v=7';
+import { loadGraffitiSurface } from './city3d-graffiti.js?v=2';
+import { buildProm } from './city3d-prom.js?v=4';
+import { buildCenter } from './city3d-center.js?v=7';
+import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { addCitySound } from './city3d-sound.js?v=1';
 import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=5';
@@ -825,7 +825,7 @@ function updateCrew(beat, dt) {
   const T = W.turn, cx = W.cyph.x, cz = W.cyph.z, n = W.crew.length, now = performance.now() / 1000;
   // the player is dancing in the circle: the crew steps back to the edge, faces the middle and watches
   if (W.cyBusy) { W.crew.forEach(D => { D.ws = null; if (!isStand(D.cur)) D.play('Breakdance_Ready', { fade: .4 }); D.root.position.set(D.c.slot.x, 0, D.c.slot.z);
-    D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.tick(dt); }); T.plan = null; W.power = false; return; }
+    D.root.rotation.y = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); W.tickAmbient(D, dt); }); T.plan = null; W.power = false; return; }
   const J = W.crew[T.who % n], c = J.c, toMid = Math.atan2(cx - c.slot.x, cz - c.slot.z);
   if (!T.plan) {
     if (!cypherMemory.has(J)) cypherMemory.set(J, {});
@@ -856,7 +856,8 @@ function updateCrew(beat, dt) {
   } else { J.ws = null; J.play('Breakdance_Ready', { fade: .5, speed: .95 }); J.root.position.set(c.slot.x, 0, c.slot.z); J.root.rotation.y = toMid; T.who++; T.plan = null; }
   W.crew.forEach((D, i) => {
     if (D !== J) { const face = Math.atan2(cx - D.c.slot.x, cz - D.c.slot.z); D.root.position.set(D.c.slot.x, 0, D.c.slot.z); D.root.rotation.y = face; }
-    D.tick(dt); if (D.ws) walkPose(D, dt);
+    if (D === J || D.ws) { D.tick(dt); if (D.ws) walkPose(D, dt); }
+    else W.tickAmbient(D, dt);
   });
   W.freezeNow = freezeNow;
 }
@@ -1004,6 +1005,7 @@ function stride(H, s, sp, moving, _k, dt) {
 // real spot, remembers the pose), then every frame walkMove(J, dt, tx, tz, k 0…1, endFace) BEFORE J.tick and walkPose(J, dt) AFTER
 // it; he turns to where he goes, walks there with the shared gait, and at the end turns to endFace. Clear with J.ws = null.
 function walkStart(J) {
+  W.ambient.reset(J);
   const a = J.root.rotation.y, c = Cc(a), sn = S(a), p = J.root.position; p.x += J.dx * c + J.dz * sn; p.z += -J.dx * sn + J.dz * c; J.home0();
   if (!W.walkBase) W.walkBase = poseOf('Breakdance_Ready', .05);
   const q = {}; for (const n of GALL) q[n] = J.B[n].quaternion.clone();
@@ -1033,43 +1035,6 @@ function walkPose(J, dt) { const s = J.ws; if (s) stride(J, s, s.sp, s.mv, 0, dt
 W.walk = { start: walkStart, move: walkMove, pose: walkPose };
 const GALL = GAIT_BONES;
 const ARM_BONES = new Set(GALL.filter(n => /Shoulder|Arm|Hand/.test(n)));
-
-// ---------- music ----------
-// iPhone (owner 17.11.2026 «фоновая музыка не играет сразу, пришлось выкл и вкл кнопку на экране»): Safari keeps a sound context silent
-// when it was made before any touch and woken by a touch seconds later (WebKit bug 190410 — the city loads for several seconds), and after
-// the app was in the background it may stay silent for good (bug 276016). His fix by hand — off and on = a new loop — now happens by itself:
-// on a phone nothing sounds before the first real touch (touchend / click — pointerdown doesn't count on iPhone), the loop is started again
-// as soon as the sound really runs, and after the background the next touch makes a brand-new sound context.
-let musicOn = false, musicT0 = 0, musicLive = false, musicStale = false;
-// which loop plays (owner 17.11.2026 «разные биты под батлы с разными бандами»): 'yard' = the background; a battle asks for its crew's loop
-// (rhythm.js LOOPS) and gives the background back at its end. Asked for a few ms late so that «back to the yard» + «the next jam round»
-// in the same moment stay on the jam's beat instead of scratching twice.
-let backgroundMusic = DIST === 'club' ? 'club' : 'yard';
-let musicId = backgroundMusic, musicAsk = 0;
-function setBackgroundMusic(id) { backgroundMusic = id; setMusic(null); }
-function setMusic(id) { musicId = id || backgroundMusic; clearTimeout(musicAsk); musicAsk = setTimeout(() => { try { if (musicOn && window.RB && RB.bgm) RB.bgm(true, musicId); } catch (_) {} }, 40); }
-const coarse = matchMedia('(pointer: coarse)').matches, musicWanted = () => localStorage.getItem('fedoskin-city-music') !== '0';
-function startMusic(touch) {
-  if (!window.RB || !RB.bgm) return;
-  try {
-    if (musicStale && touch) { musicStale = false; RB.bgm(false); if (RB.fresh) RB.fresh(); musicOn = musicLive = false; }
-    if (RB.unlock) RB.unlock();
-    if (!musicWanted()) return;
-    const run = !RB.audioState || RB.audioState() === 'running';
-    if (musicOn && (musicLive || !run)) return;   // playing for real, or still waiting for the phone to let the sound in
-    if (musicOn) RB.bgm(false);                    // it was started before the sound ran: start the loop again (= the owner's off/on)
-    RB.bgm(true, musicId); musicOn = true; musicLive = run; musicT0 = performance.now() + 150; paintMus();
-  } catch (_) {}
-}
-function paintMus() { $('#mus').textContent = musicOn || (musicWanted() && coarse) ? '🎵' : '🔇'; }
-$('#mus').addEventListener('click', e => { e.stopPropagation(); if (musicOn) { RB.bgm(false); musicOn = musicLive = false; localStorage.setItem('fedoskin-city-music', '0'); } else { localStorage.removeItem('fedoskin-city-music'); startMusic(true); } paintMus(); });
-['touchend', 'pointerup', 'click', 'keydown'].concat(coarse ? [] : ['pointerdown']).forEach(ev => document.addEventListener(ev, () => startMusic(true), { capture: true, passive: true }));
-if (!coarse) setTimeout(() => startMusic(false), 600);   // computers often allow it straight away; a phone waits for the first touch
-setInterval(() => { if (musicOn && !musicLive && !musicStale && !document.hidden && window.RB && RB.audioState && RB.audioState() === 'running') startMusic(false); }, 300);
-document.addEventListener('visibilitychange', () => { if (!window.RB || !musicOn) return;
-  if (document.hidden) { RB.bgm(false); musicLive = false; if (coarse) musicStale = true; }
-  else if (!coarse) { musicOn = false; startMusic(false); } });
-paintMus();
 
 // ---------- boot ----------
 async function loadDistrictEnvironment() {
@@ -1158,13 +1123,15 @@ async function boot() {
       return null;
     }) : null,
   ]);
-  let PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
-  renderer.setPixelRatio(TOUCH ? Math.min(1, PR) : PR);
+  const PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
+  renderer.setPixelRatio(PR);
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0a0c11'); scene.fog = new THREE.FogExp2('#0a0c11', .016);
   const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 120);
+  W.ambient = ambientPoseScheduler(scene);
+  W.tickAmbient = (J, dt) => { const elapsed = W.ambient.elapsed(J, dt); if (elapsed !== null) J.tick(elapsed); };
 
   // dusk light: cool sky + moon with long soft shadows
   scene.add(new THREE.HemisphereLight('#8a9cc8', '#3a2a1e', 1.55));
@@ -1193,7 +1160,7 @@ async function boot() {
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
-    djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic, backgroundMusic: setBackgroundMusic,
+    djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
     busy:() => W.lock || GAME.busy(),rewear,t:_t});
@@ -1212,30 +1179,16 @@ async function boot() {
   scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false;
     const lp = o.getWorldPosition(new THREE.Vector3()), tp = o.target.getWorldPosition(new THREE.Vector3());
     spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2,
-      intensity: o.shadow.intensity, visible: false, refreshed: -Infinity });
-    if (TOUCH) o.shadow.intensity = 0;
+      visible: false, refreshed: -Infinity });
   });
   let farOn = false, frameNumber = 0;
-  let shadowFrames = 0, shadowPrograms;
-  function setShadows(enabled) {
-    renderer.shadowMap.enabled = moon.castShadow = enabled;
-    for (const { l } of spots) l.castShadow = enabled;
-  }
-  if (TOUCH) setShadows(false);
   const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
 
   // post: bloom on the bright bits, then vignette + grade + grain
-  // The HDR buffers use the phone's pixel density without multisampling the entire frame.
-  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: TOUCH ? 0 : 4 });
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84);
-  let openingEffectsPending = TOUCH;
-  bloom.enabled = !openingEffectsPending;
-  if (TOUCH) {
-    const sizeBloom = bloom.setSize.bind(bloom);
-    bloom.setSize = (w, h) => sizeBloom(Math.max(32, w * .65), Math.max(32, h * .65));
-  }
   comp.addPass(bloom);
   // a soft knee (17.11.2026, «пересвет»): a surface just over the threshold used to bloom at full strength — any lit light thing grew a
   // halo; now the glow fades in over .84…1.2, so only real light sources (lamp strips ≈ 1.4+, signs, LEDs) glow in full
@@ -1276,12 +1229,6 @@ async function boot() {
   const resize = () => { const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false); comp.setSize(w, h);
     camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
-  const applyRenderRatio = () => {
-    const ratio = openingEffectsPending ? Math.min(1, PR) : PR;
-    if (renderer.getPixelRatio() === ratio) return;
-    renderer.setPixelRatio(ratio);
-    comp.setPixelRatio(ratio);
-  };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
   function compileDistrict() {
@@ -1294,14 +1241,6 @@ async function boot() {
       renderer.setRenderTarget(null);
     }
   }
-  function prepareShadows() {
-    const existing = new Set(renderer.info.programs);
-    setShadows(true);
-    compileDistrict();
-    setShadows(false);
-    // Rendering continues with the opening programs while the driver links the shadow variants.
-    shadowPrograms = renderer.info.programs.filter(p => !existing.has(p));
-  }
   compileDistrict();
   if (!TOUCH) warmDistrictTextures(scene, renderer, false);
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
@@ -1313,7 +1252,7 @@ async function boot() {
   const fog0 = scene.fog.density;
   // name tags (crews, places, the guard) grow a little when the camera is pulled back, so they stay readable from far away
   const tags = []; scene.traverse(o => { if (o.isSprite && o.material.depthTest === false) tags.push({ o, s: o.scale.clone() }); }); let tagK = 1;
-  let last, fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
+  let last, fpsN = 0, fpsT = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
   // 22.11.2026: + how long the PHONE'S PROCESSOR worked on the frame («ЦП») — if the frames are slow while ЦП is small, the graphics chip is
@@ -1322,7 +1261,7 @@ async function boot() {
   let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
   document.addEventListener('visibilitychange', () => {
     last = undefined;
-    fpsN = fpsT = slow = worst = cpuS = cpuN = 0;
+    fpsN = fpsT = worst = cpuS = cpuN = 0;
   });
   const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
   let firstFrame = true, nextFrame;
@@ -1334,8 +1273,9 @@ async function boot() {
     if (showFps) { hist[histI] = iv; histI = (histI + 1) % hist.length; if (iv > 50) jerks.push(now); while (jerks.length && jerks[0] < now - 10000) jerks.shift(); }
     if (showFps) renderer.info.reset();
     // the beat count of what is heard (each crew loop has its own tempo); no sound yet — the yard's 88 BPM by the page clock
-    const hb = musicOn && musicLive && window.RB?.audioState?.() === 'running' ? RB.bgmBeat() : null;
-    const tb = hb != null && hb >= 0 ? hb : ((now - (musicOn ? musicT0 : W.t0)) / 1000) * 88 / 60;
+    const hb = window.cityMusic?.beat();
+    const tb = hb != null && hb >= 0 ? hb : ((now - W.t0) / 1000) * 88 / 60;
+    W.ambient.view(camera, firstFrame || W.camSnap);
     updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
     // battles take over with their own close-ups (W.camT) and give it back afterwards
@@ -1358,25 +1298,27 @@ async function boot() {
     camera.lookAt(camLook);
     // the line of a drawn power move is laid over the dancer AFTER the camera has moved (else it lags a frame behind him)
     if (GAME.post) { camera.updateMatrixWorld(); GAME.post(dt); }
-    moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
-    if (shadowPrograms?.every(program => !renderer.info.programs.includes(program) || program.isReady())) {
-      shadowPrograms = null;
-      setShadows(true);
-    }
-    if (TOUCH && renderer.shadowMap.enabled) shadowFrames++;
+    const battleFocus = GAME.shadowFocus();
+    const shadowCenter = moon.target.position;
+    // The normal fitted view has room for the duel. Keep a fixed projection while following the dancer.
+    const stableShadow = battleFocus && W.zoom <= .75 && Math.hypot(camLook.x - battleFocus.x, camLook.z - battleFocus.z) < 1.8 && !W.camT?.off;
+    if (stableShadow) shadowCenter.set(battleFocus.x, 0, battleFocus.z);
+    else shadowCenter.copy(camLook);
+    moon.position.copy(shadowCenter).add(MOON);
+    moon.target.updateMatrixWorld();
+    SB.cacheStatic(moon, Boolean(stableShadow));
+    for (const spot of spots) SB.cacheStatic(spot.l, Boolean(battleFocus));
     // Keep the moon responsive in close-ups. During a walk on touch devices and in the overview, reuse every other map.
     const stagger = far || (TOUCH && !W.camT);
     if (!stagger || cameraCut || farChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
-    const startupSpots = TOUCH && !cameraCut && !W.camT && shadowFrames <= spots.length;
     const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
     let nextSpot = null;
     for (const spot of spots) {
       const dx = Math.max(x0 - spot.x, 0, spot.x - x1), dz = Math.max(z0 - spot.z, 0, spot.z - z1);
       const visible = dx * dx + dz * dz < spot.r * spot.r;
       if (visible && renderer.shadowMap.enabled) {
-        if (!startupSpots && (!stagger || !spot.visible || cameraCut || !spot.l.shadow.map)) {
+        if (!stagger || !spot.visible || cameraCut || !spot.l.shadow.map) {
           spot.l.shadow.needsUpdate = true;
-          spot.l.shadow.intensity = spot.intensity;
           spot.refreshed = frameNumber;
         } else if (!nextSpot || spot.refreshed < nextSpot.refreshed) nextSpot = spot;
       }
@@ -1384,7 +1326,6 @@ async function boot() {
     }
     if (nextSpot) {
       nextSpot.l.shadow.needsUpdate = true;
-      nextSpot.l.shadow.intensity = nextSpot.intensity;
       nextSpot.refreshed = frameNumber;
     }
     // speakers pump on the beat
@@ -1395,48 +1336,27 @@ async function boot() {
     motes.forEach(m => { const a = m.p.geometry.attributes.position, A = a.array, B = m.base; for (let i = 0; i < m.seed.length; i++) { const q = m.seed[i], t = now * .0002 + q; A[i * 3] = B[i * 3] + Math.sin(t * 1.3) * .25; A[i * 3 + 1] = B[i * 3 + 1] + Math.sin(t * .9 + q) * .2; A[i * 3 + 2] = B[i * 3 + 2] + Math.cos(t * 1.1) * .25; } a.needsUpdate = true; });
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
-    if (openingEffectsPending && shadowFrames > Math.max(1, spots.length)) {
-      openingEffectsPending = false;
-      bloom.enabled = tier < 3;
-      applyRenderRatio();
-    }
     comp.render(dt);
     if (firstFrame) {
       firstFrame = false;
       last = undefined;   // Shader compilation and the initial drawing-buffer setup are not steady-state FPS.
       $('#cityLoading').hidden = true;
-      if (TOUCH) {
-        requestAnimationFrame(() => setTimeout(prepareShadows, 0));
-        warmDistrictTextures(scene, renderer, true);
-      }
+      if (TOUCH) warmDistrictTextures(scene, renderer, true);
     }
     SB.tick();
     if (showFps) { cpuS += performance.now() - c0; cpuN++; }
-    // Measure real frame time. The simulation's dt cap must not make a slow device appear to run at 20 FPS.
-    if (iv > 0 && !document.hidden) { fpsN++; fpsT += iv / 1000; }
+    // Keep timing diagnostic only. Rendering quality stays fixed under load.
+    if (showFps && iv > 0 && !document.hidden) { fpsN++; fpsT += iv / 1000; }
     if (fpsT >= 1.5) { const fps = fpsN / fpsT;
       if (showFps) { $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ЦП ' + (cpuS / Math.max(1, cpuN)).toFixed(1) + ' мс · рывков ' + jerks.length + ' · ' + renderer.info.render.calls + ' выз. · ' + renderer.getPixelRatio().toFixed(2); cpuS = cpuN = 0;
         const g = fpsG; g.clearRect(0, 0, 300, 40); for (let i = 0; i < 300; i++) { const v = hist[(histI + i) % 300]; if (!v) continue; g.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffb84d' : 'rgba(255,255,255,.55)'; const h = Math.min(40, v * .8); g.fillRect(i, 40 - h, 1, h); } }
-      if (fps < 40 && tier < 3) {
-        if (++slow >= 2) {
-          slow = 0;
-          if (tier < 2 && PR > 1) {
-            tier++;
-            PR = Math.max(1, PR * .8);
-            applyRenderRatio();
-          } else {
-            tier = 3;
-            bloom.enabled = false;
-          }
-        }
-      } else slow = 0;
       fpsN = 0; fpsT = 0; worst = 0; }
   };
   requestAnimationFrame(now => {
     try { frame(now); } catch (e) { cancelAnimationFrame(nextFrame); reportCityError(e); }
   });
   zoomTip();
-  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale, id: musicId, playing: window.RB && RB.bgmId ? RB.bgmId() : null }) };
+  window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: window.cityMusic?.state };
 }
 function reportCityError(error) {
   console.error(error);

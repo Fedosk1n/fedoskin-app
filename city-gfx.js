@@ -838,7 +838,10 @@
     for (let i = 0; i < chars.length; i++) {
       if (chars[i] === ' ' && (cut < 0 || Math.abs(i - middle) < Math.abs(cut - middle))) cut = i;
     }
-    return cut < 0 ? null : [chars.slice(0, cut).join(''), chars.slice(cut + 1).join('')];
+    if (cut >= 0) return [chars.slice(0, cut).join(''), chars.slice(cut + 1).join('')];
+    if (chars.length <= 14) return null;
+    const half = Math.ceil(chars.length / 2);
+    return [chars.slice(0, half).join(''), chars.slice(half).join('')];
   }
 
   function muralRow(S, word, seed, extra) {
@@ -859,9 +862,77 @@
     return { cv, x: l, y: t, w: r - l + 1, h: b - t + 1 };
   }
 
+  function muralBackground(c, w, h, style, P, rnd) {
+    const base = c.createLinearGradient(0, 0, w * .78, h);
+    base.addColorStop(0, mixCol(P.o, P.bg, .76));
+    base.addColorStop(.54, mixCol(P.k, P.bg, .57));
+    base.addColorStop(1, mixCol(P.o, P.bg, .40));
+    c.fillStyle = base; c.fillRect(0, 0, w, h);
+    c.save();
+    if (style === 'tile') {
+      const cell = h / 21;
+      for (let y = 0; y < h; y += cell) for (let x = 0; x < w; x += cell) {
+        c.fillStyle = mixCol(P.bg, P.k, .26 + rnd() * .30);
+        c.fillRect(x, y, cell - 1.5, cell - 1.5);
+      }
+      for (const y of [h * .14, h * .80]) {
+        c.fillStyle = P.c; c.fillRect(0, y, w, cell);
+        c.fillStyle = P.b;
+        for (let x = 0; x < w; x += cell * 2) c.fillRect(x, y + cell * .22, cell * .55, cell * .55);
+      }
+    } else if (style === 'bubble' || style === 'tag') {
+      for (let i = 0; i < 19; i++) {
+        const x = (i % 10) / 9 * w + (rnd() - .5) * h * .2;
+        const y = (i < 10 ? .15 : .86) * h + (rnd() - .5) * h * .18;
+        const r = h * (.10 + rnd() * .14);
+        c.fillStyle = mixCol(P.bg, i % 3 === 0 ? P.a : P.k, .24 + rnd() * .32);
+        c.beginPath(); c.ellipse(x, y, r * 1.6, r, -.18, 0, 7); c.fill();
+      }
+      c.strokeStyle = P.b; c.globalAlpha = .42; c.lineWidth = h * .012;
+      for (let i = 0; i < 15; i++) {
+        const x = rnd() * w, y = h * (i % 2 ? .12 + rnd() * .18 : .74 + rnd() * .22);
+        c.beginPath(); c.arc(x, y, h * (.021 + rnd() * .044), 2.8, 5.6); c.stroke();
+      }
+    } else {
+      // Broad overlapping sprays reach the edges and give the central letters room to read.
+      const polygon = (color, points) => {
+        c.fillStyle = color; c.beginPath();
+        for (const [x, y] of points) c.lineTo(x * w, y * h);
+        c.closePath(); c.fill();
+      };
+      polygon(mixCol(P.bg, P.a, .19), [[0,.12],[.99,-.10],[1,.21],[.38,.42],[.54,.21],[0,.58]]);
+      polygon(mixCol(P.bg, P.k, .30), [[-.06,.96],[.77,.59],[.50,.90],[1,.67],[1,1],[-.06,1]]);
+      polygon(mixCol(P.k, P.c, .55), [[0,.74],[.37,.64],[.28,.79],[.55,.75],[0,1]]);
+      polygon(mixCol(P.bg, P.b, .43), [[.55,.12],[1,0],[1,.13],[.82,.23],[.92,.08]]);
+      if (style === 'stencil' || style === 'block') {
+        c.globalAlpha = .52; c.fillStyle = P.a;
+        for (let i = -2; i < 21; i++) {
+          c.save(); c.translate(i * w / 18, h * .82); c.rotate(-.58);
+          c.fillRect(0, 0, w * .022, h * .48); c.restore();
+        }
+      } else {
+        for (let i = 0; i < 13; i++) {
+          const x = rnd(), y = i % 2 === 0 ? rnd() * .23 : .76 + rnd() * .25;
+          const size = .035 + rnd() * .075;
+          c.globalAlpha = .24 + rnd() * .38;
+          polygon(i % 3 ? P.a : P.hi, [[x,y],[x+size,y-.03],[x+size*.53,y+.035]]);
+        }
+      }
+    }
+    c.globalAlpha = .22;
+    for (let i = 0; i < 145; i++) {
+      c.fillStyle = i % 3 ? P.o : P.hi;
+      const r = 1 + rnd() * h * .007;
+      c.beginPath(); c.arc(rnd() * w, rnd() * h, r, 0, 7); c.fill();
+    }
+    c.restore();
+  }
+
   function grafMural(c, S) {
     const word = grafWord(S.word) || 'FT', seed = S.seed || 1;
-    const fit = (width, height) => Math.min(S.w * .90 / width, S.h * .84 / height);
+    const palette = (typeof S.pal === 'string' ? GRAF_PALS[S.pal] : S.pal) || GRAF_PALS.fire;
+    muralBackground(c, S.w, S.h, S.style, palette, grafRnd(seed + 311));
+    const fit = (width, height) => Math.min(S.w * .95 / width, S.h * .88 / height);
     let rows = [muralRow(S, word, seed, S.extra)], gap = 0;
     let scale = fit(rows[0].w, rows[0].h);
     const lines = grafChars(word).length > 7 && scale * rows[0].h < S.h * .62 ? muralLines(word) : null;
@@ -874,7 +945,7 @@
     }
     const width = Math.max(...rows.map(row => row.w)) * scale;
     const height = (rows.reduce((sum, row) => sum + row.h, 0) + gap) * scale;
-    const rnd = grafRnd(seed), palette = (typeof S.pal === 'string' ? GRAF_PALS[S.pal] : S.pal) || GRAF_PALS.fire;
+    const rnd = grafRnd(seed);
     let y = (S.h - height) / 2;
     // Small overspray clouds hug the design and tie two rows into one piece.
     c.save(); c.fillStyle = palette.a;

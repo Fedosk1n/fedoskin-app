@@ -185,13 +185,15 @@
   }
 
   // ---- the beat ----
-  let ctx = null, master = null, noise = null;
+  let ctx = null, master = null, noise = null, audioStateListener;
   let HOT = null;   // the battle punch of a crew loop while it is being scheduled (see hotRig below), null everywhere else
   function audioOn() {
     try {
       if (!ctx) {
         const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
-        ctx = new AC(); master = ctx.createGain();
+        const audio = new AC(); ctx = audio;
+        audio.addEventListener('statechange', () => { if (ctx === audio) audioStateListener?.(audio.state); });
+        master = ctx.createGain();
         const comp = ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
         noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       }
@@ -1665,5 +1667,5 @@ ${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px so
     let peak = 0; for (let k = 0; k < d.length; k += sr) { let q = 0; const e = Math.min(d.length, k + sr); for (let i = k; i < e; i++) { q += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); } per.push(+Math.sqrt(q / (e - k)).toFixed(3)); }
     return { dur: +dur.toFixed(1), peak: +peak.toFixed(2), rms: per };
   }
-  window.RB = { freezeBalance: { css: BALANCE_CSS, rail: balanceRail, bar: balanceBar, drift: freezeDrift, paint: paintBalance }, init: d => { D = d; }, unlock: () => audioOn(), audioState: () => (ctx ? ctx.state : 'none'), fresh: audioFresh, open, close, jam, hiss: sprayHiss, bgm, bgmBeat, bgmId: () => (bgN ? bgN.id : null), LOOPS: Object.keys(LOOPS).map(k => ({ id: k, name: LOOPS[k].name, bpm: LOOPS[k].bpm })), _bgmRender: bgmRender, sfx, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
+  window.RB = { freezeBalance: { css: BALANCE_CSS, rail: balanceRail, bar: balanceBar, drift: freezeDrift, paint: paintBalance }, init: d => { D = d; }, unlock: () => audioOn(), audioState: () => (ctx ? ctx.state : 'none'), onAudioState: listener => { audioStateListener = listener; }, fresh: audioFresh, open, close, jam, hiss: sprayHiss, bgm, bgmBeat, bgmId: () => (bgN ? bgN.id : null), LOOPS: Object.keys(LOOPS).map(k => ({ id: k, name: LOOPS[k].name, bpm: LOOPS[k].bpm })), _bgmRender: bgmRender, sfx, result: (o, r) => open(Object.assign({}, o, { result: r })), notesFor, maxScore, scoreOf, BEATS: BEATS.filter(b => !b.g), RB2, _shapes: SHAPES, _render: render, state: () => G };
 })();

@@ -299,10 +299,10 @@ export async function buildCenter(TK) {
   W.tickers.push(dt => {
     walkers.forEach(w => { const J = w.J, p = J.root.position;
       if (w.mode === 'path') { w.u += w.dir * w.v * dt; const t = at(w.u, w.dir * .4), dx = t.x - p.x, dz = t.z - p.z; if (Math.hypot(dx, dz) > 1e-4) turn(J, Math.atan2(dx, dz), dt, 6); p.x = t.x; p.z = t.z;
-        standPose(J); J.tick(dt); stride(J, J.st, w.v, true, .5, dt); }
+        const elapsed = W.ambient.elapsed(J, dt); if (elapsed !== null) { standPose(J); J.tick(elapsed); stride(J, J.st, w.v, true, .5, elapsed); } }
       else if (w.mode === 'watch') { if (go(J, w.slot.x, w.slot.z, 1.9, dt)) turn(J, Math.atan2(SHOW.x - p.x, SHOW.z - p.z), dt); }
       else if (w.mode === 'back') { const t = at(w.u, w.dir * .4); if (go(J, t.x, t.z, 1.5, dt)) w.mode = 'path'; } });
-    idlers.forEach(J => { const p = J.root.position; turn(J, showOn ? Math.atan2(SHOW.x - p.x, SHOW.z - p.z) : J.home, dt, 3); J.tick(dt); });
+    idlers.forEach(J => { const p = J.root.position; turn(J, showOn ? Math.atan2(SHOW.x - p.x, SHOW.z - p.z) : J.home, dt, 3); W.tickAmbient(J, dt); });
   });
   // the crowd: called by the game when a show starts / ends
   const crowd = on => { showOn = on;
