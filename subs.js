@@ -213,7 +213,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "tn-flare-to-airflare-to-flare": {
   "ks": "262fa2a3-9675-40ac-8b20-5092475a3192",

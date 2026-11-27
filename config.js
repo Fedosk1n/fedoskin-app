@@ -30,10 +30,24 @@ window.APP_CONFIG = {
   "pw-windmill": {
    "media": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
    "tracks": {
-    "en": "dub-pw-windmill-en-21950bf9.mp4"
+    "en": "dub-pw-windmill-en-21950bf9.mp4",
+    "es": "dub-pw-windmill-es-23e49c43.mp4",
+    "pt": "dub-pw-windmill-pt-9dca9e6b.mp4",
+    "fr": "dub-pw-windmill-fr-bde723a8.mp4",
+    "de": "dub-pw-windmill-de-79758c08.mp4",
+    "ja": "dub-pw-windmill-ja-feff79b1.mp4",
+    "ko": "dub-pw-windmill-ko-aecb1df4.mp4",
+    "zh": "dub-pw-windmill-zh-e66dfc6a.mp4"
    },
    "mux": {
-    "en": "dub-pw-windmill-en-1c43a15e.mp4"
+    "en": "dub-pw-windmill-en-1c43a15e.mp4",
+    "es": "dub-pw-windmill-es-mux-23e49c43.mp4",
+    "pt": "dub-pw-windmill-pt-mux-9dca9e6b.mp4",
+    "fr": "dub-pw-windmill-fr-mux-bde723a8.mp4",
+    "de": "dub-pw-windmill-de-mux-79758c08.mp4",
+    "ja": "dub-pw-windmill-ja-mux-feff79b1.mp4",
+    "ko": "dub-pw-windmill-ko-mux-aecb1df4.mp4",
+    "zh": "dub-pw-windmill-zh-mux-e66dfc6a.mp4"
    }
   },
   "fr-airbaby": {
