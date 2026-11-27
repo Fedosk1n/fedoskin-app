@@ -44,21 +44,23 @@ def block(name, loc, size, material, radius=0):
 for x in (-1.18, 0, 1.18):
     first = len(objects)
     for dx in (-.37, .37):
-        for y in (-.31, .35):
-            block("Steel chair leg", (x + dx, y, .175), (.048, .052, .35), frame, .005)
-        block("Seat side rail", (x + dx, .02, .306), (.056, .79, .059), frame, .006)
-        block("Armrest post", (x + dx, -.222, .438), (.045, .044, .28), frame, .006)
-        block("Rear armrest post", (x + dx, .32, .52), (.044, .043, .34), frame, .006)
-        block("Walnut armrest", (x + dx, .035, .596), (.122, .67, .081), walnut, .019)
-        block("Armrest pin", (x + dx, -.267, .638), (.028, .024, .004), brass, .004)
-    block("Padded seat", (x, .060, .386), (.76, .68, .17), seat, .065)
-    block("Front welt", (x, -.272, .43), (.674, .02, .016), edge, .008)
-    shell = block("Backrest shell", (x, .357, .717), (.86, .116, .66), frame, .041)
-    pillow = block("Velour back cushion", (x, .294, .731), (.79, .13, .61), seat, .058)
+        for y in (-.025, .40):
+            block("Steel chair leg", (x + dx, y, .128), (.048, .052, .256), frame, .005)
+        block("Seat side rail", (x + dx, .183, .23), (.056, .47, .059), frame, .006)
+        block("Backrest upright", (x + dx, .40, .41), (.048, .052, .389), frame, .006)
+        outer = x + dx * 1.06
+        block("Armrest post", (outer, .015, .425), (.045, .044, .402), frame, .006)
+        block("Rear armrest post", (outer, .32, .475), (.044, .043, .314), frame, .006)
+        block("Walnut armrest", (x + dx * .924, .035, .622), (.17, .67, .081), walnut, .019)
+        block("Armrest pin", (x + dx, -.267, .664), (.028, .024, .004), brass, .004)
+    block("Padded seat", (x, .15, .283), (.76, .36, .116), seat, .046)
+    block("Front welt", (x, -.021, .302), (.674, .02, .016), edge, .008)
+    shell = block("Backrest shell", (x, .434, .717), (.86, .116, .66), frame, .041)
+    pillow = block("Velour back cushion", (x, .370, .731), (.79, .09, .61), seat, .042)
     shell.rotation_euler.x = -.13
     pillow.rotation_euler.x = -.13
     for d in (-.23, .23):
-        stitch = block("Upholstery seam", (x+d, .235, .741), (.009, .011, .475), edge, .005)
+        stitch = block("Upholstery seam", (x+d, .330, .741), (.009, .011, .475), edge, .005)
         stitch.rotation_euler.x = -.13
 
     for part in objects[first:]:
@@ -104,20 +106,23 @@ def limb(name, a, b, width, material):
 
 
 for i, x in enumerate((-1.18, 0, 1.18)):
-    lean = (-.01, -.08, -.035)[i]
-    ellipsoid("Seated torso", (x, .14+lean, .741), (.197, .119, .247), shirt)
-    ellipsoid("Pelvis", (x, .111, .532), (.174, .125, .099), trousers)
-    ellipsoid("Head", (x, .099+lean, 1.072), (.103, .095, .131), skin)
-    for side in (-1, 1):
-        hip = (x+side*.111, .115, .538)
-        knee = (x+side*.205, -.326, .493)
-        ankle = (x+side*.224, -.465, .087)
+    lean = (.045, .055, .035)[i]
+    torso = ellipsoid("Seated torso", (x, .12+lean, .741), (.197, .119, .247), shirt)
+    torso.rotation_euler.x = -.21
+    ellipsoid("Pelvis", (x, .105, .443), (.174, .125, .099), trousers)
+    ellipsoid("Head", (x, .145+lean, 1.062), (.103, .095, .131), skin)
+    for j, side in enumerate((-1, 1)):
+        depth = ((.42, .35), (.34, .40), (.44, .34))[i][j]
+        hip = (x+side*.10, .105, .453)
+        knee = (x+side*.306, -.194, .418)
+        ankle = (x+side*.37, -depth, .087)
         limb("Thigh", hip, knee, .078, trousers)
         limb("Shin", knee, ankle, .057, trousers)
-        ellipsoid("Shoe", (x+side*.224, -.543, .055), (.075, .137, .047), frame)
-        shoulder = (x+side*.184, .133+lean, .868)
-        elbow = (x+side*.28, .021, .64)
-        wrist = (x+side*.22, -.168 - .03*(i % 2), .576)
+        shoe = ellipsoid("Shoe", (ankle[0], -depth-.058, .055), (.075, .137, .047), frame)
+        shoe.rotation_euler.z = side*.29
+        shoulder = (x+side*.14, .145+lean, .894)
+        elbow = (x+side*.29, .14, .723)
+        wrist = (elbow[0], -.099, .723)
         limb("Upper arm", shoulder, elbow, .057, shirt)
         limb("Forearm", elbow, wrist, .045, shirt)
         ellipsoid("Hand", (wrist[0], wrist[1]-.037, wrist[2]-.007), (.041, .063, .026), skin)
