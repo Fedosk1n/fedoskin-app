@@ -41,7 +41,7 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 // Increment for each release that requires redeploying this Worker.
-const WORKER_VERSION = 3;
+const WORKER_VERSION = 4;
 
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
@@ -570,6 +570,46 @@ const SHOP = { neon: ['laces', 80], gloves: ['hands', 100], cardboard: ['floor',
   amberGloves: ['hands', 145], sandTee: ['top', 145], foamKnees: ['knees', 165], rallyJacket: ['top', 220],
   pulsePhones: ['ears', 235], silverPendant: ['neck', 245], contrastJoggers: ['pants', 265], nightRunner: ['kicks', 325],
   velvetBomber: ['top', 700], electricBucket: ['head', 800], prismPhones: ['ears', 3200] }; // tee = not sold: given for push notifications (owner 11.11.2026)
+// From HERO.SHOP and HERO.GEAR. Update with node tools/sync_daily_loot.mjs.
+// BEGIN DAILY_LOOT_POOLS
+const DAILY_LOOT_POOLS = [
+  ["neon","gloves","cardboard","tee","streetLaces","canvasTeal","asphaltPants","c:rustyBandana","c:matPants","c:beatGloves","c:cypherCap","c:terracottaWrist","c:wideLaces"],
+  ["knee","bandana","stripedBeanie","amberGloves","sandTee","foamKnees","c:rustyTrack","c:acidKicks","c:acidBucket","c:stencilBandana","c:cleanLaces","c:metroBeanie","c:parkVisor","c:matWrist","c:acidRetroBandana","c:foamElbows","c:canvasCap"],
+  ["wall","city","rallyJacket","pulsePhones","silverPendant","contrastJoggers","nightRunner","c:owlPhones","c:owlHoodie","c:goldChain","c:djGloves","c:stencilBomber","c:turnBucket","c:turnKicks","c:paintHoodie","c:mallSneakers","c:pendulumPhones","c:foundryGloves","c:parkElbows","c:tileKnees","c:fourWallsChain","c:poolBucket","c:spinCapSlate","c:courtKicks"],
+  ["box","fire","velvetBomber","electricBucket","c:goldCap","c:funkTrack","c:rootsBeanie","c:rebarCap","c:waveKicks","c:cypherBomber","c:chromeKicks","c:chromeTrack","c:writerKicks","c:chromePendant","c:cachePants","c:ringKnees","c:parkSpinCap"]
+];
+// END DAILY_LOOT_POOLS
+const DAILY_LOOT_MS = 24 * 60 * 60 * 1000;
+const DAILY_LOOT_ODDS = [8000, 1600, 350, 50, 0];
+function randomBelow(limit) {
+  const random = new Uint32Array(1), bound = 2 ** 32 - (2 ** 32 % limit);
+  do { crypto.getRandomValues(random); } while (random[0] >= bound);
+  return random[0] % limit;
+}
+function dailyLootDraw() {
+  let ticket = randomBelow(10000);
+  const rarity = DAILY_LOOT_POOLS.findIndex((_, rank) => (ticket -= DAILY_LOOT_ODDS[rank]) < 0);
+  const pool = DAILY_LOOT_POOLS[rarity];
+  return { rarity, item: pool[randomBelow(pool.length)] };
+}
+async function dailyLoot(db, id, claim) {
+  const now = Date.now();
+  let claimed = false;
+  if (claim) {
+    const roll = dailyLootDraw(), nonce = crypto.randomUUID();
+    const [insert] = await db.batch([
+      db.prepare(`INSERT INTO hero_loot (id, t, nonce, item, rarity, duplicate)
+        SELECT ?, ?, ?, ?, ?, EXISTS(SELECT 1 FROM hero_own WHERE id = ? AND item = ?)
+        WHERE NOT EXISTS (SELECT 1 FROM hero_loot WHERE id = ? AND t > ?)`)
+        .bind(id, now, nonce, roll.item, roll.rarity, id, roll.item, id, now - DAILY_LOOT_MS),
+      db.prepare(`INSERT OR IGNORE INTO hero_own (id, item, t, paid)
+        SELECT id, item, t, 0 FROM hero_loot WHERE id = ? AND nonce = ?`).bind(id, nonce),
+    ]);
+    claimed = Boolean(insert.meta?.changes);
+  }
+  const last = await db.prepare('SELECT t, item, rarity, duplicate FROM hero_loot WHERE id = ? ORDER BY t DESC LIMIT 1').bind(id).first();
+  return { claimed, last, now, next: last ? last.t + DAILY_LOOT_MS : now, odds: DAILY_LOOT_ODDS, poolSizes: DAILY_LOOT_POOLS.map(pool => pool.length) };
+}
 const GEAR_CATALOG = 4;
 const MYTHIC_WIN_DAYS = { red: 21, prismPhones: 28 };
 // Rows without a recorded payment were bought at the original prices.
@@ -851,8 +891,16 @@ async function battle(req, env, path, json) {
   const id = String(b.id || ''), secret = String(b.secret || '');
   if (!/^\d{6,9}$/.test(id) || !/^[0-9a-f]{32}$/.test(secret)) return json({ error: 'bad id' }, 400);
   await lbMigrate(env);
-  const db = env.DB, now = Date.now(), me = await lbRow(db, id);
-  if (!me || me.hid || me.h !== await hash('lb:' + secret)) return json({ error: 'not in rating' }, 403);
+  const db = env.DB, now = Date.now(), identity = await hash('lb:' + secret);
+  let me = await lbRow(db, id);
+  if (!me && path === '/hero/loot') {
+    if (b.claim !== true) return json({ ok: true, ...(await dailyLoot(db, id, false)) });
+    // A personal wardrobe uses the existing device identity without joining the public ranking.
+    await db.prepare('INSERT OR IGNORE INTO lb (id, h, f, t, lvl, rk, hid) VALUES (?, ?, ?, ?, 1, ?, 1)')
+      .bind(id, identity, now, now, randomBelow(1e9)).run();
+    me = await lbRow(db, id);
+  }
+  if (!me || (me.hid && !['/hero/loot', '/hero/eq'].includes(path)) || me.h !== identity) return json({ error: 'not in rating' }, 403);
   const inboxTarget = path === '/bt/inbox' && Number.isSafeInteger(b.n) && b.n > 0 ? b.n : null;
   if ((path === '/bt/inbox' && !inboxTarget) || path === '/bt/ready') await btExpire(env, null).catch(() => {});
   const score = async x => (await db.prepare('SELECT w, l FROM bt_score WHERE id = ?').bind(x).first()) || { w: 0, l: 0 };
@@ -861,7 +909,7 @@ async function battle(req, env, path, json) {
   const wallet = async () => {
     const sc = await score(id), own = await db.prepare(`SELECT item, ${SHOP_COST} AS cost FROM hero_own WHERE id = ?`).bind(id).all();
     const purchases = (own.results || []).filter(r => Object.hasOwn(SHOP, r.item));
-    const owned = purchases.map(r => r.item);
+    const owned = (own.results || []).filter(r => Object.hasOwn(SHOP, r.item) || (r.item.startsWith('c:') && Object.hasOwn(CGEAR, r.item.slice(2)))).map(r => r.item);
     // the team tee: this phone has notifications on (its subscription is linked) ⇒ it's theirs
     if (!owned.includes('tee') && await db.prepare('SELECT 1 AS x FROM bt_sub WHERE id = ?').bind(id).first()) { await db.prepare('INSERT OR IGNORE INTO hero_own (id, item, t) VALUES (?, ?, ?)').bind(id, 'tee', now).run(); owned.push('tee'); }
     const bon = await db.prepare('SELECT SUM(pts) AS p FROM pts_bonus WHERE id = ?').bind(id).first();
@@ -1010,6 +1058,11 @@ async function battle(req, env, path, json) {
     const w = await wallet();
     return json({ ok: true, got: ins.meta && ins.meta.changes ? PTS_FRESH : 0, pts: w.pts, earned: w.earned, owned: w.owned, eq: w.eq });
   }
+  if (path === '/hero/loot') {
+    await wallet(); // Records the notification tee before a possible duplicate draw.
+    const drop = await dailyLoot(db, id, b.claim === true);
+    return json({ ok: true, ...drop, ...(await wallet()) });
+  }
   if (path === '/hero/buy') {
     const item = String(b.item || '');
     if (!Object.hasOwn(SHOP, item)) return json({ error: 'item' }, 400);
@@ -1035,7 +1088,7 @@ async function battle(req, env, path, json) {
   }
   if (path === '/hero/eq') {
     const w = await wallet(), slots = {};
-    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (w.owned.includes(k)) slots[SHOP[k][0]] = k; else if (k.slice(0, 2) === 'c:' && Object.hasOwn(CGEAR, k.slice(2))) slots[CGEAR[k.slice(2)]] = k; }); // one per slot
+    (Array.isArray(b.eq) ? b.eq : []).map(String).forEach(k => { if (Object.hasOwn(SHOP, k) && w.owned.includes(k)) slots[SHOP[k][0]] = k; else if (k.slice(0, 2) === 'c:' && Object.hasOwn(CGEAR, k.slice(2))) slots[CGEAR[k.slice(2)]] = k; }); // one per slot
     const eq = Object.values(slots);
     if ((Array.isArray(b.eq) ? b.eq : []).includes('girl')) eq.push('girl'); // b-girl look (11.11.2026) — not an item, rides along with the items
     const lv = (Array.isArray(b.eq) ? b.eq : []).map(String).find(k => /^lv[1-7]$/.test(k)); // an older level look chosen in the wardrobe (11.11.2026) — drawing never goes above the real level
@@ -1104,6 +1157,7 @@ function schema(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS bt_def (id TEXT PRIMARY KEY, d TEXT, t INTEGER) WITHOUT ROWID'),
     // hero accessories (10.11.2026): what each phone bought (with points, never money) and what it wears
     db.prepare('CREATE TABLE IF NOT EXISTS hero_own (id TEXT NOT NULL, item TEXT NOT NULL, t INTEGER, paid INTEGER, PRIMARY KEY (id, item)) WITHOUT ROWID'),
+    db.prepare('CREATE TABLE IF NOT EXISTS hero_loot (id TEXT NOT NULL, t INTEGER NOT NULL, nonce TEXT NOT NULL, item TEXT NOT NULL, rarity INTEGER NOT NULL, duplicate INTEGER NOT NULL, PRIMARY KEY (id, t)) WITHOUT ROWID'),
     db.prepare('CREATE TABLE IF NOT EXISTS hero_eq (id TEXT PRIMARY KEY, eq TEXT) WITHOUT ROWID'),
     // paid courses (12.11.2026): buyer phones (random id + key hash), orders, owned courses, access codes
     db.prepare('CREATE TABLE IF NOT EXISTS crs_dev (id TEXT PRIMARY KEY, kh TEXT, t INTEGER) WITHOUT ROWID'),
