@@ -72,6 +72,7 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   Keep red slots, chance thresholds and mythic scores in sync with `BT_GEAR_*` in the Worker. The admin checks `WORKER_VERSION`.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
 - City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) + «Промзона» (city3d-prom.js, `?d=prom`) + «Клуб» (city3d-club.js, `?d=club`) — see the last entries of the full notes.
+- The City story lives in `city3d-story.js`. Each chapter records its actual energy and respect award in `S.story` after its gameplay outcome. The signed poster and reference images stay in the journal.
 - The Club's east entrance from the Industrial Zone opens after beating Foundry. `city3d-smoke.js` runs Seven to Smoke with eight breakers,
   one scored point per duel, winner stays, loser queues, first to seven or four minutes of active duels. Tied leaders battle a tiebreak.
   Player duels use the normal city battle animation and inputs. The booth selects a club loop, and the results wall uses `S.smoke`.
