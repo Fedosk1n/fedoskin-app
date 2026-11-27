@@ -621,7 +621,7 @@ export function bodyOf(seed, o = {}) {
   const type = o.type || pick(o.girl ? ['avg', 'slim', 'slim', 'small', 'lanky', 'athl', 'stocky', 'heavy'] : names), T = BODY_TYPES[type] || BODY_TYPES.avg, j = k => 1 + (r() - .5) * k;
   const b = { type, h: T.h * j(.05), limb: T.limb * j(.07), arm: T.arm * j(.07), chest: T.chest * j(.05), waist: T.waist * j(.06), hip: T.hip * j(.05), belly: T.belly * j(.3), head: T.head * j(.03),
     skin: pick(SKINS), hair: o.old ? pick(['#8d9096', '#e9e9ec', '#b9bcc2']) : HAIRS[Math.floor(Math.pow(r(), 1.6) * 8)], style: pick(o.girl ? WOMEN : MEN), beard: !o.girl && r() < (o.old ? .5 : .28), girl: !!o.girl,
-    motion: r() };
+    motion: r(), face: Math.floor(r()*4) };
   if (o.girl) { b.chest *= .9; b.arm *= .88; b.hip *= 1.07; b.waist *= .93; b.h *= .96; }
   return Object.assign(b, o);
 }

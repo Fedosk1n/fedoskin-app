@@ -34,12 +34,29 @@ const SKULL = [
 const HEAD_TOP = .246;
 const HEADS = new Map(), HAIR = new Map(), CONTACTS = new WeakMap();
 
-function profileOf(girl, type) {
+const FEATURES = [
+  { jaw: .96, cheek: 1.04, chin: .003, noseWidth: .92, noseHeight: -.001, noseDepth: 1.09,
+    eyeWidth: 1.01, eyeHeight: 0, eyeOpen: 1, eyeTilt: .0015, browArch: .0048,
+    mouthWidth: 1, mouthHeight: 0, lipDepth: 1, iris: '#694630' },
+  { jaw: 1.06, cheek: 1.10, chin: -.006, noseWidth: 1.18, noseHeight: .003, noseDepth: .81,
+    eyeWidth: 1.06, eyeHeight: -.0015, eyeOpen: 1.14, eyeTilt: .0005, browArch: .0055,
+    mouthWidth: .94, mouthHeight: .0015, lipDepth: 1.24, iris: '#56412A' },
+  { jaw: 1.14, cheek: .97, chin: .009, noseWidth: 1.05, noseHeight: -.003, noseDepth: 1.18,
+    eyeWidth: .96, eyeHeight: .001, eyeOpen: .84, eyeTilt: .0023, browArch: .0027,
+    mouthWidth: 1.16, mouthHeight: -.0015, lipDepth: .90, iris: '#626354' },
+  { jaw: .87, cheek: 1.03, chin: -.002, noseWidth: .88, noseHeight: .002, noseDepth: .94,
+    eyeWidth: 1.10, eyeHeight: .002, eyeOpen: .92, eyeTilt: .0027, browArch: .0064,
+    mouthWidth: 1.07, mouthHeight: -.001, lipDepth: 1.12, iris: '#725241' },
+];
+
+function profileOf(girl, type, faceId, old) {
   const frame = /^(slim|lanky)$/.test(type) ? 'narrow' : /^(heavy|stocky|big)$/.test(type) ? 'broad' : 'middle';
   const temple = frame === 'narrow' ? .95 : frame === 'broad' ? 1.04 : 1;
   const jaw = (frame === 'narrow' ? .89 : frame === 'broad' ? 1.1 : 1) * (girl ? .93 : 1);
   const nose = (frame === 'narrow' ? .92 : frame === 'broad' ? 1.12 : 1) * (girl ? .95 : 1);
-  return { key: (girl ? 'f-' : 'm-') + frame, girl, temple, jaw, nose };
+  const frameKey = (girl ? 'f-' : 'm-') + frame;
+  const identity = Number.isInteger(faceId) && faceId >= 0 && faceId < FEATURES.length ? faceId : 0;
+  return { key: frameKey + identity + (old ? '-old' : ''), frameKey, girl, temple, jaw, nose, features: FEATURES[identity], old };
 }
 
 function skullSlice(y, profile) {
@@ -58,6 +75,11 @@ function skullSlice(y, profile) {
   });
   const upper = smooth(.004, .095, y);
   s[3] *= (1 - upper) * profile.jaw + upper * profile.temple;
+  if (profile.features) {
+    const {jaw, cheek, chin} = profile.features;
+    s[3] *= 1 + (jaw - 1) * bell(y-.012,.042) + (cheek - 1) * bell(y-.072,.030);
+    s[1] += chin * bell(y+.007,.028);
+  }
   return s;
 }
 
@@ -75,10 +97,13 @@ function facePoint(slice, angle, profile) {
   const shadow = .81 + .19 * smooth(-.039, .029, y);
   const { cols, rows, xStep, yStep, yStart, samples } = CITY_ANATOMY.face;
   const center = 1 - smooth(.020, .041, Math.abs(x));
-  const nose = smooth(.034, .049, y) * (1 - smooth(.094, .113, y));
-  const lip = smooth(.007, .016, y) * (1 - smooth(.032, .040, y));
-  const width = 1 + center * ((profile.nose - 1) * nose + (profile.jaw - 1) * lip);
-  const u = Math.abs(x) / (xStep * width), v = (y - yStart) / yStep;
+  const nose = smooth(.034, .046, y) * (1 - smooth(.094, .112, y));
+  const lip = smooth(.007, .015, y) * (1 - smooth(.033, .041, y));
+  const eye = smooth(.083,.094,y) * (1 - smooth(.126,.142,y)) * smooth(.019,.028,Math.abs(x));
+  const features = profile.features;
+  const width = 1 + center * ((profile.nose * features.noseWidth - 1) * nose + (features.mouthWidth - 1) * lip);
+  const height = y - center*(nose*features.noseHeight + lip*features.mouthHeight) - eye*features.eyeHeight;
+  const u = Math.abs(x) / (xStep * width), v = (height - yStart) / yStep;
   if (f2 === 0 || u >= cols - 1 || v < 0 || v >= rows - 1) return [...p, [shadow, shadow, shadow]];
   const i = Math.floor(u), j = Math.floor(v), sx = u - i, sy = v - j;
   const k = (j * cols + i) * 4, stride = cols * 4;
@@ -88,8 +113,12 @@ function facePoint(slice, angle, profile) {
     const bottom = THREE.MathUtils.lerp(samples[a+stride], samples[a+stride+4], sx);
     return THREE.MathUtils.lerp(top, bottom, sy) * f2 / 10000;
   };
-  p[2] += sample(0) * (profile.girl ? .89 : 1);
-  return [...p, [1, 2, 3].map(channel => shadow * (1 + sample(channel)))];
+  const depth = 1 + center * (nose * (features.noseDepth - 1) + lip * (features.lipDepth - 1));
+  p[2] += sample(0) * depth * (profile.girl ? .94 : 1);
+  const fold = profile.old ? bell(Math.abs(x) - (.024 + (.049-y)*.43),.0029)*bell(y-.035,.013) : 0;
+  const eyeCrease = profile.old ? bell(Math.abs(x)-.047,.012)*bell(y-.091,.0019) : 0;
+  p[2] -= f2 * (.0011*fold + .0007*eyeCrease);
+  return [...p, [1, 2, 3].map(channel => shadow * (1 + sample(channel) - f2*(.095*fold + .081*eyeCrease)))];
 }
 
 function rings(rows, segments, sample, capTop = null, capBottom = null) {
@@ -132,7 +161,25 @@ function skinGeometry(profile) {
     .090, .094, .098, .102, .106, .110, .116, .123, .130])].sort((a, b) => a - b);
   // Give the central face more samples without adding vertices at the nape.
   const faceAngle = angle => angle + .55 * Math.cos(angle);
-  return rings(ys.map(y => skullSlice(y, profile)), 72, (s, a) => facePoint(s, faceAngle(a), profile), [0, HEAD_TOP, -.025], [0, -.05, .068, .77]);
+  const columns = 72;
+  const skin = rings(ys.map(y => skullSlice(y, profile)), columns,
+    (s, a) => facePoint(s, faceAngle(a), profile), [0, HEAD_TOP, -.025], [0, -.05, .068, .77]);
+  // The small rows around the lips and nostrils shouldn't make creases on the sides of the head.
+  const {position, normal} = skin.attributes;
+  const center = new THREE.Vector3(), up = new THREE.Vector3(), around = new THREE.Vector3(), next = new THREE.Vector3();
+  for (let row = 1; row < ys.length - 1; row++) {
+    for (let i = 0; i < columns; i++) {
+      const offset = row * columns, index = offset + i;
+      center.fromBufferAttribute(position,index);
+      up.fromBufferAttribute(position,index-columns).sub(center).negate().normalize();
+      up.add(next.fromBufferAttribute(position,index+columns).sub(center).normalize());
+      around.fromBufferAttribute(position,offset+(i+1)%columns)
+        .sub(next.fromBufferAttribute(position,offset+(i+columns-1)%columns));
+      up.cross(around).normalize();
+      normal.setXYZ(index,up.x,up.y,up.z);
+    }
+  }
+  return skin;
 }
 
 function faceZ(x, y, profile) {
@@ -168,13 +215,15 @@ function facePatch(columns, rows, point, flip = false) {
 }
 
 function eyeGeometry(side, profile) {
-  const cx = side * .035 * profile.temple, cy = .102;
-  const width = profile.girl ? .0156 : .0150;
+  const { features } = profile;
+  const cx = side * .035 * profile.temple, cy = .102 + features.eyeHeight;
+  const width = (profile.girl ? .0156 : .0150) * features.eyeWidth;
+  const aperture = features.eyeOpen * (profile.old ? .87 : 1);
   const shape = u => {
     const taper = Math.sqrt(Math.max(.0002, 1 - u*u));
-    const center = cy + side * u * .00135;
-    const upper = taper * (profile.girl ? .00555 : .0050) * (1 - .16 * side * u);
-    const lower = taper * .00415 * (1 + .20 * side * u);
+    const center = cy + side * u * features.eyeTilt;
+    const upper = taper * (profile.girl ? .00555 : .0050) * aperture * (1 - .16 * side * u);
+    const lower = taper * .00415 * aperture * (1 + .20 * side * u);
     return { taper, center, upper, lower };
   };
   const surface = (x, y) => {
@@ -212,7 +261,7 @@ function eyeGeometry(side, profile) {
   const brow = facePatch(19, 3, (s, t) => {
     const x = cx + side*.034*(s-.48);
     const arch = Math.sin(s * Math.PI) ** 1.1;
-    const center = .1205 + (profile.girl ? .0063 : .0047)*arch + .0023*s - .0048*s**4;
+    const center = cy + .0185 + (features.browArch + (profile.girl ? .0012 : 0))*arch + .0023*s - .0048*s**4;
     const half = (.00025 + (.66 + .34*arch)*Math.sin(s*Math.PI)**.64*(profile.girl ? .00175 : .0024))*(1-.74*s**2.5);
     const y = center + (2*t-1)*half;
     const strands = .90 + .10*t + .08*Math.cos(s*81 - t*1.42);
@@ -221,12 +270,13 @@ function eyeGeometry(side, profile) {
   return {white, iris, glint, lids, brow};
 }
 
-function beardGeometry(skin) {
+function beardGeometry(skin, profile) {
   const geo = skin.clone(), pos = geo.attributes.position, n = geo.attributes.normal, weights = [];
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const line = .042 + .031 * smooth(.028, .072, Math.abs(x));
-    const lips = (1 - smooth(.021, .034, Math.abs(x))) * bell(y - .024, .0115);
+    const lips = (1 - smooth(.021, .034, Math.abs(x)/profile.features.mouthWidth))
+      * bell(y - .024 - profile.features.mouthHeight, .0115);
     const w = (1 - smooth(line - .006, line + .005, y)) * smooth(-.06, -.041, z) * (1 - lips);
     const grain = Math.sin(x*806 + y*363) * Math.cos(y*732);
     const rise = -.0026 + (.0083 + .0011*grain) * w;
@@ -247,14 +297,15 @@ function beardGeometry(skin) {
 function faceGeometry(profile) {
   if (HEADS.has(profile.key)) return HEADS.get(profile.key);
   const skin = skinGeometry(profile);
-  const face = { skin, beard: profile.girl ? null : beardGeometry(skin), eyes: [-1, 1].map(side => eyeGeometry(side, profile)) };
+  const face = { skin, eyes: [-1, 1].map(side => eyeGeometry(side, profile)) };
   HEADS.set(profile.key, face);
   return face;
 }
 
 function scalp(profile, style) {
-  const key = profile.key + style;
+  const key = profile.frameKey + style;
   if (HAIR.has(key)) return HAIR.get(key);
+  const shell = {...profile, features: FEATURES[0], old: false};
   const covered = style === 'underHat';
   const shear = style === 'buzz' || covered;
   const wave = style === 'curly' || style === 'afro';
@@ -265,7 +316,7 @@ function scalp(profile, style) {
     const sn = Math.sin(a), front = Math.max(0, sn), back = Math.max(0, -sn);
     let y = .102 + .052 * front ** 1.5 - .057 * back ** 1.45;
     if (!shear) y += .011 * front * Math.cos(a * 2 - .6) + .005 * Math.sin(a * 3 + .5);
-    const p = facePoint(skullSlice(y + (HEAD_TOP - y) * t, profile), a, profile);
+    const p = facePoint(skullSlice(y + (HEAD_TOP - y) * t, shell), a, shell);
     const crest = smooth(.03, .56, t);
     const lobe = wave ? .006 * (1 + Math.cos(a * 9 + 11 * t)) * Math.sin(Math.PI * t) : 0;
     const side = covered ? .0038 : shear ? .0026 : style === 'afro' ? .019 : .007;
@@ -561,7 +612,7 @@ function contactPoints(geo) {
 
 export function addCityHead(bone, look, body, { M, MV, glowOf }) {
   const C = look.col, girl = look.girl || body.girl;
-  const profile = profileOf(girl, body.type);
+  const profile = profileOf(girl, body.type, body.face, body.old);
   const group = new THREE.Group();
   group.name = 'CityHead';
   group.scale.setScalar(body.head * .94);
@@ -587,11 +638,14 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
   for (const eye of face.eyes) {
     for (const lid of eye.lids) add(lid, MV(C.skin, .83));
     add(eye.white, MV('#DDD5CD', .64));
-    add(eye.iris, MV(body.old ? '#676558' : '#694630', .54));
+    add(eye.iris, MV(body.old ? '#676558' : profile.features.iris, .54));
     add(eye.glint, M('#EEE0CE', .65));
     add(eye.brow, MV(C.hair, .93));
   }
-  if (body.beard && face.beard) add(face.beard, hair);
+  if (body.beard && !girl) {
+    face.beard ??= beardGeometry(face.skin,profile);
+    add(face.beard, hair);
+  }
 
   const hat = C.hat ? look.hat : null;
   const style = body.style || (girl ? 'tail' : 'short');
