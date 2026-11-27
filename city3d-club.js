@@ -43,14 +43,14 @@ export function buildClub(TK) {
     o.rotation.x = -.65;
     return o;
   }
-  function label(txt, x, y, z, color) {
+  function label(txt, x, y, z, color, width = 2.9) {
     const cv = can(600, 128), p = cv.getContext('2d');
     p.fillStyle = '#101518'; p.beginPath(); p.roundRect(6, 14, 588, 98, 24); p.fill();
     p.strokeStyle = color; p.stroke();
     p.fillStyle = color; p.textAlign = 'center'; p.textBaseline = 'middle'; p.font = 'bold 52px Inter, sans-serif';
     p.fillText(txt, 300, 65, 540);
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(cv), toneMapped: false }));
-    sprite.position.set(x, y, z); sprite.scale.set(2.9, .62, 1); scene.add(sprite);
+    sprite.position.set(x, y, z); sprite.scale.set(width, .62, 1); scene.add(sprite);
     return sprite;
   }
 
@@ -176,8 +176,8 @@ export function buildClub(TK) {
   sign(t('СУДЬИ'), 1.32, .31, 0, .46, -6.39);
 
   const signs = [
-    label('←  ' + t('Пульт диджея'), -2.8, 1.4, 2.02, '#86e7e5'),
-    label(t('Стена результатов') + '  →', 2.8, 1.4, 2.02, '#ffce8a'),
+    label('←  ' + t('Пульт диджея'), -1.95, 1.4, 2.02, '#86e7e5', 2.5),
+    label(t('Стена результатов') + '  →', 1.95, 1.4, 2.02, '#ffce8a', 2.5),
     label('7 TO SMOKE', floor.x, 2.3, floor.z + 3.5, '#ffce8a'),
     label(t('Пульт диджея'), dj.x, 2.05, dj.z - .55, '#86e7e5'),
     label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
