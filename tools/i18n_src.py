@@ -1148,6 +1148,21 @@ t('В гардеробе пока пусто', 'Your wardrobe is empty', 'Tu arm
 t('Аура', 'Aura', 'Aura', 'Aura', 'Aura', 'Aura', 'オーラ', '오라', '光环')
 t('Оформление', 'Outfit extras', 'Detalles del atuendo', 'Detalhes do visual', 'Accessoires visuels', 'Outfit-Extras', '外見アイテム', '외형 장식', '外观装饰')
 
+t('Ежедневный ящик', 'Daily gear case', 'Caja diaria', 'Caixa diária', 'Caisse quotidienne', 'Tägliche Ausrüstungskiste', 'デイリーギアケース', '일일 장비 상자', '每日装备箱')
+t('Одна вещь бесплатно каждые 24 часа', 'One free item every 24 hours', 'Un objeto gratis cada 24 horas', 'Um item grátis a cada 24 horas', 'Un objet gratuit toutes les 24 heures', 'Alle 24 Stunden ein kostenloser Gegenstand', '24時間ごとにアイテム1点が無料', '24시간마다 무료 아이템 하나', '每24小时免费获得一件物品')
+t('У всех вещей одной редкости одинаковый шанс. Дубликат остаётся одной вещью в коллекции.', 'Every item of a given rarity has the same chance. A duplicate stays a single item in your collection.', 'Todos los objetos de la misma rareza tienen la misma probabilidad. Un duplicado sigue siendo un solo objeto en la colección.', 'Todos os itens da mesma raridade têm a mesma chance. Um duplicado conta como um só item na coleção.', 'Tous les objets de même rareté ont la même chance. Un doublon ne crée pas de deuxième objet dans la collection.', 'Alle Gegenstände derselben Seltenheit haben dieselbe Chance. Ein Duplikat bleibt ein einzelner Gegenstand in der Sammlung.', '同じレア度のアイテムは同じ確率です。重複してもコレクションでは1点のままです。', '같은 희귀도의 아이템은 확률이 같아. 중복 아이템은 컬렉션에서 하나로 남아.', '同稀有度的物品概率相同。重复物品在收藏中仍为一件。')
+t('Открыть бесплатно', 'Open for free', 'Abrir gratis', 'Abrir grátis', 'Ouvrir gratuitement', 'Kostenlos öffnen', '無料で開ける', '무료로 열기', '免费开启')
+t('Проверить снова', 'Check again', 'Volver a comprobar', 'Verificar de novo', 'Vérifier à nouveau', 'Erneut prüfen', '再確認', '다시 확인', '重新检查')
+t('Проверяем ящик…', 'Checking the case…', 'Comprobando la caja…', 'Verificando a caixa…', 'Vérification de la caisse…', 'Kiste wird geprüft…', 'ケースを確認中…', '상자 확인 중…', '正在检查装备箱…')
+t('Следующий ящик через {time}', 'Next case in {time}', 'Próxima caja en {time}', 'Próxima caixa em {time}', 'Prochaine caisse dans {time}', 'Nächste Kiste in {time}', '次のケースまで {time}', '다음 상자까지 {time}', '距离下一个箱子还有 {time}')
+t('Ящик готов к открытию', 'Your case is ready', 'Tu caja está lista', 'A caixa está pronta', 'Ta caisse est prête', 'Deine Kiste ist bereit', 'ケースを開けられます', '상자를 열 수 있어', '装备箱可以开启了')
+t('Ящик откроется после обновления сервера.', 'The case will be available after the server update.', 'La caja estará disponible tras la actualización del servidor.', 'A caixa ficará disponível após a atualização do servidor.', 'La caisse sera disponible après la mise à jour du serveur.', 'Die Kiste ist nach dem Server-Update verfügbar.', 'サーバー更新後にケースを開けられます。', '서버 업데이트 후 상자를 열 수 있어.', '服务器更新后可以开启装备箱。')
+t('Ящик не загрузился. Проверь соединение.', 'The case could not load. Check your connection.', 'La caja no se cargó. Revisa tu conexión.', 'A caixa não carregou. Verifique a conexão.', 'La caisse ne s’est pas chargée. Vérifie ta connexion.', 'Die Kiste konnte nicht geladen werden. Überprüfe deine Verbindung.', 'ケースを読み込めませんでした。接続を確認してください。', '상자를 불러오지 못했어. 연결을 확인해.', '装备箱加载失败。请检查网络连接。')
+t('Уже в коллекции', 'Already in your collection', 'Ya está en tu colección', 'Já está na sua coleção', 'Déjà dans ta collection', 'Bereits in deiner Sammlung', 'コレクションに所持済み', '이미 컬렉션에 있음', '已在收藏中')
+t('Добавлено в гардероб', 'Added to your wardrobe', 'Añadido a tu armario', 'Adicionado ao seu guarda-roupa', 'Ajouté à ta garde-robe', 'Zur Garderobe hinzugefügt', 'ワードローブに追加', '옷장에 추가됨', '已添加到衣柜')
+
+t('Уже получено', 'Already claimed', 'Ya obtenido', 'Já recebido', 'Déjà récupéré', 'Bereits abgeholt', '受け取り済み', '이미 받음', '已领取')
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'

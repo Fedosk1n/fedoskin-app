@@ -1119,6 +1119,26 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-ask{display:block;width:calc(100% - 28px);margin:10px 14px 14px;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:11px;font:600 14px var(--body,inherit);cursor:pointer}
 .lul{margin-top:6px;font-size:12.5px;color:#F2CC55;line-height:1.35}
 .lul b{font-family:var(--display);font-weight:400;letter-spacing:.4px;font-size:14px}
+
+.loot-icon{font-size:26px;line-height:1}
+.loot-entry-copy{flex:1;text-align:start}
+.loot-wardrobe{margin:3px 0 8px;min-height:42px}
+#lootDialog{position:fixed;box-sizing:border-box;width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 30px);margin:auto;border:1px solid #51443d;border-radius:19px;padding:14px 16px 16px;background:#181b23;color:#f6f0ec;overflow:auto;overscroll-behavior:contain}
+#lootDialog::backdrop{background:#05070bbd}
+#lootDialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#lootDialog h2{margin:5px 0;font-size:21px;line-height:1.15}
+#lootDialog p{margin:7px 0}
+#lootClose{flex:0 0 44px;width:44px;height:44px;min-width:44px;padding:0;line-height:1;font-size:22px}
+#lootClaim:disabled{opacity:1;background:#282a32;color:#aaa3a3;border-color:#49464c;cursor:default}
+.loot-case{width:100%;height:auto;aspect-ratio:2.55;object-fit:cover;border-radius:10px;background:#26282d}
+.loot-odds{padding:0;margin:8px 0;list-style:none;font-size:13px}
+.loot-odds li{display:flex;justify-content:space-between;gap:10px;border-block-end:1px solid #32343d;padding:4px 1px}
+.loot-odds .myth{color:#e7b0b8}
+#lootResult{display:flex;align-items:center;gap:9px;border:1px solid #816044;border-radius:8px;padding:8px;background:#2a241f}
+#lootResult[hidden]{display:none}
+#lootResult p{font-size:12px;margin:2px 0;color:#ffcd93}
+#lootItemArt{width:50px;height:55px;overflow:hidden;flex:none}
+#lootItemArt svg{display:block;width:100%;height:100%}
 </style>
 </head>
 <body>
@@ -1475,6 +1495,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </span>
   </button>
   <button class="card shoprow" id="shopRow" type="button" hidden><span class="pts">⭐ <b id="ptsN">0</b></span><span style="flex:1;text-align:left"><b>Гардероб и магазин</b><small>+10 за победу · +20 за час уроков · +10 за новый урок</small></span><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button class="card shoprow" id="lootEntry" type="button"><span class="loot-icon" aria-hidden="true">🎁</span><span class="loot-entry-copy"><b>Ежедневный ящик</b><small>Одна вещь бесплатно каждые 24 часа</small></span><span aria-hidden="true">›</span></button>
 
   <div class="card skcard" id="skCard" hidden></div>
   <div class="sec">
@@ -1766,6 +1787,18 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="btns"><button class="btn btn-ghost" id="lvlUpOk" type="button" style="flex:1">Круто!</button><button class="btn btn-accent" id="lvlUpShare" type="button" style="flex:2">Поделиться в сторис</button></div>
   </div>
 </div>
+<dialog id="lootDialog" aria-labelledby="lootTitle">
+  <header><h2 id="lootTitle">Ежедневный ящик</h2><button type="button" id="lootClose" class="btn btn-ghost" aria-label="Закрыть">×</button></header>
+  <img class="loot-case" src="img/daily-gear-case.webp?v=1" alt="" loading="lazy">
+  <p id="lootIntro">Одна вещь бесплатно каждые 24 часа</p>
+  <ul id="lootOdds" class="loot-odds"></ul>
+  <p class="small" id="lootDuplicate">У всех вещей одной редкости одинаковый шанс. Дубликат остаётся одной вещью в коллекции.</p>
+  <section id="lootResult" hidden aria-live="polite"><div id="lootItemArt" aria-hidden="true"></div><div><b id="lootItemName"></b><p id="lootItemNote"></p></div></section>
+  <p id="lootStatus" role="status"></p>
+  <button type="button" id="lootClaim" class="btn btn-accent" disabled>Открыть бесплатно</button>
+  <button type="button" id="lootRetry" class="btn btn-ghost" hidden>Проверить снова</button>
+</dialog>
+
 <div class="sheet-bg" id="shopSheet" hidden>
   <div class="sheet wd-sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
     <div class="wdhead">
@@ -1777,6 +1810,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <button type="button" data-tab="mine" aria-pressed="true">Мои вещи</button>
       <button type="button" data-tab="shop" aria-pressed="false">Магазин</button>
     </div>
+    <button class="btn btn-ghost loot-wardrobe" id="lootWardrobe" type="button">Ежедневный ящик</button>
     <div class="wd-scroll" id="wdScroll">
       <div class="wdoutfit" id="wdOutfit">
         <div class="wdoutfit-head"><h3>Экипировка</h3><small id="wdWorn"></small></div>
@@ -1894,7 +1928,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=9"></script>
+<script src="i18n.js?v=10"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
@@ -5442,7 +5476,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     // street gear won in the 3D city (city3d-game.js save) is the same wardrobe
     const c3 = city3dSave();
     if (Array.isArray(c3.own)) own = own.concat(c3.own.filter(x => !own.includes(x)));
-    return own;
+    try {
+      const cloud = JSON.parse(localStorage.getItem('fedoskin-wardrobe-owned:' + prof.id) || '[]');
+      if (Array.isArray(cloud)) own = own.concat(cloud.filter(isCityK).map(id => id.slice(2)));
+    } catch (_) {}
+    return [...new Set(own)];
   }
   const slotOf = k => { const x = HERO.itemOf ? HERO.itemOf(k) : HERO.SHOP.find(s => s.id === k); return x ? x.slot : null; };
   const eqWith = (eq, k) => eq.filter(x => x !== k && slotOf(x) !== slotOf(k)).concat(k);   // put on k, take off what was in its slot
@@ -6149,6 +6187,84 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#shopRow').addEventListener('click', () => openWd('shop'));
   $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') closeWd(); });
   const btPost = (path, body, signal) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})), signal });
+
+  // The Worker owns both the roll and the 24-hour clock. The dialog can be closed or reloaded in flight.
+  const lootDialog = $('#lootDialog');
+  const lootDefaultOdds = [8000, 1600, 350, 50, 0];
+  let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn;
+  const lootSeconds = new Intl.NumberFormat(LANG, { minimumIntegerDigits: 2, useGrouping: false });
+  const lootPercent = new Intl.NumberFormat(LANG, { style: 'percent', maximumFractionDigits: 1 });
+  function lootPaint(){
+    const ms = lootState ? Math.max(0, lootState.next - lootState.now - (performance.now() - lootClock)) : 0;
+    const status = lootFailure || (lootBusy ? T('Проверяем ящик…') : lootState ? ms
+      ? T('Следующий ящик через {time}', { time: [Math.floor(ms / 36e5), Math.floor(ms / 6e4) % 60, Math.floor(ms / 1e3) % 60].map(x => lootSeconds.format(x)).join(':') })
+      : T('Ящик готов к открытию') : '');
+    if ($('#lootStatus').textContent !== status) $('#lootStatus').textContent = status;
+    const button = $('#lootClaim');
+    button.disabled = Boolean(!lootState || lootBusy || lootFailure || ms);
+    const label = T(ms ? 'Уже получено' : 'Открыть бесплатно');
+    if (button.textContent !== label) button.textContent = label;
+    $('#lootRetry').hidden = !lootFailure;
+  }
+  function lootPresent(data, legacyDuplicate){
+    lootState = data; lootClock = performance.now();
+    if (Array.isArray(data.owned)) btWallet(data);
+    const odds = Array.isArray(data.odds) ? data.odds : lootDefaultOdds;
+    const list = $('#lootOdds'); list.replaceChildren();
+    WD_RARITY.forEach((rank, i) => {
+      const row = wdText(list, 'li', '', i === 4 ? 'myth' : '');
+      wdText(row, 'span', T(rank)); wdText(row, 'b', lootPercent.format(odds[i] / 10000));
+    });
+    const item = data.last && HERO.itemOf(data.last.item);
+    $('#lootResult').hidden = !item;
+    if (item) {
+      $('#lootItemArt').innerHTML = HERO.svg(statsView().level, { uid: 'drop', acc: [item.id], wardrobe: true });
+      $('#lootItemName').textContent = T(item.name);
+      let duplicate = data.last.duplicate || legacyDuplicate;
+      try {
+        const key = 'fedoskin-loot-duplicate:' + prof.id;
+        if (legacyDuplicate) localStorage.setItem(key, data.last.t);
+        duplicate ||= Number(localStorage.getItem(key)) === data.last.t;
+      } catch (_) {}
+      $('#lootItemNote').textContent = T(WD_RARITY[item.rar]) + ' · ' + T(duplicate ? 'Уже в коллекции' : 'Добавлено в гардероб');
+    }
+    lootPaint();
+  }
+  async function lootRequest(claim){
+    if (lootBusy) return;
+    lootBusy = true; lootFailure = ''; lootPaint();
+    const existing = new Set(wdOwned().map(item => item.id));
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
+    try {
+      if (!LB_URL) throw new Error('unavailable');
+      const r = await btPost('/hero/loot', { claim }, controller.signal);
+      if (r.status === 404) throw new Error('update');
+      if (!r.ok) throw new Error('unavailable');
+      const data = await r.json();
+      if (!data.ok || !Number.isFinite(data.next)) throw new Error('unavailable');
+      lootPresent(data, data.claimed && existing.has(data.last?.item));
+    } catch (error) {
+      lootFailure = T(error.message === 'update' ? 'Ящик откроется после обновления сервера.' : 'Ящик не загрузился. Проверь соединение.');
+    } finally { clearTimeout(timeout); lootBusy = false; lootPaint(); }
+  }
+  function openLoot(){
+    if (lootDialog.open) return;
+    lootReturn = document.activeElement;
+    lootPresent({ now: Date.now(), next: Date.now() }); lootState = null;
+    lootDialog.showModal();
+    lootRequest(false);
+    lootTimer = setInterval(lootPaint, 500);
+  }
+  $('#lootEntry').onclick = openLoot;
+  $('#lootWardrobe').onclick = openLoot;
+  $('#lootClose').onclick = () => lootDialog.close();
+  $('#lootClaim').onclick = () => lootRequest(true);
+  $('#lootRetry').onclick = () => lootRequest(false);
+  lootDialog.addEventListener('close', () => { clearInterval(lootTimer); lootReturn?.focus({ preventScroll: true }); });
+  addEventListener('storage', event => {
+    if (event.key === 'fedoskin-wardrobe-owned:' + prof.id && lootDialog.open && !lootBusy) lootRequest(false);
+  });
+
   function btPaintScore(sc){
     if (!sc || (!sc.w && !sc.l)) return;
     const el = $('#btScore'); el.hidden = false;
