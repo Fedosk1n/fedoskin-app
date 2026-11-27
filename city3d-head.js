@@ -303,8 +303,8 @@ function faceGeometry(profile) {
   return face;
 }
 
-function scalp(profile, style) {
-  const key = profile.frameKey + style;
+function scalp(profile, style, openBandana = false) {
+  const key = profile.frameKey + style + (openBandana ? '-bandana' : '');
   if (HAIR.has(key)) return HAIR.get(key);
   const shell = {...profile, features: FEATURES[0], old: false};
   const covered = style === 'underHat';
@@ -332,6 +332,18 @@ function scalp(profile, style) {
     p[0] += Math.cos(a) * lift * Math.sqrt(1 - t) + (style === 'short' ? .008 * smooth(.72, .99, t) : 0);
     p[2] += sn * lift * Math.sqrt(1 - t);
     p[1] += height * crest + lobe + (shear ? 0 : ripple*.86);
+    if (openBandana) {
+      const [edge, width] = locsBandFit(a);
+      const fit = (p[1] - edge) / width;
+      if (fit > -.15 && fit < 1.18) {
+        const [x,,z] = locsBandPoint(clamp(fit,0,1),a,shell);
+        const c = Math.cos(a);
+        const tuck = Math.max(0, (p[0]-x)*c + (p[2]-z)*sn + .003)
+          * smooth(-.15,.06,fit) * (1-smooth(.98,1.18,fit));
+        p[0] -= c * tuck;
+        p[2] -= sn * tuck;
+      }
+    }
     const rootShade = shear ? .92 : .73 + .19*smooth(.0,.15,t);
     return [p[0],p[1],p[2],rootShade + .08*crest + (shear ? .025 : .115)*strand*Math.sin(Math.PI*t)];
   }, covered ? null : [style === 'short' ? .008 : 0, HEAD_TOP + height, -.025, .97]);
@@ -491,6 +503,71 @@ const BANDANA_PAISLEY = threadGeometry(
     ].map(([t,a]) => bandanaPoint(.38+(t-.38)*r,angle+a*r*side,.00235)));
   }), .00115, 2);
 
+function hasLocs(style) {
+  return style === 'dreads' || style === 'longLocs' || style === 'tiedLocs';
+}
+
+const LOCS_BANDANAS = new Map();
+function locsBandFit(a) {
+  const s = Math.sin(a), front = Math.max(0, s), back = Math.max(0, -s);
+  return [.117 + .025 * front - .019 * back + .003 * Math.sin(2 * a + .45),
+    .025 + .014 * front - .006 * back];
+}
+
+// Folded cloth runs along the hairline and tapers above the ears toward the knot.
+function locsBandPoint(t, a, profile, lift = 0) {
+  const s = Math.sin(a), c = Math.cos(a);
+  const front = Math.max(0, s), back = Math.max(0, -s);
+  const [edge, width] = locsBandFit(a);
+  const p = outline(skullSlice(edge + width * t, profile), a, .73);
+  const fold = Math.cos(12 * t + 3 * a) * Math.sin(Math.PI * t);
+  const clearance = .010 + .006 * (2*t-.8) * front + .013 * back + .0016 * fold + lift;
+  p[0] += c * clearance;
+  p[2] += s * clearance;
+  return [...p, .88 + .09 * fold];
+}
+
+function locsBandana(profile) {
+  if (LOCS_BANDANAS.has(profile.frameKey)) return LOCS_BANDANAS.get(profile.frameKey);
+  const shell = { ...profile, features: FEATURES[0], old: false };
+  const point = (t,a,lift) => locsBandPoint(t,a,shell,lift);
+  const band = rings([
+    [.035,-.003],[0,-.001],[.012,.001],[.075,.002],[.22,0],[.42,0],
+    [.64,0],[.85,0],[.956,.001],[1,-.001],[.965,-.004],
+  ], 64, ([t,lift],a) => point(t,a,lift));
+  const seam = threadGeometry([.095,.89].map(t => angles(64).map(a => point(t,a,.0021))), .00072);
+  const print = threadGeometry(Array.from({length: 14}, (_,i) => {
+    const a = i * TAU / 14 + .045, side = i % 2 ? -1 : 1;
+    return [
+      [[.27,-.015],[.28,.060],[.42,.101],[.68,.041],[.77,-.073],[.59,-.037],[.42,-.080],[.27,-.015]],
+      [[.49,.155],[.55,.178],[.46,.204],[.40,.179],[.49,.155]],
+    ].map(path => path.map(([t,da]) => point(t,a+da*side,.0019)));
+  }).flat(), .00066, 2);
+
+  const angle = 5.82;
+  const origin = new THREE.Vector3(...point(.44,angle,.005).slice(0,3));
+  const knot = new THREE.SphereGeometry(1, 16, 12).scale(.013,.010,.008).rotateZ(.40);
+  knot.translate(...origin.toArray());
+  const ties = [-1,1].map(side => {
+    const path = new THREE.CatmullRomCurve3([
+      [0,0,0], [.009+side*.008,-.012,-.002],
+      [.020+side*.014,-.028,-.009], [.022+side*.023,-.047+side*.009,-.016],
+    ].map(p => new THREE.Vector3(...p).add(origin)));
+    return rings([.025,.11,.24,.39,.52,.66,.79,.89,.96], 10, (t,a) => {
+      const p = path.getPoint(t), tangent = path.getTangent(t);
+      const across = new THREE.Vector3(.81,.09,-.58).projectOnPlane(tangent).normalize();
+      const normal = across.clone().cross(tangent);
+      const taper = 1 - .80 * smooth(.57,1,t);
+      p.addScaledVector(across, Math.cos(a) * (.005 + .003 * t) * taper);
+      p.addScaledVector(normal, (Math.sin(a) * .0013 + Math.cos(a * 2 + 3 * t) * .001) * taper);
+      return [...p.toArray(), .83 + .15 * Math.sin(a + t * 3) ** 2];
+    }, [...path.getPoint(1).toArray(),.81], [...origin.toArray(),.85]);
+  });
+  const parts = { band, seam, print, knot, ties };
+  LOCS_BANDANAS.set(profile.frameKey, parts);
+  return parts;
+}
+
 function earGeometry(side) {
   // The rim encircles the concha. The inner ridge splits above the canal and
   // the tragus projects at the front, before the cartilage gives way to the lobe.
@@ -564,9 +641,9 @@ const HEADBAND = new THREE.TorusGeometry(1,.085,6,28).rotateX(Math.PI / 2).scale
 const HAT_LIGHT = new THREE.TorusGeometry(1,.054,6,28).rotateX(Math.PI / 2);
 const HAIR_PARTS = new Map();
 
-export function cityLocs(style, covered, offset) {
+export function cityLocs(style, offset, bandana) {
   const tied = style === 'tiedLocs';
-  const key = style + (covered ? '-covered' : '') + '-' + offset;
+  const key = style + '-' + offset + (bandana ? '-bandana' : '');
   if (HAIR_PARTS.has(key)) return HAIR_PARTS.get(key);
   const positions = [], colors = [], indices = [];
   const sections = [.037,.09,.151,.221,.296,.374,.455,.541,.628,.709,.787,.854,.912,.954,.988];
@@ -577,9 +654,9 @@ export function cityLocs(style, covered, offset) {
     const side = Math.cos(angle), rear = Math.sin(angle);
     const endX = side * (tied ? .11 : .144) + .012*Math.sin(i*3.7);
     const endY = -(outer ? .39 : .29) - .051*(.5+.5*Math.sin(i*2.2)) - (tied ? .018 : 0);
-    const rootX = side * (tied ? .059 : .086);
-    const rootY = covered ? .096 : (tied ? .209 : outer ? .156 : .207);
-    const rootZ = -.024 + rear * (tied ? .099 : .129);
+    const rootX = side * (tied ? .059 : bandana ? .076 : .086);
+    const rootY = tied ? .209 : outer ? .156 : .207;
+    const rootZ = -.024 + rear * (tied ? .099 : bandana ? .106 : .129);
     const endZ = -.235 - offset + .028*Math.cos(i*2.3);
     const path = new THREE.CatmullRomCurve3([
       [rootX,rootY,rootZ],
@@ -594,6 +671,11 @@ export function cityLocs(style, covered, offset) {
       const v = u.clone().cross(tangent);
       const groove = Math.cos(a*2 + t*28 + i*.9);
       const r = thick*(.82+.18*Math.sin(t*Math.PI))*(1-.69*smooth(.950,1,t))*(1+.075*groove);
+      if (bandana) {
+        const hold = smooth(.043,.101,p.y) * (1 - smooth(.143,.185,p.y));
+        p.x *= 1 - .17 * hold;
+        p.z += (.025 + .70 * offset) * hold;
+      }
       p.addScaledVector(u,Math.cos(a)*r+.003*Math.sin(t*20+i)*Math.sin(t*Math.PI));
       p.addScaledVector(v,Math.sin(a)*r);
       const tone = .80+.115*groove+.12*(.5+.5*Math.cos(i*2.3))+.15*smooth(.67,1,t);
@@ -702,19 +784,25 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
     add(face.beard, M(C.hair,.90,0,FINISH.hair));
   }
 
-  const hat = C.hat ? look.hat : null;
   const style = body.style || (girl ? 'tail' : 'short');
+  const locs = hasLocs(style);
+  const hat = C.hat && (!locs || look.hat === 'bandana') ? look.hat : null;
+  const openBandana = locs && hat === 'bandana';
   if (style !== 'bald') {
-    if (hat !== 'bandana') {
+    if (hat !== 'bandana' || openBandana) {
       const color = !hat && style === 'buzz' ? '#' + new THREE.Color(C.hair).lerp(new THREE.Color(C.skin), .13).getHexString() : C.hair;
-      add(scalp(profile, hat ? 'underHat' : style), MV(color,.84,0,FINISH.hair), 0, 0, 0, !hat);
+      add(scalp(profile, hat && !openBandana ? 'underHat' : style, openBandana), MV(color,.84,0,FINISH.hair), 0, 0, 0, !hat || openBandana);
     }
     if (!hat && style === 'mohawk') add(hairPart(style), M(body.dye || C.hair,.84,0,FINISH.hair), 0, 0, 0, true);
     if (!hat && (style === 'bun' || style === 'buns')) {
       const xs = style === 'buns' ? [-.065, .065] : [0];
       for (const x of xs) add(hairPart('bun'),hair,x,.205,-.105,true).rotation.x = .4;
     }
-    if (!hat && style === 'tiedLocs') add(hairPart('bun'),hair,0,.158,-.123,true).scale.set(.89,.67,.96);
+    if (style === 'tiedLocs') {
+      const bun = add(hairPart('bun'),hair,0,openBandana ? .185 : .158,openBandana ? -.144 : -.123,true);
+      if (openBandana) { bun.scale.set(.98,.89,1.05); bun.rotation.x = .46; }
+      else bun.scale.set(.89,.67,.96);
+    }
     if (style === 'tail' || (hat && /^(bun|buns)$/.test(style))) {
       add(hairPart('tail'),hair,0,.047,-.115,true).rotation.x = .40;
     }
@@ -781,6 +869,13 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       for (const a of [.35,2.8,3.86,5.75]) addEyelet(roundBucket([.134,.20],a),a,thread(trim,.63));
       crown = BUCKET_TOP; crownZ = BUCKET_Z;
       bandY = .162; bandZ = .143; bandX = bandZ * BUCKET_X; bandCenter = BUCKET_Z;
+    } else if (openBandana) {
+      const {band,seam,print,knot,ties} = locsBandana(profile);
+      add(band, clothMat(main), 0, 0, 0, true).name = 'OpenBandana';
+      add(seam, M(thread(trim,.16),.93));
+      add(print, M(trim,.96));
+      add(knot, M(main,.93,0,FINISH.cloth)).name = 'BandanaKnot';
+      for (const tie of ties) add(tie, clothMat(main));
     } else if (hat === 'bandana') {
       add(WRAP, clothMat(main), 0, 0, 0, true);
       add(PRINT, M(trim, .92));
@@ -802,7 +897,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
     }
   }
   const tier = look.cus?.head || 0;
-  if (tier) {
+  if (tier && !locs) {
     const accent = look.acc || '#E2611A';
     if (hat) {
       const pin = add(PIN, M('#E7B23C', .39, .75), .063, hat === 'bucket' ? .177 : .171, hat === 'bucket' ? .115 : .107);
