@@ -5,10 +5,10 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=35';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=36';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loadFestivalStage } from './city3d-festival-art.js?v=1';
-import { initPower } from './city3d-power.js?v=25';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=26';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -18,8 +18,8 @@ import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=1';
-import { initFestival } from './city3d-campaign.js?v=1';
-import { loadCampaign } from './city3d-campaign-engine.js?v=1';
+import { initFestival } from './city3d-campaign.js?v=2';
+import { loadFestivalState } from './city3d-festival-story.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -219,7 +219,7 @@ function load() {
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
   s.story = loadStory(s.story);
-  s.festival = loadCampaign(s.festival);
+  s.festival = loadFestivalState(s.festival);
   s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
   s.scratchBest = Array.isArray(s.scratchBest) ? s.scratchBest : [];
   s.clubTrack = s.clubTrack === 1 ? 1 : 0;
@@ -691,6 +691,63 @@ export function initGame(ctx) {
   }
   let festivalGuest = null, festivalScene = null, festivalHome = null;
   let festivalPeople = [];
+  let narrativeCast = null, festivalSpin = null, openingShow = null;
+  function clearNarrativeCast() {
+    if (!narrativeCast) return;
+    narrativeCast.group.traverse(object => { if (object.isMesh) object.geometry.dispose(); });
+    narrativeCast.group.removeFromParent();
+    narrativeCast = null;
+  }
+  function setFestivalCast(point, order, lead) {
+    const show = lead && W.cyph;
+    if (show && !openingShow) {
+      openingShow = { cyBusy: W.cyBusy, home: W.hero.root.position.clone(), yaw: W.hero.root.rotation.y };
+      W.cyBusy = true;
+      W.hero.root.position.set(show.x - 2.8, 0, show.z + .62);
+      face(W.hero, show.x, show.z);
+    }
+    const centre = show || festivalScene?.position || W.hero.root.position;
+    if (show) W.camT = { x:show.x, z: show.z + .6, zoom:.50 };
+    const key = [point.x, point.z, centre.x, centre.z, lead, ...order].join(':');
+    if (narrativeCast?.key === key) return;
+    clearNarrativeCast();
+    const group = new THREE.Group(), actors = {};
+    group.name = 'FestivalNarrativeCast';
+    scene.add(group);
+    group.position.set(centre.x, .025, centre.z);
+    if (show) {
+      const light = new THREE.PointLight('#ffd09b', 10, 5);
+      light.position.set(.35, 2.2, -.12);
+      group.add(light);
+    }
+    order.forEach((actor, index) => {
+      const stitch = actor === 'stitch';
+      const outfit = HERO.topDown(stitch ? 3 : 5, stitch ? ['c:stencilBandana','c:cleanLaces'] : ['c:rebarCap','c:chromeTrack']);
+      outfit.col.top = stitch ? '#eec477' : '#5379ae';
+      outfit.col.sleeve = outfit.col.top;
+      outfit.col.trim = stitch ? '#452e46' : '#d9e6ec';
+      const dancer = mocapPerson(outfit, { body: bodyOf(stitch ? 410 : 611, { type: stitch ? 'slim' : 'athl' }) });
+      dancer.root.name = 'FestivalDancer:' + actor;
+      dancer.root.userData.role = actor === lead ? 'performs' : 'waits';
+      const x = show ? actor === lead ? 0 : 2.75 : index ? 1.78 : -1.45;
+      dancer.root.position.set(x, 0, show ? actor === lead ? 0 : -.72 : -2.05);
+      if (show && actor === lead) dancer.root.rotation.y = .25;
+      else face(dancer, 0, 0);
+      dancer.play('Breakdance_Ready');
+      group.add(dancer.root);
+      actors[actor] = dancer;
+    });
+    narrativeCast = { key, group, actors };
+  }
+  function playFestivalMove(dancer, clip, cue, fade) {
+    const length = clipLen(clip);
+    const seconds = cue?.seconds;
+    const speed = seconds && length ? Math.min(2.3, Math.max(.45, length / Math.max(.19, seconds))) : 1;
+    dancer.play(clip, { fade, once: cue ? true : undefined, speed });
+    if (clip.startsWith('City_Backspin') && cue?.clock) {
+      festivalSpin = { dancer, clip, length, clock: cue.clock, at: cue.clock(), speed };
+    }
+  }
   function createFestivalSet(point, act, decisions) {
     if (festivalScene) return;
     const layout = new THREE.Group();
@@ -728,6 +785,16 @@ export function initGame(ctx) {
     openAllowed: () => !A && !B && !P && !choosing && $('#cityLoading').hidden && $('#alpha').hidden && !$('#lookDialog').open,
     lock(locked) {
       W.lock = locked;
+      if (!locked) {
+        if (openingShow) {
+          W.hero.root.position.copy(openingShow.home);
+          W.hero.root.rotation.y = openingShow.yaw;
+          W.cyBusy = openingShow.cyBusy;
+          openingShow = null;
+        }
+        clearNarrativeCast();
+        festivalSpin = null;
+      }
       if (!locked && festivalScene) {
         if (festivalHome) W.hero.root.position.copy(festivalHome);
         festivalScene.traverse(mesh => { if (mesh.isMesh && !mesh.geometry.userData.sharedCityGeometry) mesh.geometry.dispose(); });
@@ -736,6 +803,7 @@ export function initGame(ctx) {
       paintAct();
     },
     prepareScene: createFestivalSet,
+    setCast: setFestivalCast,
     tryPrize(items) {
       try {
         const profile = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}');
@@ -750,8 +818,12 @@ export function initGame(ctx) {
         toast(_t('Мифический комплект надет'));
       } catch (_) {}
     },
-    displaySet(clip, rival, guestIndex) {
-      if (!rival) { (festivalPeople[guestIndex] || W.hero).play(clip, { fade: .12 }); return; }
+    displaySet(clip, rival, guestIndex, cue) {
+      const named = narrativeCast?.actors[cue?.actor];
+      if (named || !rival) {
+        playFestivalMove(named || festivalPeople[guestIndex] || W.hero, clip, cue, .12);
+        return;
+      }
       if (!festivalGuest) {
         festivalGuest = mocapPerson(HERO.topDown(5, ['c:stencilBandana']), { body: bodyOf(412, { type: 'slim' }) });
         scene.add(festivalGuest.root);
@@ -760,7 +832,7 @@ export function initGame(ctx) {
       festivalGuest.root.visible = true;
       festivalGuest.root.position.set(p.x - 1.25, 0, p.z - 1.25);
       face(festivalGuest, p.x, p.z);
-      festivalGuest.play(clip, { fade: .15 });
+      playFestivalMove(festivalGuest, clip, cue, .15);
     },
   });
   $('#g3festivalOpen').onclick = () => festival.open(false);
@@ -1834,9 +1906,14 @@ export function initGame(ctx) {
       g.people.forEach(J => { if (J !== B?.opp) W.tickAmbient(J, dt); });
     });
     if (festival.busy()) {
+      if (festivalSpin && festivalSpin.dancer.cur === festivalSpin.clip) {
+        const { dancer, clock, at, speed, length } = festivalSpin;
+        dancer.phraseTime = Math.min(length, (clock() - at) * speed);
+      }
       W.hero.tick(dt);
       if (festivalGuest?.root.visible) festivalGuest.tick(dt);
       festivalPeople.forEach(person => person.tick(dt));
+      if (narrativeCast) Object.values(narrativeCast.actors).forEach(person => person.tick(dt));
     } else if (festivalGuest) festivalGuest.root.visible = false;
     const festivalTarget = festival.target();
     if (!B && !P && !A && !choosing && !festival.busy()) {

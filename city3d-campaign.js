@@ -1,13 +1,16 @@
-import { ACTS, CAST, DECISIONS, EPISODES, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES, venueFor } from './city3d-campaign-data.js?v=1';
-import { createPhrase, DIRECTIONS, displayNote, MOVES, pieceAt, postInput, phraseVerdict, recordDecision, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=1';
-import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=1';
+import { ACTS, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES } from './city3d-campaign-data.js?v=1';
+import { createPhrase, DIRECTIONS, displayNote, MOVES, postInput, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=1';
+import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=2';
 import { examCourse, FESTIVAL_CHECKPOINTS, FESTIVAL_OFFICIAL, FESTIVAL_PRIZE, judgeFestivalExam } from './city3d-festival-exams.js?v=1';
+import { FESTIVAL_CAST, FESTIVAL_EPISODES, REVISED_TURNS, STORY_CHOICES, actAvailable, finalOrder, legacyMeeting, recordStoryDecision, storyCourse, storyDecision, storyLine, storyVenue, waitingDancer } from './city3d-festival-story.js?v=1';
+import { COMBOS, REPLY_LINES, SIGNATURES, STYLE_NAMES, comboEvents, comboInput, comboRival, playablePhrase, playableVerdict } from './city3d-festival-combos.js?v=1';
 
 const DIFFICULTY = { training: 'Медленный', normal: 'Обычный', quick: 'Быстрый' };
 const REACTIONS = {
   clean: 'Чисто в музыку', variation: 'Своя вариация', lineup: 'Круг передан',
   copied: 'Нужна собственная связка', fit: 'Рисунок не подошёл', line: 'В очередь нужен другой танцор',
   miss: 'Сигнал пропущен', rest: 'Здесь оставь паузу', early: 'Дождись отметки',
+  release: 'Отпускай на отметке тем же пальцем', style: 'Выбери один из двух рисунков',
 };
 
 const CLIPS = ['Breakdance_Uprock', 'Breakdance_Footwork_2', 'City_Backspin', 'Breakdance_Freeze_Var_4'];
@@ -73,9 +76,10 @@ function createPulse() {
         const pitches = [49, 55, 52, 65, 58, 46, 62, 73];
         const note = pitches[(course.flavor + pattern * 2 + Math.floor(beat / 4) + (slot === 2 ? 3 : 0) + 80) % pitches.length];
         if (slot % 2 === 0 || pattern === 2) tone(context, when + .026, 'triangle', note, note * .982, .22, .12);
-        if (slot !== 3 || pattern === 1) percussion(context, when + period * .52, 6800, .042, .029);
+        if (slot !== 3 || pattern === 1) percussion(context, when + period * (course.combo ? .5 : .52), 6800, .042, .029);
       } else if (slot === 3) percussion(context, when + period * .5, 1800, .08, .09);
     },
+    mark(context, when) { percussion(context, when, 2750, .055, .12); },
     scratch(context, which) {
       if (!context) return;
       const when = context.currentTime + .003;
@@ -89,7 +93,7 @@ function createPulse() {
   };
 }
 
-export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet, tryPrize, prepareScene }) {
+export function initFestival({ t, W, D, places, colliders, state, eligible, save, travel, leaveVisit, openAllowed, lock, displaySet, tryPrize, prepareScene, setCast }) {
   const tag = document.createElement('style');
   tag.textContent = FESTIVAL_CSS;
   document.head.append(tag);
@@ -106,12 +110,13 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   let run = null, opening = false, atVenue = false, activeSheet = null, practice = null, frame = 0, frameView = -1;
   let previousDepth = null;
   let examRecord = null;
-  const current = () => EPISODES[state.episode];
-  const storyTurn = () => STORY_TURNS[state.episode];
+  const current = () => FESTIVAL_EPISODES[state.episode];
+  const turnAt = episode => (legacyMeeting(state, episode) ? STORY_TURNS : REVISED_TURNS)[episode];
+  const storyTurn = () => turnAt(state.episode);
   const needsArrival = () => Boolean(storyTurn()?.preparatory && !state.prepared);
-  const location = () => needsArrival() ? VENUES[storyTurn().preparatory] : venueFor(current(), state.choices);
+  const location = () => needsArrival() ? VENUES[storyTurn().preparatory] : storyVenue(state.episode, state.choices, legacyMeeting(state));
   const findAnchor = () => {
-    const [district, id] = current() ? location() : venueFor(EPISODES.at(-1), state.choices);
+    const [district, id] = current() ? location() : storyVenue(58, state.choices);
     return district === D ? places.find(place => place.id === id) : null;
   };
   function getPoint() {
@@ -176,7 +181,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     return `<h2>${t(act.title)}</h2><p>${t(act.intro)}</p>`;
   }
   function verdictPoster() {
-    const results = Object.entries(DECISIONS).map(([id, rule]) => {
+    const results = Object.entries(STORY_CHOICES).map(([id, rule]) => {
       const choice = rule.options.find(option => option.tag === state.choices[id]);
       return choice ? `<p><b>${t(choice.label)}</b><br>${t(choice.consequence)}</p>` : '';
     }).join('');
@@ -188,7 +193,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   function route() {
     const e = current();
     const title = t('Городской фестиваль');
-    const visits = `<p class="festival-counter">${t('Встречи · {n}/{all}', { n: state.episode, all: EPISODES.length })}</p>`;
+    const visits = `<p class="festival-counter">${t('Встречи · {n}/{all}', { n: state.episode, all: FESTIVAL_EPISODES.length })}</p>`;
     if (!e) {
       setView('route', `<header><h2>${title}</h2>${button('fClose', '×', true)}</header>${visits}${verdictPoster()}
         ${button('fExams', t('Судимые испытания и мифический комплект'))}
@@ -197,9 +202,11 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       const [district, , landmark, photo] = location();
       const ready = atVenue && district === D;
       const act = ACTS[e.act];
-      const selected = Object.entries(DECISIONS).flatMap(([key, decision]) => {
-        const earliest = { venue: 4, roster: 3, sound: 5 }[key];
-        if (e.act < earliest) return [];
+      const selected = Object.entries(STORY_CHOICES).flatMap(([key, decision]) => {
+        const earliest = { venue: 4, roster: 3, sound: 5, slot: 2, access: 5, format: 6 }[key];
+        if (e.act !== earliest) return [];
+        if (key === 'slot' && state.episode !== 14 || key === 'access' && state.episode !== 44 ||
+            key === 'format' && state.episode !== 50) return [];
         const option = decision.options.find(item => item.tag === state.choices[key]);
         return option ? [`<p class="festival-payoff">${t(option.consequence)}</p>`] : [];
       }).join('');
@@ -207,9 +214,9 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       setView('route', `<header><h2>${title}</h2>${button('fClose', '×', true)}</header>
         ${visits}<article class="festival-act" style="--act:${act.color}">${chapterNotes()}
         <h3>${name(e, state.episode)}</h3>
-        <p class="festival-landmark">${t(landmark)} · ${t(CAST[e.speaker])}</p>
+        <p class="festival-landmark">${t(landmark)} · ${t(FESTIVAL_CAST[e.speaker])}</p>
         ${needsArrival() ? `<p>${t(storyTurn().before)}</p>` : ''}
-        <p>${t('Пьеса {n}/4 · пройдено {beat} из {all} ударов', { n: state.piece + 1, beat: state.beat, all: pieceAt(state.episode, state.piece, state.choices).beats })}</p>
+        <p>${t('Пьеса {n}/4 · пройдено {beat} из {all} ударов', { n: state.piece + 1, beat: state.beat, all: storyCourse(state.episode, state.piece, state).beats })}</p>
         ${selected}
         <figure class="festival-tip"><img src="img/story-${photo}.webp?v=1" alt="${t('Ориентир района фестиваля')}">
           ${district === D ? `<canvas id="fMap" width="340" height="180" aria-label="${t('Карта · синяя точка — ты, золотой ромб — нужная встреча')}"></canvas>` : ''}
@@ -256,8 +263,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   }
   function examError(error) { return t(error.message === 'outdated' ? 'Судимый зачёт откроется после обновления сервера.' : 'Судьи не получили результат. Попробуй ещё раз.'); }
   function examMenu(refresh = false) {
-    const examined = examRecord?.passed || [], [district] = current() ? location() : venueFor(EPISODES.at(-1), state.choices);
-    const routeCount = Array.from({ length: ACTS.length }, (_, act) => EPISODES.findLastIndex(ep => ep.act === act) + 1);
+    const examined = examRecord?.passed || [], [district] = current() ? location() : storyVenue(58, state.choices);
     setView('exams', `<header><h2>${t('Судимые испытания и мифический комплект')}</h2>${button('fBack', t('Назад'), true)}</header>
       <div class="festival-prizes"><img src="img/festival-prism.webp?v=1" alt="${t('Кроссовки «Грань круга» и шнурки «Световой рисунок»')}"></div>
       <p>${t('Кроссовки «Грань круга» и шнурки «Световой рисунок»')}</p>
@@ -266,7 +272,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       <div id="fExamNotice" role="status"></div>
       ${FESTIVAL_OFFICIAL.map((trial, index) => {
         const chapter = index < FESTIVAL_CHECKPOINTS.length ? index : ACTS.length - 1;
-        const local = state.episode >= routeCount[chapter];
+        const local = actAvailable(state, chapter);
         const access = local && district === D && FESTIVAL_OFFICIAL.slice(0, index).every(prior => examined.includes(prior.id));
         return `<article class="festival-act"><h3>${examined.includes(trial.id) ? '✓ ' : ''}${t(trial.name)}</h3>
           <p>${t('Соперник · {x}', { x: t(trial.rival) })}</p>
@@ -337,8 +343,8 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   }
   function practiceView() {
     if (!state.piece && !state.beat && !state.episode) return '';
-    const episodes = EPISODES.slice(0, Math.min(state.episode + 1, EPISODES.length)).map((e, index) =>
-      `<option value="${index}"${index === Math.min(state.episode, EPISODES.length - 1) ? ' selected' : ''}>${name(e, index)}</option>`).join('');
+    const episodes = FESTIVAL_EPISODES.slice(0, Math.min(state.episode + 1, FESTIVAL_EPISODES.length)).map((e, index) =>
+      `<option value="${index}"${index === Math.min(state.episode, FESTIVAL_EPISODES.length - 1) ? ' selected' : ''}>${name(e, index)}</option>`).join('');
     const pieces = [0, 1, 2, 3].map(n => `<option value="${n}">${t('Пьеса {n}', { n: n + 1 })}</option>`).join('');
     return `<details class="festival-practice"><summary>${t('Тренировка освоенной фразы')}</summary>
       <label>${t('Встреча')} <select id="fPracticeChoice">${episodes}</select></label>
@@ -354,22 +360,38 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     setView('opening', `<header><h2>${name(current(), state.episode)}</h2>${button('fBack',t('Назад'),true)}</header>
       ${state.episode === 0 ? `<img class="festival-plate" src="img/festival-lost.webp?v=1" alt="${t('Ограда на подходе к площадке и свободный проход сбоку.')}">` : ''}
       ${state.episode === 24 ? `<img class="festival-plate" src="img/festival-rehearsal.webp?v=1" alt="${t('Две вертушки на рабочем пульте и проход для следующего танцора.')}">` : ''}
-      <p><b>${t(CAST[current().speaker])}</b></p><p>${t(storyTurn().before)}</p>
+      <p><b>${t(FESTIVAL_CAST[current().speaker])}</b></p><p>${t(storyTurn().before)}</p>
       ${button('fConfirmLandmark',t('Сверить ориентир и продолжить'))}`);
     $('#fBack').onclick = route;
     $('#fConfirmLandmark').onclick = () => { state.prepared = true; save(); atVenue = false; route(); };
   }
   function briefing() {
-    const key = currentTarget(), e = EPISODES[key.episode], course = pieceAt(key.episode, key.piece, state.choices);
-    const decision = !practice && DECISIONS[e.decision];
-    const pendingChoice = decision && !state.choices[e.decision];
+    const key = currentTarget(), e = FESTIVAL_EPISODES[key.episode], course = storyCourse(key.episode, key.piece, state);
+    const decisionId = !practice && storyDecision(state);
+    const decision = STORY_CHOICES[decisionId];
+    const pendingChoice = decision && !state.choices[decisionId];
+    const combo = COMBOS[course.combo];
+    const lead = key.episode === 0 && state.choices.slot;
+    const turn = turnAt(key.episode);
+    const line = storyLine(key.episode, state.choices);
+    const cueSheet = !practice && key.episode === 44 && !legacyMeeting(state) && !state.cueSheet && !key.piece && !key.beat;
+    const previousTry = state.rematch;
+    const replay = previousTry?.key === [key.episode, key.piece, key.beat].join(':') && previousTry.style != null;
     const liveUnlocked = key.episode < state.episode || key.episode === state.episode && key.piece <= state.piece;
     const maxPractice = key.episode < state.episode || key.piece < state.piece ? course.beats - 1 : state.beat;
     const practiceOptions = practice && liveUnlocked ? Array.from({ length: Math.floor(maxPractice / 16) + 1 }, (_, i) =>
       `<option value="${i * 16}">${t('Фраза {n}', { n: i + 1 })}</option>`).join('') : '';
     setView('briefing', `<header><h2>${name(e, key.episode)}</h2>${button('fBack',t('Назад'),true)}</header>
-      ${!practice && key.piece === 0 && !key.beat && STORY_TURNS[key.episode] ? `<p class="festival-payoff">${t(STORY_TURNS[key.episode].before)}</p>` : ''}
-      <p>${t(MODE_NAMES[course.mode])}</p><p>${t(MODE_GUIDES[course.mode])}</p>
+      ${!practice && key.piece === 0 && !key.beat && turn ? `<p class="festival-payoff">${t(turn.before)}</p>` : ''}
+      ${lead ? `<p class="festival-lead">${t('Выходит {x}', { x: t(FESTIVAL_CAST[lead]) })}</p>` : ''}
+      ${!practice && key.piece === 0 && line ? `<p class="festival-payoff">${t(line)}</p>` : ''}
+      ${!practice && decisionId && state.choices[decisionId] ? `<p>${t(decision.options.find(item => item.tag === state.choices[decisionId]).consequence)}</p>` : ''}
+      ${cueSheet ? `<fieldset><legend>${t('Поставь сигнал на схему входа')}</legend>
+        <button type="button" data-sheet="lead">${t('Удар и встречный кик')}</button>
+        <button type="button" data-sheet="answer">${t('Пауза и дробный подхват')}</button></fieldset>` : ''}
+      <p><b>${t(combo?.name || MODE_NAMES[course.mode])}</b></p><p>${t(combo?.guide || MODE_GUIDES[course.mode])}</p>
+      ${replay ? `<p class="festival-payoff">${t('Соперник запомнил твой ответ «{x}». Попробуй другой рисунок на тот же акцент.', { x: t(STYLE_NAMES[previousTry.style]) })}</p>` : ''}
+      ${combo && !pendingChoice && !cueSheet ? `<div class="festival-study" id="fStudy"></div>` : ''}
       ${pendingChoice ? `<fieldset><legend>${t(decision.question)}</legend>
         ${decision.options.map(option => `<button type="button" data-f-choice="${option.tag}">${t(option.label)}</button>`).join('')}</fieldset>` : ''}
       <p>${t('Жёлтая рамка показывает текущий удар. Следующие знаки видны правее. На клавиатуре работают 1–4.')}</p>
@@ -377,13 +399,19 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         `<option ${id === state.tempo ? 'selected' : ''} value="${id}">${t(DIFFICULTY[id])}</option>`).join('')}</select></label>
       ${practice ? practiceOptions ? `<label>${t('Фраза')} <select id="fPhrase">${practiceOptions}</select></label>`
         : `<p>${t('Сначала открой эту пьесу в сюжете.')}</p>` : ''}
-      ${!pendingChoice && (!practice || practiceOptions) ? button('fPlay', t(practice ? 'Тренировать фразу' : 'Играть пьесу')) : ''}
-      ${!practice && !pendingChoice && !key.beat ? button('fDemo', t('Попробовать одну фразу перед выступлением'), true) : ''}`);
+      ${!pendingChoice && !cueSheet && (!practice || practiceOptions) ? button('fPlay', t(practice ? 'Тренировать фразу' : 'Играть пьесу')) : ''}
+      ${!practice && !pendingChoice && !cueSheet && !key.beat ? button('fDemo', t('Попробовать одну фразу перед выступлением'), true) : ''}`);
     $('#fBack').onclick = () => { practice = null; route(); };
     $('#fTempo').onchange = event => { state.tempo = event.target.value; save(); };
     panel.querySelectorAll('[data-f-choice]').forEach(item => { item.onclick = () => {
-      if (recordDecision(state, item.dataset.fChoice)) { save(); briefing(); }
+      if (recordStoryDecision(state, item.dataset.fChoice)) { save(); briefing(); }
     }; });
+    panel.querySelectorAll('[data-sheet]').forEach(item => { item.onclick = () => {
+      state.cueSheet = item.dataset.sheet;
+      save();
+      briefing();
+    }; });
+    if (combo && !pendingChoice && !cueSheet) playStudy(course);
     if ($('#fDemo')) $('#fDemo').onclick = () => {
       practice = { ...key };
       start();
@@ -393,17 +421,111 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       start();
     };
   }
+  function cueName(item) {
+    if (item.undecided) return '◇';
+    if (item.kind === 'style') return t('Выбор');
+    const pad = DIRECTIONS[item.pad];
+    if (item.kind === 'hand') return t('Передай {x}', { x: pad });
+    if (item.kind === 'hold') return t('Держи {x}', { x: pad });
+    if (item.kind === 'release') return t('Отпусти {x}', { x: pad });
+    return pad + (item.at % 1 ? ' · ' + t('и') : '');
+  }
+  function playStudy(course) {
+    const key = currentTarget(), study = $('#fStudy');
+    const phrases = [0, 1, 2, 3].map(section => playablePhrase(course,
+      Math.ceil(course.beats / 64 * section) * 16, state.choices)).filter(phrase => phrase.spec);
+    const poseStudy = phrases.some(phrase => phrase.alternate || phrase.spec === COMBOS.coil) ?
+      `<details><summary>${t('Лист поз для тренировки')}</summary><img loading="lazy" src="img/festival-pose-study.webp?v=1"
+        alt="${t('Две цепочки поз: вход, перенос веса, удержание на плече и выход в стойку.')}"></details>` : '';
+    study.innerHTML = `<p><b>${t('Рисунки этой пьесы')}</b></p>${phrases.map(phrase =>
+      `<div><span>${t(phrase.spec.name)}</span> ${comboEvents(phrase).slice(0,5).map(item => `<small>${cueName(item)}</small>`).join(' ')}</div>`).join('')}${poseStudy}`;
+    castFor(key, course);
+    const primary = phrases[0];
+    if (primary?.alternate) {
+      const actor = comboRival(primary, state);
+      displaySet?.(SIGNATURES[actor][2], true, null, { actor, seconds: 1.8 });
+    }
+  }
+  function castFor(key, course) {
+    const point = getPoint();
+    if (!point || !atVenue) return;
+    if (key.episode === 0 && state.choices.slot) {
+      const lead = state.choices.slot;
+      setCast?.(point, [lead, waitingDancer(state.choices)], lead);
+    } else if (key.episode === 44 && state.choices.access === 'trace') {
+      setCast?.(point, [waitingDancer(state.choices)]);
+    } else if (key.episode >= 48 && key.episode <= 58) {
+      const order = finalOrder(state.choices);
+      setCast?.(point, order);
+    } else if (key.episode === 14 || COMBOS[course.combo]?.styles) {
+      const lead = COMBOS[course.combo]?.rival || waitingDancer(state.choices);
+      setCast?.(point, [lead, lead === 'stitch' ? 'granite' : 'stitch']);
+    }
+  }
+  function paintCombo(beat) {
+    const r = run, phrase = r.phrase, near = Math.round(beat * 2) / 2;
+    const progress = Math.floor(beat + .5);
+    if (frameView === near) return;
+    frameView = near;
+    const steps = comboEvents(phrase);
+    const now = steps.find(item => item.at === near);
+    const next = steps.filter(item => item.at > near).slice(0, 4);
+    if (next.length < 4 && r.nextPhrase?.spec) {
+      next.push(...comboEvents(r.nextPhrase).slice(0,4-next.length).map(item => ({ ...item, ahead: true })));
+    }
+    const choosing = phrase.alternate && phrase.style == null && near <= 0;
+    $('#fMode').textContent = t(phrase.spec.name);
+    $('#fCues').innerHTML = [now, ...next].slice(0,5).map((item, index) =>
+      `<span class="${index === 0 ? 'now' : ''} ${item?.kind || ''}">${item ? cueName(item) : '—'}</span>`).join('');
+    const rival = phrase.alternate ? comboRival(phrase, state) : null;
+    const prompt = now?.kind === 'hold' ? t('Зажми и держи до отметки отпускания')
+      : now?.kind === 'release' ? t('Отпусти сейчас')
+      : now?.kind === 'style' ? t('Ответ на акцент · {x}', { x: t(FESTIVAL_CAST[rival]) })
+      : beat < 0 ? r.key.episode === 0 && state.choices.slot ? t('Выходит {x}', { x: t(FESTIVAL_CAST[state.choices.slot]) }) : t('Приготовься') : '';
+    $('#fPrompt').textContent = prompt;
+    const following = next[0];
+    const preview = choosing ? STYLE_NAMES.map(label => t(label)).join(' / ')
+      : following?.kind === 'style' ? t('Далее · {x}', { x: STYLE_NAMES.map(label => t(label)).join(' / ') })
+      : following?.ahead ? t('Далее · {x}', { x: t(r.nextPhrase.spec.name) }) : '';
+    $('#fPreview').textContent = preview;
+    panel.querySelectorAll('[data-pad]').forEach((pad,i) => {
+      pad.textContent = choosing ? STYLE_NAMES[i] ? t(STYLE_NAMES[i]) : DIRECTIONS[i] : DIRECTIONS[i];
+      pad.classList.toggle('not-in-score', choosing && i > 1);
+      pad.classList.toggle('holding', Boolean(phrase.pending && phrase.steps.find(item => item.kind === 'release' && item.at >= near)?.pad === i));
+      pad.setAttribute('aria-label', pad.textContent);
+    });
+    if (rival && (near <= 0 || beat < 0) && r.rivalPreview !== phrase) {
+      r.rivalPreview = phrase;
+      displaySet?.(SIGNATURES[rival][2], true, null, { actor: rival, seconds: r.period * 1.8 });
+    }
+    $('#fLiveProgress').textContent = t('Фраза {n} · {b}/{all}', { n: Math.floor(phrase.start / 16) + 1, b: Math.max(0, phrase.start + progress + 1), all: r.course.beats });
+  }
+  function keyEdge(event, edge) {
+    if (!run || event.repeat) return;
+    const direct = /^[1-4]$/.test(event.key) ? Number(event.key) - 1 : null;
+    const pad = direct ?? (run.phrase.spec && [' ', 'Enter'].includes(event.key) ? Number(event.target.closest?.('[data-pad]')?.dataset.pad) : NaN);
+    if (!Number.isInteger(pad)) return;
+    event.preventDefault();
+    press(pad, edge, event.code || event.key);
+  }
   function courseView(course) {
-    setView('piece', `<header><div><b>${t(MODE_NAMES[course.mode])}</b><small id="fLiveProgress"></small></div>
+    setView('piece', `<header><div><b id="fMode">${t(COMBOS[course.combo]?.name || MODE_NAMES[course.mode])}</b><small id="fLiveProgress"></small></div>
       ${button('fPause',t('Пауза'),true)}</header>
       <div id="fCues" aria-hidden="true"></div><div id="fPrompt"></div><div id="fPreview"></div>
-      ${course.mode === 'd' ? `<div class="festival-decks" aria-hidden="true"><div data-deck="0"></div><div data-deck="1"></div></div>` : ''}
+      ${course.mode === 'd' && !course.combo ? `<div class="festival-decks" aria-hidden="true"><div data-deck="0"></div><div data-deck="1"></div></div>` : ''}
       <div id="fPads">${DIRECTIONS.map((label, index) => `<button type="button" data-pad="${index}">${label}</button>`).join('')}</div>
       <p id="fResponse" aria-live="polite"></p>`);
     $('#fPause').onclick = pause;
     panel.querySelectorAll('[data-pad]').forEach(item => {
-      item.onpointerdown = event => { event.preventDefault(); press(Number(item.dataset.pad)); };
-      item.onclick = event => { if (event.detail === 0) press(Number(item.dataset.pad)); };
+      const pad = Number(item.dataset.pad);
+      item.onpointerdown = event => {
+        event.preventDefault();
+        if (run?.phrase.spec && event.isTrusted) item.setPointerCapture?.(event.pointerId);
+        press(pad, 'down', event.pointerId);
+      };
+      item.onpointerup = event => press(pad, 'up', event.pointerId);
+      item.onpointercancel = event => press(pad, 'cancel', event.pointerId);
+      item.onclick = event => { if (event.detail === 0 && !run?.phrase.spec) press(pad); };
     });
     panel.querySelectorAll('[data-deck]').forEach(disc => {
       let pointer = null, startAngle = 0;
@@ -428,9 +550,11 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     $('#fCues').style.setProperty('--beat-glow', String(Math.max(.14, 1 - Math.abs(offset) * 2)));
     if (index === frameView) return;
     frameView = index;
+    $('#fMode').textContent = t(MODE_NAMES[r.course.mode]);
     const labels = event?.kind === 'cast' ? RUNNERS : event?.kind === 'build' || event?.kind === 'reply' ? MOVES : null;
     const decks = r.course.mode === 'd' ? [t('Левая') + ' ↶', t('Левая') + ' ↷', t('Правая') + ' ↶', t('Правая') + ' ↷'] : null;
     panel.querySelectorAll('[data-pad]').forEach((pad, i) => {
+      pad.classList.remove('not-in-score','holding');
       pad.textContent = (labels ? t(labels[i]) : decks?.[i] || DIRECTIONS[i]);
     });
     panel.querySelectorAll('[data-deck]').forEach(disc => {
@@ -464,9 +588,30 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       `<span class="${i === 1 ? 'now' : i === 0 ? 'past' : ''}">${cue(index + i - 1)}</span>`).join('');
     $('#fLiveProgress').textContent = t('Фраза {n} · {b}/{all}', { n: Math.floor(phrase.start / 16) + 1, b: Math.max(0, phrase.start + index + 1), all: r.course.beats });
   }
-  function press(value) {
+  function press(value, edge = 'down', token = 'direct') {
     if (!run) return;
     const relative = (run.now() - run.phraseStart) / run.period;
+    if (run.phrase.spec) {
+      const response = comboInput(run.phrase, relative, value, edge, token, state.tempo === 'training');
+      if (!response) return;
+      const { reaction, event, duration } = response;
+      $('#fResponse').textContent = t(event?.kind === 'style' ? REPLY_LINES[value] : REACTIONS[reaction]);
+      if (event?.kind === 'style') {
+        displaySet?.(value === 0 ? 'Festival_AnswerCut' : 'Festival_AnswerThread', false, null, { seconds: run.period * 1.8 });
+        const actor = comboRival(run.phrase, state);
+        displaySet?.(value === 0 ? 'City_Trick_KickSwitch' : 'Festival_FootReset', true, null, { actor, seconds: 1.05 });
+        frameView = -4;
+      }
+      if (event?.clip) {
+        if (event.kind === 'hold' || event.kind === 'release') frameView = -4;
+        const members = finalOrder(state.choices);
+        const lead = run.key.episode === 0 && state.choices.slot;
+        const actor = lead || (event.kind === 'hand' ? members[Math.round(event.at / 8) % members.length] : null);
+        displaySet?.(event.clip, false, null, { actor, seconds: duration * run.period, hold: event.kind === 'hold', clock: run.now });
+      }
+      return;
+    }
+    if (edge !== 'down') return;
     const index = Math.round(relative);
     const item = displayNote(run.phrase, index);
     if (!item) return;
@@ -487,16 +632,25 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     run = null;
     if (exam) examBrief(exam.spec, exam.practiceOnly); else briefing();
   }
-  function result(verdict, completed, previous) {
+  function result(verdict, completed, turn, key) {
     pulse.stop();
     window.cityMusic?.pause(false);
     const trained = Boolean(practice);
     const advance = verdict.passed && !trained;
+    const lost = !verdict.passed && verdict.style != null && !trained;
+    if (lost) {
+      state.rematch = { key: [key.episode, key.piece, key.beat].join(':'), style: verdict.style };
+      save();
+    } else if (!trained && state.rematch) {
+      state.rematch = undefined;
+      save();
+    }
     setView('result', `<header><h2>${t(verdict.passed ? (completed ? 'Встреча сыграна' : 'Фраза сыграна') : 'Попробуй эту фразу ещё раз')}</h2>
       ${button('fClose', t('Закрыть журнал'), true)}</header>
       <p>${t('В музыку · {hits}/{total} · лишние сигналы {errors}', { hits: verdict.hits, total: verdict.required, errors: verdict.errors })}</p>
       ${verdict.variation ? `<p>${t('Свои вариации и передачи · {n}', { n: verdict.variation })}</p>` : ''}
-      ${completed && STORY_TURNS[previous] ? `<p class="festival-payoff">${t(STORY_TURNS[previous].after)}</p>` : ''}
+      ${lost ? `<p class="festival-payoff">${t('Соперник держит эту фразу. Твой прежний зачёт остаётся; можно взять реванш с того же удара.')}</p>` : ''}
+      ${completed && turn ? `<p class="festival-payoff">${t(turn.after)}</p>` : ''}
       ${button('fAgain',t(advance ? (completed ? 'Следующая встреча' : 'Продолжить') : 'К фразе'))}`);
     $('#fClose').onclick = close;
     $('#fAgain').onclick = () => {
@@ -509,7 +663,13 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const r = run, now = r.now();
     while (r.audio && r.epoch + r.cursor * r.period < now + .16) {
       const when = r.epoch + r.cursor * r.period;
-      if (when >= now) pulse.beat(r.audio, when, r.cursor + r.key.beatAtStart, r.period, r.course);
+      if (when >= now) {
+        const beat = r.cursor + r.key.beatAtStart;
+        pulse.beat(r.audio, when, beat, r.period, r.course);
+        if (r.phrase.spec && comboEvents(r.phrase).some(item => item.at === beat - r.phrase.start + .5)) {
+          pulse.mark(r.audio, when + r.period * .5);
+        }
+      }
       r.cursor++;
     }
     const offset = (now - r.phraseStart) / r.period;
@@ -527,31 +687,35 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         frame = requestAnimationFrame(playFrame);
         return;
       }
-      const verdict = phraseVerdict(r.phrase, state.tempo === 'training');
+      const verdict = playableVerdict(r.phrase, state.tempo === 'training');
       const beat = r.phrase.start + r.phrase.length;
-      const prior = state.episode;
-      if (!practice && recordPhrase(state, verdict, beat, r.key)) save();
+      const prior = state.episode, turn = turnAt(prior);
+      if (!practice && recordPhrase(state, verdict, beat, r.key)) {
+        if (state.episode !== prior) state.cueSheet = state.legacyEpisode = undefined;
+        save();
+      }
       const completed = state.episode !== prior;
       if (practice || !verdict.passed || beat >= r.course.beats) {
         run = null;
-        result(verdict, completed, prior);
+        result(verdict, completed, turn, r.key);
         return;
       }
       r.key.beat = beat;
       r.phraseStart += r.period * r.phrase.length;
-      r.phrase = createPhrase(r.course, beat, { ...state.choices, lastReply: state.lastReply });
+      r.phrase = playablePhrase(r.course, beat, { ...state.choices, lastReply: state.lastReply });
       const next = beat + r.phrase.length;
-      r.nextPhrase = next < r.course.beats ? createPhrase(r.course, next, state.choices) : null;
+      r.nextPhrase = next < r.course.beats ? playablePhrase(r.course, next, state.choices) : null;
       frameView = -2;
     }
     const adjusted = (now - r.phraseStart) / r.period;
-    paintPiece(Math.round(adjusted), adjusted - Math.round(adjusted));
+    if (r.phrase.spec) paintCombo(adjusted);
+    else paintPiece(Math.round(adjusted), adjusted - Math.round(adjusted));
     frame = requestAnimationFrame(playFrame);
   }
   async function start() {
     if (opening || run) return;
     opening = true;
-    const key = currentTarget(), course = pieceAt(key.episode, key.piece, state.choices);
+    const key = currentTarget(), course = storyCourse(key.episode, key.piece, state);
     const audio = await pulse.open();
     if (!opening || panel.hidden) return;
     opening = false;
@@ -564,15 +728,21 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const epoch = now() + period * 2;
     key.beatAtStart = key.beat;
     run = { key, audio, now, course, period, epoch, phraseStart: epoch, cursor: -1, exam,
-      phrase: createPhrase(course, key.beat, exam ? {} : { ...state.choices, lastReply: state.lastReply }) };
+      phrase: (exam ? createPhrase : playablePhrase)(course, key.beat, exam ? {} : { ...state.choices, lastReply: state.lastReply }) };
     const next = key.beat + run.phrase.length;
-    run.nextPhrase = next < course.beats ? createPhrase(course, next, state.choices) : null;
+    run.nextPhrase = next < course.beats ? (exam ? createPhrase : playablePhrase)(course, next, state.choices) : null;
     frameView = -3;
     const point = getPoint();
     if (point && (atVenue || exam)) {
-      const act = EPISODES[key.episode]?.act ?? 7;
+      const act = FESTIVAL_EPISODES[key.episode]?.act ?? 7;
       W.camT = { x: point.x, z: point.z - .8, zoom: act >= 6 ? .79 : .52 };
       if (act >= 6 || exam) prepareScene?.(point, act, state.choices);
+    }
+    if (!exam) {
+      castFor(key, course);
+      const opener = key.episode === 0 ? state.choices.slot
+        : [50, 55].includes(key.episode) && state.choices.format === 'relay' ? finalOrder(state.choices)[0] : null;
+      if (opener) displaySet?.(SIGNATURES[opener][2], false, null, { actor: opener, seconds: period * 2 });
     }
     courseView(course);
     frame = requestAnimationFrame(playFrame);
@@ -587,8 +757,9 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   addEventListener('keydown', event => {
     if (panel.hidden) return;
     if (event.key === 'Escape') { event.preventDefault(); if (run) pause(); else close(); }
-    if (run && !event.repeat && /^[1-4]$/.test(event.key)) { event.preventDefault(); press(Number(event.key) - 1); }
+    keyEdge(event, 'down');
   });
+  addEventListener('keyup', event => keyEdge(event, 'up'));
   document.addEventListener('visibilitychange', () => { if (document.hidden && run) pause(); });
   return { open, close, target: getPoint, busy: () => !panel.hidden };
 }
