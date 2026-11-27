@@ -15,7 +15,7 @@ import { CLUB_TRACKS } from './city3d-club.js?v=7';
 import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=2';
 import { performDJ } from './city3d-dj.js?v=3';
-import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=2';
+import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -455,7 +455,7 @@ export function initGame(ctx) {
   const wallArt = (c, mine) => mine
     ? { word: nick(), style: c.id === 'forge' ? 'stencil' : ART[c.id].style,
       pal: c.id === 'forge' ? 'ochre' : WRITER_PALETTE[D], extra: 'crown' }
-    : ART[c.id];
+    : { ...ART[c.id], piece: c.id };
   function placeWall(g) {
     if (g.c.wall) return { x: g.c.wall[0], z: g.c.wall[1] };
     // a free spot ~2.8 m from the crew, preferring the side away from the middle of the yard

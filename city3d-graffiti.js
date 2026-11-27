@@ -7,6 +7,13 @@ const surfaces = {
   park: ['#717b6c', '#563d58'],
   prom: ['#6c645f', '#71472e'],
 };
+const pieces = {
+  yard: ['rusty', 'acid', 'owls', 'gold'],
+  center: ['stencil', 'turn', 'chrome'],
+  park: ['funk', 'roots', 'wave'],
+  prom: ['rebar', 'volt', 'forge'],
+};
+const repainted = new WeakSet();
 const slab = new THREE.BoxGeometry(3.6, 2.2, .28);
 const lip = new THREE.BoxGeometry(3.67, .13, .35);
 const plain = new THREE.MeshStandardMaterial({ color: '#676462', roughness: .94 });
@@ -19,8 +26,9 @@ function canvas(w = WIDTH, h = HEIGHT) {
   return cv;
 }
 
-async function loadImage(name) {
+async function loadImage(name, decorative = false) {
   const image = new Image();
+  if (decorative) image.fetchPriority = 'low';
   image.src = new URL('./img/graffiti-' + name + '.webp?v=1', import.meta.url).href;
   try { await image.decode(); return image; } catch (_) { return null; }
 }
@@ -34,6 +42,10 @@ function drawTile(x, image, index, flip, width, height) {
 }
 
 export async function loadGraffitiSurface(district) {
+  // Decorative bakes can arrive after the first frame on a slow connection.
+  const artwork = { atlas: null };
+  artwork.ready = loadImage(district, true).then(image => { artwork.atlas = image; });
+  const facades = district === 'yard' ? ['fedoskin', 'cypher'].map(name => loadImage(name, true)) : [];
   const [color, wear] = await Promise.all([loadImage('concrete'), loadImage('wear')]);
   const index = Math.max(0, Object.keys(surfaces).indexOf(district));
   const masks = [];
@@ -49,7 +61,7 @@ export async function loadGraffitiSurface(district) {
       masks.push(mask);
     }
   }
-  return { district, index, color, masks };
+  return { district, index, color, masks, artwork, facades };
 }
 
 function wallBase(surface, seed, flip) {
@@ -87,8 +99,16 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
   });
   const flip = seed % 2 === 0;
   const base = wallBase(surface, seed, flip);
+  const tileFor = art => pieces[surface.district]?.indexOf(art.piece) ?? -1;
+  const drawPiece = (x, art) => {
+    const tile = tileFor(art), atlas = surface.artwork?.atlas;
+    if (!atlas || tile < 0) return false;
+    drawTile(x, atlas, tile, false, WIDTH, HEIGHT);
+    return true;
+  };
   const artCanvas = art => {
     const cv = canvas(), x = cv.getContext('2d');
+    if (drawPiece(x, art)) return cv;
     x.save();
     if (window.CITY_GFX) {
       const paint = CITY_GFX.graf({ ...art, w: WIDTH, h: HEIGHT, scale: 1, seed: seed + 17, mural: true });
@@ -107,6 +127,9 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
     return cv;
   };
   const cv = artCanvas(spec), tex = new THREE.CanvasTexture(cv);
+  if (tileFor(spec) >= 0 && !surface.artwork?.atlas) surface.artwork?.ready.then(() => {
+    if (!repainted.has(cv) && drawPiece(cv.getContext('2d'), spec)) tex.needsUpdate = true;
+  });
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   const face = new THREE.Mesh(front, new THREE.MeshStandardMaterial({
@@ -120,6 +143,7 @@ export function makeGraffitiWall({ model, surface, seed, spec }) {
 }
 
 export function revealGraffiti({ cv, tex }, old, next, progress) {
+  repainted.add(cv);
   const x = cv.getContext('2d'), edge = cv.width * progress;
   if (progress >= 1) x.drawImage(next, 0, 0);
   else {
