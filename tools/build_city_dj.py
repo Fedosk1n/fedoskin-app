@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from city_blender_export import export_scene, paint, studio
@@ -185,8 +185,9 @@ for i in range(7):
 block("Crossfader slot", (0, -.322, 1.129), (.303, .031, .009), rub, .004)
 block("Crossfader cap", (.033, -.322, 1.145), (.049, .051, .029), silver, .007)
 
-# Laptop on a compact rear shelf, screen facing the player/camera.
+# Laptop on a compact rear shelf.
 block("Laptop shelf", (-.72, .343, 1.143), (.51, .295, .033), trim, .009)
+laptop_start = len(objects)
 block("Laptop chassis", (-.72, .331, 1.179), (.437, .248, .024), silver, .008)
 block("Keyboard inset", (-.72, .336, 1.193), (.374, .133, .006), dark, .006)
 for i in range(3):
@@ -200,6 +201,14 @@ glass.rotation_euler.x = -.27
 for i in range(21):
     height = .011 + .082 * (sin(i*.73 + .5)**2) * (1 - .025*i)
     block("Waveform on screen", (-.893 + i*.017, .447, 1.306), (.008, .008, height), green)
+if club:
+    # The display faces the operator while the operator faces the dance floor.
+    pivot = Vector((-.72, .331, 1.179))
+    turn = Matrix.Translation(pivot) @ Matrix.Rotation(pi, 4, 'Z') @ Matrix.Translation(-pivot)
+    bpy.context.view_layer.update()
+    for part in objects[laptop_start:]:
+        part.matrix_world = turn @ part.matrix_world
+
 for x, offset in ((-.32, 0), (.61, .044)):
     points = [(x, .253, 1.113), (x, .434, 1.071), (x + .1, .5, .953),
               (x + .17, .436, .842), (x + .133, .41, .706 + offset)]

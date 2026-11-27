@@ -11,10 +11,10 @@ import { initPower } from './city3d-power.js?v=22';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=4';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=2';
+import { CLUB_TRACKS } from './city3d-club.js?v=5';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=3';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
-import { performDJ } from './city3d-dj.js?v=2';
+import { performDJ } from './city3d-dj.js?v=3';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
@@ -668,7 +668,7 @@ export function initGame(ctx) {
   if (club) {
     $('#g3tf').hidden = true;
     ctx.backgroundMusic(CLUB_TRACKS[S.clubTrack]);
-    PLACES.push({ id: 'smoke', x: club.floor.x, z: club.floor.z + 3.52, r: 2.12 },
+    PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
   const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
@@ -1206,7 +1206,7 @@ export function initGame(ctx) {
     const H = W.hero, lv = ctx.heroLevel(), c = g.c, r = rng((Date.now() ^ (c.lv * 911)) >>> 0);
     const opp = g.people[0], cx = g.x, cz = g.z;
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
-    const meSpot = { x: cx - .3, z: cz + 2.1 }, opSpot = { x: cx + .3, z: cz - 2.1 };
+    const [opSpot, meSpot] = g.smoke ? club.duelSpots : [{ x: cx + .3, z: cz - 2.1 }, { x: cx - .3, z: cz + 2.1 }];
     const turns = [], rounds = g.smoke || c.tour ? 1 : c.lv >= 3 ? 2 : 1;
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq), choices = availablePower();
     for (let i = 0; i < rounds; i++) {
@@ -1218,7 +1218,7 @@ export function initGame(ctx) {
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
     B = { g, opp, turns, choices, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
-    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
+    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: g.smoke ? 1.15 : .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
     $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
     paintAct();
@@ -1290,7 +1290,7 @@ export function initGame(ctx) {
       const k = ease(clamp((now - B.pt) / B.walkIn, 0, 1));
       W.walk.move(H, dt, B.meSpot.x, B.meSpot.z, k, Math.atan2(B.cx - B.meSpot.x, B.cz - B.meSpot.z));
       W.walk.move(B.opp, dt, B.opSpot.x, B.opSpot.z, k, Math.atan2(B.cx - B.opSpot.x, B.cz - B.opSpot.z));
-      if (k >= 1) { B.phase = 'turn'; B.i = -1; nextTurn(); }
+      if (k >= 1) { B.phase = 'turn'; B.i = -1; if (B.g.smoke) W.camT.zoom = .4; nextTurn(); }
     } else if (B.phase === 'turn') {
       if (B.skip) { PM.cancel(); FZ.cancel(); finishSkip(); return; }
       // Pause the choreography clock during power drawing, replays and the manual freeze.

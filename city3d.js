@@ -9,8 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=58';
-import { buildClub } from './city3d-club.js?v=4';
+import { initGame } from './city3d-game.js?v=59';
+import { buildClub } from './city3d-club.js?v=5';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
@@ -116,10 +116,10 @@ async function loadAsphalt() {
   ]);
   return { color, surface, repair };
 }
-async function loadBlenderModel(file) {
+async function loadBlenderModel(file, revision = 1) {
   if (!file) return null;
   try {
-    const response = await fetch(new URL(`./anim/${file}.json?v=1`, import.meta.url));
+    const response = await fetch(new URL(`./anim/${file}.json?v=${revision}`, import.meta.url));
     if (!response.ok) return null;
     const model = await response.json();
     const arrays = { Float32Array, Int8Array, Uint16Array, Uint32Array };
@@ -1093,7 +1093,7 @@ async function boot() {
 
   const [, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges] = await Promise.all([
     loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
-    loadBlenderModel({ yard: 'yard-dj', park: 'park-paths', club: 'club-dj' }[DIST]), DIST !== 'club' ? loadBlenderModel('sound-systems') : null,
+    DIST === 'club' ? loadBlenderModel('club-dj', 2) : loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), DIST !== 'club' ? loadBlenderModel('sound-systems') : null,
     DIST !== 'club' ? loadBlenderModel('graffiti-wall') : null, DIST !== 'club' ? loadGraffitiSurface(DIST) : null,
     DIST === 'park' ? loadBlenderModel('park-playground') : null,
     DIST === 'club' ? loadBlenderModel('club-judges') : null,

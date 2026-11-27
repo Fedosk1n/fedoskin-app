@@ -72,7 +72,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   let run;
 
   function camera() {
-    W.camT = { x: club.floor.x - 1.15, z: club.floor.z + .5, zoom: .78 };
+    W.camT = { x: club.floor.x, z: club.floor.z + .4, zoom: 1.15 };
     W.camSnap = true;
   }
   function start(track) {
@@ -83,7 +83,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     // An immediate first duel teaches the rotation, then the actual queue takes over.
     const line = [first.id, hero.id, ...others.map(p => p.id)];
     run = { entries, line, track, points: Object.fromEntries(line.map(id => [id, 0])), left: SMOKE_TIME, walks: [], phase: 'entry',
-      home: { x: J.root.position.x, z: J.root.position.z, ry: J.root.rotation.y } };
+      home: { x: J.root.position.x, z: J.root.position.z, yaw: J.root.rotation.y } };
     W.lock = true;
     document.body.classList.add('g3fight');
     hud.hidden = actions.hidden = false;
@@ -92,9 +92,9 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     arrange();
     paint();
   }
-  function move(J, at, yaw) {
+  function move(J, at) {
     W.walk.start(J);
-    run.walks.push({ J, at, yaw });
+    run.walks.push({ J, at });
   }
   function arrange() {
     club.hideVotes();
@@ -103,15 +103,13 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     run.walks = [];
     camera();
     const [holder, challenger, ...waiting] = run.line;
-    const f = club.floor, hero = run.entries.get('me').J;
+    const hero = run.entries.get('me').J;
     const heroInside = holder === 'me' || challenger === 'me';
-    const north = { x: .3, z: f.z - 2.1 }, south = { x: -.3, z: f.z + 2.1 };
     const active = heroInside ? [holder === 'me' ? challenger : holder, 'me'] : [holder, challenger];
-    move(run.entries.get(active[0]).J, north, 0);
-    move(run.entries.get(active[1]).J, south, Math.PI);
+    active.forEach((id, i) => move(run.entries.get(id).J, club.duelSpots[i]));
     const standby = [...waiting, ...[...run.entries.keys()].filter(id => !run.line.includes(id))];
-    standby.forEach((id, i) => move(run.entries.get(id).J, club.slots[i], Math.PI / 2));
-    if (!heroInside && !standby.includes('me')) move(hero, run.home, 0);
+    standby.forEach((id, i) => move(run.entries.get(id).J, club.slots[i]));
+    if (!heroInside && !standby.includes('me')) move(hero, run.home);
   }
   function playerInside() {
     return run.line[0] === 'me' || run.line[1] === 'me';
@@ -138,7 +136,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     if (playerInside()) {
       run.phase = 'player';
       const opponent = run.entries.get(run.line[0] === 'me' ? run.line[1] : run.line[0]);
-      opponent.J.home = { x: .3, z: club.floor.z - 2.1 };
+      opponent.J.home = club.duelSpots[0];
       playPlayer(opponent, run.track, run.line[0] === 'me');
     } else {
       run.phase = 'watch';
@@ -162,9 +160,11 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     const id = duel.ids[side], J = run.entries.get(id).J;
     if (side !== duel.slot) {
       const other = run.entries.get(duel.ids[1 - side]).J;
-      other.root.position.z = club.floor.z + (side ? -2.1 : 2.1);
+      const waiting = club.duelSpots[1 - side];
+      other.root.position.set(waiting.x, 0, waiting.z);
+      other.root.rotation.y = waiting.yaw;
       other.play(READY, { fade: .24 });
-      J.root.position.set(0, 0, club.floor.z);
+      J.root.position.set(club.floor.x, 0, club.floor.z);
       duel.list = preview(run.entries.get(id), run.track);
       duel.step = -1;
       duel.slot = side;
@@ -216,13 +216,13 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     if (!run) return;
     cancelPlayer();
     club.hideVotes();
-    const H = W.hero, { x, z, ry } = run.home;
-    H.root.position.set(x, 0, z); H.root.rotation.y = H.st.face = ry;
+    const H = W.hero, { x, z, yaw } = run.home;
+    H.root.position.set(x, 0, z); H.root.rotation.y = H.st.face = yaw;
     H.play(READY, { fade: .3 }); H.ws = null;
     club.dancers.forEach(({ J }) => {
       J.ws = null;
       J.root.position.set(J.clubRest.x, 0, J.clubRest.z);
-      J.root.rotation.y = Math.PI / 2;
+      J.root.rotation.y = J.clubRest.yaw;
       J.play(READY, { fade: .3 });
     });
     if (!run.champion) club.board();
@@ -241,7 +241,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     if (run.phase === 'entry') {
       run.delay -= dt;
       const f = clamp(1 - run.delay / .78, 0, 1), k = f * f * (3 - 2 * f);
-      run.walks.forEach(({ J, at, yaw }) => W.walk.move(J, dt, at.x, at.z, k, yaw));
+      run.walks.forEach(({ J, at }) => W.walk.move(J, dt, at.x, at.z, k, at.yaw));
       if (run.delay <= 0) {
         run.walks.forEach(({ J }) => { J.ws = null; });
         run.walks = [];
