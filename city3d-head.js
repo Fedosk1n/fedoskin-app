@@ -574,8 +574,9 @@ export function cityLocs(style, covered, offset) {
     const rootZ = -.024 + rear * (tied ? .099 : .129);
     const endZ = -.235 - offset + .028*Math.cos(i*2.3);
     const path = new THREE.CatmullRomCurve3([
-      [rootX,rootY,rootZ], [side*(tied?.085:.109),.104,-.137+.038*Math.abs(side)],
-      [side*(tied?.093:.125),-.061,-.188-offset*.5+.029*Math.abs(side)],
+      [rootX,rootY,rootZ],
+      [side*(tied?.085:.109),.104,-.137-offset*.69+.038*Math.abs(side)],
+      [side*(tied?.093:.125),-.061,-.19-offset*1.53+.029*Math.abs(side)],
       [endX+.013*Math.sin(i),-.216,endZ+.019*Math.cos(i)], [endX,endY,endZ],
     ].map(([x,y,z])=>new THREE.Vector3(x,y,z)));
     const thick = .0095 + .0041*(.5+.5*Math.cos(i*2.83));
