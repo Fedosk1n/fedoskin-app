@@ -1,6 +1,6 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
 import { performDJ } from './city3d-dj.js?v=3';
-import { seatedJudge } from './city3d-club-judges.js?v=1';
+import { seatedJudge } from './city3d-club-judges.js?v=2';
 const t = window._t;
 export const CLUB_TRACKS = ['club', 'club_floor'];
 export const CLUB_BREAKERS = [
@@ -268,9 +268,15 @@ export async function buildClub(TK) {
     scene.add(judgeModel);
   } else {
     for (const x of judgeXs) {
-      block(.83, .34, .69, dark, x, .17, judgeZ - .04);
-      block(.76, .17, .68, velvet, x, .386, judgeZ - .06);
-      block(.80, .61, .13, velvet, x, .731, judgeZ - .29);
+      block(.76, .25, .36, dark, x, .125, judgeZ - .15);
+      block(.76, .116, .36, velvet, x, .283, judgeZ - .15);
+      block(.80, .61, .09, velvet, x, .731, judgeZ - .37).rotation.x = .13;
+      for (const side of [-1, 1]) {
+        block(.048, .389, .052, dark, x + side * .37, .41, judgeZ - .40);
+        block(.045, .402, .044, dark, x + side * .392, .425, judgeZ - .015);
+        block(.044, .314, .043, dark, x + side * .392, .475, judgeZ - .32);
+        block(.17, .081, .67, walnut, x + side * .342, .622, judgeZ - .035);
+      }
     }
   }
   const judges = judgeXs.map((x, i) => {
