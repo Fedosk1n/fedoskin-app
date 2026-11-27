@@ -16,8 +16,8 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1]
 STUDIO = Path(sys.argv[sys.argv.index("--") + 1]) if "--" in sys.argv else None
 FINGER_SIDES = 10
-X_STEP, Y_START, Y_STEP = .003, -.045, .0025
-COLUMNS, ROWS = 31, 83
+X_STEP, Y_START, Y_STEP = .0018, -.045, .0016
+COLUMNS, ROWS = 51, 130
 
 
 def bell(value, width):
@@ -32,30 +32,39 @@ def smooth(lo, hi, value):
 def sculpt(x, y):
     """Relief and pigmentation painted on the front of the head, in metres."""
     side = abs(x)
-    bridge = .014 * bell(x, .010) * bell(y - .083, .029)
-    tip = .019 * bell(x, .015) * bell(y - .061, .017)
-    wing = bell(side - .014, .007) * bell(y - .051, .008)
-    nostril = bell(side - .011, .0034) * bell(y - .046, .0028)
-    temple = bell(side - .061, .017) * bell(y - .119, .023)
-    eye = bell(side - .035, .0195) * bell(y - .102, .0105)
-    brow = bell(side - .035, .026) * bell(y - .121, .008)
-    cheek = bell(side - .049, .020) * bell(y - .078, .014)
-    jaw = bell(side - .046, .025) * bell(y - .019, .022)
-    chin = bell(x, .028) * bell(y - .000, .015)
-    philtrum = bell(x, .0040) * bell(y - .038, .006)
-    lip_width = 1 - smooth(.009, .030, side)
-    line_y = .0235 + .0018 * bell(side - .009, .005) - .0012 * (side / .030) ** 2
-    upper = lip_width * bell(y - line_y - .0030, .0038)
-    lower = lip_width * bell(y - line_y + .0041, .0042)
-    seam = lip_width * bell(y - line_y, .0019)
-    corners = bell(side - .027, .004) * bell(y - .023, .0035)
-    under_lip = bell(x, .021) * bell(y - .011, .004)
-    relief = (bridge + tip + .007 * wing - .004 * nostril + .0065 * brow - .0080 * eye
-              - .003 * temple + .006 * cheek + .004 * jaw + .007 * chin - .0015 * philtrum
-              + .0045 * upper + .006 * lower - .0028 * seam - .002 * under_lip)
-    shade = -.28 * nostril - .31 * seam - .19 * corners - .09 * eye - .047 * under_lip
-    lip = .57 * upper + .43 * lower
-    return relief, shade + .08 * lip, shade - .38 * lip - .036 * cheek, shade - .24 * lip - .02 * cheek
+    root = .006 * bell(x, .013) * bell(y - .105, .018)
+    bridge = .017 * bell(x, .012) * bell(y - .080, .027)
+    tip = .016 * bell(x, .0145) * bell(y - .059, .016)
+    wing = bell(side - .014, .0075) * bell(y - .052, .0085)
+    columella = bell(x, .0060) * bell(y - .045, .0088)
+    nostril = bell(side - .0115, .0037) * bell(y - .0465 - .22*(side-.0115), .0023)
+    alar_fold = bell(side - .021, .004) * bell(y - .050, .0085)
+    temple = bell(side - .062, .019) * bell(y - .125, .020)
+    socket = bell(side - .035, .021) * bell(y - .102, .011)
+    brow = bell(side - .037, .026) * bell(y - .119, .010)
+    lower_orbit = bell(side - .041, .019) * bell(y - .091, .0048)
+    cheek = bell(side - .053, .021) * bell(y - .078, .016)
+    cheek_hollow = bell(side - .067, .012) * bell(y - .052, .014)
+    jaw = bell(side - .050, .026) * bell(y - .010, .023)
+    chin = bell(x, .028) * bell(y + .004, .017)
+    philtrum = bell(x, .0043) * bell(y - .0355, .0065)
+    lip_width = 1 - smooth(.008, .028, side)
+    line_y = .0236 + .0016 * bell(side - .008, .005) - .0019 * (side / .028) ** 2
+    bow = 1 + .32 * bell(side - .007, .0045)
+    upper = lip_width * bow * bell(y - line_y - .0029, .0026)
+    lower = lip_width * bell(y - line_y + .0037, .0036)
+    seam = lip_width * bell(y - line_y, .00125)
+    corners = bell(side - .025, .0042) * bell(y - .0218, .0025)
+    under_lip = bell(x, .020) * bell(y - .0105, .004)
+    relief = (root + bridge + tip + .007 * wing + .008 * columella - .0035 * nostril - .0018 * alar_fold
+              + .0058 * brow - .0055 * socket + .0014 * lower_orbit - .0028 * temple + .007 * cheek
+              - .0045 * cheek_hollow + .0048 * jaw + .008 * chin - .002 * philtrum
+              + .0048 * upper + .0058 * lower - .0020 * seam - .0018 * under_lip)
+    shade = (-.53 * nostril - .38 * seam - .20 * corners - .057 * socket - .064 * alar_fold
+             - .05 * under_lip - .035 * cheek_hollow + .027 * lower_orbit)
+    lip = .66 * upper + .37 * lower
+    warm = .014 * cheek + .022 * wing
+    return relief, shade + .11 * lip + warm, shade - .43 * lip - warm, shade - .30 * lip - .59 * warm
 
 
 def hand_vertices():
