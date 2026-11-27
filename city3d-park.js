@@ -5,7 +5,7 @@
 // Built in code with the toolkit of city3d.js (TK). The game on top is in city3d-game.js; what it needs is left in
 // W.park: { stage, dancers, og, bars, gateCenter, gateProm, crowd(on) }.
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
-export async function buildPark(TK) {
+export function buildPark(TK) {
   const { THREE, RoundedBoxGeometry, scene, W, OR, M, glowMat, tex, can, grain, blotch, rng, lerp, decal, paintCanvas, box, circ,
     lamps, dust, mocapPerson, bodyOf, stride, standPose, HERO } = TK;
   const PI = Math.PI;
@@ -30,19 +30,12 @@ export async function buildPark(TK) {
     for (let i = 0; i < 2600; i++) { const px = r() * S, py = r() * S, l = 3 + r() * 5; x.strokeStyle = `hsla(${105 + r() * 30},${30 + r() * 20}%,${16 + r() * 16}%,.7)`; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - .5) * 3, py - l); x.stroke(); }
     grain(c, 14, 5);
     flat(new THREE.PlaneGeometry(80, 60), new THREE.MeshStandardMaterial({ map: tex(c, { repeat: [16, 12] }), roughness: .97 }), 0, 0, 17.8); }
-  const loadSurface = (file, mesh) => mesh
-    ? new THREE.TextureLoader().loadAsync(new URL('./img/' + file + '.webp?v=1', import.meta.url).href).catch(() => null)
-    : null;
-  // Start both surface loads together. The textures decorate the baked geometry at their original scale.
   const paths = TK.pathModel, gravel = paths?.getObjectByName('park gravel');
   const playground = TK.playgroundModel, rubber = playground?.getObjectByName('playground rubber');
-  const [gravelMap, rubberMap] = await Promise.all([loadSurface('park-gravel', gravel), loadSurface('playground-rubber', rubber)]);
+  const [gravelMap, rubberMap] = TK.surfaces;
   // Blender exported a single surface across all crossings, plus one batched border.
   if (gravel?.material) {
     if (gravelMap) {
-      gravelMap.colorSpace = THREE.SRGBColorSpace;
-      gravelMap.wrapS = gravelMap.wrapT = THREE.RepeatWrapping;
-      gravelMap.anisotropy = TK.maxAniso;
       gravel.material.map = gravelMap;
     } else gravel.material.color.set('#817567');
     scene.add(paths);
@@ -150,8 +143,6 @@ export async function buildPark(TK) {
   const BX = 7.4, BZ = 8.00, bars = { x: BX + .12, z: BZ + .70 };
   if (rubber?.material) {
     if (rubberMap) {
-      rubberMap.colorSpace = THREE.SRGBColorSpace;
-      rubberMap.anisotropy = TK.maxAniso;
       rubber.material.map = rubberMap;
     } else rubber.material.color.set('#38574f');
     playground.position.set(BX, 0, BZ);

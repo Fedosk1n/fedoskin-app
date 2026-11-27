@@ -22,7 +22,7 @@ const SURFACES = [
   ['vinyl', '#252b2d', .004, .15, .40],
 ];
 
-async function loadClubSurfaces(THREE, load) {
+export async function loadClubSurfaces(THREE, load) {
   const entries = await Promise.all(SURFACES.map(async ([key, color, bumpScale, metalness, roughness]) => {
     const [map, packed] = await Promise.all([
       load(`club-${key}-color.webp?v=1`, true, true),
@@ -52,9 +52,8 @@ async function loadClubSurfaces(THREE, load) {
   };
 }
 
-export async function buildClub(TK) {
-  const { THREE, scene, W, box, circ, can, tex, loadSurfaceTexture, mocapPerson, bodyOf, HERO, boothModel, judgeModel } = TK;
-  const material = await loadClubSurfaces(THREE, loadSurfaceTexture);
+export function buildClub(TK) {
+  const { THREE, scene, W, box, circ, can, tex, mocapPerson, bodyOf, HERO, boothModel, judgeModel, surfaces: material } = TK;
   const floor = { x: 0, z: -2.4, r: 3.85 };
   const smokeEntry = { x: floor.x, z: floor.z + floor.r + .15, r: 2.12 };
   const duelSpots = [1, -1].map(side => {

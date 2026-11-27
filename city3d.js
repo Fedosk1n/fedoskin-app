@@ -9,12 +9,12 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=60';
-import { buildClub } from './city3d-club.js?v=6';
+import { initGame } from './city3d-game.js?v=61';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=7';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
-import { buildPark } from './city3d-park.js?v=6';
+import { buildPark } from './city3d-park.js?v=7';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { addCitySound } from './city3d-sound.js?v=1';
 import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=4';
@@ -125,7 +125,13 @@ async function loadBlenderModel(file, revision = 1) {
     const arrays = { Float32Array, Int8Array, Uint16Array, Uint32Array };
     for (const { data: { attributes, index } } of model.geometries) {
       for (const a of [...Object.values(attributes), index]) {
-        const bytes = Uint8Array.from(atob(a.bytes), c => c.charCodeAt(0));
+        let bytes;
+        if (Uint8Array.fromBase64) bytes = Uint8Array.fromBase64(a.bytes);
+        else {
+          const raw = atob(a.bytes);
+          bytes = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        }
         a.array = new arrays[a.type](bytes.buffer);
       }
     }
@@ -586,23 +592,24 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props, playgroundModel, clubJudges) {
-  try { await document.fonts.load('80px Anton'); await document.fonts.load('900 40px Inter'); } catch (_) {}
-  WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
+async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade) {
+  if (DIST !== 'club') {
+    WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
+  }
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, concreteTex, facadeTex, roofTex, stripeTex,
-    loadSurfaceTexture, mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
+    mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
-  else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, playgroundModel, maxAniso });
+  else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
   else if (DIST === 'prom') await buildProm(TK);
-  else if (DIST === 'club') await buildClub({ ...TK, boothModel: props, judgeModel: clubJudges });
-  else await buildYard(scene, asphalt);
+  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces });
+  else buildYard(scene, asphalt, facade);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
-async function buildYard(scene, asphalt) {
+function buildYard(scene, asphalt, facadeGeometry) {
 
   // ground
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), asphaltMaterial(asphalt, 70, 70, '#e8e1dd', .045));
@@ -638,17 +645,14 @@ async function buildYard(scene, asphalt) {
   });
   // The Blender-built canopy and fire escape share a single vertex-coloured mesh.
   // Keep the original facade usable if the optional detail asset cannot be fetched.
-  try {
-    const geometry = await new THREE.BufferGeometryLoader().loadAsync('./anim/yard-facade.json');
-    geometry.computeVertexNormals();
-    const facade = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+  if (facadeGeometry) {
+    facadeGeometry.computeVertexNormals();
+    const facade = new THREE.Mesh(facadeGeometry, new THREE.MeshStandardMaterial({
       vertexColors: true, flatShading: true, roughness: .78, metalness: .18,
     }));
     facade.name = 'Yard fire escape';
     facade.position.z = -16;
     scene.add(shadowAll(facade));
-  } catch (error) {
-    console.warn('Yard facade detail unavailable', error);
   }
   // water tank on the tall roof + antenna
   { const t = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 1.6, 18), M('#4b3b30', .8)); t.position.set(-11, 9.5 + .8 + .5, -20); scene.add(shadowAll(t));
@@ -1068,10 +1072,74 @@ document.addEventListener('visibilitychange', () => { if (!window.RB || !musicOn
 paintMus();
 
 // ---------- boot ----------
+async function loadDistrictEnvironment() {
+  try {
+    const atlas = await new THREE.ImageLoader().loadAsync(new URL('./img/city-environment.png?v=1', import.meta.url).href);
+    const size = 256, levels = [];
+    if (atlas.width !== size * 6 || atlas.height !== 504) return null;
+    // Baked cubemap faces are stacked from the sharpest mip down to diffuse lighting.
+    for (let side = size, y = 0; side >= 8; y += side, side /= 2) {
+      levels.push(Array.from({ length: 6 }, (_, face) => {
+        const canvas = can(side, side);
+        canvas.getContext('2d').drawImage(atlas, face * side, y, side, side, 0, 0, side, side);
+        return canvas;
+      }));
+    }
+    // The renderer counts the base level for its PMREM roughness range.
+    const tail = levels.at(-1).map(face => {
+      const canvas = can(4, 4);
+      canvas.getContext('2d').drawImage(face, 0, 0, 4, 4);
+      return canvas;
+    });
+    const cube = new THREE.CubeTexture(levels[0]);
+    cube.mipmaps = [...levels.slice(1), tail].map(image => ({ image }));
+    cube.colorSpace = THREE.SRGBColorSpace;
+    cube.isPMREMTexture = true;
+    cube.generateMipmaps = false;
+    cube.needsUpdate = true;
+    return cube;
+  } catch (_) {
+    return null;
+  }
+}
+
+function warmDistrictTextures(scene, renderer) {
+  const textures = new Set();
+  const add = value => { if (value?.isTexture && !value.isRenderTargetTexture) textures.add(value); };
+  add(scene.environment);
+  scene.traverse(o => {
+    for (const material of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
+      for (const value of Object.values(material)) add(value);
+      if (material.uniforms) for (const uniform of Object.values(material.uniforms)) add(uniform?.value);
+    }
+  });
+  for (const texture of textures) { try { renderer.initTexture(texture); } catch (_) {} }
+}
+
 async function boot() {
   const cv = $('#c3');
-  try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); } catch (e) { $('#err').style.display = 'flex'; return; }
+  try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); } catch (_) { cityLoadFailed($('#cityError').textContent); return; }
   maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const fontStyles = $('#cityFonts');
+  const loadFonts = () => Promise.allSettled([document.fonts.load('80px Anton'), document.fonts.load('900 40px Inter')]);
+  if (fontStyles.media === 'all') loadFonts();
+  else fontStyles.addEventListener('load', loadFonts, { once: true });
+
+  const assets = Promise.all([
+    loadMocap(), loadDistrictEnvironment(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
+    DIST === 'club' ? loadBlenderModel('club-dj', 2) : loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), DIST !== 'club' ? loadBlenderModel('sound-systems') : null,
+    DIST !== 'club' ? loadBlenderModel('graffiti-wall') : null, DIST !== 'club' ? loadGraffitiSurface(DIST) : null,
+    DIST === 'park' ? loadBlenderModel('park-playground') : null,
+    DIST === 'club' ? loadBlenderModel('club-judges', 2) : null,
+    DIST === 'club' ? loadClubSurfaces(THREE, loadSurfaceTexture) : DIST === 'park' ? Promise.all([
+      loadSurfaceTexture('park-gravel.webp?v=1', true, true),
+      loadSurfaceTexture('playground-rubber.webp?v=1', true, false),
+    ]) : null,
+    DIST === 'yard' ? new THREE.BufferGeometryLoader().loadAsync('./anim/yard-facade.json').catch(error => {
+      console.warn('Yard facade detail unavailable', error);
+      return null;
+    }) : null,
+  ]);
   let PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
   renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1085,20 +1153,19 @@ async function boot() {
   const moon = new THREE.DirectionalLight('#9db4e6', 1.1); moon.position.copy(MOON); moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048); moon.shadow.camera.left = -16; moon.shadow.camera.right = 16; moon.shadow.camera.top = 16; moon.shadow.camera.bottom = -16; moon.shadow.camera.near = 1; moon.shadow.camera.far = 60; moon.shadow.bias = -.0005; moon.shadow.normalBias = .03; moon.shadow.radius = 4;
   scene.add(moon, moon.target);
-  // a tiny environment so metal and puddles have something to reflect
-  { const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene(); es.background = new THREE.Color('#06080c');
+
+  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade] = await assets;
+  scene.environmentIntensity = .45;
+  if (reflection) scene.environment = reflection;
+  else {
+    const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene(); es.background = new THREE.Color('#06080c');
     const add = (c, x, y, z, s) => { const m = new THREE.Mesh(new THREE.SphereGeometry(s, 8, 6), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); es.add(m); };
     add('#ffad60', 6, 6, 3, 1.6); add('#ffad60', -7, 5, -4, 1.2); add('#5872a8', 0, 14, 0, 6); add('#ff8a3a', 2, 3, -8, 1);
-    scene.environment = pm.fromScene(es, .04).texture; scene.environmentIntensity = .45; }
+    scene.environment = pm.fromScene(es, .04).texture;
+    pm.dispose();
+  }
 
-  const [, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges] = await Promise.all([
-    loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
-    DIST === 'club' ? loadBlenderModel('club-dj', 2) : loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), DIST !== 'club' ? loadBlenderModel('sound-systems') : null,
-    DIST !== 'club' ? loadBlenderModel('graffiti-wall') : null, DIST !== 'club' ? loadGraffitiSurface(DIST) : null,
-    DIST === 'park' ? loadBlenderModel('park-playground') : null,
-    DIST === 'club' ? loadBlenderModel('club-judges', 2) : null,
-  ]);
-  await build(scene, asphalt, props, playgroundModel, clubJudges);
+  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
@@ -1172,17 +1239,17 @@ async function boot() {
     camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
-  // WARM-UP (22.11.2026, owner «проверь почему город притормаживает»): three.js prepares a shader and sends a texture to the graphics chip
-  // only the first time something comes on screen. Walking a lap of the yard did ~30 such uploads (signs, walls, decals, up to 2 MB each with
-  // their mipmaps) and compiled shaders on the way — on an iPhone each one can hold a frame for tens of milliseconds, so the city «caught»
-  // whenever a new corner came into view. Now every shader of the district is compiled (for the picture's own buffer, the variant really
-  // used) and every texture uploaded here, while the district loads.
-  { const texs = new Set(), add = v => { if (v && v.isTexture) texs.add(v); };
-    scene.traverse(o => { const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      for (const m of ms) { for (const k in m) add(m[k]); if (m.uniforms) for (const k in m.uniforms) add(m.uniforms[k] && m.uniforms[k].value); } });
-    try { renderer.setRenderTarget(rt); renderer.compile(scene, camera); } catch (e) { console.warn(e); } finally { renderer.setRenderTarget(null); }
-    texs.forEach(t => { try { if (!t.isRenderTargetTexture) renderer.initTexture(t); } catch (_) {} }); }
-
+  // Queue shaders together and upload textures while the graphics driver compiles them.
+  // Both the first draw and walking into a new part of the district can reuse the results.
+  try {
+    renderer.setRenderTarget(rt);
+    renderer.compile(scene, camera);
+  } catch (e) {
+    console.warn(e);
+  } finally {
+    renderer.setRenderTarget(null);
+  }
+  warmDistrictTextures(scene, renderer);
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
   // the hero is read EVERY frame: after a change of clothes (gear won in a battle, a detail from the tailor) W.hero is a NEW person —
   // the camera used to keep following the old, removed one and the hero ran out of the picture (owner 17.11.2026 «мой человечек
@@ -1200,8 +1267,9 @@ async function boot() {
   // screenshot shows a periodic stutter
   let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
   const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
+  let firstFrame = true, nextFrame;
   const frame = now => {
-    requestAnimationFrame(frame);
+    nextFrame = requestAnimationFrame(frame);
     const c0 = performance.now(), iv = now - last;
     const dt = clamp(iv / 1000, 0, .05); worst = Math.max(worst, iv); last = now;
     if (showFps) { hist[histI] = iv; histI = (histI + 1) % hist.length; if (iv > 50) jerks.push(now); while (jerks.length && jerks[0] < now - 10000) jerks.shift(); }
@@ -1247,6 +1315,10 @@ async function boot() {
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
     comp.render(dt);
+    if (firstFrame) {
+      firstFrame = false;
+      $('#cityLoading').hidden = true;
+    }
     SB.tick();
     if (showFps) { cpuS += performance.now() - c0; cpuN++; }
     // quality guard: a phone that can't keep up gets fewer pixels, then no bloom
@@ -1256,8 +1328,14 @@ async function boot() {
       if (fps < 40 && now > 6000) { slow++; if (slow >= 2 && tier < 3) { tier++; slow = 0; if (tier === 1) PR = Math.max(1, PR * .8); else if (tier === 2) PR = Math.max(1, PR * .8); else bloom.enabled = false; resize(); } } else slow = 0;
       fpsN = 0; fpsT = 0; worst = 0; }
   };
-  requestAnimationFrame(frame);
+  requestAnimationFrame(now => {
+    try { frame(now); } catch (e) { cancelAnimationFrame(nextFrame); reportCityError(e); }
+  });
   zoomTip();
   window.CITY3D = { W, camera, scene, renderer, GAME, stride, standPose, comp, bloom, SB, moon, spots, rewear, fitShadows: () => fitZ, music: () => ({ on: musicOn, live: musicLive, stale: musicStale, id: musicId, playing: window.RB && RB.bgmId ? RB.bgmId() : null }) };
 }
-boot().catch(e => { console.error(e); const el = $('#err'); el.textContent = _t('Ошибка: ') + e.message; el.style.display = 'flex'; });
+function reportCityError(error) {
+  console.error(error);
+  cityLoadFailed(_t('Ошибка: ') + error.message);
+}
+boot().catch(reportCityError);

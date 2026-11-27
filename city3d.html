@@ -6,11 +6,31 @@
 <meta name="theme-color" content="#0B0D12">
 <title>Fedoskin · Город</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap">
+<link rel="stylesheet" id="cityFonts" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;900&display=swap">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<link rel="modulepreload" href="city3d.js?v=66">
+<link rel="modulepreload" href="vendor/three/three.core.js">
+<link rel="preload" as="fetch" crossorigin href="anim/bboy.json?v=2">
+<link rel="preload" as="fetch" crossorigin href="anim/city-breaking.json?v=4">
+<link rel="preload" as="image" crossorigin href="img/city-environment.png?v=1">
 <style>
   html, body { margin: 0; height: 100%; background: #0B0D12; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   body { font-family: Inter, system-ui, sans-serif; color: #F2EFE8; }
   #c3 { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #cityLoading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 4;
+    background: linear-gradient(180deg, #10141c, #10141cb8 40%, #10141c), #141923 url("img/city3d.jpg?v=1") center / cover no-repeat; }
+  #cityLoading[hidden] { display: none; }
+  #cityLoading:not([hidden]) ~ .hud :is(.ttl, button),
+  #cityLoading:not([hidden]) ~ :is(#hint, #ztip) { visibility: hidden; }
+  .city-load-status { display: grid; justify-items: center; gap: 14px; padding: 18px;
+    text-align: center; font: 700 16px/1.4 Inter, system-ui, sans-serif; }
+  .city-load-track { width: 104px; height: 3px; border-radius: 4px; overflow: hidden; background: #f2efe838; }
+  .city-load-track::after { content: ''; display: block; width: 42px; height: 100%; border-radius: inherit;
+    background: #f08a51; animation: city-load-slide 1.35s ease-in-out infinite alternate; }
+  @keyframes city-load-slide { to { transform: translateX(62px); } }
+  @media (prefers-reduced-motion: reduce) { .city-load-track::after { animation: none; margin-inline: auto; } }
   .hud { position: fixed; left: 0; right: 0; top: 0; padding: max(10px, env(safe-area-inset-top)) 12px 0; display: flex; gap: 8px; align-items: center; pointer-events: none; z-index: 5; }
   .hud > * { pointer-events: auto; }
   .hb { height: 40px; min-width: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,.14); background: rgba(12,14,19,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -55,7 +75,8 @@
          pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 4; }
   #joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(226,97,26,.75); box-shadow: 0 0 18px rgba(226,97,26,.6); }
   #joy.on { opacity: 1; }
-  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font: 600 15px Inter, sans-serif; z-index: 9; }
+  #err { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 30px; background: #0B0D12; font: 600 15px Inter, sans-serif; z-index: 9; }
   /* alpha notice on the first visit (owner 17.11.2026 «добавь город в открытый доступ… предупреди ещё раз, что это альфа») */
   #alpha { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(5,6,9,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   #alpha[hidden] { display: none; }
@@ -73,6 +94,9 @@
 </head>
 <body>
 <canvas id="c3"></canvas>
+<div id="cityLoading">
+  <div class="city-load-status" role="status"><span id="cityLoadText">Загружаем город…</span><span class="city-load-track" aria-hidden="true"></span></div>
+</div>
 <div class="hud">
   <a class="hb" href="./?city=play" id="back" aria-label="Назад">←</a>
   <div class="ttl">ДВОР<small>α АЛЬФА-ВЕРСИЯ</small></div>
@@ -92,10 +116,10 @@
 <div id="joy"><i></i></div>
 <div id="hint">Веди пальцем по экрану — герой пойдёт</div>
 <div id="ztip"><i><b></b><b></b></i><span>Двумя пальцами — отдалить или приблизить карту</span></div>
-<div id="err">Этот телефон не умеет показывать 3D-графику (WebGL).</div>
+<div id="err" role="alert"><p id="cityError">Этот телефон не умеет показывать 3D-графику (WebGL).</p><a href="./?city=play">Вернуться в приложение</a></div>
 <div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
-<script src="city3d-i18n.js?v=11"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
+<script defer src="city3d-i18n.js?v=11"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
 <script>
 // the app's language (same rule as index.html phoneLang). Since 18.11.2026 (owner «переведи 3д город… на все языки») the WHOLE city is
 // translated: window._t('русский текст', {vars}) looks the text up in city3d-i18n.js (source: tools/i18n_city3d.py); a text with no
@@ -117,35 +141,49 @@
     zh: ['内测版', '城市还在建设中。可能会有错误，低配手机上可能会卡顿；平衡和奖励还会调整，大更新后城市进度可能会被重置。', '发现问题？在应用的聊天里告诉我，我来修。', '目前城市里的内容都是俄语，翻译稍后上线。', '明白，开始玩', '这部手机无法显示 3D 图形（WebGL）。', '返回应用'],
   }[lang];
   A[3] = '';   // «for now everything inside the city is in Russian» — not true any more (18.11.2026)
+  const $ = s => document.querySelector(s), box = $('#alpha'), loading = $('#cityLoading'), err = $('#err');
+  const loadCopy = {
+    ru: ['Загружаем город…', 'Не удалось загрузить город.'],
+    en: ['Loading the city…', 'Could not load the city.'],
+    es: ['Cargando la ciudad…', 'No se pudo cargar la ciudad.'],
+    pt: ['Carregando a cidade…', 'Não foi possível carregar a cidade.'],
+    fr: ['Chargement de la ville…', 'Impossible de charger la ville.'],
+    de: ['Stadt wird geladen…', 'Die Stadt konnte nicht geladen werden.'],
+    ja: ['街を読み込み中…', '街を読み込めませんでした。'],
+    ko: ['도시를 불러오는 중…', '도시를 불러올 수 없습니다.'],
+    zh: ['正在加载城市…', '无法加载城市。'],
+  }[lang];
   window.CITY_LANG = lang; document.documentElement.lang = lang;
-  const D = (window.I18N3 && I18N3[lang]) || null, miss = new Set();
-  window._t = (ru, v) => { let s = lang !== 'ru' && D && D[ru];
+  $('#cityLoadText').textContent = loadCopy[0];
+  $('#cityError').textContent = A[5]; $('#err a').textContent = A[6];
+  window.cityLoadFailed = (message = loadCopy[1]) => {
+    loading.hidden = box.hidden = true;
+    $('#cityError').textContent = message;
+    err.style.display = 'flex';
+  };
+  const miss = new Set();
+  window._t = (ru, v) => { let s = lang !== 'ru' && window.I18N3?.[lang]?.[ru];
     if (!s) { s = ru; if (lang !== 'ru' && /[А-Яа-яЁё]/.test(ru)) miss.add(ru); }
     return v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s; };
   window._t.miss = miss;
   document.addEventListener('DOMContentLoaded', () => {
-    const $ = s => document.querySelector(s), box = $('#alpha');
     // the fixed texts of the page
     $('#hint').textContent = _t($('#hint').textContent); $('#ztip span').textContent = _t($('#ztip span').textContent);
     $('#back').setAttribute('aria-label', _t('Назад')); $('#mus').setAttribute('aria-label', _t('Музыка'));
     { const t = $('.ttl'); if (t.firstChild) t.firstChild.nodeValue = _t(t.firstChild.nodeValue); }
     $('.ttl small').textContent = 'α ' + A[0].toUpperCase(); $('#alpha h2').textContent = A[0]; $('#aP1').textContent = A[1]; $('#aP2').textContent = A[2]; if (A[3]) { $('#aP3').textContent = A[3]; $('#aP3').hidden = false; } $('#aOk').textContent = A[4];
-    $('#err').innerHTML = ''; $('#err').append(A[5], document.createElement('br'), document.createElement('br')); const a = document.createElement('a'); a.href = './?city=play'; a.textContent = A[6]; $('#err').append(a);
     // back: to where the app was (its «Город» screen) if we came from it, else open the app on that screen
     $('#back').addEventListener('click', e => { try { const r = new URL(document.referrer); if (r.origin === location.origin && r.pathname.replace(/index\.html$/, '') === location.pathname.replace(/city3d\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); } } catch (_) {} });
     let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-alpha') === '1'; } catch (_) {}
-    if (!seen) { box.hidden = false; $('#aOk').addEventListener('click', e => { e.stopPropagation(); box.hidden = true; try { localStorage.setItem('fedoskin-city3d-alpha', '1'); } catch (_) {} }); }
+    if (!seen && err.style.display !== 'flex') { box.hidden = false; $('#aOk').addEventListener('click', e => { e.stopPropagation(); box.hidden = true; try { localStorage.setItem('fedoskin-city3d-alpha', '1'); } catch (_) {} }); }
   });
 })();
 </script>
-<script src="hero.js?v=24"></script>
-<script src="lessons.js"></script>
-<script src="battle-study.js?v=1"></script>
-<script src="city-gfx.js?v=10"></script>
-<script src="rhythm.js?v=32"></script>
-<script type="importmap">
-{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
-</script>
-<script type="module" src="city3d.js?v=65"></script>
+<script defer src="hero.js?v=24"></script>
+<script defer src="lessons.js"></script>
+<script defer src="battle-study.js?v=1"></script>
+<script defer src="city-gfx.js?v=10"></script>
+<script defer src="rhythm.js?v=32"></script>
+<script type="module" src="city3d.js?v=66" onerror="cityLoadFailed()"></script>
 </body>
 </html>
