@@ -6191,7 +6191,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // The Worker owns both the roll and the 24-hour clock. The dialog can be closed or reloaded in flight.
   const lootDialog = $('#lootDialog');
   const lootDefaultOdds = [8000, 1600, 350, 50, 0];
-  let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn;
+  let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn, lootWorkerReady = false;
   const lootSeconds = new Intl.NumberFormat(LANG, { minimumIntegerDigits: 2, useGrouping: false });
   const lootPercent = new Intl.NumberFormat(LANG, { style: 'percent', maximumFractionDigits: 1 });
   function lootPaint(){
@@ -6237,8 +6237,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
     try {
       if (!LB_URL) throw new Error('unavailable');
+      if (!lootWorkerReady) {
+        const status = await fetch(LB_URL + '/', { cache: 'no-store', signal: controller.signal });
+        const worker = await status.json();
+        if (!status.ok || worker.service !== 'fedoskin-push' || !Number.isInteger(worker.version)) throw new Error('unavailable');
+        if (worker.version < 4) throw new Error('update');
+        lootWorkerReady = true;
+      }
       const r = await btPost('/hero/loot', { claim }, controller.signal);
-      if (r.status === 404) throw new Error('update');
+      if (r.status === 404) { lootWorkerReady = false; throw new Error('update'); }
       if (!r.ok) throw new Error('unavailable');
       const data = await r.json();
       if (!data.ok || !Number.isFinite(data.next)) throw new Error('unavailable');
