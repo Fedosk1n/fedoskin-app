@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=33';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=61';
+import { initGame } from './city3d-game.js?v=62';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=7';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
@@ -17,7 +17,7 @@ import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=7';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=4';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=5';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -1188,18 +1188,25 @@ async function boot() {
   // lamp's shadow is redrawn only while its light is on screen. The picture stays the same.
   trimCasters(scene);
   const SB = shadowBatcher(scene); SB.useFor(moon);
+  moon.shadow.autoUpdate = false;
   const spots = []; scene.updateMatrixWorld(true);
-  scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false; o.shadow.needsUpdate = true;
+  scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false;
     const lp = o.getWorldPosition(new THREE.Vector3()), tp = o.target.getWorldPosition(new THREE.Vector3());
-    spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2 }); });
-  let spotN = 0, farOn = false, moonN = 0;
+    spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2, visible: false, refreshed: -Infinity }); });
+  let farOn = false, frameNumber = 0;
   const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
 
   // post: bloom on the bright bits, then vignette + grade + grain
-  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  // The HDR buffers use the phone's pixel density without multisampling the entire frame.
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: TOUCH ? 0 : 4 });
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84); comp.addPass(bloom);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84);
+  if (TOUCH) {
+    const sizeBloom = bloom.setSize.bind(bloom);
+    bloom.setSize = (w, h) => sizeBloom(Math.max(32, w * .65), Math.max(32, h * .65));
+  }
+  comp.addPass(bloom);
   // a soft knee (17.11.2026, «пересвет»): a surface just over the threshold used to bloom at full strength — any lit light thing grew a
   // halo; now the glow fades in over .84…1.2, so only real light sources (lamp strips ≈ 1.4+, signs, LEDs) glow in full
   bloom.highPassUniforms.smoothWidth.value = .36;
@@ -1232,10 +1239,12 @@ async function boot() {
         if (y <= 4) { VIEW.x0 = Math.min(VIEW.x0, q.x); VIEW.x1 = Math.max(VIEW.x1, q.x); VIEW.z0 = Math.min(VIEW.z0, q.z); VIEW.z1 = Math.max(VIEW.z1, q.z); }
         lb.expandByPoint(q.applyMatrix4(sc.matrixWorldInverse)); } }
     const sh = moon.shadow, cm = sh.camera, m = .8; cm.left = lb.min.x - m; cm.right = lb.max.x + m; cm.bottom = lb.min.y - m; cm.top = lb.max.y + m; cm.updateProjectionMatrix();
+    sh.needsUpdate = true;
     const tx = 2048 / 32, w = Math.min(2048, Math.ceil((cm.right - cm.left) * tx / 64) * 64), h = Math.min(2048, Math.ceil((cm.top - cm.bottom) * tx / 64) * 64);
     if (sh.mapSize.x !== w || sh.mapSize.y !== h) { sh.mapSize.set(w, h); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   };
-  const resize = () => { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(PR); renderer.setSize(w, h, false); comp.setPixelRatio(PR); comp.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
+  const resize = () => { const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false); comp.setSize(w, h);
     camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
@@ -1259,19 +1268,24 @@ async function boot() {
   const fog0 = scene.fog.density;
   // name tags (crews, places, the guard) grow a little when the camera is pulled back, so they stay readable from far away
   const tags = []; scene.traverse(o => { if (o.isSprite && o.material.depthTest === false) tags.push({ o, s: o.scale.clone() }); }); let tagK = 1;
-  let last = performance.now(), fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
+  let last, fpsN = 0, fpsT = 0, slow = 0, tier = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
   // 22.11.2026: + how long the PHONE'S PROCESSOR worked on the frame («ЦП») — if the frames are slow while ЦП is small, the graphics chip is
   // the limit; + a strip of the last ~5 s of frames (each bar = one frame, red = longer than 50 ms) and how many such jerks in 10 s, so one
   // screenshot shows a periodic stutter
   let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
+  document.addEventListener('visibilitychange', () => {
+    last = undefined;
+    fpsN = fpsT = slow = worst = cpuS = cpuN = 0;
+  });
   const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
   let firstFrame = true, nextFrame;
   const frame = now => {
     nextFrame = requestAnimationFrame(frame);
-    const c0 = performance.now(), iv = now - last;
+    const c0 = performance.now(), iv = last === undefined ? 0 : now - last;
     const dt = clamp(iv / 1000, 0, .05); worst = Math.max(worst, iv); last = now;
+    frameNumber++;
     if (showFps) { hist[histI] = iv; histI = (histI + 1) % hist.length; if (iv > 50) jerks.push(now); while (jerks.length && jerks[0] < now - 10000) jerks.shift(); }
     if (showFps) renderer.info.reset();
     // the beat count of what is heard (each crew loop has its own tempo); no sound yet — the yard's 88 BPM by the page clock
@@ -1284,15 +1298,15 @@ async function boot() {
     look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
     if (W.camT) look.set(W.camT.x, W.camT.y || 0, W.camT.z);
     // W.camSnap: a replay's cut — the camera jumps instead of gliding
-    if (W.camSnap) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
+    const cameraCut = W.camSnap;
+    if (cameraCut) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
     W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
     // W.camT.off: a battle's replay looks from another side (city3d-power.js), the normal view is `off`
     camPos.copy(camLook).addScaledVector(W.camT && W.camT.off || off, W.zoom); camera.position.copy(camPos);
     scene.fog.density = fog0 / Math.max(1, W.zoom);
-    // pulled far back: eyes, ears, laces, pins of every person (one draw each, invisible from up there) are hidden, and the moon's
-    // shadow is redrawn every second frame — the overview of the whole district costs about what the normal view does
-    { const far = W.zoom > 1.7; if (far !== farOn) { farOn = far; scene.traverse(o => { if (o.userData.tiny) o.visible = !far; }); if (!far) moon.shadow.autoUpdate = true; }
-      if (far) { moon.shadow.autoUpdate = false; moon.shadow.needsUpdate = (moonN = (moonN + 1) % 2) === 0; } }
+    // Hide subpixel rig details in the wider view.
+    const far = W.zoom > 1.7, farChanged = far !== farOn;
+    if (farChanged) { farOn = far; scene.traverse(o => { if (o.userData.tiny) o.visible = !far; }); }
     { const k = Math.pow(Math.max(1, W.zoom), .6); if (Math.abs(k - tagK) > .004) { tagK = k; for (const t of tags) t.o.scale.copy(t.s).multiplyScalar(k); } }
     { const zb = zoomBucket(); if (zb !== fitZ) fitShadows(zb); }
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
@@ -1300,12 +1314,26 @@ async function boot() {
     // the line of a drawn power move is laid over the dancer AFTER the camera has moved (else it lags a frame behind him)
     if (GAME.post) { camera.updateMatrixWorld(); GAME.post(dt); }
     moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
-    // a lamp's shadow is redrawn only while the ground it lights is on screen (else it isn't seen anyway)
-    { const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
-      // pulled far back (two fingers) most lamps are on screen at once: then they take turns, one in three per frame — a person's
-      // shadow under a lamp lags by two frames, invisible at that distance, and the overview stays as light as the normal view
-      const turn = W.zoom > 1.7 ? 3 : 1; spotN = (spotN + 1) % turn;
-      spots.forEach((S, i) => { if (i % turn !== spotN) return; const dx = Math.max(x0 - S.x, 0, S.x - x1), dz = Math.max(z0 - S.z, 0, S.z - z1); if (dx * dx + dz * dz < S.r * S.r) S.l.shadow.needsUpdate = true; }); }
+    // Keep the moon responsive in close-ups. During a walk on touch devices and in the overview, reuse every other map.
+    const stagger = far || (TOUCH && !W.camT);
+    if (!stagger || cameraCut || farChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
+    const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
+    let nextSpot = null;
+    for (const spot of spots) {
+      const dx = Math.max(x0 - spot.x, 0, spot.x - x1), dz = Math.max(z0 - spot.z, 0, spot.z - z1);
+      const visible = dx * dx + dz * dz < spot.r * spot.r;
+      if (visible) {
+        if (!stagger || !spot.visible || cameraCut) {
+          spot.l.shadow.needsUpdate = true;
+          spot.refreshed = frameNumber;
+        } else if (!nextSpot || spot.refreshed < nextSpot.refreshed) nextSpot = spot;
+      }
+      spot.visible = visible;
+    }
+    if (nextSpot) {
+      nextSpot.l.shadow.needsUpdate = true;
+      nextSpot.refreshed = frameNumber;
+    }
     // speakers pump on the beat
     const beat = Math.pow(1 - (tb % 1), 3);
     soundSystem.tick(beat);
@@ -1317,15 +1345,30 @@ async function boot() {
     comp.render(dt);
     if (firstFrame) {
       firstFrame = false;
+      last = undefined;   // Shader compilation and the initial drawing-buffer setup are not steady-state FPS.
       $('#cityLoading').hidden = true;
     }
     SB.tick();
     if (showFps) { cpuS += performance.now() - c0; cpuN++; }
-    // quality guard: a phone that can't keep up gets fewer pixels, then no bloom
-    fpsN++; fpsT += dt; if (fpsT > 2) { const fps = fpsN / fpsT;
+    // Measure real frame time. The simulation's dt cap must not make a slow device appear to run at 20 FPS.
+    if (iv > 0 && !document.hidden) { fpsN++; fpsT += iv / 1000; }
+    if (fpsT >= 1.5) { const fps = fpsN / fpsT;
       if (showFps) { $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ЦП ' + (cpuS / Math.max(1, cpuN)).toFixed(1) + ' мс · рывков ' + jerks.length + ' · ' + renderer.info.render.calls + ' выз. · ' + PR.toFixed(2); cpuS = cpuN = 0;
         const g = fpsG; g.clearRect(0, 0, 300, 40); for (let i = 0; i < 300; i++) { const v = hist[(histI + i) % 300]; if (!v) continue; g.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffb84d' : 'rgba(255,255,255,.55)'; const h = Math.min(40, v * .8); g.fillRect(i, 40 - h, 1, h); } }
-      if (fps < 40 && now > 6000) { slow++; if (slow >= 2 && tier < 3) { tier++; slow = 0; if (tier === 1) PR = Math.max(1, PR * .8); else if (tier === 2) PR = Math.max(1, PR * .8); else bloom.enabled = false; resize(); } } else slow = 0;
+      if (fps < 40 && tier < 3) {
+        if (++slow >= 2) {
+          slow = 0;
+          if (tier < 2 && PR > 1) {
+            tier++;
+            PR = Math.max(1, PR * .8);
+            renderer.setPixelRatio(PR);
+            comp.setPixelRatio(PR);
+          } else {
+            tier = 3;
+            bloom.enabled = false;
+          }
+        }
+      } else slow = 0;
       fpsN = 0; fpsT = 0; worst = 0; }
   };
   requestAnimationFrame(now => {
