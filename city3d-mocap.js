@@ -19,7 +19,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   const [capture, authored] = await Promise.all([
     fetch(url).then(response => response.json()),
-    fetch(new URL('./anim/city-breaking.json?v=5', import.meta.url))
+    fetch(new URL('./anim/city-breaking.json?v=6', import.meta.url))
       .then(response => response.ok ? response.json() : null).catch(() => null),
     loadCharacterFinish(),
   ]);

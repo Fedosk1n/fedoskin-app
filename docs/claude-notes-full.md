@@ -1862,3 +1862,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Sixty meetings across eight acts begin after the first prologue invitation. The music modes share a clock with the visual cues and save the route at each completed phrase. Campaign visits do not unlock ordinary district activities. Three decisions change later venue, first dancers and music.
 - Blender sources generate the festival scenes, movable stage and spectral kit. The 3D kit uses separate weighted sole and lace geometry and the wardrobe SVG animates the same distinction. Both render a static gradient for reduced motion.
 - Worker v5 confirms eight act rehearsals and four judged exams before adding both exclusive items to the same wardrobe that stores daily loot. See `docs/city-festival.md` for the checks and evidence.
+
+## 27.11.2026 — Festival story and combinations
+
+- Stitch and Granite have distinct first-showcase charts and places in the live yard. Later they carry the missed slot into a meeting, a crisis and two decisions about venue access and the final running order. The eight-act route still requires 240 three-minute pieces, with one meeting in its epilogue.
+- Eight playable combination families use early previews, offbeat timing, same-control hold/release, directional transitions and equal-difficulty personal responses. New staged poses use the existing mocap rig. The Blender training sheet reads packed animation keys and the published backspin frames remain the same.
+- Local v2 save migration retains old episode indices, in-flight charts and available control checks. The Worker contract and official adjudication stay unchanged.

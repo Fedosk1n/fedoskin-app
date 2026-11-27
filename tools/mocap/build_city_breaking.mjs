@@ -299,6 +299,16 @@ const authored = {
   City_Sweep_Drop: { n: 40, keys: [[0,stand],[.42,squat],[.70,sweep],[1,sit]] },
   City_Backspin: { n: backspinFrames, poseAt: backspin },
   City_Shoulder_Hold: { n: 62, keys: [[0,sit],[.17,open],[.35,shoulderHold],[1,shoulderHold]] },
+  // Festival joins share grounded endpoints with the existing clips. The two rivals
+  // carry different weight changes, a fast cross-step and a late shoulder reveal.
+  Festival_CrossDrop: { n: 38, keys: [[0,stand],[.18,capture('Breakdance_Uprock',.34)],[.42,squat],[.70,sweep],[1,sit]] },
+  Festival_StandThrough: { n: 34, keys: [[0,sit],[.22,tuck],[.52,squat],[.84,capture('Breakdance_Uprock',.2)],[1,stand]] },
+  Festival_FootReset: { n: 30, keys: [[0,sit],[.22,twist],[.48,tuck],[.72,open],[1,sit]] },
+  Festival_StitchSignal: { n: 51, keys: [[0,stand],[.14,capture('Breakdance_Uprock',.31)],[.27,squat],[.45,kick],
+    [.56,tuck],[.64,switchKick],[.83,twist],[1,sit]] },
+  Festival_GraniteSignal: { n: 62, keys: [[0,sit],[.15,open],[.39,shoulderHold],[.75,shoulderHold],[.90,tuck],[1,sit]] },
+  Festival_AnswerCut: { n: 32, keys: [[0,stand],[.25,squat],[.54,kick],[.73,switchKick],[1,sit]] },
+  Festival_AnswerThread: { n: 32, keys: [[0,stand],[.24,squat],[.53,tuck],[.75,thru],[1,sit]] },
 };
 
 function bake({ n, keys, poseAt }) {

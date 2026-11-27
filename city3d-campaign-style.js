@@ -14,7 +14,7 @@ export const FESTIVAL_CSS = `
 #g3festival select{max-width:100%}
 #g3festival fieldset{border:1px solid #75684f;border-radius:9px;padding:8px;margin:8px 0}
 #g3festival fieldset button{width:100%;margin:3px 0}
-.festival-counter,.festival-landmark{color:#ffd998;font-weight:750}
+.festival-lead,.festival-counter,.festival-landmark{color:#ffd998;font-weight:750}
 .festival-act,.festival-poster{background:#20222b;border:1px solid #51433b;border-inline-start:3px solid var(--act,#ffc679);border-radius:11px;padding:11px;margin:8px 0}
 .festival-payoff{border-inline-start:2px solid #a6dbb1;padding:4px 8px;color:#d2f3cf}
 .festival-tip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr));align-items:stretch;gap:6px;margin:10px 0;overflow:hidden;border-radius:9px}
@@ -30,6 +30,16 @@ export const FESTIVAL_CSS = `
 #fCues,#fPads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:6px 0}
 #fCues{grid-template-columns:repeat(5,minmax(0,1fr));font:800 15px Inter,sans-serif}
 #fCues span{padding:8px 2px;background:#262b34;border:1px solid #514e58;border-radius:6px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#fCues :is(.hold,.release,.hand){font-size:11px}
+#fCues .hold,#fPads button.holding{border-color:#9adbbb;color:#d6ffe9}
+#fCues .release{border-color:#c9bbfb;color:#eee7ff}
+#fCues .hand{border-color:#82c7f3;color:#d9f1ff}
+#fPads button.not-in-score{opacity:.38}
+.festival-study{padding:8px;border:1px solid #5a5360;border-radius:9px;background:#23252e;margin:8px 0}
+.festival-study>div{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:4px 0}
+.festival-study span{min-width:min(50%,160px);font-size:12px;color:#e6d1aa}
+#g3festival .festival-study img{width:100%;border-radius:8px;display:block;margin-top:5px}
+.festival-study small{font-size:10px;border:1px solid #575360;border-radius:5px;padding:2px 4px;color:#d9def0}
 #fCues .past{opacity:.58}
 #fCues .now{background:#3e3132;color:#ffe5ab;border:2px solid #ffc679;box-shadow:0 0 calc(13px * var(--beat-glow,.6)) #ffc679b0;padding:7px 1px}
 #fPads button{padding:5px 1px;overflow-wrap:anywhere;color:#fff0ce;border-color:#896e55;background:#342c36;touch-action:none;min-height:49px}

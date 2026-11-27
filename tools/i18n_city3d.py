@@ -615,7 +615,8 @@ if __name__ == '__main__':
         for l in L: D[l][k] = app[l][k]          # KeyError = the gear's name is missing in tools/i18n_src.py
     from i18n_festival import CAMPAIGN_ROWS
     current = {r[0] for r in ROWS} | set(REUSE)
-    ROWS.extend(row for row in CAMPAIGN_ROWS if row[0] not in current)
+    from i18n_festival_story import STORY_ROWS
+    ROWS.extend(row for row in CAMPAIGN_ROWS + STORY_ROWS if row[0] not in current)
     seen = set()
     for r in ROWS:
         assert len(r) == len(L) + 1, r[0]
