@@ -1103,7 +1103,7 @@ async function loadDistrictEnvironment() {
   }
 }
 
-function warmDistrictTextures(scene, renderer) {
+function* districtTextures(scene) {
   const textures = new Set();
   const add = value => { if (value?.isTexture && !value.isRenderTargetTexture) textures.add(value); };
   add(scene.environment);
@@ -1113,7 +1113,25 @@ function warmDistrictTextures(scene, renderer) {
       if (material.uniforms) for (const uniform of Object.values(material.uniforms)) add(uniform?.value);
     }
   });
-  for (const texture of textures) { try { renderer.initTexture(texture); } catch (_) {} }
+  yield* textures;
+}
+
+function warmDistrictTextures(scene, renderer, defer) {
+  const textures = districtTextures(scene);
+  const upload = texture => { try { renderer.initTexture(texture); } catch (_) {} };
+  if (!defer) {
+    for (const texture of textures) upload(texture);
+  } else if ('requestIdleCallback' in window) {
+    const warm = idle => {
+      for (let i = 0; i < 2 && idle.timeRemaining() > 5; i++) {
+        const { value, done } = textures.next();
+        if (done) return;
+        upload(value);
+      }
+      requestIdleCallback(warm);
+    };
+    requestIdleCallback(warm);
+  }
 }
 
 async function boot() {
@@ -1141,7 +1159,8 @@ async function boot() {
     }) : null,
   ]);
   let PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
-  renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight, false);
+  renderer.setPixelRatio(TOUCH ? Math.min(1, PR) : PR);
+  renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0a0c11'); scene.fog = new THREE.FogExp2('#0a0c11', .016);
@@ -1192,8 +1211,17 @@ async function boot() {
   const spots = []; scene.updateMatrixWorld(true);
   scene.traverse(o => { if (!o.isSpotLight || !o.castShadow) return; SB.useFor(o); o.shadow.autoUpdate = false;
     const lp = o.getWorldPosition(new THREE.Vector3()), tp = o.target.getWorldPosition(new THREE.Vector3());
-    spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2, visible: false, refreshed: -Infinity }); });
+    spots.push({ l: o, x: tp.x, z: tp.z, r: Math.hypot(lp.x - tp.x, lp.y - tp.y, lp.z - tp.z) * Math.tan(Math.min(o.angle, 1.3)) + 1.2,
+      intensity: o.shadow.intensity, visible: false, refreshed: -Infinity });
+    if (TOUCH) o.shadow.intensity = 0;
+  });
   let farOn = false, frameNumber = 0;
+  let shadowFrames = 0, shadowPrograms;
+  function setShadows(enabled) {
+    renderer.shadowMap.enabled = moon.castShadow = enabled;
+    for (const { l } of spots) l.castShadow = enabled;
+  }
+  if (TOUCH) setShadows(false);
   const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
 
   // post: bloom on the bright bits, then vignette + grade + grain
@@ -1202,6 +1230,8 @@ async function boot() {
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84);
+  let openingEffectsPending = TOUCH;
+  bloom.enabled = !openingEffectsPending;
   if (TOUCH) {
     const sizeBloom = bloom.setSize.bind(bloom);
     bloom.setSize = (w, h) => sizeBloom(Math.max(32, w * .65), Math.max(32, h * .65));
@@ -1246,19 +1276,34 @@ async function boot() {
   const resize = () => { const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false); comp.setSize(w, h);
     camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
+  const applyRenderRatio = () => {
+    const ratio = openingEffectsPending ? Math.min(1, PR) : PR;
+    if (renderer.getPixelRatio() === ratio) return;
+    renderer.setPixelRatio(ratio);
+    comp.setPixelRatio(ratio);
+  };
   addEventListener('resize', resize); resize();
   setupInput(cv, camera);
-  // Queue shaders together and upload textures while the graphics driver compiles them.
-  // Both the first draw and walking into a new part of the district can reuse the results.
-  try {
-    renderer.setRenderTarget(rt);
-    renderer.compile(scene, camera);
-  } catch (e) {
-    console.warn(e);
-  } finally {
-    renderer.setRenderTarget(null);
+  function compileDistrict() {
+    try {
+      renderer.setRenderTarget(rt);
+      renderer.compile(scene, camera);
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      renderer.setRenderTarget(null);
+    }
   }
-  warmDistrictTextures(scene, renderer);
+  function prepareShadows() {
+    const existing = new Set(renderer.info.programs);
+    setShadows(true);
+    compileDistrict();
+    setShadows(false);
+    // Rendering continues with the opening programs while the driver links the shadow variants.
+    shadowPrograms = renderer.info.programs.filter(p => !existing.has(p));
+  }
+  compileDistrict();
+  if (!TOUCH) warmDistrictTextures(scene, renderer, false);
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), look = new THREE.Vector3();
   // the hero is read EVERY frame: after a change of clothes (gear won in a battle, a detail from the tailor) W.hero is a NEW person —
   // the camera used to keep following the old, removed one and the hero ran out of the picture (owner 17.11.2026 «мой человечек
@@ -1314,17 +1359,24 @@ async function boot() {
     // the line of a drawn power move is laid over the dancer AFTER the camera has moved (else it lags a frame behind him)
     if (GAME.post) { camera.updateMatrixWorld(); GAME.post(dt); }
     moon.position.copy(camLook).add(MOON); moon.target.position.copy(camLook); moon.target.updateMatrixWorld();
+    if (shadowPrograms?.every(program => !renderer.info.programs.includes(program) || program.isReady())) {
+      shadowPrograms = null;
+      setShadows(true);
+    }
+    if (TOUCH && renderer.shadowMap.enabled) shadowFrames++;
     // Keep the moon responsive in close-ups. During a walk on touch devices and in the overview, reuse every other map.
     const stagger = far || (TOUCH && !W.camT);
     if (!stagger || cameraCut || farChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
+    const startupSpots = TOUCH && !cameraCut && !W.camT && shadowFrames <= spots.length;
     const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
     let nextSpot = null;
     for (const spot of spots) {
       const dx = Math.max(x0 - spot.x, 0, spot.x - x1), dz = Math.max(z0 - spot.z, 0, spot.z - z1);
       const visible = dx * dx + dz * dz < spot.r * spot.r;
-      if (visible) {
-        if (!stagger || !spot.visible || cameraCut) {
+      if (visible && renderer.shadowMap.enabled) {
+        if (!startupSpots && (!stagger || !spot.visible || cameraCut || !spot.l.shadow.map)) {
           spot.l.shadow.needsUpdate = true;
+          spot.l.shadow.intensity = spot.intensity;
           spot.refreshed = frameNumber;
         } else if (!nextSpot || spot.refreshed < nextSpot.refreshed) nextSpot = spot;
       }
@@ -1332,6 +1384,7 @@ async function boot() {
     }
     if (nextSpot) {
       nextSpot.l.shadow.needsUpdate = true;
+      nextSpot.l.shadow.intensity = nextSpot.intensity;
       nextSpot.refreshed = frameNumber;
     }
     // speakers pump on the beat
@@ -1342,18 +1395,27 @@ async function boot() {
     motes.forEach(m => { const a = m.p.geometry.attributes.position, A = a.array, B = m.base; for (let i = 0; i < m.seed.length; i++) { const q = m.seed[i], t = now * .0002 + q; A[i * 3] = B[i * 3] + Math.sin(t * 1.3) * .25; A[i * 3 + 1] = B[i * 3 + 1] + Math.sin(t * .9 + q) * .2; A[i * 3 + 2] = B[i * 3 + 2] + Math.cos(t * 1.1) * .25; } a.needsUpdate = true; });
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
+    if (openingEffectsPending && shadowFrames > Math.max(1, spots.length)) {
+      openingEffectsPending = false;
+      bloom.enabled = tier < 3;
+      applyRenderRatio();
+    }
     comp.render(dt);
     if (firstFrame) {
       firstFrame = false;
       last = undefined;   // Shader compilation and the initial drawing-buffer setup are not steady-state FPS.
       $('#cityLoading').hidden = true;
+      if (TOUCH) {
+        requestAnimationFrame(() => setTimeout(prepareShadows, 0));
+        warmDistrictTextures(scene, renderer, true);
+      }
     }
     SB.tick();
     if (showFps) { cpuS += performance.now() - c0; cpuN++; }
     // Measure real frame time. The simulation's dt cap must not make a slow device appear to run at 20 FPS.
     if (iv > 0 && !document.hidden) { fpsN++; fpsT += iv / 1000; }
     if (fpsT >= 1.5) { const fps = fpsN / fpsT;
-      if (showFps) { $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ЦП ' + (cpuS / Math.max(1, cpuN)).toFixed(1) + ' мс · рывков ' + jerks.length + ' · ' + renderer.info.render.calls + ' выз. · ' + PR.toFixed(2); cpuS = cpuN = 0;
+      if (showFps) { $('#fps').textContent = fps.toFixed(0) + ' fps · худший кадр ' + worst.toFixed(0) + ' мс · ЦП ' + (cpuS / Math.max(1, cpuN)).toFixed(1) + ' мс · рывков ' + jerks.length + ' · ' + renderer.info.render.calls + ' выз. · ' + renderer.getPixelRatio().toFixed(2); cpuS = cpuN = 0;
         const g = fpsG; g.clearRect(0, 0, 300, 40); for (let i = 0; i < 300; i++) { const v = hist[(histI + i) % 300]; if (!v) continue; g.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffb84d' : 'rgba(255,255,255,.55)'; const h = Math.min(40, v * .8); g.fillRect(i, 40 - h, 1, h); } }
       if (fps < 40 && tier < 3) {
         if (++slow >= 2) {
@@ -1361,8 +1423,7 @@ async function boot() {
           if (tier < 2 && PR > 1) {
             tier++;
             PR = Math.max(1, PR * .8);
-            renderer.setPixelRatio(PR);
-            comp.setPixelRatio(PR);
+            applyRenderRatio();
           } else {
             tier = 3;
             bloom.enabled = false;
