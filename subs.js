@@ -15,7 +15,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "fr-one-hand-freeze": {
   "ks": "",
@@ -213,7 +213,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "tn-flare-to-airflare-to-flare": {
   "ks": "262fa2a3-9675-40ac-8b20-5092475a3192",

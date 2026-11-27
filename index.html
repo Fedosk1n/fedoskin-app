@@ -3830,7 +3830,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // valid only while the lesson still plays the same Kinescope video (a replaced video ⇒ ignored, like intros).
   // Choice in 'fedoskin-subs': 'off' or a language; nothing chosen ⇒ the app's language, off for Russian (the lessons are Russian).
   var SUBS = window.LESSON_SUBS || {};
-  var subsCues = null, subsFor = null, subsIdx = 0, subsShown = null;
+  var subsCues = null, subsTimed = null, subsFor = null, subsIdx = 0, subsShown = null;
   function subsInfo(l){ const x = l && SUBS && SUBS[l.id]; return x && (!x.ks || x.ks === (l.ks || '')) && (!x.r2 || x.r2 === (l.r2 || '')) ? x : null; } // R2 lessons: same file name
   // The choice is remembered together with the app language it was made in: after switching the app to another
   // language the subtitles follow the new language again (owner 04.11: «субтитры того языка, на котором говорит пользователь»).
@@ -3849,22 +3849,23 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ['#btnSubs', '#fsSubsC', '#fsSubsTop'].forEach(id => { const b = $(id); b.hidden = !has; b.setAttribute('aria-pressed', on); });
   }
   function loadSubs(l){
-    subsCues = null; subsFor = l.id; subsIdx = 0; subsShown = null; $('#subtl').hidden = true;
+    subsCues = null; subsTimed = null; subsFor = l.id; subsIdx = 0; subsShown = null; $('#subtl').hidden = true;
     paintSubsBtns();
     const info = subsInfo(l); if (!info) return;
     fetch('subs/' + l.id + '.json?v=' + (info.v || 1)).then(r => r.ok ? r.json() : null).then(j => {
       if (!j || subsFor !== l.id || (j.ks && l.ks && j.ks !== l.ks)) return;
-      subsCues = j.cues || []; renderSub();
+      subsCues = j.cues || []; subsTimed = j.timed || null; renderSub();
     }).catch(() => {});
   }
   function renderSub(){
     const lang = subsLang();
+    const cues = subsTimed?.[lang] || subsCues;
     let txt = '';
-    if (lang && subsCues && subsCues.length && !$('#lesson').hidden) {
+    if (lang && cues && cues.length && !$('#lesson').hidden) {
       const t = P.t;
-      if (!subsCues[subsIdx] || subsCues[subsIdx][0] > t) subsIdx = 0;
-      while (subsIdx < subsCues.length - 1 && subsCues[subsIdx][1] <= t) subsIdx++;
-      const c = subsCues[subsIdx];
+      if (!cues[subsIdx] || cues[subsIdx][0] > t) subsIdx = 0;
+      while (subsIdx < cues.length - 1 && cues[subsIdx][1] <= t) subsIdx++;
+      const c = cues[subsIdx];
       if (c && c[0] <= t && t < c[1]) txt = c[2][lang] || '';
     }
     if (txt === subsShown) return;
@@ -3881,7 +3882,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       b.children[1].textContent = name; b.children[2].textContent = code === 'off' ? '' : code.toUpperCase();
       b.addEventListener('click', () => {
         try { localStorage.setItem('fedoskin-subs', JSON.stringify({c: code, app: LANG})); } catch (_) {}
-        $('#subsSheet').hidden = true; subsShown = null; paintSubsBtns(); renderSub();
+        $('#subsSheet').hidden = true; subsIdx = 0; subsShown = null; paintSubsBtns(); renderSub();
       });
       list.appendChild(b);
     });

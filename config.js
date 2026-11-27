@@ -30,19 +30,19 @@ window.APP_CONFIG = {
   "pw-windmill": {
    "media": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
    "tracks": {
-    "en": "dub-pw-windmill-en-47b577f2.mp4"
+    "en": "dub-pw-windmill-en-21950bf9.mp4"
    },
    "mux": {
-    "en": "dub-pw-windmill-en-1cae91fe.mp4"
+    "en": "dub-pw-windmill-en-1c43a15e.mp4"
    }
   },
   "fr-airbaby": {
    "media": "fr-airbaby-to0b3ely.mp4",
    "tracks": {
-    "en": "dub-fr-airbaby-en-2593928f.mp4"
+    "en": "dub-fr-airbaby-en-1f6971fb.mp4"
    },
    "mux": {
-    "en": "dub-fr-airbaby-en-db50b4ce.mp4"
+    "en": "dub-fr-airbaby-en-892766c5.mp4"
    }
   }
  }
