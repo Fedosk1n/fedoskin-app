@@ -9,8 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=36';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=70';
-import { buildClub, loadClubSurfaces } from './city3d-club.js?v=8';
+import { initGame } from './city3d-game.js?v=71';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=9';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
@@ -883,7 +883,13 @@ function setupInput(cv, camera) {
   // dropped (no joystick, no tap), and until all fingers are lifted nothing else starts. The mouse wheel zooms on a computer.
   const fingers = new Map(), gap = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
   const pinchEnd = () => { if (!W.pinch) return; W.pinch = null; saveZoom(); };
+  const cancelGuidePreview = () => {
+    if (!W.guideView) return;
+    if (W.guideView.snap) { W.camSnap = true; W.zoom = W.uZoom; }
+    W.guideView = null;
+  };
   cv.addEventListener('pointerdown', e => {
+    cancelGuidePreview();
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     if (fingers.size >= 2) {   // the second finger: from now on it is a pinch
       if (fingers.size === 2) { W.pinch = { d0: gap(), z0: W.uZoom }; hintOff(); ztipOff(); }
@@ -894,7 +900,7 @@ function setupInput(cv, camera) {
   cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift);
   cv.addEventListener('pointermove', e => { const f = fingers.get(e.pointerId); if (f) { f.x = e.clientX; f.y = e.clientY; }
     if (W.pinch && fingers.size >= 2) { setZoom(W.pinch.z0 * W.pinch.d0 / gap()); return; } });
-  cv.addEventListener('wheel', e => { e.preventDefault(); ztipOff(); setZoom(W.uZoom * Math.exp(clamp(e.deltaY, -120, 120) * .0016)); clearTimeout(cv._wz); cv._wz = setTimeout(saveZoom, 400); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); cancelGuidePreview(); ztipOff(); setZoom(W.uZoom * Math.exp(clamp(e.deltaY, -120, 120) * .0016)); clearTimeout(cv._wz); cv._wz = setTimeout(saveZoom, 400); }, { passive: false });
   // Safari's own page pinch (it ignores user-scalable=no): off, the pinch belongs to the map
   ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
   cv.addEventListener('pointermove', e => { if (!ctl.down || e.pointerId !== ctl.id) return; ctl.x = e.clientX; ctl.y = e.clientY;
@@ -907,7 +913,10 @@ function setupInput(cv, camera) {
     }
     ctl.joy = false; };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  const keys = {}; addEventListener('keydown', e => { keys[e.key] = 1; }); addEventListener('keyup', e => { keys[e.key] = 0; });
+  const keys = {}; addEventListener('keydown', e => {
+    if (/^(Arrow(Left|Right|Up|Down)|[wasd])$/.test(e.key)) cancelGuidePreview();
+    keys[e.key] = 1;
+  }); addEventListener('keyup', e => { keys[e.key] = 0; });
   ctl.keys = keys;
 }
 let hintGone = false; function hintOff() { if (hintGone) return; hintGone = true; $('#hint').classList.add('off'); }
@@ -918,7 +927,7 @@ function zoomTip() {
   const el = $('#ztip'); let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-ztip') === '1'; } catch (_) {}
   if (!el || seen) { if (el) el.remove(); return; }
   if (!matchMedia('(pointer: coarse)').matches) el.querySelector('span').textContent = _t('Колёсико мыши — отдалить или приблизить карту');
-  const go = () => { const a = $('#alpha'); if (a && !a.hidden) { setTimeout(go, 400); return; }
+  const go = () => { const a = $('#alpha'); if (a && !a.hidden || document.body.classList.contains('city-guide-intro')) { setTimeout(go, 400); return; }
     ztipT = setTimeout(() => { try { localStorage.setItem('fedoskin-city3d-ztip', '1'); } catch (_) {} el.classList.add('on'); ztipT = setTimeout(ztipOff, 5200); }, 1200); };
   go();
 }
@@ -1296,11 +1305,12 @@ async function boot() {
     // battles take over with their own close-ups (W.camT) and give it back afterwards
     const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;
     look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
-    if (W.camT) look.set(W.camT.x, W.camT.y || 0, W.camT.z);
+    const view = W.camT || W.guideView;
+    if (view) look.set(view.x, view.y || 0, view.z);
     // W.camSnap: a replay's cut — the camera jumps instead of gliding
     const cameraCut = W.camSnap;
     if (cameraCut) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
-    W.zoom = lerp(zW, W.camT ? W.camT.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !W.camT ? 18 : 3)));
+    W.zoom = view?.snap ? view.zoom : lerp(zW, view ? view.zoom : W.uZoom, 1 - Math.exp(-dt * (W.pinch && !view ? 18 : 3)));
     // W.camT.off: a battle's replay looks from another side (city3d-power.js), the normal view is `off`
     camPos.copy(camLook).addScaledVector(W.camT && W.camT.off || off, W.zoom); camera.position.copy(camPos);
     scene.fog.density = fog0 / Math.max(1, W.zoom);

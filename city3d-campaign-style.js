@@ -16,6 +16,8 @@ export const FESTIVAL_CSS = `
 #g3festival fieldset button{width:100%;margin:3px 0}
 .festival-lead,.festival-counter,.festival-landmark{color:#ffd998;font-weight:750}
 .festival-act,.festival-poster{background:#20222b;border:1px solid #51433b;border-inline-start:3px solid var(--act,#ffc679);border-radius:11px;padding:11px;margin:8px 0}
+.festival-quick{background:#213739;border:1px solid #69988e;border-radius:9px;padding:6px 9px;margin:8px 0;color:#ddf6ef}
+.festival-quick summary{cursor:pointer;font-weight:800;padding:4px 0;color:#b8efdd}
 .festival-payoff{border-inline-start:2px solid #a6dbb1;padding:4px 8px;color:#d2f3cf}
 .festival-tip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr));align-items:stretch;gap:6px;margin:10px 0;overflow:hidden;border-radius:9px}
 .festival-tip img,.festival-tip canvas,.festival-poster img{display:block;width:100%;height:auto;min-height:65px;object-fit:cover;border-radius:7px}

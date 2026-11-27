@@ -1868,3 +1868,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Stitch and Granite have distinct first-showcase charts and places in the live yard. Later they carry the missed slot into a meeting, a crisis and two decisions about venue access and the final running order. The eight-act route still requires 240 three-minute pieces, with one meeting in its epilogue.
 - Eight playable combination families use early previews, offbeat timing, same-control hold/release, directional transitions and equal-difficulty personal responses. New staged poses use the existing mocap rig. The Blender training sheet reads packed animation keys and the published backspin frames remain the same.
 - Local v2 save migration retains old episode indices, in-flight charts and available control checks. The Worker contract and official adjudication stay unchanged.
+
+## 28.11.2026 — Contextual City guidance
+
+- The nonmodal guide follows one selected line and remembers which objectives it showed. The first Yard objective uses footprints outside the cypher. Its timer requires stopping in the footprint area and resets across overlays and page visibility changes.
+- The 17 Blender-built landmarks load as five district bundles. Map artwork and reference cards use the same physical object. See `docs/city-guidance.md` for the mapping and build.

@@ -616,7 +616,8 @@ if __name__ == '__main__':
     from i18n_festival import CAMPAIGN_ROWS
     current = {r[0] for r in ROWS} | set(REUSE)
     from i18n_festival_story import STORY_ROWS
-    ROWS.extend(row for row in CAMPAIGN_ROWS + STORY_ROWS if row[0] not in current)
+    from i18n_city_guidance import GUIDANCE_ROWS
+    ROWS.extend(row for row in CAMPAIGN_ROWS + STORY_ROWS + GUIDANCE_ROWS if row[0] not in current)
     seen = set()
     for r in ROWS:
         assert len(r) == len(L) + 1, r[0]

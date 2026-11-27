@@ -288,19 +288,22 @@ export function buildClub(TK) {
   });
   for (const x of [-1.91, 1.91]) box(x, judgeZ - .04, .40, .39);
 
+  const activitySigns = {
+    smoke: label('7 TO SMOKE', smokeEntry.x, 2.3, smokeEntry.z, '#ffce8a'),
+    clubDJ: label(t('Пульт диджея'), dj.x, 1.05, dj.z, '#86e7e5'),
+    clubRecords: label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
+  };
   const signs = [
     label(t('Пульт диджея') + '  ↗', 1.95, 1.4, 2.02, '#86e7e5', 2.5),
     label(t('Стена результатов') + '  →', 1.95, 1.4, 3.20, '#ffce8a', 2.5),
-    label('7 TO SMOKE', smokeEntry.x, 2.3, smokeEntry.z, '#ffce8a'),
-    label(t('Пульт диджея'), dj.x, 1.05, dj.z, '#86e7e5'),
-    label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
+    ...Object.values(activitySigns),
     label(t('Выход в Промзону'), exit.x, 2.15, exit.z + .34, '#edb48b'),
   ];
   W.tickers.push(dt => {
     mix.tick(dt);
     judges.forEach(judge => judge.tick(dt));
   });
-  W.club = { floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, mix,
+  W.club = { floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, activitySigns, mix,
     showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
     hideVotes: () => judges.forEach(judge => judge.hide()),
   };

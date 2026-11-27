@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=36';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { loadFestivalStage } from './city3d-festival-art.js?v=1';
+import { loadFestivalStage } from './city3d-festival-art.js?v=2';
 import { initPower } from './city3d-power.js?v=26';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
@@ -17,9 +17,11 @@ import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=3';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
-import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=1';
-import { initFestival } from './city3d-campaign.js?v=2';
+import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
+import { initFestival } from './city3d-campaign.js?v=3';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
+import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
+import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -344,7 +346,7 @@ function ui() {
 <div id="g3hud"><div class="chip" id="g3en"><span>⚡ <b id="g3enN"></b> ${_t('энергии')}</span><div class="bar"><i></i></div></div>
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
 <div id="g3hud2"><button type="button" class="chip" id="g3story" aria-haspopup="dialog">${_t('Сюжет')} <b></b></button><button type="button" class="chip" id="g3festivalOpen" aria-haspopup="dialog" hidden>${_t('Фестиваль')}</button><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
-<div id="g3storyNear" hidden></div>
+<div id="g3storyNear" role="timer" hidden></div>
 <button id="g3act" type="button"></button>
 <div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button><button id="g3modeExit" type="button" hidden>${_t('В город')}</button></div>
 <div id="g3res"></div><div id="g3toast" role="status"></div><div id="g3info"><div></div></div>`;
@@ -689,6 +691,14 @@ export function initGame(ctx) {
     PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
+  const guide = initCityGuide(_t);
+  const landmark = initLandmarkView({ scene, camera:ctx.camera, node:guide.label, district:D, t:_t });
+  const guideColliders = ctx.colliders || [], placements = new Map();
+  const groundArt = (id, point) => {
+    const key = [id,point.x,point.z,guideColliders.length].join(':');
+    if (!placements.has(key)) placements.set(key,placeLandmark(id,point,guideColliders,W.bounds));
+    return placements.get(key);
+  };
   let festivalGuest = null, festivalScene = null, festivalHome = null;
   let festivalPeople = [];
   let narrativeCast = null, festivalSpin = null, openingShow = null;
@@ -781,7 +791,7 @@ export function initGame(ctx) {
     }
   }
   const festival = initFestival({ t: _t, W, D, places: PLACES, colliders: ctx.colliders || [], state: S.festival,
-    eligible: () => S.story.length > 0, save, travel: to => travel(to, true), leaveVisit: festivalVisit ? () => travel(S.where) : null,
+    eligible: () => S.story.length > 0, landmarkPoint:groundArt, save, travel: to => travel(to, true), leaveVisit: festivalVisit ? () => travel(S.where) : null,
     openAllowed: () => !A && !B && !P && !choosing && $('#cityLoading').hidden && $('#alpha').hidden && !$('#lookDialog').open,
     lock(locked) {
       W.lock = locked;
@@ -835,27 +845,65 @@ export function initGame(ctx) {
       playFestivalMove(festivalGuest, clip, cue, .15);
     },
   });
-  $('#g3festivalOpen').onclick = () => festival.open(false);
-  const festivalPin = new THREE.Mesh(new THREE.OctahedronGeometry(.35), new THREE.MeshBasicMaterial({ color: '#ffb96c', toneMapped: false }));
-  festivalPin.name = 'city-festival-marker';
-  festivalPin.scale.y = 1.35;
-  festivalPin.visible = false;
-  scene.add(festivalPin);
-  const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
+  function openFestival(venue) {
+    if (festival.open(venue)) guide.choose('festival');
+  }
+  $('#g3festivalOpen').onclick = () => openFestival(false);
+  const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || 0)) / 60));
   const myWalls = () => IDS.filter(id => S.turf[id]).length;
   const storyChapter = () => CHAPTERS[S.story.length];
-  const storyPin = new THREE.Mesh(new THREE.OctahedronGeometry(.29), new THREE.MeshBasicMaterial({ color: '#FFD36D', toneMapped: false }));
-  storyPin.name = 'city-story-marker';
-  storyPin.scale.y = 1.45;
-  storyPin.visible = false;
-  const storyHalo = new THREE.Mesh(new THREE.RingGeometry(.4, .48, 28), new THREE.MeshBasicMaterial({ color: '#FFD36D', transparent: true, opacity: .85, depthWrite: false, toneMapped: false }));
-  storyHalo.name = 'city-story-marker-ground';
-  storyHalo.rotation.x = -Math.PI / 2;
-  storyHalo.visible = false;
-  scene.add(storyPin, storyHalo);
   const storyPlaces = { cypher: 'show', mall: 'mall', jam: 'jam', ring: 'ring', finale: 'storyFinale' };
   const storyDistricts = ['yard', 'center', 'park', 'prom', 'club'];
   const finaleGuests = Y && storyChapter()?.id === 'finale' ? buildFinaleGuests() : [];
+  const preferredMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const watchPoint = W.cyph && { x:W.cyph.x, z:W.cyph.z+3.72 };
+  const courseStarted = () => S.festival.episode > 0 || S.festival.piece > 0 || S.festival.beat > 0 ||
+    S.festival.prepared || Object.keys(S.festival.choices).length > 0;
+  function guidingLine(chapter, festivalStep) {
+    const selected = guide.line() || (festivalVisit || courseStarted() ? 'festival' : 'story');
+    if (selected === 'festival' && festivalStep) return 'festival';
+    if (chapter) return 'story';
+    return festivalStep ? 'festival' : null;
+  }
+  function storyDestination(chapter) {
+    if (!chapter || chapter.district !== D || festivalOnly) return null;
+    if (chapter.id === 'cypher') return watchPoint;
+    return PLACES.find(p => p.id === storyPlaces[chapter.id]);
+  }
+  function showLandmark(target) {
+    if (!target) return;
+    const snap = preferredMotion.matches;
+    W.guideView = { x:target.x, z:target.z, zoom:Math.min(W.uZoom, .82), snap, until:performance.now()+2400 };
+    if (snap) W.camSnap = true;
+    $('#c3').focus({ preventScroll:true });
+  }
+  function guidanceEntry(chapter, line, object, festivalStep) {
+    if (line !== 'festival' && S.story.length === 1 && festivalStep && !courseStarted() && !guide.inviteResolved()) {
+      return { id:'festival-invite', line:'festival', art:'mat', title:_t('Винт зовёт на фестиваль'),
+        where:_t('Двор · тренировочный коврик'),
+        text:_t('Продолжи задание Винта у тренировочного мата во Дворе или собери общий сайфер.'),
+        button:_t('К фестивалю'), action:() => { guide.choose('festival'); $('#c3').focus({preventScroll:true}); },
+        alternate:{ button:_t('Продолжить сайфер'), action:() => { guide.choose('story'); $('#c3').focus({preventScroll:true}); } } };
+    }
+    if (line === 'festival' && festivalStep) {
+      return { id:'festival:'+festivalStep.id+':'+D, line, art:festivalStep.art,
+        title:festivalStep.title, where:festivalStep.where, text:festivalStep.text,
+        button:_t(object ? 'Показать место' : 'Поехать к площадке'),
+        action:object ? () => showLandmark(object.point) : () => travel(festivalStep.district,true) };
+    }
+    if (line !== 'story' || !chapter) return null;
+    let text = _t(chapter.imageHint);
+    if (chapter.id === 'cypher' && object) {
+      text = _t(matchMedia('(pointer: coarse)').matches ?
+        'Проведи пальцем по двору. Встань на следы у картона и смотри круг {n} секунд.' :
+        'Подойди к следам у картона стрелками, клавишами WASD или кликом. Смотри круг {n} секунд.', { n:WATCH_TIME });
+    }
+    if (!object) text = festivalOnly ? _t('Выйди из сюжетного визита и продолжи общий сайфер.') : storyHint(chapter);
+    return { id:'story:'+chapter.id+':'+D, line, art:CHAPTER_ART[chapter.id],
+      title:_t(chapter.id === 'cypher' ? 'Винт · Смотреть круг' : chapter.title),
+      where:_t(chapter.location), text, button:_t(object ? 'Показать место' : festivalOnly ? 'Вернуться в обычный город' : 'Открыть цель'),
+      action:object ? () => showLandmark(object.point) : festivalOnly ? () => travel(S.where) : openStory };
+  }
 
   function storyHint(chapter) {
     if (chapter.district === D) {
@@ -865,7 +913,7 @@ export function initGame(ctx) {
       if (button.off) return button.h;
       const cost = energyCost(BAL[chapter.id]);
       if (S.en < cost) return _t('Нужно {n} ⚡. Энергия пополняется бесплатно с новым днём.', { n: cost });
-      return cost > 0 ? _t('Золотая метка у места действия · −{n} ⚡', { n: cost }) : _t('Золотая метка у места действия');
+      return cost > 0 ? _t('Ориентир у места действия · −{n} ⚡', { n: cost }) : _t('Ориентир у места действия');
     }
     const ahead = storyDistricts.indexOf(chapter.district) > storyDistricts.indexOf(D);
     if (ahead && D === 'yard') {
@@ -885,6 +933,7 @@ export function initGame(ctx) {
   }
   function openStory() {
     if (B || A || P || choosing || festival.busy()) return;
+    guide.choose('story', S.story.length > 0);
     const chapter = storyChapter();
     openModeInfo(storyJournal(_t, S.story, chapter ? storyHint(chapter) : '', BAL.enCap), false);
     const panel = $('#g3info').firstElementChild;
@@ -902,7 +951,11 @@ export function initGame(ctx) {
     return next ? _t('Сюжет · {reward} · дальше «{next}»', { reward, next: _t(next.title) }) : _t('Общий сайфер состоялся · {reward}', { reward });
   }
   // moving between districts: the save remembers where I am, the page builds that district
-  function travel(to, forFestival = false) { if (!forFestival) S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
+  let traveling = false;
+  function travel(to, forFestival = false) {
+    if (traveling) return;
+    traveling = true;
+    if (!forFestival) S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
     const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;background:#0B0D12;opacity:0;transition:opacity .35s;z-index:20'; document.body.appendChild(f); requestAnimationFrame(() => (f.style.opacity = 1));
     setTimeout(() => { const u = new URL(location.href); u.searchParams.delete('d'); u.searchParams.delete('festival');
       if (forFestival) { u.searchParams.set('d', to); u.searchParams.set('festival','1'); }
@@ -953,7 +1006,7 @@ export function initGame(ctx) {
     if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: _t('🕺 Толпа устала — приходи завтра'), s: _t('Шоу у ТЦ: {n} раза в день', { n: BAL.mallMax }) } : { h: _t('🕺 Шоу у ТЦ · −{n} ⚡', { n: energyCost(BAL.mall) }), s: _t('Начинай, когда охранник далеко: красный круг — его зона'), low: S.en < energyCost(BAL.mall) }; }
   }
   function placeRun(pl) {
-    if (pl.id === 'festival') { festival.open(true); return; }
+    if (pl.id === 'festival') { openFestival(true); return; }
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
     if (pl.id === 'club') { travel('club'); return; }
     if (pl.id === 'backProm') { travel('prom'); return; }
@@ -1880,7 +1933,10 @@ export function initGame(ctx) {
   let cyT = 0, storyWatchStart = null;
   const storyOverlays = ['#cityLoading', '#alpha', '#g3info', '#lookDialog'].map($);
   const storyNear = $('#g3storyNear');
-  addEventListener('visibilitychange', () => { if (document.hidden) storyWatchStart = null; });
+  const resetWatch = () => { storyWatchStart = null; };
+  document.addEventListener('visibilitychange',resetWatch);
+  addEventListener('pagehide',resetWatch);
+  addEventListener('pageshow',resetWatch);
   // ---------- per frame ----------
   function update(dt) {
     if (P) paintTick(dt);
@@ -1891,7 +1947,6 @@ export function initGame(ctx) {
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) PZ.gateClub.chain.visible = !S.wins.forge;
     if (club) {
-      club.signs.forEach(label => { label.visible = !A; });
       smoke.tick(dt, B, B?.phase === 'end' || wheel.active() || PM.state() === 'replay');
     }
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
@@ -1915,60 +1970,79 @@ export function initGame(ctx) {
       festivalPeople.forEach(person => person.tick(dt));
       if (narrativeCast) Object.values(narrativeCast.actors).forEach(person => person.tick(dt));
     } else if (festivalGuest) festivalGuest.root.visible = false;
-    const festivalTarget = festival.target();
+    const chapter = storyChapter(), festivalStep = festival.guide(), line = guidingLine(chapter,festivalStep);
+    const festivalTarget = line === 'festival' && festivalStep && festival.target();
+    const storyTarget = line === 'story' && storyDestination(chapter);
+    const storyArt = storyTarget && CHAPTER_ART[chapter.id];
+    const storyObject = storyArt && groundArt(storyArt,storyTarget);
     if (!B && !P && !A && !choosing && !festival.busy()) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
       if (!festivalOnly) crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
       const localPlaces = festivalOnly ? [] : PLACES;
       for (const pl of localPlaces) {
-        if (pl.id === 'storyFinale' && storyChapter()?.id !== 'finale') continue;
+        if (pl.id === 'storyFinale' && (chapter?.id !== 'finale' || line !== 'story')) continue;
+        if (pl.id === 'show' && chapter?.id === 'cypher' && line === 'story') continue;
         const d = Math.hypot(p.x - pl.x, p.z - pl.z);
         if (d < pl.r && d < bd) { bd = d; best = { place: pl }; }
       }
-      if (festivalTarget && Math.hypot(p.x - festivalTarget.x, p.z - festivalTarget.z) < festivalTarget.r &&
-          Math.hypot(p.x - festivalTarget.x, p.z - festivalTarget.z) < bd) best = { place: festivalTarget };
       if (!festivalOnly) crews.forEach(g => { if (!canPaint(g)) return; const d = Math.hypot(p.x - g.wall.x, p.z - g.wall.z); if (d < 2.4 && d < bd) { bd = d; best = { paint: true, g }; } });
+      if (festivalTarget) {
+        const distance = Math.hypot(p.x - festivalTarget.x, p.z - festivalTarget.z);
+        if (distance < 1.15 || distance < festivalTarget.r && distance < bd) best = { place:festivalTarget };
+      }
+      if (storyObject && storyArt !== 'watch' && Math.hypot(p.x - storyObject.x,p.z - storyObject.z) < 1.08) {
+        best = { place:storyTarget };
+      }
       const key = o => !o ? null : o.paint ? 'p:' + o.g.c.id : o.place ? 'l:' + o.place.id : 'c:' + o.c.id;
       if (key(best) !== key(near)) { near = best; paintAct(); }
       // to-do «watch a turn in the cypher»: stand near the circle for 8 s
       if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
     }
-    const chapter = storyChapter();
     const [loading, alpha, sheet, appearance] = storyOverlays;
-    const exploring = !W.lock && !document.hidden && loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open;
-    const target = exploring && !festivalOnly && chapter?.district === D && PLACES.find(pl => pl.id === storyPlaces[chapter.id]);
-    festivalPin.visible = Boolean(exploring && festivalTarget);
-    if (festivalPin.visible) {
-      festivalPin.position.set(festivalTarget.x, 1.62, festivalTarget.z);
-      festivalPin.rotation.y -= dt;
-    }
-    storyPin.visible = storyHalo.visible = Boolean(target);
-    if (target) {
-      storyPin.position.set(target.x, 1.45, target.z);
-      storyPin.rotation.y += dt;
-      storyHalo.position.set(target.x, .052, target.z);
+    const exploring = !traveling && !W.lock && !B && !A && !P && !choosing && !festival.busy() && !document.hidden &&
+      loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open && !$('#g3res').classList.contains('on');
+    if (W.guideView && (!exploring || performance.now() >= W.guideView.until)) {
+      if (W.guideView.snap) { W.camSnap = true; W.zoom = W.uZoom; }
+      W.guideView = null;
     }
     const p = W.hero.root.position;
-    const byCircle = target && chapter.id === 'cypher' && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 3.55;
+    let object = null;
+    if (festivalTarget) object = { art:festivalStep.art, point:festivalTarget, line };
+    if (storyObject) object = { art:storyArt, point:storyObject, line };
+    if (club) {
+      const duplicate = exploring && club.activitySigns[object?.art];
+      club.signs.forEach(label => { label.visible = !A && label !== duplicate; });
+    }
+    const byCircle = exploring && object?.art === 'watch' && inWatchArea(watchPoint,p);
+    const stopped = Math.hypot(W.hero.st.vx || 0,W.hero.st.vz || 0) < .22;
     let storyWatch = 0;
-    if (byCircle) {
+    if (byCircle && stopped) {
       const now = performance.now();
-      storyWatchStart ??= now;
+      if (storyWatchStart === null) {
+        storyWatchStart = now;
+        guide.announce(_t('Осталось у круга · {n} с',{n:WATCH_TIME}));
+      }
       storyWatch = (now - storyWatchStart) / 1000;
       if (storyWatch >= WATCH_TIME) {
         const story = storyResult('cypher');
         save(); paintHud(); sfx('win'); toast(story);
-        storyPin.visible = storyHalo.visible = false;
+        storyWatchStart = null;
+        object = null;
       }
     } else storyWatchStart = null;
-    const close = target && (chapter.id === 'cypher' ? byCircle && storyWatch < WATCH_TIME : Math.hypot(p.x - target.x, p.z - target.z) < 3);
-    storyNear.hidden = !close;
-    if (close) {
-      const line = _t(chapter.near, { n: Math.ceil(WATCH_TIME - storyWatch) });
-      if (storyNear.textContent !== line) storyNear.textContent = line;
+    storyNear.hidden = !byCircle || storyWatch >= WATCH_TIME;
+    if (!storyNear.hidden) {
+      const text = stopped ? _t('Осталось у круга · {n} с',{n:Math.ceil(WATCH_TIME-storyWatch)}) : _t('Остановись на следах, чтобы начать отсчёт');
+      if (storyNear.textContent !== text) storyNear.textContent = text;
     }
+    const entry = guidanceEntry(storyChapter(),line,object,festivalStep);
+    document.body.classList.toggle('city-guide-intro',exploring && storyChapter()?.id === 'cypher' && line === 'story');
+    guide.set(entry,exploring && !byCircle);
+    landmark.set(exploring && object ? { ...object,
+      label:!byCircle && (Boolean(W.guideView) || Math.hypot(p.x-object.point.x,p.z-object.point.z)<4.4) } : null);
   }
   function post(dt) {
+    landmark.post();
     PM.post(dt);
     if (!wheel.active()) return;
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
