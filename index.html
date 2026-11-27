@@ -2575,8 +2575,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const KEEP_MAX = 120 * 1048576; // bigger files aren't gathered in memory on a phone
   // the lesson on screen: saved a moment after it starts playing (later on a slow connection, so the start isn't slowed)
   vid.addEventListener('playing', () => {
-    const l = curLesson; if (!isApple || !l || l.ks || av !== vid) return;
-    setTimeout(() => { if (curLesson === l) keepOnPhone(fileFor(l)); }, introFast() ? 1500 : 8000);
+    const l = curLesson; if (!isApple || !l || l.ks || dubMuxKey || av !== vid) return;
+    setTimeout(() => { if (curLesson === l && !dubMuxKey) keepOnPhone(fileFor(l)); }, introFast() ? 1500 : 8000);
   });
   async function fromSaved(u){
     const r = await caches.match(new URL(u, location.href).href, { ignoreSearch: true });
@@ -2642,7 +2642,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const quiet = () => soundOff || (typeof P !== 'undefined' && P.rate < 1);
   const dubChoice = $('#dubChoice'), dubLang = $('#dubLang'), dubAudio = new Audio();
   dubAudio.crossOrigin = 'anonymous';
-  let dubTracks = null, dubSource = '', dubPlay = null, dubWaiting = true;
+  let dubTracks = null, dubMuxTracks = null, dubMuxKey = '', dubSource = '', dubPlay = null, dubWaiting = true;
   const dubOn = () => !!dubSource && $('#badgeOwn').hidden;
   function syncDub(){
     if (!dubOn() || !dubAudio.getAttribute('src') || quiet() || !P.playing || av.paused || av.seeking || dubWaiting || av.readyState < 3) {
@@ -2701,17 +2701,44 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function loadDub(lesson){
     setDub('original');
     const entry = lesson && CFG.dubs && CFG.dubs[lesson.id];
-    dubTracks = entry && entry.media === (lesson.ks || lesson.r2) ? entry.tracks : null;
+    const valid = entry && entry.media === (lesson.ks || lesson.r2);
+    dubTracks = valid ? entry.tracks : null;
+    dubMuxTracks = valid && isApple && R2_BASE ? entry.mux : null;
+    dubMuxKey = '';
     dubLang.replaceChildren(new Option(T('Оригинал'), 'original'));
     for (const [code, name] of I18N.langs) {
-      if (dubTracks && dubTracks[code]) dubLang.add(new Option(name, code));
+      if (dubTracks?.[code] || dubMuxTracks?.[code]) dubLang.add(new Option(name, code));
     }
     dubChoice.hidden = dubLang.options.length === 1;
     $('#dubLabel').textContent = T('Озвучка');
-    dubLang.value = LANG !== 'ru' && dubTracks?.[LANG] ? LANG : 'original';
-    setDub(dubLang.value);
+    dubLang.value = LANG !== 'ru' && (dubTracks?.[LANG] || dubMuxTracks?.[LANG]) ? LANG : 'original';
   }
-  dubLang.addEventListener('change', () => setDub(dubLang.value));
+  // Safari plays the matched picture and dub on one media timeline.
+  function loadLessonMedia(lesson, lang, at){
+    dubMuxKey = dubMuxTracks?.[lang] || '';
+    const media = dubMuxKey ? { ...lesson, ks: '', r2: dubMuxKey } : lesson;
+    const intro = media.ks && (at != null || resumeAt?.id === lesson.id) ? null : introSource(media);
+    loadVideo(fileFor(media), jpgUrl(lesson), media.ks, intro, at);
+    setDub(dubMuxKey ? 'original' : lang);
+    ldStart(lesson);
+  }
+  function changeDub(){
+    const lang = dubLang.value;
+    if (!curLesson || !$('#badgeOwn').hidden) return;
+    const key = dubMuxTracks?.[lang] || '';
+    if (dubMuxKey === key) { setDub(lang); return; }
+    const at = introOn ? av.currentTime : pendingStart ?? av.currentTime;
+    const playing = P.playing;
+    loadLessonMedia(curLesson, lang, at);
+    if (playing) setPlaying(true);
+  }
+  dubLang.addEventListener('change', changeDub);
+  vid.addEventListener('error', () => {
+    if (!dubMuxKey || !vid.src.includes('/v/' + dubMuxKey)) return;
+    dubLang.value = 'original';
+    changeDub();
+    toast(T('Озвучка не загрузилась. Включён оригинал.'));
+  });
   dubAudio.addEventListener('error', () => { if (dubOn()) dubFallback(); });
   dubAudio.addEventListener('loadedmetadata', syncDub);
   dubAudio.addEventListener('seeked', syncDub);
@@ -2826,13 +2853,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // no intro file (deleted, network): carry on with the stream from the same moment
   vin.addEventListener('error', () => { if (introOn && vin.getAttribute('src')) toStream(vin.currentTime || 0); });
 
-  function loadVideo(src, poster, ks, intro){
+  function loadVideo(src, poster, ks, intro, at){
     dubWaiting = true;
-    const ra = resumeAt && curLesson && resumeAt.id === curLesson.id && resumeAt.t > 3 ? resumeAt.t : 0; resumeAt = null;
+    const ra = at ?? (resumeAt && curLesson && resumeAt.id === curLesson.id && resumeAt.t > 3 ? resumeAt.t : 0); resumeAt = null;
     if (ra) intro = ks ? null : intro; // continuing from a moment: no 5-s intro in front of it
     nativeWant = null;
     setPlaying(false);
-    dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null;
+    dropHls(); clearTimeout(ksFailTimer); ksPending = false; vid._ksToken = null; vid._srcTok = null;
     clearIntro(); pendingStart = null; scrub = null; sbCan.hidden = true; fqStop(); fqCan.hidden = true; fqCan.fcId = null; if (fcBuilding && (!curLesson || fcBuilding.key !== fcKey(curLesson))) fcStopBuild(); if (fcW) fcW.postMessage({ cmd: 'resume' });
     P.own = true; P.t = 0;
     vid.hidden = false; $('#figure').style.display = 'none';
@@ -3169,12 +3196,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     P.dur = l.dur;
     stopIntroWarm(mediaFor(l));
     pvStopAll(); pvHold = []; clearTimeout(pvHoldT); pvHoldT = setTimeout(pvRelease, 8000);
-    const srcInfo = resumeAt && resumeAt.id === l.id && l.ks ? null : introSource(l);
     diag('open ' + l.id + (l.ks ? ' ks' + (ksSaved[l.ks] ? ' saved' : '') + (isApple ? (mmsOk() ? ' mms' : ' apple-player') : '') : ' file') + (resumeAt && resumeAt.id === l.id ? ' from ' + resumeAt.t : ''));
-    loadVideo(fileFor(l), jpgUrl(l), l.ks, srcInfo); fcOwn = false;
     loadDub(l);
+    loadLessonMedia(l, dubLang.value);
+    fcOwn = false;
     vpnArm(l);
-    ldStart(l);
     paint();
     paintSave();
     const nl = $('#nextList'); nl.innerHTML = '';
@@ -3249,7 +3275,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (gen !== ldGen || curLesson !== l) return;
     let next = 500;
     if (!document.hidden && (!$('#lesson').hidden || document.body.classList.contains('fsmode'))) {
-      const x = l.ks ? null : await swProg(ldKey(l));
+      const ks = dubMuxKey ? '' : l.ks;
+      const x = ks || dubMuxKey ? null : await swProg(ldKey(l));
       if (gen !== ldGen || curLesson !== l) return;
       if (x && x.st === 'dl' && x.total) {
         const f = Math.min(1, x.got / x.total); ldPaint([[0, f]]);
@@ -3261,12 +3288,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         ldState = x.st; next = 3000;
       } else {
         // Kinescope lessons: what the player holds now + every piece saved on the phone (merged)
-        const sg = l.ks ? mergeSegs(bufSegs().concat(ksSavedSegs(l))) : bufSegs(); ldPaint(sg);
+        const sg = ks ? mergeSegs(bufSegs().concat(ksSavedSegs(l))) : bufSegs(); ldPaint(sg);
         const sum = sg.reduce((a, y) => a + y[1] - y[0], 0);
-        if (l.ks && sum >= 0.995 && KS_HAVE.get(l.ks) && KS_HAVE.get(l.ks).size) { if (ldState !== 'ksfull') ldDone(T('Сохранён на телефоне'), 3000); ldState = 'ksfull'; next = 2000; }
-        if (!l.ks && sum >= 0.995) { if (ldState !== 'full') ldDone(T('Загружен целиком'), 3000); ldState = 'full'; next = 3000; }
+        if (ks && sum >= 0.995 && KS_HAVE.get(ks) && KS_HAVE.get(ks).size) { if (ldState !== 'ksfull') ldDone(T('Сохранён на телефоне'), 3000); ldState = 'ksfull'; next = 2000; }
+        if (!ks && sum >= 0.995) { if (ldState !== 'full') ldDone(T('Загружен целиком'), 3000); ldState = 'full'; next = 3000; }
         // iPhone: the label shows while the player keeps loading (it may stop part way — then the label goes away)
-        else if (!l.ks) {
+        else if (!ks) {
           if (sum > ldSum + 0.002) { ldSum = sum; ldGrowT = Date.now(); }
           if (sg.length && Date.now() - ldGrowT < 2500) { clearTimeout(ldHideT); ldLabel(T('Загрузка {p} %', {p: Math.floor(sum * 100)})); ldState = 'buf'; }
           else if (ldState === 'buf' || ldState === 'dl') { ldLabel(''); ldState = ''; }
@@ -3276,7 +3303,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     ldTimer = setTimeout(() => ldTick(gen, l), next);
   }
   function ldStart(l){
-    if (l && l.ks) ksHaveLoad(l.ks);
+    if (l && l.ks && !dubMuxKey) ksHaveLoad(l.ks);
     clearTimeout(ldTimer); clearTimeout(ldHideT); ldGen++; ldState = ''; ldSum = 0; ldGrowT = 0; ldPaint([]); ldLabel('');
     const g = ldGen; ldTimer = setTimeout(() => ldTick(g, l), 250);
   }
@@ -3672,7 +3699,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   let lastFrameAt = 0, playingAt = 0, wdLesson = null;
   [vid, vin].forEach(el => el.addEventListener('playing', () => { if (el === av) playingAt = performance.now(); }));
   setInterval(() => {
-    if (!vid.requestVideoFrameCallback || !curLesson || curLesson.ks || fcOwn || scrub || !P.own || !P.playing) return;
+    if (!vid.requestVideoFrameCallback || !curLesson || curLesson.ks || dubMuxKey || fcOwn || scrub || !P.own || !P.playing) return;
     const el = av;
     if (el !== vid || el.paused || el.seeking || el.readyState < 3 || document.hidden || $('#lesson').hidden || el.currentTime < 0.5) return;
     if (performance.now() - Math.max(lastFrameAt, playingAt) < 1500 || wdLesson === curLesson) return;
@@ -3715,7 +3742,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
 
   let scrub = null;
-  const isStreamEl = el => el === vid && !!(curLesson && curLesson.ks);
+  const isStreamEl = el => el === vid && !!(curLesson && curLesson.ks && !dubMuxKey);
   const inBuffer = (el, t) => { const b = el.buffered; for (let i = 0; i < b.length; i++) if (t >= b.start(i) && t <= b.end(i) - 0.1) return true; return false; };
   function scrubStart(){
     if (scrub || !P.own || !curLesson) return;

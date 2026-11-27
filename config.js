@@ -31,12 +31,18 @@ window.APP_CONFIG = {
    "media": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
    "tracks": {
     "en": "dub-pw-windmill-en-47b577f2.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-windmill-en-1cae91fe.mp4"
    }
   },
   "fr-airbaby": {
    "media": "fr-airbaby-to0b3ely.mp4",
    "tracks": {
     "en": "dub-fr-airbaby-en-2593928f.mp4"
+   },
+   "mux": {
+    "en": "dub-fr-airbaby-en-db50b4ce.mp4"
    }
   }
  }
