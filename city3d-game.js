@@ -11,10 +11,10 @@ import { initPower } from './city3d-power.js?v=23';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=7';
+import { CLUB_TRACKS } from './city3d-club.js?v=8';
 import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=2';
-import { performDJ } from './city3d-dj.js?v=3';
+import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
@@ -215,6 +215,7 @@ function load() {
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
   s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
+  s.scratchBest = Array.isArray(s.scratchBest) ? s.scratchBest : [];
   s.clubTrack = s.clubTrack === 1 ? 1 : 0;
   s.cus = Object.assign({ kicks: 0, top: 0, pants: 0, head: 0 }, s.cus || {});
   s.gearProgress = s.gearProgress || {
@@ -688,7 +689,7 @@ export function initGame(ctx) {
   function placeBtn(pl) {
     const t = today();
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
-    if (pl.id === 'dj') return S.djDay === t ? { off: true, h: _t('🎧 Бит качает до конца дня'), s: _t('Меньше срывов и больше стиля в батлах') } : { h: _t('🎧 Заказать бит · −{n} ⚡', { n: energyCost(BAL.dj) }), s: _t('На весь день: меньше срывов, больше стиля'), low: S.en < energyCost(BAL.dj) };
+    if (pl.id === 'dj') return { h: _t('Пульт диджея'), s: _t('Скретч-тренировка и заказ бита') };
     if (pl.id === 'mat') return { h: _t('Тренировочный коврик'), s: _t('Траектории пауэрмувов · тренировка формы') };
     if (pl.id === 'powerContest') return { h: _t('Пауэрмув-контест'), s: _t('Три раунда против Вихря') };
     if (pl.id === 'atelier') { const left = CUS.reduce((a, c) => a + 3 - (S.cus[c.id] || 0), 0);
@@ -707,7 +708,7 @@ export function initGame(ctx) {
     if (pl.id === 'club') return S.wins.forge ? { h: _t('🪩 Войти в Клуб'), s: _t('7 to Smoke · танцпол и пульт диджея') } : { off: true, h: _t('🔒 Клуб — победи «Литейку»'), s: _t('Хозяева Промзоны · ур. 8 · главарь Коготь') };
     if (pl.id === 'backProm') return { h: _t('Выход в Промзону'), s: '' };
     if (pl.id === 'smoke') return { h: '7 TO SMOKE', s: _t('8 танцоров · первый до 7 очков') };
-    if (pl.id === 'clubDJ') return { h: _t('Пульт диджея'), s: _t('Выбери пластинку для Клуба') };
+    if (pl.id === 'clubDJ') return { h: _t('Пульт диджея'), s: _t('Скретч-тренировка и пластинки Клуба') };
     if (pl.id === 'clubRecords') return { h: _t('Стена результатов'), s: _t('Твои результаты в 7 to Smoke') };
     if (pl.id === 'stash') return S.stash.got.includes(pl.i) ? { off: true, h: _t('📦 Тайник уже пуст'), s: '' } : { h: _t('📦 Вскрыть тайник'), s: _t('Сегодня найдено {n} из {m} · внутри ⚡ или ★', { n: S.stash.got.length, m: BAL.stashN }) };
     if (pl.id === 'ring') { const n = S.ringDay.day === t ? S.ringDay.n : 0, next = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep;
@@ -727,12 +728,7 @@ export function initGame(ctx) {
     if (pl.id === 'smoke') { openSmoke(); return; }
     if (pl.id === 'clubDJ') { openClubDJ(); return; }
     if (pl.id === 'clubRecords') { openClubRecords(); return; }
-    if (pl.id === 'dj') {
-      S.en -= energyCost(BAL.dj); S.djDay = today();
-      const rewards = collectGear('dj');
-      save(); paintHud(); bumpGoal('dj'); sfx('win'); djMix.cue();
-      toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards); paintAct();
-    }
+    if (pl.id === 'dj') { openYardDJ(); return; }
     if (pl.id === 'mat') openPractice();
     if (pl.id === 'powerContest') openContest();
     if (pl.id === 'atelier') startAtelier();
@@ -813,8 +809,9 @@ export function initGame(ctx) {
   }
   function openClubDJ() {
     const records = [_t('Медный брейк'), _t('Ночной грув')];
-    openModeInfo(`<h4>${_t('Пульт диджея')}</h4><p>${_t('Выбери пластинку для Клуба')}</p>
+    openModeInfo(`<h4>${_t('Пульт диджея')}</h4><button type="button" id="g3djScratch">${_t('Скретч с диджеем')}</button><p>${_t('Выбери пластинку для Клуба')}</p>
       ${CLUB_TRACKS.map((track, i) => `<button type="button" data-club-track="${i}" class="${S.clubTrack === i ? '' : 'sec'}" aria-pressed="${S.clubTrack === i}">${records[i]} · ${battleBpm(track)} BPM</button>`).join('')}`);
+    $('#g3djScratch').onclick = () => startScratch(club.mix, openClubDJ);
     const buttons = [...document.querySelectorAll('[data-club-track]')];
     buttons.forEach((button, i) => {
       button.onclick = () => {
@@ -827,6 +824,60 @@ export function initGame(ctx) {
         });
       };
     });
+  }
+  function openYardDJ() {
+    const hasBeat = S.djDay === today(), cost = energyCost(BAL.dj);
+    openModeInfo(`<h4>${_t('Пульт диджея')}</h4><button type="button" id="g3djScratch">${_t('Скретч с диджеем')}</button>
+      ${hasBeat ? `<p>${_t('🎧 Бит качает до конца дня')}</p>` : `<button type="button" class="sec" id="g3djBeat">${_t('🎧 Заказать бит · −{n} ⚡', { n: cost })}</button><p>${_t('На весь день: меньше срывов, больше стиля')}</p>`}`);
+    $('#g3djScratch').onclick = () => startScratch(djMix, openYardDJ);
+    const order = $('#g3djBeat');
+    if (order) order.onclick = () => {
+      if (S.djDay === today()) return;
+      if (S.en < cost) { location.href = './'; return; }
+      S.en -= cost; S.djDay = today();
+      const rewards = collectGear('dj');
+      save(); paintHud(); bumpGoal('dj'); sfx('win'); djMix.cue();
+      closeChoice();
+      toast(_t('🎧 Диджей поставил твой бит! Сегодня в батлах меньше срывов и больше стиля'), rewards);
+    };
+  }
+  let scratchStyle;
+  function loadScratchStyle() {
+    if (scratchStyle) return scratchStyle;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = new URL('./city3d-scratch.css?v=1', import.meta.url).href;
+    scratchStyle = new Promise((resolve, reject) => {
+      link.onload = resolve;
+      link.onerror = () => { scratchStyle = null; link.remove(); reject(); };
+      document.head.append(link);
+    });
+    return scratchStyle;
+  }
+  async function startScratch(mix, retry) {
+    const request = {};
+    choosing = request;
+    const button = $('#g3djScratch');
+    button.disabled = true;
+    button.textContent = _t('Открываем вертушки…');
+    try {
+      const [{ openScratch, loadScratchArt }] = await Promise.all([import('./city3d-scratch.js?v=1'), loadScratchStyle()]);
+      await loadScratchArt();
+      if (choosing !== request) return;
+      closeChoice();
+      A = { kind: 'scratch' };
+      W.lock = true;
+      window.cityMusic?.pause(true);
+      openScratch({ t: _t, best: S.scratchBest, onMotion: mix.scratch,
+        onBest(i, score) { S.scratchBest[i] = score; save(); },
+        onClose() { window.cityMusic?.pause(false); endAct(); },
+      });
+    } catch (_) {
+      if (choosing !== request && A?.kind !== 'scratch') return;
+      if (A?.kind === 'scratch') { window.cityMusic?.pause(false); endAct(); }
+      retry();
+      toast(_t('Вертушки не загрузились. Попробуй ещё раз.'));
+    }
   }
   function openClubRecords() {
     const { best, wins, played } = S.smoke;
@@ -1544,5 +1595,5 @@ export function initGame(ctx) {
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
     wheel.position(.5 + wheelAnchor.x / 2, .5 - wheelAnchor.y / 2);
   }
-  return { update, post, shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post, scratchActive: () => A?.kind === 'scratch', shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

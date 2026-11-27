@@ -9,8 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=33';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=65';
-import { buildClub, loadClubSurfaces } from './city3d-club.js?v=7';
+import { initGame } from './city3d-game.js?v=66';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=8';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
@@ -1278,6 +1278,8 @@ async function boot() {
   let firstFrame = true, nextFrame;
   const frame = now => {
     nextFrame = requestAnimationFrame(frame);
+    // The turntable overlay has its own beat clock and input. Leave the dimmed street frame in place.
+    if (GAME.scratchActive()) { last = undefined; return; }
     const c0 = performance.now(), iv = last === undefined ? 0 : now - last;
     const dt = clamp(iv / 1000, 0, .05); worst = Math.max(worst, iv); last = now;
     frameNumber++;

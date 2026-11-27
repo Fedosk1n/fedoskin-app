@@ -1,7 +1,7 @@
 """Build the DJ booth asset, editable scene and preview in Blender 4.3.
 
 blender -b -t 6 --factory-startup --python-exit-code 1 --python tools/build_city_dj.py -- /tmp/city-dj
-Add --club after the output directory for the Club booth.
+Add --club for the Club booth, or --scratch for isolated overhead layers for the scratch trainer.
 """
 from math import cos, pi, sin
 from pathlib import Path
@@ -16,6 +16,7 @@ from city_blender_export import export_scene, paint, studio
 args = sys.argv[sys.argv.index("--") + 1:]
 destination = Path(args[0]).resolve()
 club = "--club" in args
+scratch = "--scratch" in args
 destination.mkdir(parents=True, exist_ok=True)
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
@@ -40,6 +41,11 @@ yellow = paint("Amber power LEDs", "ff9b52", "amber LEDs", .52, 0, .56)
 green = paint("Green-cyan level LEDs", "79d1b9", "teal LEDs", .52, 0, .41)
 signal = paint("Front meter light", "edb56f" if club else "e96629", "front meter", .52, 0, .7)
 objects, pivots = [], {}
+if scratch:
+    vinyl = paint("Black pressed vinyl", "090a0d", roughness=.38, metalness=.12)
+    groove = paint("Alternating pressed tracks", "181c23", roughness=.62)
+    mint = matte("Terracotta paper label", "bd5a38")
+    white = matte("Warm cue paint", "efdfc3")
 
 
 def piece(ob, name, material, part):
@@ -135,23 +141,26 @@ for x in (-.93, .93):
 block("Rear transverse crossbar", (0, .315, .33), (1.88, .048, .043), trim, .008)
 
 for x, label, key in ((-.66, amber, "record-left"), (.66, mint, "record-right")):
+    deck_start = len(objects)
     block("Turntable chassis", (x, -.019, 1.017), (.69, .72, .074), dark, .025)
     block("Brushed deck plate", (x, -.021, 1.057), (.648, .67, .03), trim, .017)
     deck_x, deck_y = x - .045, -.055
-    cylinder("Bearing and milled platter rim", (deck_x, deck_y, 1.098), .275, .041, silver, 40)
-    cylinder("Rubber slip mat", (deck_x, deck_y, 1.121), .260, .018, rub, 40)
+    platter_sides = 112 if scratch else 40
+    cylinder("Bearing and milled platter rim", (deck_x, deck_y, 1.098), .275, .041, silver, platter_sides)
+    cylinder("Rubber slip mat", (deck_x, deck_y, 1.121), .260, .018, rub, platter_sides)
     pivots[key] = (deck_x, deck_y, 1.135)
-    disc = cylinder("Spinning vinyl", (deck_x, deck_y, 1.135), .25, .017, vinyl, 40, key)
+    disc = cylinder("Spinning vinyl", (deck_x, deck_y, 1.135), .25, .017, vinyl, platter_sides, key)
     if club:
         for loop in disc.data.loops:
             point = disc.data.vertices[loop.vertex_index].co
             disc.data.uv_layers.active.data[loop.index].uv = (point.x / .5 + .5, point.y / .5 + .5)
     for radius in (.241, .225, .209, .191, .177, .155, .135):
-        annulus("Pressed groove", deck_x, deck_y, 1.144, radius, .004, groove, key)
-    cylinder("Printed label", (deck_x, deck_y, 1.1445), .088, .004, label, 28, key)
-    annulus("Paper label rule", deck_x, deck_y, 1.147, .071, .004, white, key, 24)
+        annulus("Pressed groove", deck_x, deck_y, 1.144, radius, .004, groove, key, 112 if scratch else 32)
+    cylinder("Printed label", (deck_x, deck_y, 1.1445), .088, .004, label, 72 if scratch else 28, key)
+    annulus("Paper label rule", deck_x, deck_y, 1.147, .071, .004, white, key, 72 if scratch else 24)
     block("Scratch cue marker", (deck_x + .102, deck_y - .012, 1.147), (.031, .014, .004), white, .003, key)
     cylinder("Deck spindle", (deck_x, deck_y, 1.157), .009, .027, silver)
+    arm_start = len(objects)
     arm_x = x + .262
     cylinder("Tonearm mount", (arm_x, .216, 1.128), .047, .105, trim)
     cylinder("Tonearm pivot cap", (arm_x, .216, 1.188), .035, .027, silver)
@@ -159,12 +168,42 @@ for x, label, key in ((-.66, amber, "record-left"), (.66, mint, "record-right"))
     rod("S-shaped tonearm second segment", (arm_x - .035, -.050, 1.179), (arm_x - .115, -.159, 1.161), .011, silver)
     cartridge = block("Stylus cartridge", (arm_x - .126, -.171, 1.158), (.063, .036, .025), dark, .005)
     cartridge.rotation_euler.z = -.55
+    tonearm = objects[arm_start:]
     block("Start and stop", (x - .257, -.296, 1.087), (.09, .056, .019), rub, .008)
     block("Deck cue lamp", (x - .258, -.306, 1.100), (.031, .01, .006), yellow, .002)
     block("Pitch slider track", (x + .267, -.185, 1.083), (.024, .197, .009), rub, .003)
     block("Pitch slider control", (x + .267, -.169, 1.095), (.053, .034, .028), silver, .005)
     for i in range(4):
         block("Pitch calibration mark", (x + .222, -.251 + i * .051, 1.074), (.026, .006, .003), white)
+
+if scratch:
+    deck = objects[deck_start:]
+    moving = [part for part in deck if part.get("part") == key]
+    base = [part for part in deck if part not in moving and part not in tonearm]
+    bpy.context.view_layer.update()
+    scene = bpy.context.scene
+    target = (deck_x, deck_y, 1.13)
+    studio(scene, (deck_x, deck_y, 3.8), target, .87, destination / "scratch-base.png")
+    # With a centered record and a square sensor the layers share the exact same pivot.
+    scene.camera.rotation_euler = (0, 0, 0)
+    scene.render.resolution_x = scene.render.resolution_y = 768
+    scene.render.film_transparent = True
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.view_settings.view_transform = "AgX"
+    scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value = .25
+    scene.objects['Warm key'].data.energy *= 1.6
+    scene.objects['Cool fill'].data.energy *= .43
+    scene.cycles.samples = 40
+    scene.cycles.use_denoising = False
+    for name, visible in (("base", base), ("record", moving), ("arm", tonearm)):
+        for part in objects:
+            part.hide_render = part not in visible
+        scene.render.filepath = str(destination / f"scratch-{name}.png")
+        bpy.ops.render.render(write_still=True)
+    for part in deck:
+        part.hide_render = False
+    bpy.ops.wm.save_as_mainfile(filepath=str(destination / "scratch-deck.blend"), compress=True)
+    sys.exit(0)
 
 block("Mixer shell", (0, -.026, 1.043), (.504, .724, .127), case, .024)
 block("Mixer faceplate", (0, -.034, 1.112), (.472, .689, .026), panel, .012)
