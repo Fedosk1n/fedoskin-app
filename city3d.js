@@ -9,8 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=55';
-import { buildClub } from './city3d-club.js?v=1';
+import { initGame } from './city3d-game.js?v=56';
+import { buildClub } from './city3d-club.js?v=2';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
@@ -577,7 +577,8 @@ const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : 
 // the player's own zoom (owner 17.11.2026 «добавь возможность двумя пальцами зумить экран (карту), чтобы можно было видеть всю область»):
 // 1 = the normal view, up to ZMAX pulled back (the camera goes further along the same angle), down to ZMIN closer. Kept between visits.
 const ZMIN = .7, ZMAX = 3;
-W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom'); return z ? clamp(z, ZMIN, ZMAX) : 1; } catch (_) { return 1; } })();
+const defaultZoom = DIST === 'club' ? 1.13 : 1;
+W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom'); return z ? clamp(z, ZMIN, ZMAX) : defaultZoom; } catch (_) { return defaultZoom; } })();
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
