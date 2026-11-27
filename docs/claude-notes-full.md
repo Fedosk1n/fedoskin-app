@@ -1840,3 +1840,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
 - Crew wall lettering can wrap only at spaces. A single tag, including a hyphenated tag, scales to fit on one line with its outline and emblem.
 - The two floorrock clips use continuous pelvis and limb paths across the shoulders or along the hip, with planted wrist intervals and a return to the common footwork pose. The backspin holds crossed ankles at staggered heights and completes two revolutions in about one second before the exit. A failed backspin starts its fall after the revolutions.
 - The Blender comparison sampled the actual skinned City meshes on identical dance poses. In the game the shirt has a folded open hem, the seat and cuffs use half-angle hip and ankle bones, and sewn overlays sample the garment triangles and their final skin weights.
+
+- 27.11.2026 — The Club (`city3d-club.js`) opens through the eastern arch of the Industrial Zone after defeating Foundry. Walk in to a wood
+  dance floor, judges, a breaker queue, a DJ booth with two original loops and a results wall. Seven to Smoke (`city3d-smoke.js`) follows
+  the eight-person winner-stays queue described by Red Bull BC One (https://www.redbull.com/int-en/themed-battle-concepts-breaking).
+  The app uses four minutes of active duels, with the current duel finishing before the cutoff and tied leaders dancing a tiebreak.
+  The tournament is free and saves personal best, finishes and wins in `S.smoke`. The first win of the day gives +30 respect.

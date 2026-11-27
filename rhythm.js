@@ -1070,6 +1070,26 @@ ${BALANCE_CSS}.rbteach{flex:none;padding:14px 12px;margin-top:10px;border:1px so
       each(o, t, st, [[[0, 33, 3], [4, 33, 1], [6, 36, 2], [8, 38, 3], [12, 40, 2]], [[0, 33, 3], [4, 33, 1], [6, 36, 2], [8, 31, 3], [12, 35, 2]]][B], (u, [, m, d]) => bass(o, u, mf(m), d * st, 'triangle', 520, .4));
       chord(o, t, mf(B ? 55 : 57), B ? [1, 1.26, 1.498] : [1, 1.189, 1.498], 'square', 1300, .025, st * 6);
     } },
+    club: { name: 'Copper Break', bpm: 122, vol: .228, hb: .23, play(o, t, b, st) {
+      const B = b % 2, L = grid(t, st, .11);
+      L(B ? 'X..x...x..X.x...' : 'X.....x.X...x...', (u, a) => kick(o, u, a));
+      L('....X.......X...', u => snare(o, u, .68));
+      L('x.x.oxx.x.x.x.xx', (u, a) => hat(o, u, .105 * a));
+      L('......x...o.....', (u, a) => vBongo(o, u, 280 + a * 100, .44));
+      each(o, t, st, [[0, 36, 3], [6, 43, 2], [8, B ? 34 : 39, 2], [11, 41, 2], [14, 43, 1]],
+        (u, [, m, d]) => bass(o, u, mf(m), d * st, 'triangle', 410, .46));
+      for (const cut of [2, 9, 14]) chord(o, t + cut * st, mf(B ? 58 : 60), [1, 1.189, 1.498], 'triangle', 2200, .045, st * 1.9);
+    } },
+    club_floor: { name: 'Night Groove', bpm: 134, vol: .236, hb: .31, play(o, t, b, st) {
+      const B = b % 2, L = grid(t, st, .075);
+      L(B ? 'X.x...x.X.X...x.' : 'X...x..xX.x.....', (u, a) => kick(o, u, a));
+      L('....X.......X...', u => { snare(o, u, .73); vClap(o, u, .36); });
+      L('x.x.x.oxx.x.x.ox', (u, a) => hat(o, u, .095 * a));
+      L('.....x.....x...x', u => rim(o, u));
+      each(o, t, st, [[0, 33, 3], [4, 45, 2], [7, 40, 1], [8, B ? 31 : 36, 4], [14, 40, 2]],
+        (u, [, m, d]) => bass(o, u, mf(m), d * st, 'sawtooth', 540, .35));
+      for (const cut of [3, 10]) chord(o, t + cut * st, mf(B ? 55 : 57), [1, 1.189, 1.498, 1.782], 'square', 1850, .023, st * 2.4);
+    } },
     // Подпольный ринг (Промзона): dark and heavy — a half-time snare, a rumbling bass, low minor stabs; F# minor
     ring: { name: 'Подпольный', bpm: 123, vol: .271, hb: .24, play(o, t, b, st, bar) { const B = b % 2, L = grid(t, st, .16);
       L(['X.......X.X.....', 'X..X....X.......'][B], (u, a) => { kick(o, u, a); tone(o, u, 'sine', 65, 38, .45 * a, .5); });

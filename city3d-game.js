@@ -11,6 +11,8 @@ import { initPower } from './city3d-power.js?v=22';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
+import { CLUB_TRACKS } from './city3d-club.js?v=1';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=1';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { performDJ } from './city3d-dj.js?v=1';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
@@ -212,6 +214,8 @@ function load() {
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
+  s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
+  s.clubTrack = s.clubTrack === 1 ? 1 : 0;
   s.cus = Object.assign({ kicks: 0, top: 0, pants: 0, head: 0 }, s.cus || {});
   s.gearProgress = s.gearProgress || {
     dj: Number(Boolean(s.djDay)),
@@ -658,6 +662,15 @@ export function initGame(ctx) {
   if (PZ) { if (S.stash.day !== today()) { S.stash = { day: today(), got: [] }; save(); }
     PLACES.push({ id: 'ring', x: PZ.ring.x, z: PZ.ring.z + PZ.ring.r + .6, r: 2 }, { id: 'zpark', x: PZ.gatePark.x, z: PZ.gatePark.z, r: 1.4 }, { id: 'club', x: PZ.gateClub.x, z: PZ.gateClub.z, r: 1.6 });
     stashToday().forEach(i => { const s = PZ.stash[i]; s.g.visible = !S.stash.got.includes(i); if (s.g.visible) { ctx.circ && ctx.circ(s.x, s.z, .42); PLACES.push({ id: 'stash', i, x: s.x, z: s.z, r: 1.5 }); } }); }
+  const club = W.club;
+  const smoke = club && initSmoke({ W, playPlayer: smokeBattle, cancelPlayer: clearSmokeBattle, preview: smokePreview,
+    playMusic: ctx.music, record: recordSmoke, end: endAct, sfx });
+  if (club) {
+    $('#g3tf').hidden = true;
+    ctx.backgroundMusic(CLUB_TRACKS[S.clubTrack]);
+    PLACES.push({ id: 'smoke', x: club.floor.x, z: club.floor.z + 3.52, r: 2.12 },
+      { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
+  }
   const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
   const myWalls = () => IDS.filter(id => S.turf[id]).length;
   // moving between districts: the save remembers where I am, the page builds that district
@@ -668,7 +681,7 @@ export function initGame(ctx) {
     info(`<h4>${_t('🚇 Метро — карта города')}</h4>
       <div class="row"><span>${_t('🏠 Двор')}</span><span>${_t('открыт')}</span></div><div class="row"><span>${_t('🏙 <b>Центр</b>')}</span><span>${_t('ты здесь')}</span></div>
       <div class="row"><span>${_t('🌳 Парк и набережная')}</span><span>${boss ? _t('открыт') : _t('🔒 победи «Хромированных»')}</span></div>
-      <div class="row"><span>${_t('🏭 Промзона')}</span><span>${S.wins.wave || S.seen.prom ? _t('открыта — вход из Парка') : _t('🔒 победи «Волну» в Парке')}</span></div><div class="row"><span>${_t('🪩 Клуб')}</span><span>${S.wins.forge ? _t('🚧 строится') : _t('🔒 победи «Литейку» в Промзоне')}</span></div>
+      <div class="row"><span>${_t('🏭 Промзона')}</span><span>${S.wins.wave || S.seen.prom ? _t('открыта — вход из Парка') : _t('🔒 победи «Волну» в Парке')}</span></div><div class="row"><span>${_t('🪩 Клуб')}</span><span>${S.wins.forge ? _t('открыт') : _t('🔒 победи «Литейку» в Промзоне')}</span></div>
       <p style="margin-top:10px">${_t('Новые районы открываются, когда побеждаешь хозяев предыдущего. Диджей, тренировочный мат и сайфер ждут во дворе — их бонусы действуют весь день и здесь.')}</p>
       ${boss ? `<button id="g3gp">${_t('🌳 Поехать в Парк')}</button>` : ''}<button id="g3go" class="sec">${_t('🏠 Поехать во двор')}</button>`); $('#g3go').onclick = () => travel('yard'); if ($('#g3gp')) $('#g3gp').onclick = () => travel('park'); }
   // what each place offers right now (button text) and what it does
@@ -691,7 +704,11 @@ export function initGame(ctx) {
     if (pl.id === 'prom') return S.wins.wave || S.seen.prom ? { h: _t('🚪 Войти в Промзону'), s: _t('Банды 6–8 уровня · подпольный ринг · тайники') } : { off: true, h: _t('🔒 Промзона — победи «Волну»'), s: _t('Хозяева набережной · ур. 7 · главарь Кюрасао') };
     // ---- the industrial zone ----
     if (pl.id === 'zpark') return { h: _t('🚪 Вернуться в Парк'), s: _t('Эстрада, Маятник и площадка — там') };
-    if (pl.id === 'club') return S.wins.forge ? { off: true, h: _t('🚧 Клуб — скоро'), s: _t('Ты победил хозяев Промзоны. Район строится') } : { off: true, h: _t('🔒 Клуб — победи «Литейку»'), s: _t('Хозяева Промзоны · ур. 8 · главарь Коготь') };
+    if (pl.id === 'club') return S.wins.forge ? { h: _t('🪩 Войти в Клуб'), s: _t('7 to Smoke · танцпол и пульт диджея') } : { off: true, h: _t('🔒 Клуб — победи «Литейку»'), s: _t('Хозяева Промзоны · ур. 8 · главарь Коготь') };
+    if (pl.id === 'backProm') return { h: _t('Выход в Промзону'), s: '' };
+    if (pl.id === 'smoke') return { h: '7 TO SMOKE', s: _t('8 танцоров · первый до 7 очков') };
+    if (pl.id === 'clubDJ') return { h: _t('Пульт диджея'), s: _t('Выбери пластинку для Клуба') };
+    if (pl.id === 'clubRecords') return { h: _t('Стена результатов'), s: _t('Твои результаты в 7 to Smoke') };
     if (pl.id === 'stash') return S.stash.got.includes(pl.i) ? { off: true, h: _t('📦 Тайник уже пуст'), s: '' } : { h: _t('📦 Вскрыть тайник'), s: _t('Сегодня найдено {n} из {m} · внутри ⚡ или ★', { n: S.stash.got.length, m: BAL.stashN }) };
     if (pl.id === 'ring') { const n = S.ringDay.day === t ? S.ringDay.n : 0, next = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep;
       return n >= BAL.ringMax ? { off: true, h: _t('🥊 Ринг закрыт до завтра'), s: _t('Серия побед: {n} · она не сгорает за ночь', { n: S.streak }) }
@@ -705,6 +722,11 @@ export function initGame(ctx) {
   }
   function placeRun(pl) {
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
+    if (pl.id === 'club') { travel('club'); return; }
+    if (pl.id === 'backProm') { travel('prom'); return; }
+    if (pl.id === 'smoke') { openSmoke(); return; }
+    if (pl.id === 'clubDJ') { openClubDJ(); return; }
+    if (pl.id === 'clubRecords') { openClubRecords(); return; }
     if (pl.id === 'dj') {
       S.en -= energyCost(BAL.dj); S.djDay = today();
       const rewards = collectGear('dj');
@@ -775,6 +797,73 @@ export function initGame(ctx) {
     choosing = true; W.lock = true; paintAct();
     info(html + `<button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>`);
     $('#g3choiceBack').onclick = closeChoice;
+  }
+  function openSmoke() {
+    openModeInfo(`<h4>7 TO SMOKE</h4>
+      <p>${_t('Восемь танцоров, дуэли 1 на 1. Судьи дают победителю очко. Он остаётся в кругу, проигравший встаёт в конец очереди.')}</p>
+      <p>${_t('Первый до 7 побеждает. Лимит {n} мин. После последней дуэли выигрывает лидер, при равенстве лидеры танцуют тай-брейк.', { n: SMOKE_TIME / 60 })}</p>
+      <p>${_t('Начни пауэрмув с жёлтой точки. На фризе держи палец на панели и веди точку за зелёной зоной.')}</p>
+      <button type="button" id="g3enterSmoke">${_t('Выйти в круг')}</button>`);
+    $('#g3enterSmoke').onclick = () => {
+      closeChoice();
+      A = { kind: 'smoke' };
+      paintAct();
+      smoke.start(CLUB_TRACKS[S.clubTrack]);
+    };
+  }
+  function openClubDJ() {
+    const records = [_t('Медный брейк'), _t('Ночной грув')];
+    openModeInfo(`<h4>${_t('Пульт диджея')}</h4><p>${_t('Выбери пластинку для Клуба')}</p>
+      ${CLUB_TRACKS.map((track, i) => `<button type="button" data-club-track="${i}" class="${S.clubTrack === i ? '' : 'sec'}" aria-pressed="${S.clubTrack === i}">${records[i]} · ${battleBpm(track)} BPM</button>`).join('')}`);
+    const buttons = [...document.querySelectorAll('[data-club-track]')];
+    buttons.forEach((button, i) => {
+      button.onclick = () => {
+        S.clubTrack = i; save();
+        ctx.backgroundMusic(CLUB_TRACKS[i]);
+        buttons.forEach((b, index) => {
+          b.classList.toggle('sec', index !== i);
+          b.setAttribute('aria-pressed', String(index === i));
+        });
+      };
+    });
+  }
+  function openClubRecords() {
+    const { best, wins, played } = S.smoke;
+    openModeInfo(`<h4>${_t('Стена результатов')}</h4><div class="row"><span>7 TO SMOKE</span><span>${_t('Личный рекорд · {n}/7', { n: best })}</span></div>
+      <div class="row"><span>${_t('Побед: {n}', { n: wins })}</span><span>${_t('Турниров: {n}', { n: played })}</span></div>`);
+  }
+  function recordSmoke(points, won) {
+    const record = S.smoke;
+    record.played++;
+    record.best = Math.max(points, record.best);
+    const reward = won && record.day !== today() ? 30 : 0;
+    if (won) { record.wins++; record.day = today(); }
+    S.rep += reward;
+    save();
+    return reward;
+  }
+  function smokeBattle(opponent, track, holder) {
+    startBattle({ c: { id: opponent.id, name: opponent.name, col: opponent.col, lv: opponent.lv }, smoke: { track, holder },
+      people: [opponent.J], x: club.floor.x, z: club.floor.z, label: { visible: true }, ring: { visible: true } });
+  }
+  function smokePreview(opponent, track) {
+    const r = rng(Math.floor(Math.random() * 0x100000000));
+    const { seq } = makeTurn(opponent.J, opponent.lv, r, 'op', undefined, null, 1.8, false, battleBpm(track));
+    const featured = [seq.find(s => s.kind === 'top'), seq.find(s => s.kind === 'power'), seq.find(s => s.kind === 'freeze')].filter(s => s?.c);
+    const lengths = featured.map(s => Math.min(s.len, s.kind === 'power' ? 2.1 : 1.05));
+    let end = 0;
+    return featured.map((s, i) => ({ ...s, b: end += lengths[i] }));
+  }
+  function clearSmokeBattle() {
+    if (!B?.g.smoke) return;
+    PM.cancel(); FZ.cancel(); wheel.close(); mythCut(null, null, 0);
+    for (const J of [W.hero, B.opp]) {
+      if (J.fall) fallEnd(J);
+      J.ws = null;
+    }
+    $('#g3bt').classList.remove('on');
+    $('#g3mv').textContent = '';
+    B = null;
   }
   function openPractice() {
     const n = S.form.day === today() ? S.form.n : 0, cost = energyCost(BAL.train);
@@ -1104,9 +1193,12 @@ export function initGame(ctx) {
     return T;
   }
   function startBattle(g) {
-    if (!g.c.tour) S.en -= energyCost(BAL.battle); S.fights++; save(); paintHud();
+    if (!g.smoke) {
+      if (!g.c.tour) S.en -= energyCost(BAL.battle);
+      S.fights++; save(); paintHud();
+    }
     // every crew battles to its own beat (rhythm.js LOOPS, owner 17.11.2026); the jam and the ring have theirs
-    const beatId = g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id;
+    const beatId = g.smoke?.track || (g.c.ringB ? 'ring' : g.c.tour ? 'jam' : g.c.id);
     const bpm = battleBpm(beatId);
     const profile = crewStyle(g.c.id) || (g.c.ringB ? 'power' : ['groove', 'ground', 'shapes'][JM?.i]);
     if (ctx.music) ctx.music(beatId);
@@ -1114,17 +1206,18 @@ export function initGame(ctx) {
     const opp = g.people[0], cx = g.x, cz = g.z;
     // positions: the middle of the crew's ring is the stage; me on the south side, the opponent on the north
     const meSpot = { x: cx - .3, z: cz + 2.1 }, opSpot = { x: cx + .3, z: cz - 2.1 };
-    const turns = [], rounds = c.tour ? 1 : c.lv >= 3 ? 2 : 1;
+    const turns = [], rounds = g.smoke || c.tour ? 1 : c.lv >= 3 ? 2 : 1;
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq), choices = availablePower();
     for (let i = 0; i < rounds; i++) {
-      const gear = HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
-      turns.push(makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, profile));
-      turns.push(makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm));
+      const gear = g.smoke ? null : HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
+      const theirTurn = makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, profile);
+      const myTurn = makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm);
+      turns.push(...(g.smoke?.holder ? [myTurn, theirTurn] : [theirTurn, myTurn]));
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
     B = { g, opp, turns, choices, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
-    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = '';
+    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
     $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
     paintAct();
@@ -1187,7 +1280,7 @@ export function initGame(ctx) {
       B.ln = now;
       B.lastMove = move;
       T.pending.resolve(move);
-      $('#g3skip').style.display = '';
+      if (!B.g.smoke) $('#g3skip').style.display = '';
     });
   }
   function battleTick(dt) {
@@ -1274,6 +1367,7 @@ export function initGame(ctx) {
     const nw = performance.now() / 1000; B.t0 = nw - (s.a + .002 + Math.max(0, T.J.act ? T.J.act.time - (s.at || 0) : 0)); B.ln = nw;
     PM.arm(T.J, s, {
       first: (S.drawN || 0) < 2,
+      required: !!B.g.smoke, wait: B.g.smoke ? 8 : undefined,
       // what makes it easier: the levels from lessons above the move's own (+1 px, +.3 s each), the tailor's spin pad, the warm-up, the DJ, the mat
       tolAdd: Math.min(3, up) + Math.min(6, 30 * (bf.fall + (bf.pw || 0) + (s.c === 'Head_Spinning' ? bf.spin || 0 : 0))),
       spinTol: s.c === 'Head_Spinning' ? bf.spinTol : 0,
@@ -1293,16 +1387,22 @@ export function initGame(ctx) {
     T.seq = T.seq.slice(0, i + 1).concat(ok ? s.tails.ok : s.tails.bad);
     s.len = res.len; s.b = s.a + s.len; let tt = s.b; for (let k = i + 1; k < T.seq.length; k++) { const x = T.seq[k]; x.a = tt; tt += x.len; x.b = tt; }
     T.len = tt + OUT; B.t0 = now - (s.a + res.rel + .001); B.ln = now;
-    const pts = powerPoints(s, res);
+    const pts = powerPoints(s, res, res.reason === 'no-start' ? 0 : .5);
     T.score += pts; paintScore(T);
     B.pm = (B.pm || []).concat({ nm: s.nm, g: res.grade, turns: res.turns, pts });
-    if (!ok) { fallStart(J); sfx('crash'); mvText(s, ['bad', _t('Срыв! +0.5 за попытку')]); B.clean = false; }
+    if (!ok) {
+      fallStart(J); sfx('crash');
+      mvText(s, ['bad', res.reason === 'no-start' ? _t('Попытка не начата') : _t('Срыв! +0.5 за попытку')]);
+      B.clean = false;
+    }
     else {
       T.rec = res.rec;
       if (res.grade === 'perfect') {
         mvText(s, ['gold', _t('Идеально! +{n}', { n: pts })]); sfx('perfect');
-        S.perf = S.perf || {}; if (!S.perf[s.nm]) B.perfFirst = (B.perfFirst || []).concat(s.nm); S.perf[s.nm] = (S.perf[s.nm] || 0) + 1;
-        bumpGoal('perf');
+        if (!B.g.smoke) {
+          S.perf = S.perf || {}; if (!S.perf[s.nm]) B.perfFirst = (B.perfFirst || []).concat(s.nm); S.perf[s.nm] = (S.perf[s.nm] || 0) + 1;
+          bumpGoal('perf');
+        }
       } else { mvText(s, ['ok', _t('Чисто! +{n}', { n: pts })]); sfx('hit'); }
     }
     save();
@@ -1317,7 +1417,8 @@ export function initGame(ctx) {
     const T = B.turns[B.i]; alignEntry(T); B.t0 = performance.now() / 1000; T.si = -1;
     const other = T.who === 'me' ? B.opp : H; other.play('Breakdance_Ready', { fade: .4, speed: 1.05 });
     W.walk.start(T.J);
-    $('#g3turn').textContent = (T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name })) + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });
+    const turnTitle = T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name });
+    $('#g3turn').textContent = B.g.smoke ? turnTitle : turnTitle + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });
     $('#g3mv').innerHTML = '';
   }
   function finishSkip() {
@@ -1336,6 +1437,7 @@ export function initGame(ctx) {
     H.st.face = H.root.rotation.y;
     const votes = [0, 1, 2].map(() => (diff + (Math.random() - .5) * 2.4 > 0 ? 'me' : 'op')), myV = votes.filter(v => v === 'me').length, win = myV >= 2;
     H.play(win ? 'Breakdance_Ending_1' : 'Breakdance_Ready', { fade: .4 }); B.opp.play(win ? 'Breakdance_Ready' : 'Bboy_Uprock', { fade: .4 });
+    if (B.g.smoke) { B.smokeWon = win; return; }
     let lines = [];
     const rkP = rankOf(S.rep), pf = B.perfFirst || [];
     if (pf.length) S.rep += pf.length * BAL.perfFirst;
@@ -1408,9 +1510,17 @@ export function initGame(ctx) {
       chain.visible = rankOf(S.rep) < BAL.gateRank; Y.arenaLabel.visible = matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
       atP.tick(dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
-    if (PZ) { PZ.gateClub.chain.visible = true; }
+    if (PZ) PZ.gateClub.chain.visible = !S.wins.forge;
+    if (club) {
+      club.signs.forEach(label => { label.visible = !A; });
+      smoke.tick(dt, B, B?.phase === 'end' || wheel.active() || PM.state() === 'replay');
+    }
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
-    if (B) { if (B.phase !== 'end') battleTick(dt); else { W.hero.tick(dt); B.opp.tick(dt); } }
+    if (B) {
+      if (B.phase !== 'end') battleTick(dt);
+      else if (B.g.smoke) { const won = B.smokeWon; clearSmokeBattle(); smoke.playerVerdict(won); }
+      else { W.hero.tick(dt); B.opp.tick(dt); }
+    }
     FZ.tick(dt);
     crews.forEach(g => {
       if (!g.label.visible && B?.g !== g) return;
@@ -1433,5 +1543,5 @@ export function initGame(ctx) {
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
     wheel.position(.5 + wheelAnchor.x / 2, .5 - wheelAnchor.y / 2);
   }
-  return { update, post, _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }
