@@ -9,8 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=56';
-import { buildClub } from './city3d-club.js?v=2';
+import { initGame } from './city3d-game.js?v=57';
+import { buildClub } from './city3d-club.js?v=3';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
@@ -96,20 +96,24 @@ function concreteTex() {
   [0, 128].forEach(p => { rx.fillStyle = '#fff'; rx.fillRect(p - 1, 0, 2, 256); rx.fillRect(0, p - 1, 256, 2); });
   return { map: tex(c, { repeat: [1, 1] }), rough: tex(rc, { color: false, repeat: [1, 1] }), bump: tex(c, { color: false, repeat: [1, 1] }) };
 }
+const surfaceTextureLoader = new THREE.TextureLoader();
+async function loadSurfaceTexture(file, color, repeat) {
+  try {
+    const texture = await surfaceTextureLoader.loadAsync(new URL(`./img/${file}`, import.meta.url).href);
+    if (color) texture.colorSpace = THREE.SRGBColorSpace;
+    if (repeat) texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = maxAniso;
+    return texture;
+  } catch (_) {
+    return null;
+  }
+}
 async function loadAsphalt() {
-  const loader = new THREE.TextureLoader();
-  const load = async (name, srgb, repeat) => {
-    try {
-      const t = await loader.loadAsync(new URL(`./img/asphalt-${name}.webp?v=1`, import.meta.url).href);
-      if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-      if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      t.anisotropy = maxAniso;
-      return t;
-    } catch (_) {
-      return null;
-    }
-  };
-  const [color, surface, repair] = await Promise.all([load('color', true, true), load('surface', false, true), load('repair', true, false)]);
+  const [color, surface, repair] = await Promise.all([
+    loadSurfaceTexture('asphalt-color.webp?v=1', true, true),
+    loadSurfaceTexture('asphalt-surface.webp?v=1', false, true),
+    loadSurfaceTexture('asphalt-repair.webp?v=1', true, false),
+  ]);
   return { color, surface, repair };
 }
 async function loadBlenderModel(file) {
@@ -587,11 +591,11 @@ async function build(scene, asphalt, props, playgroundModel) {
   WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, concreteTex, facadeTex, roofTex, stripeTex,
-    mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
+    loadSurfaceTexture, mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, playgroundModel, maxAniso });
   else if (DIST === 'prom') await buildProm(TK);
-  else if (DIST === 'club') buildClub(TK);
+  else if (DIST === 'club') await buildClub(TK);
   else await buildYard(scene, asphalt);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}

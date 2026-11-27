@@ -11,13 +11,53 @@ export const CLUB_BREAKERS = [
   { id: 'fader', name: 'Фейдер', lv: 8, col: '#dbc8ff', gear: ['girl', 'c:goldChain'], body: 'avg' },
 ];
 
-export function buildClub(TK) {
-  const { THREE, scene, W, box, circ, can, tex, mocapPerson, bodyOf, HERO, rng } = TK;
+const SURFACES = [
+  ['oak', '#865333', .024, 0, .49],
+  ['brick', '#354649', .036, 0, .82],
+  ['terrazzo', '#293134', .018, 0, .72],
+  ['velvet', '#67383f', .009, 0, .85],
+  ['steel', '#464f4f', .009, .50, .50],
+  ['vinyl', '#252b2d', .004, .15, .40],
+];
+
+async function loadClubSurfaces(THREE, load) {
+  const entries = await Promise.all(SURFACES.map(async ([key, color, bumpScale, metalness, roughness]) => {
+    const [map, packed] = await Promise.all([
+      load(`club-${key}-color.webp?v=1`, true, true),
+      load(`club-${key}-surface.webp?v=1`, false, true),
+    ]);
+    return [key, { map, packed, color, bumpScale, metalness, roughness }];
+  }));
+  const textures = Object.fromEntries(entries);
+  return (key, { repeat = [1, 1], tint = '#ffffff' } = {}) => {
+    const { map, packed, color, bumpScale, metalness, roughness } = textures[key];
+    const tile = texture => {
+      if (!texture || (repeat[0] === 1 && repeat[1] === 1)) return texture;
+      const copy = texture.clone();
+      copy.repeat.set(...repeat);
+      return copy;
+    };
+    const profile = tile(packed);
+    return new THREE.MeshStandardMaterial({
+      name: 'Club ' + key,
+      color: map ? tint : color,
+      map: tile(map),
+      // The bake stores relief in red and roughness in green.
+      bumpMap: profile, bumpScale,
+      roughnessMap: profile, roughness: profile ? 1 : roughness,
+      metalness,
+    });
+  };
+}
+
+export async function buildClub(TK) {
+  const { THREE, scene, W, box, circ, can, tex, loadSurfaceTexture, mocapPerson, bodyOf, HERO } = TK;
+  const material = await loadClubSurfaces(THREE, loadSurfaceTexture);
   const floor = { x: 0, z: -2.4 };
   const dj = { x: -6.2, z: 1.25, r: 1.8 };
   const records = { x: 6.1, z: 1.35, r: 1.8 };
   const exit = { x: -.1, z: 8.4, r: 1.6 };
-  const colors = { gold: '#e7a84f', turquoise: '#48d3ca', dark: '#191f22' };
+  const colors = { gold: '#e7a84f', turquoise: '#48d3ca' };
   const mat = (color, roughness = .75, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
   const flat = color => new THREE.MeshBasicMaterial({ color, toneMapped: false });
   function mesh(geometry, material, x, y, z) {
@@ -57,35 +97,35 @@ export function buildClub(TK) {
   scene.background.set('#0d151a');
   scene.fog.color.set('#0d151a');
   scene.fog.density = .012;
-  const wall = mat('#2a3439'), dark = mat(colors.dark), steel = mat('#465658', .45, .65);
-  const parquet = can(1024, 1024), p = parquet.getContext('2d'), random = rng(20307);
-  for (let y = 0; y < 32; y++) {
-    for (let x = -1; x < 8; x++) {
-      const x0 = x * 128 + y % 3 * 42, y0 = y * 32;
-      p.fillStyle = `hsl(${27 + random() * 14}, ${32 + random() * 12}%, ${31 + random() * 11}%)`;
-      p.fillRect(x0, y0, 127, 31);
-      p.strokeStyle = 'rgba(40,23,12,.17)'; p.lineWidth = 1;
-      for (let n = 0; n < 4; n++) {
-        const gy = y0 + random() * 30;
-        p.beginPath(); p.moveTo(x0, gy); p.quadraticCurveTo(x0 + 70, gy + random() * 6, x0 + 126, gy + 2); p.stroke();
-      }
-    }
-  }
-  p.strokeStyle = '#ffcf85'; p.lineWidth = 4;
-  p.strokeRect(34, 34, 956, 956);
+  const wall = material('brick', { repeat: [5, 2] });
+  const steel = material('steel'), dark = material('steel', { tint: '#7c8282' });
+  const velvet = material('velvet'), vinyl = material('vinyl');
+  const inset = can(1024, 1024), p = inset.getContext('2d');
+  p.lineWidth = 3; p.strokeStyle = 'rgba(235,200,143,.75)';
+  p.strokeRect(30, 30, 964, 964);
+  p.strokeStyle = 'rgba(223,182,119,.38)';
+  p.strokeRect(42, 42, 940, 940);
+  p.lineWidth = 4; p.strokeStyle = 'rgba(244,207,152,.83)';
   p.beginPath(); p.arc(512, 512, 326, 0, Math.PI * 2); p.stroke();
-  p.strokeStyle = '#8b472e'; p.setLineDash([21, 13]); p.lineWidth = 10;
-  p.beginPath(); p.arc(512, 512, 350, 0, Math.PI * 2); p.stroke();
+  p.setLineDash([20, 17]);
+  p.strokeStyle = 'rgba(220,170,113,.62)';
+  p.beginPath(); p.arc(512, 512, 353, 0, Math.PI * 2); p.stroke();
   p.setLineDash([]);
-  p.fillStyle = 'rgba(60,29,17,.24)'; p.font = '900 380px Anton, sans-serif'; p.textAlign = 'center';
+  for (const x of [55, 969]) for (const y of [55, 969]) {
+    p.fillStyle = '#d9af72';
+    p.beginPath(); p.moveTo(x - 7, y); p.lineTo(x, y - 7); p.lineTo(x + 7, y); p.lineTo(x, y + 7); p.closePath();
+    p.fill();
+  }
+  p.fillStyle = 'rgba(40,22,16,.33)'; p.font = '900 380px Anton, sans-serif'; p.textAlign = 'center';
   p.fillText('07', 512, 650);
-  block(21, .18, 22, mat('#242d30'), 0, -.10, -.8);
-  const wood = mesh(new THREE.PlaneGeometry(7.3, 7.3),
-    new THREE.MeshStandardMaterial({ map: tex(parquet), roughness: .55 }), floor.x, .018, floor.z);
+  block(21, .18, 22, material('terrazzo', { repeat: [5, 5] }), 0, -.10, -.8);
+  const wood = mesh(new THREE.PlaneGeometry(7.3, 7.3), material('oak'), floor.x, .018, floor.z);
   wood.rotation.x = -Math.PI / 2;
-  const lane = block(2.5, .014, 5.4, mat('#633631'), 0, .001, 5.68);
-  lane.receiveShadow = false;
-  [-1.23, 1.23].forEach(x => block(.035, .018, 5.4, flat('#be7545'), x, .009, 5.68));
+  const marks = mesh(new THREE.PlaneGeometry(7.3, 7.3), new THREE.MeshStandardMaterial({
+    map: tex(inset), transparent: true, depthWrite: false, roughness: .53,
+  }), floor.x, .022, floor.z);
+  marks.rotation.x = wood.rotation.x;
+  block(2.5, .014, 5.4, material('velvet', { repeat: [1, 2] }), 0, .001, 5.68);
 
   // Leave the near wall open so the overhead camera can see the room.
   block(19.6, 3.7, .44, wall, 0, 1.85, -8.9); box(0, -8.9, 19.6, .6);
@@ -94,14 +134,14 @@ export function buildClub(TK) {
     block(.09, .045, 18, flat('#af724b'), x * .975, .2, -.6);
     box(x, -.5, .55, 18.4);
   }
-  const slat = mat('#18272c'), railing = mat('#42362d');
+  const slat = mat('#18272c');
   for (let i = -15; i <= 15; i++) block(.07, 2.2, .11, slat, i * .58, 1.66, -8.61);
   block(15.4, .12, .28, steel, 0, 3.47, -8.51);
   [-6.1, 6.1].forEach(x => {
     block(.95, 2.25, .38, dark, x, 1.25, -8.47);
     for (let j = 0; j < 3; j++) mesh(new THREE.CircleGeometry(j === 0 ? .22 : .31, 18), flat(j === 0 ? '#607575' : '#1a1818'), x, .65 + j * .62, -8.267);
     block(.085, 2.17, .16, flat(colors.turquoise), x - 1.05, 1.5, -8.49);
-    block(2.25, .7, .8, mat('#673e39'), x, .35, -6.8); box(x, -6.8, 2.25, .8);
+    block(2.25, .7, .8, velvet, x, .35, -6.8); box(x, -6.8, 2.25, .8);
   });
   sign('7 TO SMOKE', 8.5, 1.25, 0, 2.82, -8.34, '#ffd68c');
   const scoreCv = can(1024, 256), ink = scoreCv.getContext('2d');
@@ -122,11 +162,11 @@ export function buildClub(TK) {
 
   // Listening booth and crate shelves.
   block(3.2, 1.06, .92, dark, dj.x, .53, dj.z - 1.6); box(dj.x, dj.z - 1.6, 3.2, .96);
-  block(3.34, .08, 1, mat('#704629'), dj.x, 1.09, dj.z - 1.6);
+  block(3.34, .08, 1, material('oak', { tint: '#b4a28a' }), dj.x, 1.09, dj.z - 1.6);
   const disks = [-.97, .97].map(offset => {
     const x = dj.x + offset, z = dj.z - 1.59;
     block(.86, .11, .72, steel, x, 1.17, z);
-    const disk = mesh(new THREE.CylinderGeometry(.29, .29, .025, 24), dark, x, 1.24, z);
+    const disk = mesh(new THREE.CylinderGeometry(.29, .29, .025, 48), vinyl, x, 1.24, z);
     const sticker = mesh(new THREE.CylinderGeometry(.095, .095, .012, 16), flat(colors.gold), x, 1.258, z);
     sticker.position.x += .11;
     return { disk, sticker, x };
@@ -139,8 +179,8 @@ export function buildClub(TK) {
   circ(dj.x, dj.z - 2.34, .32);
 
   // Archive wall: printed results above a low bench.
-  const rz = records.z - 1.35, poster = mat('#54332d');
-  block(2.92, .58, .78, mat('#684439'), records.x, .29, rz + .22); box(records.x, rz + .22, 2.92, .78);
+  const rz = records.z - 1.35, poster = material('oak', { tint: '#9c8985' });
+  block(2.92, .58, .78, velvet, records.x, .29, rz + .22); box(records.x, rz + .22, 2.92, .78);
   block(3.1, 2.49, .22, poster, records.x, 1.48, rz - .36);
   [0, 1, 2].forEach((n) => sign(['07', '1 VS 1', '7 TO SMOKE'][n], .87, .61, records.x - .93 + n * .93, 1.72, rz - .18));
   block(3.12, .045, .05, flat(colors.gold), records.x, 2.54, rz - .18);
