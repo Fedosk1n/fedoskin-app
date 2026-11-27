@@ -681,6 +681,16 @@ function skinGeo(skinColor) {
   return G;
 }
 // small extras for the CUSTOM details of clothes: glowing trim and round sewn patches (drawn once per colour)
+const festivalPhase = { value: 0 };
+const reducedGlow = matchMedia('(prefers-reduced-motion: reduce)');
+const FESTIVAL_RGB = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false });
+FESTIVAL_RGB.onBeforeCompile = shader => {
+  shader.uniforms.festivalPhase = festivalPhase;
+  shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying float vFestivalLED;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFestivalLED = position.z * 3.3 + position.x * .55;');
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vFestivalLED;\nuniform float festivalPhase;')
+    .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = .59 + .34 * cos(6.2831853 * (vec3(vFestivalLED + festivalPhase) + vec3(0.0, .33, .67)));');
+};
 const GLOW = new Map(), glowOf = c => { if (!GLOW.has(c)) GLOW.set(c, new THREE.MeshStandardMaterial({ color: '#16171b', roughness: .5, emissive: c, emissiveIntensity: 2.2 })); return GLOW.get(c); };
 const PATCH = new Map();
 function patchMat(kind, c) {
@@ -769,6 +779,7 @@ export function mocapPerson(look, opt = {}) {
   }
   rig.updateMatrixWorld(true);
   const JP = n => new THREE.Vector3().setFromMatrixPosition(B[n].matrixWorld), FWD = new THREE.Vector3(0, 0, 1), DOWN = new THREE.Vector3(0, -1, 0), G = skinGeo(C.skin);
+  const festivalLED = look.rgbSole || look.rgbLace ? skinGeo(C.skin) : null;
   const hi = !!opt.hero, NT = 24, NA = 20, NL = 20, cus = look.cus || {}, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const smooth = (min, max, v) => {
     const t = clamp((v - min) / (max - min), 0, 1);
@@ -1061,12 +1072,12 @@ export function mocapPerson(look, opt = {}) {
         p.x += Math.cos(a) * lift; p.y += Math.sin(a) * lift;
         return p;
       };
-      const shoeBand = (rows, edge, start, end, c, lift) => {
+      const shoeBand = (rows, edge, start, end, c, lift, target = G) => {
         for (let i = start; i < end; i++) {
           const [u0, v0] = edge(i), [u1, v1] = edge(i + 1);
           const a = surface(rows, u0, i, lift), b = surface(rows, u1, i + 1, lift);
           const c0 = surface(rows, v0, i, lift), d = surface(rows, v1, i + 1, lift);
-          G.quad(a, b, c0, d, c, wOf(a.z, a.y), wOf(c0.z, c0.y));
+          target.quad(a, b, c0, d, c, wOf(a.z, a.y), wOf(c0.z, c0.y));
         }
       };
       for (const [t0, t1] of [[.245,.35],[.35,.47],[.47,.575],[.575,.647]]) shoeBand(upper, () => [t0,t1], 1, 7, '#24232A', .003);
@@ -1087,11 +1098,18 @@ export function mocapPerson(look, opt = {}) {
         shoeBand(upper, edge => {
           const center = laceRow(a[0] + (b[0] - a[0]) * (edge - 2) / 4);
           return [center - laceWidth, center + laceWidth];
-        }, 2, 6, laceC, .009 + .0003 * i);
+        }, 2, 6, laceC, .009 + .0003 * i, look.rgbLace ? festivalLED : G);
       }
       for (const t of [.19,.32,.45,.62,.77,.89]) shoeBand(outsole, () => [t,t+.019], 10, 14, shadeOf(tread, 1.28), .001);
       [[0, yB, zH + .02], [-.05, yB, T0.z - .01], [.05, yB, T0.z - .01], [0, .11 + highT, A0.z - .04]].forEach(([dx, y, z]) => lpt(s + 'Foot', new THREE.Vector3(xAt(z, dx), y, z)));
       [[0, yB + .014, zT - .008], [0, .05, zT - .04], [-.045, yB + .01, T0.z + .04], [.045, yB + .01, T0.z + .04]].forEach(([dx, y, z]) => lpt(s + 'ToeBase', new THREE.Vector3(xAt(z, dx), y, z)));
+      if (look.rgbSole) {
+        for (const [from, to] of [[.12, .33], [.365, .63], [.665, .89]]) {
+          const channel = () => [from, to];
+          shoeBand(outsole, channel, .3, 1.3, '#ffffff', .0031, festivalLED);
+          shoeBand(outsole, channel, 6.7, 7.7, '#ffffff', .0031, festivalLED);
+        }
+      }
       // Custom tier 3 adds glowing strips along the sole.
       if (cus.kicks >= 3) {
         const gm = glowOf(look.acc || '#E2611A'), z = zH + len * .4;
@@ -1118,6 +1136,14 @@ export function mocapPerson(look, opt = {}) {
   body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, .8, 0), 1.8);
   rig.add(body);
   body.bind(new THREE.Skeleton(bones));
+  if (festivalLED) {
+    const strip = new THREE.SkinnedMesh(festivalLED.build(), FESTIVAL_RGB);
+    strip.name = 'FestivalSpectralStrips';
+    strip.userData.clothDetail = true;
+    strip.boundingSphere = body.boundingSphere.clone();
+    rig.add(strip);
+    strip.bind(body.skeleton, body.bindMatrix);
+  }
   for (const [kind, pieces] of Object.entries(patches)) {
     if (!pieces.length) continue;
     const patch = new THREE.SkinnedMesh(G.badges(pieces), patchMat(kind, look.acc || '#E2611A'));
@@ -1210,6 +1236,7 @@ export function mocapPerson(look, opt = {}) {
     stepScale: scale * (bd.old ? .87 : .94 + motion * .12), armSwing: bd.old || bd.pack ? .6 + motion * .14 : .78 + motion * .22 };
   // advance the animation and move the dancer by the clip's own travel
   J.tick = dt => {
+    if (festivalLED) festivalPhase.value = reducedGlow.matches ? 0 : performance.now() / 5700 % 1;
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
     mixer.update(dt);
     if (r && a.timeScale > 0) {
