@@ -1856,3 +1856,9 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   It uses the shared reaching animation with local vinyl and fader pivots. `tools/build_club_judges.py` exports one chair and the two side
   tables. The Club places three copies and keeps the judges seated using the real body rig. The 7 to Smoke decision forwards the three
   votes to their cards. Club assets load only in the Club.
+
+## 27.11.2026 — Independent City Festival
+
+- Sixty meetings across eight acts begin after the first prologue invitation. The music modes share a clock with the visual cues and save the route at each completed phrase. Campaign visits do not unlock ordinary district activities. Three decisions change later venue, first dancers and music.
+- Blender sources generate the festival scenes, movable stage and spectral kit. The 3D kit uses separate weighted sole and lace geometry and the wardrobe SVG animates the same distinction. Both render a static gradient for reduced motion.
+- Worker v5 confirms eight act rehearsals and four judged exams before adding both exclusive items to the same wardrobe that stores daily loot. See `docs/city-festival.md` for the checks and evidence.

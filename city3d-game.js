@@ -5,9 +5,10 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=33';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=34';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { initPower } from './city3d-power.js?v=23';   // the hero's power move is DRAWN by the finger (17.11)
+import { loadFestivalStage } from './city3d-festival-art.js?v=1';
+import { initPower } from './city3d-power.js?v=24';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
@@ -17,6 +18,8 @@ import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=1';
+import { initFestival } from './city3d-campaign.js?v=1';
+import { loadCampaign } from './city3d-campaign-engine.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -216,6 +219,7 @@ function load() {
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
   s.story = loadStory(s.story);
+  s.festival = loadCampaign(s.festival);
   s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
   s.scratchBest = Array.isArray(s.scratchBest) ? s.scratchBest : [];
   s.clubTrack = s.clubTrack === 1 ? 1 : 0;
@@ -339,7 +343,7 @@ function ui() {
   const h = document.createElement('div'); h.innerHTML = `
 <div id="g3hud"><div class="chip" id="g3en"><span>⚡ <b id="g3enN"></b> ${_t('энергии')}</span><div class="bar"><i></i></div></div>
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
-<div id="g3hud2"><button type="button" class="chip" id="g3story" aria-haspopup="dialog">${_t('Сюжет')} <b></b></button><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
+<div id="g3hud2"><button type="button" class="chip" id="g3story" aria-haspopup="dialog">${_t('Сюжет')} <b></b></button><button type="button" class="chip" id="g3festivalOpen" aria-haspopup="dialog" hidden>${_t('Фестиваль')}</button><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
 <div id="g3storyNear" hidden></div>
 <button id="g3act" type="button"></button>
 <div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button><button id="g3modeExit" type="button" hidden>${_t('В город')}</button></div>
@@ -361,6 +365,7 @@ function paintHud() {
   const complete = S.story.length === CHAPTERS.length;
   $('#g3story b').textContent = complete ? '✓' : S.story.length === INVITATION_COUNT ? _t('Финал') : `${S.story.length}/${INVITATION_COUNT}`;
   $('#g3story').classList.toggle('done', complete);
+  $('#g3festivalOpen').hidden = S.story.length === 0;
 }
 function info(html) { const e = $('#g3info'); e.firstElementChild.innerHTML = html; e.classList.add('on'); }
 
@@ -369,7 +374,11 @@ export function initGame(ctx) {
   // ctx: { scene, W, collide: (x,z,r)=>{x,z}, circ(x,z,r), heroLevel(), shake(k), home() }
   S = load(); ui(); onGoal = t => { toast(t); paintHud(); };
   const D = ctx.dist || 'yard', HERE = CREWS.filter(c => (c.d || 'yard') === D), Bd = ctx.W.bounds;
-  if (S.where !== D) { S.where = D; save(); }
+  const festivalVisit = Boolean(ctx.festivalVisit && S.story.length);
+  const regularAccess = { yard: true, center: rankOf(S.rep) >= BAL.gateRank,
+    park: Boolean(S.wins.chrome || S.seen.park), prom: Boolean(S.wins.wave || S.seen.prom), club: Boolean(S.wins.forge) };
+  const festivalOnly = festivalVisit && !regularAccess[D];
+  if (!festivalVisit && S.where !== D) { S.where = D; save(); }
   NHERE = HERE.length; IDS = HERE.map(c => c.id);
   const W = ctx.W, scene = ctx.scene, notes = refill();
   const PM = initPower({ W, camera: ctx.camera, sfx });
@@ -377,9 +386,9 @@ export function initGame(ctx) {
   let choosing = null;
   const powerModes = initPowerModes({ W, PM, wheel, playMusic: ctx.music, sfx, fallStart, fallTick, fallEnd,
     score: (move, res) => powerPoints(move, res, 0), record: recordContest, onEnd: endAct });
-  if (D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
-  if (D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
-  if (D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
+  if (!festivalVisit && D === 'center' && !S.seen.center) { S.seen.center = today(); save(); notes.push(_t('🏙 Центр открыт! Банды здесь 3–5 уровня — сильнее дворовых')); }
+  if (!festivalVisit && D === 'park' && !S.seen.park) { S.seen.park = today(); save(); notes.push(_t('🌳 Парк открыт! Банды 5–7 уровня, джем на эстраде и старый би-бой у шахматных столов')); }
+  if (!festivalVisit && D === 'prom' && !S.seen.prom) { S.seen.prom = today(); save(); notes.push(_t('🏭 Промзона открыта! Банды 6–8 уровня, подпольный ринг и тайники')); }
   const previousRewards = collectGear();
   if (previousRewards.length) { notes.push(...previousRewards); save(); }
   paintHud(); if (notes.length) setTimeout(() => toast(notes.join(' · ')), 900);
@@ -680,6 +689,86 @@ export function initGame(ctx) {
     PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
+  let festivalGuest = null, festivalScene = null, festivalHome = null;
+  let festivalPeople = [];
+  function createFestivalSet(point, act, decisions) {
+    if (festivalScene) return;
+    const layout = new THREE.Group();
+    const centerZ = point.z - (D === 'park' ? 1.72 : D === 'prom' ? 2.8 : .85);
+    layout.position.set(point.x - .32, .045, centerZ);
+    layout.name = 'FestivalIndependentStage';
+    scene.add(layout); festivalScene = layout;
+    festivalHome ||= W.hero.root.position.clone();
+    W.hero.root.position.set(layout.position.x, 0, centerZ);
+    const industrial = decisions.venue === 'prom';
+    const amber = new THREE.PointLight('#ff995c', industrial ? 18 : 10, 8);
+    const side = new THREE.PointLight(decisions.sound === 'relay' ? '#c3a8ff' : '#72cadd', 14, 9);
+    amber.position.set(-2.6, 2.5, .6); side.position.set(2.7, 2.9, -1.4);
+    layout.add(amber, side);
+    loadFestivalStage().then(props => {
+      if (festivalScene !== layout) return;
+      props.scale.setScalar(industrial ? .88 : .70);
+      layout.add(props);
+    }).catch(() => {});
+    const clothes = [['c:stencilBandana'], ['c:waveKicks'], ['girl', 'c:rebarCap'], ['c:rootsBeanie']];
+    const order = decisions.roster === 'crew' ? [2, 0, 3, 1] : [0, 1, 2, 3];
+    for (const [i, n] of order.entries()) {
+      const look = HERO.topDown(act === 7 ? 4 : 6, clothes[n]);
+      const dancer = mocapPerson(look, { body: bodyOf(308 + n * 23, { type:['slim','athl','small','lanky'][n], girl: n === 2 }) });
+      const angle = .27 + i * (Math.PI - .52) / (order.length - 1);
+      dancer.root.position.set(Math.cos(angle) * 2.35, 0, -Math.sin(angle) * 1.95);
+      face(dancer, 0, 0);
+      dancer.play('Breakdance_Ready', { at: i / 4 });
+      layout.add(dancer.root);
+      festivalPeople[n] = dancer;
+    }
+  }
+  const festival = initFestival({ t: _t, W, D, places: PLACES, colliders: ctx.colliders || [], state: S.festival,
+    eligible: () => S.story.length > 0, save, travel: to => travel(to, true), leaveVisit: festivalVisit ? () => travel(S.where) : null,
+    openAllowed: () => !A && !B && !P && !choosing && $('#cityLoading').hidden && $('#alpha').hidden && !$('#lookDialog').open,
+    lock(locked) {
+      W.lock = locked;
+      if (!locked && festivalScene) {
+        if (festivalHome) W.hero.root.position.copy(festivalHome);
+        festivalScene.traverse(mesh => { if (mesh.isMesh && !mesh.geometry.userData.sharedCityGeometry) mesh.geometry.dispose(); });
+        festivalScene.removeFromParent(); festivalScene = festivalHome = null; festivalPeople = [];
+      }
+      paintAct();
+    },
+    prepareScene: createFestivalSet,
+    tryPrize(items) {
+      try {
+        const profile = JSON.parse(localStorage.getItem('fedoskin-profile') || '{}');
+        const own = JSON.parse(localStorage.getItem('fedoskin-wardrobe-owned:' + profile.id) || '[]');
+        if (!items.every(item => own.includes(item))) return;
+        const equipped = JSON.parse(localStorage.getItem('fedoskin-eq') || '[]');
+        const itemSlots = new Set(items.map(item => HERO.itemOf(item).slot));
+        const next = equipped.filter(id => !itemSlots.has(HERO.itemOf(id)?.slot)).concat(items);
+        localStorage.setItem('fedoskin-eq', JSON.stringify(next));
+        ctx.rewear?.();
+        festival.close();
+        toast(_t('Мифический комплект надет'));
+      } catch (_) {}
+    },
+    displaySet(clip, rival, guestIndex) {
+      if (!rival) { (festivalPeople[guestIndex] || W.hero).play(clip, { fade: .12 }); return; }
+      if (!festivalGuest) {
+        festivalGuest = mocapPerson(HERO.topDown(5, ['c:stencilBandana']), { body: bodyOf(412, { type: 'slim' }) });
+        scene.add(festivalGuest.root);
+      }
+      const p = W.hero.root.position;
+      festivalGuest.root.visible = true;
+      festivalGuest.root.position.set(p.x - 1.25, 0, p.z - 1.25);
+      face(festivalGuest, p.x, p.z);
+      festivalGuest.play(clip, { fade: .15 });
+    },
+  });
+  $('#g3festivalOpen').onclick = () => festival.open(false);
+  const festivalPin = new THREE.Mesh(new THREE.OctahedronGeometry(.35), new THREE.MeshBasicMaterial({ color: '#ffb96c', toneMapped: false }));
+  festivalPin.name = 'city-festival-marker';
+  festivalPin.scale.y = 1.35;
+  festivalPin.visible = false;
+  scene.add(festivalPin);
   const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
   const myWalls = () => IDS.filter(id => S.turf[id]).length;
   const storyChapter = () => CHAPTERS[S.story.length];
@@ -723,7 +812,7 @@ export function initGame(ctx) {
     return _t('Вернись во Двор через арку в Центре или на метро.');
   }
   function openStory() {
-    if (B || A || P || choosing) return;
+    if (B || A || P || choosing || festival.busy()) return;
     const chapter = storyChapter();
     openModeInfo(storyJournal(_t, S.story, chapter ? storyHint(chapter) : '', BAL.enCap), false);
     const panel = $('#g3info').firstElementChild;
@@ -741,9 +830,11 @@ export function initGame(ctx) {
     return next ? _t('Сюжет · {reward} · дальше «{next}»', { reward, next: _t(next.title) }) : _t('Общий сайфер состоялся · {reward}', { reward });
   }
   // moving between districts: the save remembers where I am, the page builds that district
-  function travel(to) { S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
+  function travel(to, forFestival = false) { if (!forFestival) S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
     const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;background:#0B0D12;opacity:0;transition:opacity .35s;z-index:20'; document.body.appendChild(f); requestAnimationFrame(() => (f.style.opacity = 1));
-    setTimeout(() => { const u = new URL(location.href); u.searchParams.delete('d'); location.replace(u.toString()); }, 400); }
+    setTimeout(() => { const u = new URL(location.href); u.searchParams.delete('d'); u.searchParams.delete('festival');
+      if (forFestival) { u.searchParams.set('d', to); u.searchParams.set('festival','1'); }
+      location.replace(u.toString()); }, 400); }
   function metroMap() { const boss = S.wins.chrome || S.seen.park;
     info(`<h4>${_t('🚇 Метро — карта города')}</h4>
       <div class="row"><span>${_t('🏠 Двор')}</span><span>${_t('открыт')}</span></div><div class="row"><span>${_t('🏙 <b>Центр</b>')}</span><span>${_t('ты здесь')}</span></div>
@@ -754,6 +845,7 @@ export function initGame(ctx) {
   // what each place offers right now (button text) and what it does
   function placeBtn(pl) {
     const t = today();
+    if (pl.id === 'festival') return { h: _t('Открыть встречу фестиваля'), s: _t('Сюжетная встреча · бесплатно') };
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
     if (pl.id === 'storyFinale') return { off: storyChapter()?.id !== 'finale', h: _t('Открыть общий сайфер'), s: _t('Финал сюжета · бесплатно') };
     if (pl.id === 'dj') return { h: _t('Пульт диджея'), s: _t('Скретч-тренировка и заказ бита') };
@@ -789,6 +881,7 @@ export function initGame(ctx) {
     if (pl.id === 'mall') { const n = S.mallDay.day === t ? S.mallDay.n : 0; return n >= BAL.mallMax ? { off: true, h: _t('🕺 Толпа устала — приходи завтра'), s: _t('Шоу у ТЦ: {n} раза в день', { n: BAL.mallMax }) } : { h: _t('🕺 Шоу у ТЦ · −{n} ⚡', { n: energyCost(BAL.mall) }), s: _t('Начинай, когда охранник далеко: красный круг — его зона'), low: S.en < energyCost(BAL.mall) }; }
   }
   function placeRun(pl) {
+    if (pl.id === 'festival') { festival.open(true); return; }
     const b = placeBtn(pl); if (b.off) { toast(b.h); return; } if (b.low || b.go) { location.href = './'; return; }
     if (pl.id === 'club') { travel('club'); return; }
     if (pl.id === 'backProm') { travel('prom'); return; }
@@ -1249,7 +1342,7 @@ export function initGame(ctx) {
   // ---------- proximity button ----------
   let near = null; const act = $('#g3act');
   act.onclick = () => {
-    if (!near || B || P || A || choosing) return;
+    if (!near || B || P || A || choosing || festival.busy()) return;
     if (near.paint) { startPaint(near.g); return; }
     if (near.place) { placeRun(near.place); return; }
     if (S.en < energyCost(BAL.battle)) { location.href = './'; return; }
@@ -1257,7 +1350,7 @@ export function initGame(ctx) {
     confirmBattle(BAL.battle, () => shown(crew), () => startBattle(crew));
   };
   function paintAct() {
-    if (!near || B || P || A || choosing) { act.classList.remove('on'); return; }
+    if (!near || B || P || A || choosing || festival.busy()) { act.classList.remove('on'); return; }
     if (near.place) { const b = placeBtn(near.place); act.className = 'on' + (b.off || b.low ? ' low' : ''); act.innerHTML = (b.low ? _t('🎬 Мало энергии — посмотри урок') : b.h) + `<small>${b.low ? _t('1 минута урока = +{n} ⚡', { n: BAL.perMin }) : b.s}</small>`; return; }
     if (near.paint) { const low = S.en < energyCost(BAL.paint); act.className = 'on' + (low ? ' low' : '');
       act.innerHTML = _t('🎨 Закрасить стену «{x}» · −{n} ⚡', { x: near.g.c.name, n: energyCost(BAL.paint) }) + `<small>${low ? _t('Мало энергии — посмотри урок') : _t('Твой кусок +{n} ★ каждый день', { n: BAL.turfRep })}</small>`; return; }
@@ -1740,15 +1833,24 @@ export function initGame(ctx) {
       if (!g.label.visible && B?.g !== g) return;
       g.people.forEach(J => { if (J !== B?.opp) W.tickAmbient(J, dt); });
     });
-    if (!B && !P && !A && !choosing) {
+    if (festival.busy()) {
+      W.hero.tick(dt);
+      if (festivalGuest?.root.visible) festivalGuest.tick(dt);
+      festivalPeople.forEach(person => person.tick(dt));
+    } else if (festivalGuest) festivalGuest.root.visible = false;
+    const festivalTarget = festival.target();
+    if (!B && !P && !A && !choosing && !festival.busy()) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
-      crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
-      PLACES.forEach(pl => {
-        if (pl.id === 'storyFinale' && storyChapter()?.id !== 'finale') return;
+      if (!festivalOnly) crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
+      const localPlaces = festivalOnly ? [] : PLACES;
+      for (const pl of localPlaces) {
+        if (pl.id === 'storyFinale' && storyChapter()?.id !== 'finale') continue;
         const d = Math.hypot(p.x - pl.x, p.z - pl.z);
         if (d < pl.r && d < bd) { bd = d; best = { place: pl }; }
-      });
-      crews.forEach(g => { if (!canPaint(g)) return; const d = Math.hypot(p.x - g.wall.x, p.z - g.wall.z); if (d < 2.4 && d < bd) { bd = d; best = { paint: true, g }; } });
+      }
+      if (festivalTarget && Math.hypot(p.x - festivalTarget.x, p.z - festivalTarget.z) < festivalTarget.r &&
+          Math.hypot(p.x - festivalTarget.x, p.z - festivalTarget.z) < bd) best = { place: festivalTarget };
+      if (!festivalOnly) crews.forEach(g => { if (!canPaint(g)) return; const d = Math.hypot(p.x - g.wall.x, p.z - g.wall.z); if (d < 2.4 && d < bd) { bd = d; best = { paint: true, g }; } });
       const key = o => !o ? null : o.paint ? 'p:' + o.g.c.id : o.place ? 'l:' + o.place.id : 'c:' + o.c.id;
       if (key(best) !== key(near)) { near = best; paintAct(); }
       // to-do «watch a turn in the cypher»: stand near the circle for 8 s
@@ -1757,7 +1859,12 @@ export function initGame(ctx) {
     const chapter = storyChapter();
     const [loading, alpha, sheet, appearance] = storyOverlays;
     const exploring = !W.lock && !document.hidden && loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open;
-    const target = exploring && chapter?.district === D && PLACES.find(pl => pl.id === storyPlaces[chapter.id]);
+    const target = exploring && !festivalOnly && chapter?.district === D && PLACES.find(pl => pl.id === storyPlaces[chapter.id]);
+    festivalPin.visible = Boolean(exploring && festivalTarget);
+    if (festivalPin.visible) {
+      festivalPin.position.set(festivalTarget.x, 1.62, festivalTarget.z);
+      festivalPin.rotation.y -= dt;
+    }
     storyPin.visible = storyHalo.visible = Boolean(target);
     if (target) {
       storyPin.position.set(target.x, 1.45, target.z);
@@ -1790,5 +1897,5 @@ export function initGame(ctx) {
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
     wheel.position(.5 + wheelAnchor.x / 2, .5 - wheelAnchor.y / 2);
   }
-  return { update, post, scratchActive: () => A?.kind === 'scratch', shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing, _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => PLACES, _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  return { update, post, scratchActive: () => A?.kind === 'scratch', shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing || festival.busy(), _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => [...PLACES, festival.target()].filter(Boolean), _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

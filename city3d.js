@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=33';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=34';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=67';
+import { initGame } from './city3d-game.js?v=68';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=8';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
@@ -17,7 +17,7 @@ import { buildCenter } from './city3d-center.js?v=7';
 import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=2';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=5';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=6';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -581,8 +581,10 @@ const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15
   park: { name: 'ПАРК', bounds: { x0: -12.4, x1: 12.5, z0: -11.2, z1: 14.2 }, spawn: [-10.6, 1.4, Math.PI / 2] },
   prom: { name: 'ПРОМЗОНА', bounds: { x0: -12.5, x1: 12.8, z0: -9.9, z1: 13.9 }, spawn: [-10.6, 9.5, Math.PI / 2] },
   club: { name: 'КЛУБ', bounds: { x0: -8.8, x1: 8.8, z0: -8.5, z1: 9.1 }, spawn: [0, 2.22, Math.PI] } };
-const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
-const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
+const savedCity = (() => { try { return JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}; } catch (_) { return {}; } })();
+const festivalVisit = Q.get('festival') === '1' && Boolean(savedCity.story?.length);
+const queryDistrict = Q.has('festival') && !festivalVisit ? null : Q.get('d');
+const DIST = DISTS[queryDistrict] ? queryDistrict : DISTS[savedCity.where] ? savedCity.where : 'yard';
 const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
 // the player's own zoom (owner 17.11.2026 «добавь возможность двумя пальцами зумить экран (карту), чтобы можно было видеть всю область»):
 // 1 = the normal view, up to ZMAX pulled back (the camera goes further along the same angle), down to ZMIN closer. Kept between visits.
@@ -1170,7 +1172,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
+  const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),

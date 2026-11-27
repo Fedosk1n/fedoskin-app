@@ -109,6 +109,10 @@
     canvasCap: { name: 'Кепка «Полночь»', slot: 'head', rar: 1, ico: '🧢', reward: [['wins:stencil', 2, 'Победы над бандой «{x}»']], f: { hat: 'cap' }, col: { hat: ['#24242F','#7E6798'] }, bt: { win: 4, cor: 2 } },
     wideLaces: { name: 'Шнурки «Кирпич»', slot: 'laces', rar: 0, ico: '👟', reward: [['dj', 2, 'Заказы бита у диджея во Дворе']], f: { laceStyle: 'zigzag' }, col: { laces: '#ED7155' }, bt: { win: 1, cor: 2 } },
     courtKicks: { name: 'Кроссы «Площадка»', slot: 'kicks', rar: 2, ico: '👟', reward: [['show', 4, 'Завершённые выходы в сайфере во Дворе']], f: { shoe: 'high' }, col: { shoe: '#D9E1CF', shoe2: '#44685E', sole: '#B68F66', lace: '#ECE2CB' }, bt: { win: 9, cor: 3 } },
+    prismCypherKicks: { name: 'Кроссовки «Грань круга»', slot: 'kicks', rar: 4, ico: '👟', festival: true, cosmetic: true,
+      f: { shoe: 'runner', rgbSole: true }, col: { shoe: '#272D3A', shoe2: '#514F60', sole: '#252831', lace: '#D6D8E4' } },
+    prismCypherLaces: { name: 'Шнурки «Световой рисунок»', slot: 'laces', rar: 4, ico: '✧', festival: true, cosmetic: true,
+      f: { laceStyle: 'zigzag', rgbLace: true }, col: { laces: '#9DEDD7' } },
   };
   // what worn street gear gives in RHYTHM BATTLES (owner 14.11.2026 «наоборот сделай, чтобы влиял город на батлы — лишний повод зависнуть в
   // городе»): only HELP to hit — the score rules stay the same, so the server's recount still matches. win = wider tap windows (ms, cap 30),
@@ -143,7 +147,7 @@
   const MYTHIC_MOVES = { rone: 'REAL ONE HAND', rcork: 'CORKSCREW', rplanche: 'PLANCHE' };
   const MYTHIC_SCORE = 600;
   function gearChances(arr) {
-    const count = Math.min(2, wornGear(arr).filter(item => item.rar === 4).length);
+    const count = Math.min(2, wornGear(arr).filter(item => item.rar === 4 && !item.cosmetic).length);
     return { myth: count * 200, assist: count * 400 };
   }
   function gearEvent(chances, roll, move) {
@@ -180,7 +184,7 @@
       const g = itemOf(k); if (!g) return;
       const f = g.f || {};
       for (const part of Object.keys(fit)) if (f[part]) fit[part] = f[part];
-      for (const flag of ['phones', 'chain', 'gloves', 'knee', 'laceStyle']) if (f[flag]) gf[flag] = f[flag];
+      for (const flag of ['phones', 'chain', 'gloves', 'knee', 'laceStyle', 'rgbSole', 'rgbLace']) if (f[flag]) gf[flag] = f[flag];
       Object.assign(co, g.col);
     });
     return { L, has, fit, co, gf };
@@ -223,6 +227,8 @@
     // street gear colours (same names) and the sleeve of a top that became long through gear
     Object.assign(out.col, k.co);
     if (k.co.laces) out.col.lace = k.co.laces;
+    if (k.gf.rgbSole) out.rgbSole = true;
+    if (k.gf.rgbLace) out.rgbLace = true;
     if (long && !out.col.sleeve) out.col.sleeve = out.col.top;
     return out;
   }
@@ -321,6 +327,16 @@
       o.push('</g>');
     }
 
+    if (GF.rgbSole || GF.rgbLace) {
+      const names = ['#fd657c', '#64ecd1', '#9ca7ff'];
+      const stops = names.map((color, i) => '<stop class="festival-rgb" offset="' + i * 50 +
+        '%" stop-color="' + color + '" style="animation-delay:' + (-i * 1.9) + 's"/>').join('');
+      o.push('<defs><linearGradient id="' + id + 'rgbSole" gradientUnits="userSpaceOnUse" x1="1" y1="0" x2="51" y2="21">' + stops +
+        '</linearGradient><linearGradient id="' + id + 'rgbLace" gradientUnits="userSpaceOnUse" x1="8" y1="-17" x2="39" y2="9">' + stops +
+        '</linearGradient></defs><style>.festival-rgb{animation:festivalSpectralStops 5.7s ease-in-out infinite}' +
+        '@keyframes festivalSpectralStops{0%,100%{stop-color:#fd657c}33%{stop-color:#64ecd1}66%{stop-color:#9ca7ff}}' +
+        '@media(prefers-reduced-motion:reduce){.festival-rgb{animation:none}}</style>');
+    }
     // Both feet turn outward. The visible top of the shoe carries the independent laces.
     const shoe = () => {
       const t = fit.shoe, hi = t === 'high' || t === 'highGold';
@@ -342,6 +358,7 @@
       o.push('<g transform="translate(105 219)">');
       P('M0 -2 Q3 -6 17 -6 L33 1 Q54 7 51 19 Q49 26 35 27 Q22 24 9 15 Q-2 9 0 -2 Z', outsole, S(2.2));
       P('M0 -2 Q3 -6 17 -6 L33 0 Q52 6 51 15 Q48 21 36 23 Q24 21 10 12 Q1 7 0 -2 Z', midsole, S(2));
+      if (GF.rgbSole) LN('M3 5 Q10 12 18 16 M22 18 Q31 23 38 22 M41 22 Q47 21 50 17', 'url(#' + id + 'rgbSole)', 2.1);
       LN('M6 10 L7 14 M12 14 L13 18 M19 18 L20 22 M26 21 L27 25 M34 24 V26 M42 23 V25 M47 21 V23', 'rgba(0,0,0,.32)', 1.1);
       if (wardrobe) LN('M11 13 Q20 21 32 23 Q41 24 47 20', '#fff5e1', 1.1, ' opacity=".36"');
       P(body, upper, S(2));
@@ -367,7 +384,7 @@
       for (const [from, to] of segments) {
         const stitch = 'M' + point(from) + ' L' + point(to);
         if (wardrobe) LN(stitch, INK, 4);
-        LN(stitch, lace, style === 'zigzag' ? 2.8 : 2.6);
+        LN(stitch, GF.rgbLace ? 'url(#' + id + 'rgbLace)' : lace, style === 'zigzag' ? 2.8 : 2.6);
         if (wardrobe) LN(stitch, '#fff5e4', 1.15, ' opacity=".27" transform="translate(0 -.5)"');
       }
       o.push('</g>');
