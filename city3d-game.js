@@ -16,6 +16,7 @@ import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=2';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
+import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -214,6 +215,7 @@ function load() {
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
+  s.story = loadStory(s.story);
   s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
   s.scratchBest = Array.isArray(s.scratchBest) ? s.scratchBest : [];
   s.clubTrack = s.clubTrack === 1 ? 1 : 0;
@@ -333,14 +335,15 @@ body:has(#g3wheel[open]) #g3sc{top:calc(max(10px,env(safe-area-inset-top)) + 44p
 #g3choiceActions{display:grid;grid-template-columns:1fr 2fr;gap:8px}
 `;
 function ui() {
-  const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+  const st = document.createElement('style'); st.textContent = CSS + STORY_CSS; document.head.appendChild(st);
   const h = document.createElement('div'); h.innerHTML = `
 <div id="g3hud"><div class="chip" id="g3en"><span>⚡ <b id="g3enN"></b> ${_t('энергии')}</span><div class="bar"><i></i></div></div>
 <div class="chip" id="g3rk"><span>★ <b id="g3rkN"></b> · <span id="g3rkC"></span></span><div class="bar"><i></i></div></div></div>
-<div id="g3hud2"><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
+<div id="g3hud2"><button type="button" class="chip" id="g3story" aria-haspopup="dialog">${_t('Сюжет')} <b></b></button><div class="chip" id="g3gl">📋 <b id="g3glN"></b></div><div class="chip" id="g3tf">🎨 <b id="g3tfN"></b></div></div>
+<div id="g3storyNear" hidden></div>
 <button id="g3act" type="button"></button>
 <div id="g3bt"><div id="g3sc"><span class="me">${_t('ТЫ')}</span><span class="n" id="g3a">0</span>:<span class="n" id="g3b">0</span><span class="op" id="g3on"></span></div><div id="g3turn"></div><div id="g3myth" aria-hidden="true" hidden></div><div id="g3mv"></div><button id="g3skip" type="button">${_t('Пропустить')} ⏭</button><button id="g3modeExit" type="button" hidden>${_t('В город')}</button></div>
-<div id="g3res"></div><div id="g3toast"></div><div id="g3info"><div></div></div>`;
+<div id="g3res"></div><div id="g3toast" role="status"></div><div id="g3info"><div></div></div>`;
   [...h.children].forEach(c => document.body.appendChild(c));
 }
 let toastT = 0;
@@ -355,6 +358,9 @@ function paintHud() {
   $('#g3rk .bar i').style.width = (b ? (S.rep - a) / (b - a) * 100 : 100) + '%';
   const gd = S.goals ? S.goals.filter(g => g.done).length : 0; $('#g3glN').textContent = gd + ' / 3'; $('#g3gl').classList.toggle('all', gd === 3);
   $('#g3tfN').textContent = IDS.filter(id => S.turf[id]).length + ' / ' + NHERE;
+  const complete = S.story.length === CHAPTERS.length;
+  $('#g3story b').textContent = complete ? '✓' : S.story.length === INVITATION_COUNT ? _t('Финал') : `${S.story.length}/${INVITATION_COUNT}`;
+  $('#g3story').classList.toggle('done', complete);
 }
 function info(html) { const e = $('#g3info'); e.firstElementChild.innerHTML = html; e.classList.add('on'); }
 
@@ -402,6 +408,7 @@ export function initGame(ctx) {
     if (choosing) closeChoice(); else e.currentTarget.classList.remove('on');
   };
   addEventListener('keydown', e => { if (choosing && e.key === 'Escape') closeChoice(); });
+  $('#g3story').onclick = openStory;
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
     info(`<h4>${_t('★ Прогресс')}</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
     <p style="margin-top:10px">${_t('Побеждай банды — получай уважение и их шмотки (они видны на тебе и помогают в батлах).')}</p>
@@ -643,6 +650,7 @@ export function initGame(ctx) {
   const PLACES = [
     { id: 'powerContest', x: arena.x, z: arena.z, r: 2.15 },
     { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
+    { id: 'storyFinale', x: C0.x + 1.4, z: C0.z + 2.8, r: 1.6 },
     { id: 'atelier', x: atFront.x, z: atFront.z, r: 1.6 },
   ];
   return { djMix, djLab, matAt, matLab, arena, arenaLabel, chain, atP, atLab, atSign, atFront, PLACES }; })();
@@ -674,6 +682,64 @@ export function initGame(ctx) {
   }
   const lesMin = () => Math.max(0, Math.floor((lessonSec() - (S.lday || lessonSec())) / 60));
   const myWalls = () => IDS.filter(id => S.turf[id]).length;
+  const storyChapter = () => CHAPTERS[S.story.length];
+  const storyPin = new THREE.Mesh(new THREE.OctahedronGeometry(.29), new THREE.MeshBasicMaterial({ color: '#FFD36D', toneMapped: false }));
+  storyPin.name = 'city-story-marker';
+  storyPin.scale.y = 1.45;
+  storyPin.visible = false;
+  const storyHalo = new THREE.Mesh(new THREE.RingGeometry(.4, .48, 28), new THREE.MeshBasicMaterial({ color: '#FFD36D', transparent: true, opacity: .85, depthWrite: false, toneMapped: false }));
+  storyHalo.name = 'city-story-marker-ground';
+  storyHalo.rotation.x = -Math.PI / 2;
+  storyHalo.visible = false;
+  scene.add(storyPin, storyHalo);
+  const storyPlaces = { cypher: 'show', mall: 'mall', jam: 'jam', ring: 'ring', finale: 'storyFinale' };
+  const storyDistricts = ['yard', 'center', 'park', 'prom', 'club'];
+  const finaleGuests = Y && storyChapter()?.id === 'finale' ? buildFinaleGuests() : [];
+
+  function storyHint(chapter) {
+    if (chapter.district === D) {
+      if (chapter.id === 'cypher' || chapter.id === 'finale') return '';
+      const place = PLACES.find(p => p.id === storyPlaces[chapter.id]);
+      const button = placeBtn(place);
+      if (button.off) return button.h;
+      const cost = energyCost(BAL[chapter.id]);
+      if (S.en < cost) return _t('Нужно {n} ⚡. Энергия пополняется бесплатно с новым днём.', { n: cost });
+      return cost > 0 ? _t('Золотая метка у места действия · −{n} ⚡', { n: cost }) : _t('Золотая метка у места действия');
+    }
+    const ahead = storyDistricts.indexOf(chapter.district) > storyDistricts.indexOf(D);
+    if (ahead && D === 'yard') {
+      return rankOf(S.rep) < BAL.gateRank ? _t('Арка в Центр во Дворе откроется со званием «{r}» · {a} / {b} ★. Уважение дают батлы и задания дня.', { r: BAL.ranks[BAL.gateRank], a: S.rep, b: BAL.rep[BAL.gateRank] })
+        : _t('Пройди через арку «Центр» у дальней стены Двора.');
+    }
+    if (ahead && D === 'center') {
+      return S.wins.chrome || S.seen.park ? _t('Войди в Парк через арку в Центре или воспользуйся метро.') : _t('Чтобы открыть вход в Парк из Центра, победи «Хромированных».');
+    }
+    if (ahead && D === 'park') {
+      return S.wins.wave || S.seen.prom ? _t('Пройди через арку «Промзона» в Парке.') : _t('Чтобы открыть вход в Промзону из Парка, победи «Волну».');
+    }
+    if (D === 'club') return _t('Выйди из Клуба в Промзону.');
+    if (D === 'prom') return _t('Вернись через арку из Промзоны в Парк.');
+    if (D === 'park') return _t('Вернись через арку из Парка в Центр.');
+    return _t('Вернись во Двор через арку в Центре или на метро.');
+  }
+  function openStory() {
+    if (B || A || P || choosing) return;
+    const chapter = storyChapter();
+    openModeInfo(storyJournal(_t, S.story, chapter ? storyHint(chapter) : '', BAL.enCap), false);
+    const panel = $('#g3info').firstElementChild;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', 'g3storyTitle');
+    panel.scrollTop = 0;
+    $('#g3storyTitle').focus({ preventScroll: true });
+  }
+  function storyResult(id) {
+    const result = advanceStory(S, id, BAL.enCap);
+    if (!result) return '';
+    const next = storyChapter();
+    const reward = _t('+{r} ★ и +{e} ⚡ за сюжет', { r: result.rep, e: result.en });
+    return next ? _t('Сюжет · {reward} · дальше «{next}»', { reward, next: _t(next.title) }) : _t('Общий сайфер состоялся · {reward}', { reward });
+  }
   // moving between districts: the save remembers where I am, the page builds that district
   function travel(to) { S.where = to; save(); try { sessionStorage.setItem('fedoskin-city3d-from', D); } catch (_) {}
     const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;background:#0B0D12;opacity:0;transition:opacity .35s;z-index:20'; document.body.appendChild(f); requestAnimationFrame(() => (f.style.opacity = 1));
@@ -689,6 +755,7 @@ export function initGame(ctx) {
   function placeBtn(pl) {
     const t = today();
     if (pl.id === 'show') return S.showDay === t ? { off: true, h: _t('🔥 Ты уже выходил в круг сегодня'), s: _t('Завтра снова — а пока батлы с бандами') } : { h: _t('🔥 Выйти в круг сайфера'), s: _t('Бесплатно раз в день · до +{n} ★', { n: BAL.repShow + BAL.repShowClean }) };
+    if (pl.id === 'storyFinale') return { off: storyChapter()?.id !== 'finale', h: _t('Открыть общий сайфер'), s: _t('Финал сюжета · бесплатно') };
     if (pl.id === 'dj') return { h: _t('Пульт диджея'), s: _t('Скретч-тренировка и заказ бита') };
     if (pl.id === 'mat') return { h: _t('Тренировочный коврик'), s: _t('Траектории пауэрмувов · тренировка формы') };
     if (pl.id === 'powerContest') return { h: _t('Пауэрмув-контест'), s: _t('Три раунда против Вихря') };
@@ -733,6 +800,7 @@ export function initGame(ctx) {
     if (pl.id === 'powerContest') openContest();
     if (pl.id === 'atelier') startAtelier();
     if (pl.id === 'show') startShow();
+    if (pl.id === 'storyFinale') startShow(true);
     if (pl.id === 'gate') travel('center');
     if (pl.id === 'yard') travel('yard');
     if (pl.id === 'metro') metroMap();
@@ -771,6 +839,8 @@ export function initGame(ctx) {
     if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.gearProgress.ringWins++; S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>`, _t('🔥 Серия побед на ринге: <b>{n}</b>', { n: S.streak }) + (S.streak > 1 ? _t(' — каждая следующая стоит дороже') : '')); }
     else { lines.push(S.streak ? _t('Серия из {n} побед оборвалась. Начинай новую.', { n: S.streak }) : _t('Ринг не прощает срывов. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); S.streak = 0; }
+    const story = win && storyResult('ring');
+    if (story) lines.push(`<span class="rw">${story}</span>`);
     const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
     return lines; }
   // THE JAM on the Park's stage: three battles in a row against the stage's dancers (one round each); a lost battle ends it,
@@ -787,11 +857,13 @@ export function initGame(ctx) {
         lines.unshift(`<span class="rw">${_t('🏆 Ты выиграл джем на эстраде! Всего +{n} ★', { n: JM.rep })}</span>`); }
       else lines.push(_t('Дальше — <b>{x}</b>, ур. {l}. Энергия уже оплачена', { x: JAM[JM.i].name, l: BAL.jamLv[JM.i] })); }
     else { JM.over = true; lines.push(i ? _t('Джем окончен на {i}-м раунде. За сегодня +{n} ★', { i: i + 1, n: JM.rep }) : _t('Вылет в первом раунде. Уроки поднимают уровень героя — он реже падает и крутит сложнее.')); }
+    const story = win && storyResult('jam');
+    if (story) lines.push(`<span class="rw">${story}</span>`);
     const rk = rankOf(S.rep); if (rk > rk0) lines.push(`<span class="rw">${_t('🏅 Новое звание: {r}', { r: BAL.ranks[rk] })}</span>`);
     return lines; }
-  function openModeInfo(html) {
+  function openModeInfo(html, appendBack = true) {
     choosing = true; W.lock = true; paintAct();
-    info(html + `<button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>`);
+    info(html + (appendBack ? `<button type="button" class="sec" id="g3choiceBack">${_t('Назад')}</button>` : ''));
     $('#g3choiceBack').onclick = closeChoice;
   }
   function openSmoke() {
@@ -973,15 +1045,81 @@ export function initGame(ctx) {
     W.lock = true; W.camT = { x: matAt.x, z: matAt.z + .3, zoom: .45 }; document.body.classList.add('g3fight'); paintAct();
     H.play('Breakdance_Uprock_To_Ground', { fade: .3 });
   }
-  // a turn of my own in the cypher (free once a day): the same random set as in battles, the crew watches
-  function startShow() {
+  function buildFinaleGuests() {
+    const stencil = crewLook(CREWS.find(c => c.id === 'stencil'), 0, 0);
+    const looks = [
+      { name: 'Трафареты', look: stencil.lk, body: stencil.body, angle: 2.53, clip: 'Breakdance_Uprock_Var_1' },
+      { name: 'Шуруп', look: HERO.topDown(5, []), body: bodyOf(1337, { type: 'slim', style: 'mohawk', dye: '#7CFF4F' }), angle: 1.57, clip: 'Breakdance_Footwork_2' },
+      { name: 'Клёпка', look: HERO.topDown(8, ['girl']), body: bodyOf(1838, { type: 'slim', girl: true, style: 'tail', dye: '#ff5a4a' }), angle: .18, clip: 'Breakdance_Uprock_Var_2' },
+    ];
+    return looks.map(({ name, look, body, angle, clip }) => {
+      const dancer = mocapPerson(look, { body });
+      const home = { x: C0.x + Math.cos(angle) * 2.6, z: C0.z + Math.sin(angle) * 2.6 };
+      dancer.root.position.set(home.x, 0, home.z);
+      face(dancer, C0.x, C0.z);
+      dancer.play('Breakdance_Ready', { at: angle / 2 });
+      dancer.root.visible = false;
+      scene.add(dancer.root);
+      return { name, dancer, home, clip };
+    });
+  }
+  function finaleGuestTick(dt) {
+    const guest = finaleGuests[A.guest];
+    if (!guest) return false;
+    const { dancer, home, clip, name } = guest;
+    if (A.guestTime === 0) {
+      W.walk.start(dancer);
+      $('#g3turn').textContent = _t('Общий сайфер · {name}', { name: _t(name) });
+    }
+    A.guestTime += dt;
+    const t = A.guestTime, intro = 1, outro = 1.1, danceEnd = intro + Math.min(2.6, clipLen(clip));
+    const facing = Math.atan2(C0.x - home.x, C0.z - home.z);
+    if (t < intro) W.walk.move(dancer, dt, C0.x, C0.z, ease(t / intro), facing);
+    else if (t < danceEnd) {
+      if (dancer.ws) {
+        W.walk.move(dancer, dt, C0.x, C0.z, 1, facing);
+        dancer.ws = null;
+        dancer.play(clip, { fade: .2 });
+      }
+    } else {
+      if (!dancer.ws) W.walk.start(dancer);
+      W.walk.move(dancer, dt, home.x, home.z, ease(Math.min(1, (t - danceEnd) / outro)), facing);
+    }
+    finaleGuests.forEach(({ dancer: person }) => person.tick(dt));
+    if (dancer.ws) W.walk.pose(dancer, dt);
+    if (t >= danceEnd + outro) {
+      dancer.ws = null;
+      dancer.play('Breakdance_Ready', { fade: .3 });
+      A.guest++;
+      A.guestTime = 0;
+      if (A.guest === finaleGuests.length) {
+        A.t0 = performance.now() / 1000;
+        W.walk.start(W.hero);
+        $('#g3turn').textContent = _t('Общий сайфер · твой выход');
+      }
+    }
+    return true;
+  }
+  // The regular and story performances share the same solo choreography.
+  function startShow(story = false) {
     const H = W.hero, r = rng(Date.now() >>> 0), { x, z } = H.root.position;
     const T = makeTurn(H, ctx.heroLevel(), r, 'me', buff(), null, Math.hypot(C0.x - x, C0.z - z), false, activeBpm());
     alignEntry(T);
-    W.walk.start(H);
-    A = { kind: 'show', T, c: C0, t0: performance.now() / 1000, from: { x, z } };
-    S.showDay = today(); save(); W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: .42 }; document.body.classList.add('g3fight');
-    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t('Твой выход в сайфере'); paintAct();
+    A = { kind: 'show', story, T, c: C0, t0: performance.now() / 1000, from: { x, z }, guest: 0, guestTime: 0 };
+    if (story) {
+      H.play('Breakdance_Ready', { fade: .3 });
+      djMix.cue();
+      for (const { dancer } of finaleGuests) {
+        dancer.root.visible = true;
+        dancer.play('Breakdance_Ready', { fade: .3 });
+      }
+    } else {
+      W.walk.start(H);
+      S.showDay = today();
+      save();
+    }
+    W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: story ? .53 : .42 }; document.body.classList.add('g3fight');
+    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t(story ? 'Общий сайфер' : 'Твой выход в сайфере'); paintAct();
   }
   // a street show on the mall's tiles: my random set, passers-by come to watch — and the guard walks his round.
   // If he gets close while I dance (his red ring reaches me), the show is over and almost nothing is earned.
@@ -1055,6 +1193,8 @@ export function initGame(ctx) {
       H.tick(dt); return;
     }
     if (A.kind === 'show') {
+      if (A.story && finaleGuestTick(dt)) { H.tick(dt); return; }
+      if (A.story) finaleGuests.forEach(({ dancer }) => dancer.tick(dt));
       const T = A.T, t = performance.now() / 1000 - A.t0, C1 = A.c;
       // the guard has come up: the show is cut short
       if (A.mall && !A.caught && t > 1 && Math.hypot(CN.guard.x - H.root.position.x, CN.guard.z - H.root.position.z) < CN.guard.see) {
@@ -1077,8 +1217,20 @@ export function initGame(ctx) {
         const clean = A.clean !== false, rep = BAL.repMall + (clean ? BAL.repMallClean : 0);
         S.rep += rep;
         const rewards = clean ? collectGear('mallClean') : [];
-        save(); bumpGoal('mall'); CN.crowd(false);
+        bumpGoal('mall');
+        const story = storyResult('mall');
+        save(); CN.crowd(false);
+        if (story) rewards.push(story);
         sfx('win'); toast(_t('🕺 Толпа в восторге! +{n} ★{c} — и охранник не успел', { n: rep, c: clean ? _t(' (чисто)') : '' }), rewards); $('#g3bt').classList.remove('on'); $('#g3sc').style.display = ''; endAct(); }
+      else if (t >= T.len && A.story) {
+        const story = storyResult('finale');
+        save();
+        finaleGuests.forEach(({ dancer }) => { dancer.root.visible = false; });
+        $('#g3bt').classList.remove('on'); $('#g3sc').style.display = '';
+        W.cyBusy = false;
+        endAct();
+        if (story) { sfx('win'); toast(story); openStory(); }
+      }
       else if (t >= T.len) {
         const clean = A.clean !== false, rep = BAL.repShow + (clean ? BAL.repShowClean : 0);
         S.rep += rep;
@@ -1153,7 +1305,14 @@ export function initGame(ctx) {
   }
   function closeChoice() {
     choosing = null; FZ.teach(null); W.lock = false;
-    $('#g3info').classList.remove('on'); paintAct();
+    const sheet = $('#g3info'), panel = sheet.firstElementChild;
+    if (panel.hasAttribute('aria-labelledby')) {
+      panel.removeAttribute('role');
+      panel.removeAttribute('aria-modal');
+      panel.removeAttribute('aria-labelledby');
+      $('#g3story').focus({ preventScroll: true });
+    }
+    sheet.classList.remove('on'); paintAct();
   }
   function confirmBattle(baseCost, canStart, onStart) {
     if (B || P || A || choosing) return;
@@ -1276,7 +1435,7 @@ export function initGame(ctx) {
   }
   $('#g3skip').onclick = () => { if (!B || B.phase === 'end') return; B.skip = true; };
 
-  const face = (J, x, z) => { J.root.rotation.y = Math.atan2(x - J.root.position.x, z - J.root.position.z); };
+  function face(J, x, z) { J.root.rotation.y = Math.atan2(x - J.root.position.x, z - J.root.position.z); }
   function moveTurn(T, t, dt, home, cx, cz, back) {
     const J = T.J;
     if (!J.ws) return;
@@ -1553,7 +1712,10 @@ export function initGame(ctx) {
     else if (g.c.tour) { g.people[0].busy = false; g.people[0].root.rotation.y = 0; if (JM && !JM.over) jamRound(); else { JM = null; PK.crowd(false); } }
   }
 
-  let cyT = 0;
+  let cyT = 0, storyWatchStart = null;
+  const storyOverlays = ['#cityLoading', '#alpha', '#g3info', '#lookDialog'].map($);
+  const storyNear = $('#g3storyNear');
+  addEventListener('visibilitychange', () => { if (document.hidden) storyWatchStart = null; });
   // ---------- per frame ----------
   function update(dt) {
     if (P) paintTick(dt);
@@ -1581,12 +1743,45 @@ export function initGame(ctx) {
     if (!B && !P && !A && !choosing) {
       const p = W.hero.root.position; let best = null, bd = 3.1;
       crews.forEach(g => { if (!shown(g)) return; const d = Math.hypot(p.x - g.x, p.z - g.z); if (d < bd) { bd = d; best = g; } });
-      if (!A) PLACES.forEach(pl => { const d = Math.hypot(p.x - pl.x, p.z - pl.z); if (d < pl.r && d < bd) { bd = d; best = { place: pl }; } });
+      PLACES.forEach(pl => {
+        if (pl.id === 'storyFinale' && storyChapter()?.id !== 'finale') return;
+        const d = Math.hypot(p.x - pl.x, p.z - pl.z);
+        if (d < pl.r && d < bd) { bd = d; best = { place: pl }; }
+      });
       crews.forEach(g => { if (!canPaint(g)) return; const d = Math.hypot(p.x - g.wall.x, p.z - g.wall.z); if (d < 2.4 && d < bd) { bd = d; best = { paint: true, g }; } });
       const key = o => !o ? null : o.paint ? 'p:' + o.g.c.id : o.place ? 'l:' + o.place.id : 'c:' + o.c.id;
       if (key(best) !== key(near)) { near = best; paintAct(); }
       // to-do «watch a turn in the cypher»: stand near the circle for 8 s
       if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
+    }
+    const chapter = storyChapter();
+    const [loading, alpha, sheet, appearance] = storyOverlays;
+    const exploring = !W.lock && !document.hidden && loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open;
+    const target = exploring && chapter?.district === D && PLACES.find(pl => pl.id === storyPlaces[chapter.id]);
+    storyPin.visible = storyHalo.visible = Boolean(target);
+    if (target) {
+      storyPin.position.set(target.x, 1.45, target.z);
+      storyPin.rotation.y += dt;
+      storyHalo.position.set(target.x, .052, target.z);
+    }
+    const p = W.hero.root.position;
+    const byCircle = target && chapter.id === 'cypher' && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 3.55;
+    let storyWatch = 0;
+    if (byCircle) {
+      const now = performance.now();
+      storyWatchStart ??= now;
+      storyWatch = (now - storyWatchStart) / 1000;
+      if (storyWatch >= WATCH_TIME) {
+        const story = storyResult('cypher');
+        save(); paintHud(); sfx('win'); toast(story);
+        storyPin.visible = storyHalo.visible = false;
+      }
+    } else storyWatchStart = null;
+    const close = target && (chapter.id === 'cypher' ? byCircle && storyWatch < WATCH_TIME : Math.hypot(p.x - target.x, p.z - target.z) < 3);
+    storyNear.hidden = !close;
+    if (close) {
+      const line = _t(chapter.near, { n: Math.ceil(WATCH_TIME - storyWatch) });
+      if (storyNear.textContent !== line) storyNear.textContent = line;
     }
   }
   function post(dt) {
