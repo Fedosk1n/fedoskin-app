@@ -1196,7 +1196,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "Baby Freeze and Chair Freeze in 3D City · hold zone +{n}",
  "Прямая шнуровка": "Straight bar lacing",
  "Шнуровка крестом": "Crisscross lacing",
- "Шнуровка зигзагом": "Zigzag lacing"
+ "Шнуровка зигзагом": "Zigzag lacing",
+ "Наушники": "Headphones",
+ "Не надето": "Not equipped",
+ "Закрыть карточку": "Close item details",
+ "К образу": "View outfit",
+ "Витрина": "Shop display",
+ "В гардеробе пока пусто": "Your wardrobe is empty"
  },
  "es": {
  "Главная": "Inicio",
@@ -2392,7 +2398,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "Baby Freeze y Chair Freeze en la Ciudad 3D · zona de control +{n}",
  "Прямая шнуровка": "Cordones en paralelo",
  "Шнуровка крестом": "Cordones cruzados",
- "Шнуровка зигзагом": "Cordones en zigzag"
+ "Шнуровка зигзагом": "Cordones en zigzag",
+ "Наушники": "Auriculares",
+ "Не надето": "Sin equipar",
+ "Закрыть карточку": "Cerrar detalles",
+ "К образу": "Ver atuendo",
+ "Витрина": "Escaparate",
+ "В гардеробе пока пусто": "Tu armario está vacío"
  },
  "pt": {
  "Главная": "Início",
@@ -3588,7 +3600,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "Baby Freeze e Chair Freeze na Cidade 3D · zona de controle +{n}",
  "Прямая шнуровка": "Amarração reta",
  "Шнуровка крестом": "Amarração cruzada",
- "Шнуровка зигзагом": "Amarração em zigue-zague"
+ "Шнуровка зигзагом": "Amarração em zigue-zague",
+ "Наушники": "Fones",
+ "Не надето": "Não equipado",
+ "Закрыть карточку": "Fechar detalhes",
+ "К образу": "Ver visual",
+ "Витрина": "Vitrine",
+ "В гардеробе пока пусто": "Seu guarda-roupa está vazio"
  },
  "fr": {
  "Главная": "Accueil",
@@ -4784,7 +4802,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "Baby Freeze et Chair Freeze dans la Ville 3D · zone de maintien +{n}",
  "Прямая шнуровка": "Laçage droit",
  "Шнуровка крестом": "Laçage croisé",
- "Шнуровка зигзагом": "Laçage en zigzag"
+ "Шнуровка зигзагом": "Laçage en zigzag",
+ "Наушники": "Casque",
+ "Не надето": "Non équipé",
+ "Закрыть карточку": "Fermer la fiche",
+ "К образу": "Voir la tenue",
+ "Витрина": "Vitrine",
+ "В гардеробе пока пусто": "Ta garde-robe est vide"
  },
  "de": {
  "Главная": "Start",
@@ -5980,7 +6004,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "Baby Freeze und Chair Freeze in der 3D-Stadt · Haltezone +{n}",
  "Прямая шнуровка": "Gerade Schnürung",
  "Шнуровка крестом": "Kreuzschnürung",
- "Шнуровка зигзагом": "Zickzackschnürung"
+ "Шнуровка зигзагом": "Zickzackschnürung",
+ "Наушники": "Kopfhörer",
+ "Не надето": "Nicht ausgerüstet",
+ "Закрыть карточку": "Details schließen",
+ "К образу": "Outfit ansehen",
+ "Витрина": "Auslage",
+ "В гардеробе пока пусто": "Dein Kleiderschrank ist leer"
  },
  "ja": {
  "Главная": "ホーム",
@@ -7176,7 +7206,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "3Dシティのベイビーフリーズとチェアフリーズ · キープ範囲 +{n}",
  "Прямая шнуровка": "平行結び",
  "Шнуровка крестом": "交差結び",
- "Шнуровка зигзагом": "ジグザグ結び"
+ "Шнуровка зигзагом": "ジグザグ結び",
+ "Наушники": "ヘッドホン",
+ "Не надето": "未装備",
+ "Закрыть карточку": "詳細を閉じる",
+ "К образу": "衣装を見る",
+ "Витрина": "商品一覧",
+ "В гардеробе пока пусто": "クローゼットは空です"
  },
  "ko": {
  "Главная": "홈",
@@ -8372,7 +8408,13 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "3D 도시의 베이비 프리즈와 체어 프리즈 · 유지 구간 +{n}",
  "Прямая шнуровка": "일자 끈 묶기",
  "Шнуровка крестом": "십자 끈 묶기",
- "Шнуровка зигзагом": "지그재그 끈 묶기"
+ "Шнуровка зигзагом": "지그재그 끈 묶기",
+ "Наушники": "헤드폰",
+ "Не надето": "미장착",
+ "Закрыть карточку": "상세 닫기",
+ "К образу": "의상 보기",
+ "Витрина": "상품 목록",
+ "В гардеробе пока пусто": "옷장이 비어 있어요"
  },
  "zh": {
  "Главная": "首页",
@@ -9568,6 +9610,12 @@ window.I18N = {
  "Baby Freeze и Chair Freeze в городе · зона удержания +{n}": "3D城市的 Baby Freeze 和 Chair Freeze · 稳定区 +{n}",
  "Прямая шнуровка": "平行系带",
  "Шнуровка крестом": "交叉系带",
- "Шнуровка зигзагом": "之字形系带"
+ "Шнуровка зигзагом": "之字形系带",
+ "Наушники": "耳机",
+ "Не надето": "未装备",
+ "Закрыть карточку": "关闭详情",
+ "К образу": "查看穿搭",
+ "Витрина": "商品陈列",
+ "В гардеробе пока пусто": "衣橱还是空的"
  }
 };
