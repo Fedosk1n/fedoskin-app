@@ -457,6 +457,10 @@ body.chatmode .tabs{display:none}
 .wdslot small{font-size:clamp(9px,2.55vw,12px);line-height:1.12;color:#aab4bd;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .wdslot[data-equipped=true] small{color:#f6eee5}
 .wdslot[data-equipped=true] b::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;margin:0 0 2px 4px;background:var(--wdlive)}
+.wdextras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
+.wdextras:empty{display:none}
+.wdextras .wdslot{position:static;transform:none;width:auto;padding:7px 9px;border-radius:10px;background:var(--wdsurface)}
+.wdextras .wdslot[aria-pressed=true]{background:#382922}
 .wdslot:focus-visible,.wdtile:focus-visible,.wdicon:focus-visible,.wdstage:focus-visible{outline:2px solid #ffc39e;outline-offset:-3px}
 [data-rarity="0"]{--wdrare:#b6b8c2}
 [data-rarity="1"]{--wdrare:#83b9ff}
@@ -1782,6 +1786,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
           <div id="wdSlots" role="group" aria-label="Экипировка"></div>
           <span class="wdpreview" id="wdPreview" hidden>Примерка</span>
         </div>
+        <div class="wdextras" id="wdExtras" role="group" aria-label="Оформление"></div>
         <details class="wdfold" id="wdBonus" open><summary>Бонусы от надетых вещей</summary><div class="wdboost" id="mBoost"></div></details>
       </div>
       <div class="wdsection">
@@ -1889,14 +1894,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=8"></script>
+<script src="i18n.js?v=9"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="battle-study.js?v=1"></script>
-<script src="hero.js?v=24"></script>
+<script src="hero.js?v=25"></script>
 <script src="rhythm.js?v=34"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -5811,7 +5816,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     floor: ['Пол', '23 211 154 43'],
     bg: ['Фон', '0 0 200 254'],
     item: ['Реквизит', '128 191 70 62'],
-    fx: ['Эффект', '0 0 200 254'],
+    fx: ['Аура', '28 140 144 110'],
   };
   const WD_LACING = { bars: 'Прямая шнуровка', cross: 'Шнуровка крестом', zigzag: 'Шнуровка зигзагом' };
   const WD_STATS = { rhythm: '♪', trace: '◇', freeze: '❄', save: '✓', myth: '✦', cosmetic: '○' };
@@ -5852,6 +5857,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     return HERO.SHOP.filter(item => shop.has(item.id))
       .concat([...new Set(cityOwned())].map(id => HERO.itemOf('c:' + id)).filter(Boolean));
   }
+  function wdWorn(ownedIds = new Set(wdOwned().map(it => it.id))){
+    return new Map(myEq.filter(id => ownedIds.has(id)).map(id => {
+      const item = HERO.itemOf(id);
+      return [item.slot, item];
+    }));
+  }
   function wdSetSlot(slot){
     wdSlot = slot;
     wdChosen = '';
@@ -5861,16 +5872,18 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     title.focus({ preventScroll: true });
     title.scrollIntoView({ block: 'start' });
   }
-  function wdSlotButton(slot, worn){
-    const [label, , [side, at]] = WD_SLOTS[slot];
-    const button = wdText($('#wdSlots'), 'button', '', 'wdslot');
+  function wdSlotButton(parent, slot, worn){
+    const [label, , anchor] = WD_SLOTS[slot];
+    const button = wdText(parent, 'button', '', 'wdslot');
     button.type = 'button';
     button.dataset.wdSlot = slot;
-    button.dataset.side = side;
+    if (anchor) {
+      button.dataset.side = anchor[0];
+      button.style.setProperty('--at', anchor[1] + '%');
+    }
     button.dataset.equipped = String(Boolean(worn));
     button.setAttribute('aria-pressed', String(slot === wdSlot));
     button.setAttribute('aria-controls', 'wdItems');
-    button.style.setProperty('--at', at + '%');
     const name = T(worn?.name || 'Не надето');
     button.setAttribute('aria-label', [T(label), name, worn ? T('Надето') : ''].filter(Boolean).join(' · '));
     wdText(button, 'b', T(label));
@@ -5910,13 +5923,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const look = fitting ? eqWith(eq, selected.id) : eq;
     $('#wdOutfit').hidden = wdTab === 'shop' && !wdFitting;
     $('#wdWorn').textContent = T('Надето') + ' · ' + nfmt(worn.size);
-    $('#mHero').innerHTML = HERO.svg(level, { uid: 'mh', bg: look.includes('wall') || look.includes('city'), acc: withLook(look), wardrobe: true });
+    $('#mHero').innerHTML = HERO.svg(level, { uid: 'mh', bg: look.includes('wall') || look.includes('city'),
+      acc: withLook(look), wardrobe: true, equippedPropsOnly: true });
     $('#wdPreview').hidden = !fitting;
-    $('#wdSlots').replaceChildren();
+    const slots = $('#wdSlots'), extras = $('#wdExtras');
+    slots.replaceChildren();
+    extras.replaceChildren();
     if (wdTab === 'mine') {
       const present = new Set(owned.map(item => item.slot));
       for (const [slot, [, , anchor]] of Object.entries(WD_SLOTS)) {
-        if (anchor && present.has(slot)) wdSlotButton(slot, worn.get(slot));
+        if (present.has(slot)) wdSlotButton(anchor ? slots : extras, slot, worn.get(slot));
       }
     }
     wdDrawLinks();
@@ -6021,15 +6037,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       finally { wdBusy = false; wdPaint(); }
     };
   }
-  function wdLookPaint(level, cur){
+  function wdLookPaint(level, cur, worn){
     const looks = $('#mLooks'); looks.replaceChildren();
     $('#mLv').textContent = T('Образ: ур. {n} · {name}', { n: cur, name: T(HERO.NAMES[cur - 1]) });
     if (!$('#wdLooks').open) return;
+    const eq = withLook([...worn.values()].map(it => it.id)).filter(k => !/^lv\d$/.test(k));
     HERO.LEVELS.slice(0, level).forEach((_, i) => {
       const l = i + 1, worn = l === cur;
       const d = document.createElement('button'); d.type = 'button';
       d.className = 'herolook wdlook' + (worn ? ' cur' : '');
-      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: withLook(myEq).filter(k => !/^lv\d$/.test(k)), wardrobe: true });
+      d.innerHTML = HERO.svg(l, { uid: 'ml' + l, acc: eq, wardrobe: true, equippedPropsOnly: true });
       wdText(d, 'b', T('Ур. {n}', { n: l }) + ' · ' + T(HERO.NAMES[i]));
       wdText(d, 'small', worn ? T('Надето') : T('Надеть'));
       d.disabled = worn;
@@ -6041,10 +6058,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if ($('#shopSheet').hidden) return;
     const level = statsView().level, cur = lookLv() || level, mine = wdTab === 'mine', w = BT.wallet;
     const owned = wdOwned(), ownedIds = new Set(owned.map(it => it.id));
-    const worn = new Map(myEq.filter(id => ownedIds.has(id)).map(id => {
-      const item = HERO.itemOf(id);
-      return [item.slot, item];
-    }));
+    const worn = wdWorn(ownedIds);
     const items = mine ? owned : HERO.SHOP.filter(it => it.price > 0 && !it.sub);
     const matches = items.filter(it => WD_SLOTS[it.slot] && (!wdSlot || it.slot === wdSlot));
     matches.sort(mine ? (a, b) => Number(worn.get(b.slot)?.id === b.id) - Number(worn.get(a.slot)?.id === a.id) || b.rar - a.rar :
@@ -6065,7 +6079,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     wdShelf(matches, ownedIds, worn);
     wdStage(selected, level, owned, worn);
     wdDetail(selected, ownedIds.has(wdChosen), selected && worn.get(selected.slot)?.id === wdChosen);
-    if (mine) wdLookPaint(level, cur);
+    if (mine) wdLookPaint(level, cur, worn);
   }
   function wdDismissDetail(){
     const id = wdChosen;
@@ -6100,7 +6114,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#mAll').addEventListener('click', () => wdSetSlot(''));
   $('#wdLooks').addEventListener('toggle', () => {
     const level = statsView().level;
-    if (!$('#shopSheet').hidden && wdTab === 'mine') wdLookPaint(level, lookLv() || level);
+    if (!$('#shopSheet').hidden && wdTab === 'mine') wdLookPaint(level, lookLv() || level, wdWorn());
   });
   $('#wdClose').addEventListener('click', closeWd);
   $('#shopSheet').addEventListener('keydown', event => {
