@@ -9,7 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=32';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=54';
+import { initGame } from './city3d-game.js?v=55';
+import { buildClub } from './city3d-club.js?v=1';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
@@ -568,7 +569,8 @@ const MOVES = {
 const DISTS = { yard: { name: 'ДВОР', bounds: { x0: -12.6, x1: 13.2, z0: -15.4, z1: 14.2 }, spawn: [1.2, -2.6, Math.PI] },
   center: { name: 'ЦЕНТР', bounds: { x0: -13.2, x1: 13.4, z0: -14.9, z1: 14.4 }, spawn: [0, 11.2, Math.PI] },
   park: { name: 'ПАРК', bounds: { x0: -12.4, x1: 12.5, z0: -11.2, z1: 14.2 }, spawn: [-10.6, 1.4, Math.PI / 2] },
-  prom: { name: 'ПРОМЗОНА', bounds: { x0: -12.5, x1: 12.8, z0: -9.9, z1: 13.9 }, spawn: [-10.6, 9.5, Math.PI / 2] } };
+  prom: { name: 'ПРОМЗОНА', bounds: { x0: -12.5, x1: 12.8, z0: -9.9, z1: 13.9 }, spawn: [-10.6, 9.5, Math.PI / 2] },
+  club: { name: 'КЛУБ', bounds: { x0: -8.8, x1: 8.8, z0: -8.5, z1: 9.1 }, spawn: [0, 2.22, Math.PI] } };
 const whereSaved = () => { try { return (JSON.parse(localStorage.getItem('fedoskin-city3d') || '{}') || {}).where; } catch (_) { return null; } };
 const DIST = DISTS[Q.get('d')] ? Q.get('d') : DISTS[whereSaved()] ? whereSaved() : 'yard';
 const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : null, t0: performance.now(), dist: DIST, bounds: DISTS[DIST].bounds, tickers: [] };
@@ -587,9 +589,11 @@ async function build(scene, asphalt, props, playgroundModel) {
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') await buildPark({ ...TK, pathModel: props, playgroundModel, maxAniso });
-  else if (DIST === 'prom') await buildProm(TK); else await buildYard(scene, asphalt);
+  else if (DIST === 'prom') await buildProm(TK);
+  else if (DIST === 'club') buildClub(TK);
+  else await buildYard(scene, asphalt);
   // the hero (my look incl. street gear)
-  let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
+  let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
   W.hero = mocapPerson(myLook(), { hero: true }); W.hero.play('Breakdance_Ready'); W.hero.root.position.set(sp[0], 0, sp[1]); W.hero.root.rotation.y = sp[2]; scene.add(W.hero.root);
   W.hero.st = { vx: 0, vz: 0, face: sp[2], ph: 0, idle: 0, tgt: null };
 }
@@ -1031,8 +1035,10 @@ let musicOn = false, musicT0 = 0, musicLive = false, musicStale = false;
 // which loop plays (owner 17.11.2026 «разные биты под батлы с разными бандами»): 'yard' = the background; a battle asks for its crew's loop
 // (rhythm.js LOOPS) and gives the background back at its end. Asked for a few ms late so that «back to the yard» + «the next jam round»
 // in the same moment stay on the jam's beat instead of scratching twice.
-let musicId = 'yard', musicAsk = 0;
-function setMusic(id) { musicId = id || 'yard'; clearTimeout(musicAsk); musicAsk = setTimeout(() => { try { if (musicOn && window.RB && RB.bgm) RB.bgm(true, musicId); } catch (_) {} }, 40); }
+let backgroundMusic = DIST === 'club' ? 'club' : 'yard';
+let musicId = backgroundMusic, musicAsk = 0;
+function setBackgroundMusic(id) { backgroundMusic = id; setMusic(null); }
+function setMusic(id) { musicId = id || backgroundMusic; clearTimeout(musicAsk); musicAsk = setTimeout(() => { try { if (musicOn && window.RB && RB.bgm) RB.bgm(true, musicId); } catch (_) {} }, 40); }
 const coarse = matchMedia('(pointer: coarse)').matches, musicWanted = () => localStorage.getItem('fedoskin-city-music') !== '0';
 function startMusic(touch) {
   if (!window.RB || !RB.bgm) return;
@@ -1082,8 +1088,8 @@ async function boot() {
 
   const [, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel] = await Promise.all([
     loadMocap(), DIST === 'yard' || DIST === 'center' ? loadAsphalt() : null,
-    loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), loadBlenderModel('sound-systems'),
-    loadBlenderModel('graffiti-wall'), loadGraffitiSurface(DIST),
+    loadBlenderModel({ yard: 'yard-dj', park: 'park-paths' }[DIST]), DIST !== 'club' ? loadBlenderModel('sound-systems') : null,
+    DIST !== 'club' ? loadBlenderModel('graffiti-wall') : null, DIST !== 'club' ? loadGraffitiSurface(DIST) : null,
     DIST === 'park' ? loadBlenderModel('park-playground') : null,
   ]);
   await build(scene, asphalt, props, playgroundModel);
@@ -1095,7 +1101,7 @@ async function boot() {
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
-    djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
+    djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic, backgroundMusic: setBackgroundMusic,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
     busy:() => W.lock || GAME.busy(),rewear,t:_t});

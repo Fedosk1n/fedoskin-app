@@ -71,7 +71,10 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   reveals city items when acquired. Both character models use `HERO.laceLayout` to draw each lace item's pattern with any pair of sneakers.
   Keep red slots, chance thresholds and mythic scores in sync with `BT_GEAR_*` in the Worker. The admin checks `WORKER_VERSION`.
 - City (flat): crews dance-offs, graffiti turf, DJ/MC, deliveries, daily goals; energy from lesson minutes; street gear helps in battles.
-- City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) + «Промзона» (city3d-prom.js, `?d=prom`) — see the last entries of the full notes.
+- City 3D districts: yard + «Центр» (city3d-center.js, `?d=center`) + «Парк» (city3d-park.js, `?d=park`) + «Промзона» (city3d-prom.js, `?d=prom`) + «Клуб» (city3d-club.js, `?d=club`) — see the last entries of the full notes.
+- The Club's east entrance from the Industrial Zone opens after beating Foundry. `city3d-smoke.js` runs Seven to Smoke with eight breakers,
+  one scored point per duel, winner stays, loser queues, first to seven or four minutes of active duels. Tied leaders battle a tiebreak.
+  Player duels use the normal city battle animation and inputs. The booth selects a club loop, and the results wall uses `S.smoke`.
 - City 3D bodies are ONE skinned mesh per person (`skinGeo` in city3d-mocap.js) — don't hang new limb pieces on bones; dancers leave the floor on foot (`W.walk`); fixture brightness = `LAMP_K` / `FILL_K` in city3d.js (owner 16.11: «слишком ярко»).
 - City 3D GLARE (17.11): clothes never pass HDR .8 (`tame()` in city3d-mocap.js — use `M()`/`tame()` for new clothing materials; only `glowOf` glows), bloom has a soft knee.
 - City asphalt uses the Blender maps in `img/asphalt-*.webp`. Rebuild them with `tools/bake_asphalt.py`. The surface map packs height in red and roughness in green.
