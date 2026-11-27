@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mergePositions } from './city3d-perf.js?v=2';
 import { CITY_ANATOMY } from './city3d-anatomy.js?v=2';
+import { FINISH } from './city3d-character-finish.js?v=1';
 
 const TAU = 2 * Math.PI;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -311,21 +312,28 @@ function scalp(profile, style) {
   const wave = style === 'curly' || style === 'afro' || /Locs$/.test(style);
   const volume = { buzz: .003, underHat: .002, short: .018, curly: .027, afro: .045, top: .039, longLocs: .016, tiedLocs: .022 };
   const height = volume[style] || .013;
-  const sections = covered ? [0, .035, .09, .17, .27, .4] : [0, .035, .09, .17, .27, .4, .53, .65, .76, .86, .93, .975, .994];
-  const g = rings(sections, 32, (t, a) => {
+  const sections = covered ? [0,.035,.09,.17,.27,.4] : [0,.028,.068,.12,.18,.26,.35,.44,.53,.63,.72,.81,.89,.95,.98,.994];
+  const g = rings(sections, covered ? 32 : 48, (t, a) => {
     const sn = Math.sin(a), front = Math.max(0, sn), back = Math.max(0, -sn);
     let y = .102 + .052 * front ** 1.5 - .057 * back ** 1.45;
     if (!shear) y += .011 * front * Math.cos(a * 2 - .6) + .005 * Math.sin(a * 3 + .5);
+    if (!covered) {
+      const temples = Math.exp(-(((front-.43)/.29)**2));
+      y += .0065*temples + (.0017*Math.cos(11*a) + .0013*Math.sin(15*a+.9))*(.44+.56*front);
+    }
     const p = facePoint(skullSlice(y + (HEAD_TOP - y) * t, shell), a, shell);
     const crest = smooth(.03, .56, t);
-    const lobe = wave ? .006 * (1 + Math.cos(a * 9 + 11 * t)) * Math.sin(Math.PI * t) : 0;
+    const phase = a + .55*t + .21*Math.sin(2*a+3*t);
+    const strand = Math.cos((wave ? 13 : 9)*phase + .28*Math.cos(15*t));
+    const ripple = Math.sin(Math.PI*t)*(wave ? .0039 : .0026)*(strand + .43*Math.cos(2.0*a - t*15));
+    const lobe = wave ? (.0045 + .0047*Math.cos(a*9 + 11*t)) * Math.sin(Math.PI*t) : 0;
     const side = covered ? .0038 : shear ? .0026 : style === 'afro' ? .019 : .007;
-    const lift = side + lobe + (shear ? 0 : .006 * crest);
+    const lift = side + lobe + (shear ? 0 : .006*crest+ripple);
     p[0] += Math.cos(a) * lift * Math.sqrt(1 - t) + (style === 'short' ? .008 * smooth(.72, .99, t) : 0);
     p[2] += sn * lift * Math.sqrt(1 - t);
-    p[1] += height * crest + lobe;
-    const strand = wave ? Math.cos(a * 13 + t * 10) : Math.cos(a * 5 + t * 9);
-    return [p[0], p[1], p[2], (shear ? .9 : .83) + .12 * crest + .075 * strand * Math.sin(Math.PI * t)];
+    p[1] += height * crest + lobe + (shear ? 0 : ripple*.86);
+    const rootShade = shear ? .92 : .73 + .19*smooth(.0,.15,t);
+    return [p[0],p[1],p[2],rootShade + .08*crest + (shear ? .025 : .115)*strand*Math.sin(Math.PI*t)];
   }, covered ? null : [style === 'short' ? .008 : 0, HEAD_TOP + height, -.025, .97]);
   HAIR.set(key, g);
   return g;
@@ -674,24 +682,24 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
     group.add(mesh);
     return mesh;
   };
-  const face = faceGeometry(profile), hair = M(C.hair, .88);
-  add(face.skin, MV(C.skin, .83), 0, 0, 0, true);
+  const face = faceGeometry(profile), hair = MV(C.hair,.84,0,FINISH.hair);
+  add(face.skin, MV(C.skin,.73,0,FINISH.skin), 0, 0, 0, true);
   const earX = .086 * profile.temple;
   for (const [i, side] of [-1, 1].entries()) {
-    const ear = add(EARS[i], MV(C.skin, .87), side * earX, .076, -.034, true);
+    const ear = add(EARS[i], MV(C.skin,.78,0,FINISH.skin), side * earX, .076, -.034, true);
     ear.name = 'CityEar';
     ear.rotation.x = -.23;
   }
   for (const eye of face.eyes) {
-    for (const lid of eye.lids) add(lid, MV(C.skin, .83));
-    add(eye.white, MV('#DDD5CD', .64));
+    for (const lid of eye.lids) add(lid, MV(C.skin,.76,0,FINISH.skin));
+    add(eye.white, MV('#D5C9BE', .66));
     add(eye.iris, MV(body.old ? '#676558' : profile.features.iris, .54));
     add(eye.glint, M('#EEE0CE', .65));
-    add(eye.brow, MV(C.hair, .93));
+    add(eye.brow, hair);
   }
   if (body.beard && !girl) {
     face.beard ??= beardGeometry(face.skin,profile);
-    add(face.beard, hair);
+    add(face.beard, M(C.hair,.90,0,FINISH.hair));
   }
 
   const hat = C.hat ? look.hat : null;
@@ -699,21 +707,21 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
   if (style !== 'bald') {
     if (hat !== 'bandana') {
       const color = !hat && style === 'buzz' ? '#' + new THREE.Color(C.hair).lerp(new THREE.Color(C.skin), .13).getHexString() : C.hair;
-      add(scalp(profile, hat ? 'underHat' : style), MV(color, .94), 0, 0, 0, !hat);
+      add(scalp(profile, hat ? 'underHat' : style), MV(color,.84,0,FINISH.hair), 0, 0, 0, !hat);
     }
-    if (!hat && style === 'mohawk') add(hairPart(style), M(body.dye || C.hair, .9), 0, 0, 0, true);
+    if (!hat && style === 'mohawk') add(hairPart(style), M(body.dye || C.hair,.84,0,FINISH.hair), 0, 0, 0, true);
     if (!hat && (style === 'bun' || style === 'buns')) {
       const xs = style === 'buns' ? [-.065, .065] : [0];
-      for (const x of xs) add(hairPart('bun'), MV(C.hair, .92), x, .205, -.105, true).rotation.x = .4;
+      for (const x of xs) add(hairPart('bun'),hair,x,.205,-.105,true).rotation.x = .4;
     }
-    if (!hat && style === 'tiedLocs') add(hairPart('bun'),MV(C.hair,.92),0,.158,-.123,true).scale.set(.89,.67,.96);
+    if (!hat && style === 'tiedLocs') add(hairPart('bun'),hair,0,.158,-.123,true).scale.set(.89,.67,.96);
     if (style === 'tail' || (hat && /^(bun|buns)$/.test(style))) {
-      add(hairPart('tail'), MV(C.hair, .92), 0, .047, -.115, true).rotation.x = .40;
+      add(hairPart('tail'),hair,0,.047,-.115,true).rotation.x = .40;
     }
-    if (style === 'long') add(hairPart(style), hair, 0, 0, 0, true);
+    if (style === 'long') add(hairPart(style), M(C.hair,.84,0,FINISH.hair),0,0,0,true);
     if (style === 'braids' || style === 'dreads') {
       const pairs = style === 'braids' ? [[-.078,-.045],[.078,-.045]] : [[-.073,-.067],[.073,-.067],[-.041,-.11],[.041,-.11],[0,-.125]];
-      for (const [x, z] of pairs) add(hairPart(style), MV(C.hair, .92), x, .028 + Math.abs(x) * .31, z, true).rotation.set(.31, 0, Math.sign(x) * .15);
+      for (const [x, z] of pairs) add(hairPart(style),hair,x,.028+Math.abs(x)*.31,z,true).rotation.set(.31,0,Math.sign(x)*.15);
     }
   }
 
@@ -722,7 +730,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
   let crownZ = -.025, bandY = .135, bandX = .099, bandZ = .141, bandCenter = -.015;
   if (hat) {
     const [main, trim = main] = C.hat;
-    const clothMat = color => MV(color, .93);
+    const clothMat = color => MV(color,.91,0,FINISH.cloth);
     const thread = (color, light = .36) => '#' + new THREE.Color(color)
       .lerp(new THREE.Color('#BCAEA1'), light).getHexString();
     const addEyelet = (point, angle, color) => {
@@ -737,7 +745,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       else add(back ? BRIMS.cap.back : BRIMS.cap.crown, clothMat(main), 0, 0, 0, true);
       add(back ? BRIMS.cap.backStitch : BRIMS.cap.stitch, M(thread(main,.24), .95));
       const billColor = gold || back ? trim : main;
-      const bill = add(BILL, M(billColor, .86), 0, back ? .145 : .152, back ? -.009 : 0, true);
+      const bill = add(BILL, M(billColor,.87,0,FINISH.cloth), 0, back ? .145 : .152, back ? -.009 : 0, true);
       bill.rotation.y = back ? Math.PI : 0;
       bill.rotation.x = back ? -.09 : .1;
       add(BILL_STITCH, M(thread(billColor), .96), ...bill.position.toArray()).rotation.copy(bill.rotation);
