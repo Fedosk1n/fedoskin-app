@@ -77,6 +77,8 @@ When you finish a change, add 1–3 lines here only if it changes a rule or the 
   Player duels use the normal city battle animation and inputs. The booth selects a club loop, and the results wall uses `S.smoke`.
   `tools/bake_club_materials.py` renders the Club's six material sets in Blender. The lazy-loaded WebP base colors use sRGB.
   The linear surface maps pack height in red and roughness in green. Keep the floor stencil on its separate decal so it can be edited in the city.
+  The Club booth (`tools/build_city_dj.py -- <output> --club`) has two animated decks, a mixer, laptop and monitors. The judging row
+  (`tools/build_club_judges.py`) uses three instances of one chair mesh. Seated judges show the same three votes the 7 to Smoke duel used.
 - City 3D bodies are ONE skinned mesh per person (`skinGeo` in city3d-mocap.js) — don't hang new limb pieces on bones; dancers leave the floor on foot (`W.walk`); fixture brightness = `LAMP_K` / `FILL_K` in city3d.js (owner 16.11: «слишком ярко»).
 - City 3D GLARE (17.11): clothes never pass HDR .8 (`tame()` in city3d-mocap.js — use `M()`/`tame()` for new clothing materials; only `glowOf` glows), bloom has a soft knee.
 - City asphalt uses the Blender maps in `img/asphalt-*.webp`. Rebuild them with `tools/bake_asphalt.py`. The surface map packs height in red and roughness in green.

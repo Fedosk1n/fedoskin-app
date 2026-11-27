@@ -97,6 +97,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     run.walks.push({ J, at, yaw });
   }
   function arrange() {
+    club.hideVotes();
     run.phase = 'entry';
     run.delay = .78;
     run.walks = [];
@@ -126,7 +127,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     if (!player) {
       const [leader, next, ...waiting] = run.line;
       match.textContent = run.phase === 'decision'
-        ? t('{x} берёт дуэль', { x: label(run.winner) })
+        ? t('{x} берёт дуэль', { x: label(run.winner) }) + ' · ' + run.voteCount + ':' + (3 - run.voteCount)
         : `${label(leader)} ${run.points[leader]}  /  ${run.points[next]} ${label(next)}`;
       queue.textContent = t('Очередь: {x}', { x: waiting.map(label).join(' · ') || '—' });
       queue.hidden = !waiting.length;
@@ -149,8 +150,11 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   function createBotDuel() {
     const [a, b] = run.line;
     const quality = id => run.entries.get(id).lv * .2 + Math.random() * 1.8;
-    const winner = quality(a) >= quality(b) ? a : b;
-    return { ids: [a, b], winner, slot: -1, step: -1 };
+    const margin = quality(a) - quality(b);
+    const [winner, loser] = margin >= 0 ? [a, b] : [b, a];
+    const votes = [winner, winner, winner];
+    if (Math.abs(margin) < .88) votes[Math.floor(Math.random() * 3)] = loser;
+    return { ids: [a, b], winner, votes, slot: -1, step: -1 };
   }
   function dancePreview() {
     const duel = run.duel, used = AI_TIME - run.delay;
@@ -173,10 +177,14 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       duel.step = i;
     }
   }
-  function verdict(winner) {
+  function verdict(winner, votes) {
     run.winner = winner;
+    run.voteCount = votes.filter(vote => vote === winner).length;
     run.phase = 'decision';
-    run.delay = 1.3;
+    run.delay = 1.65;
+    W.camT = { x: club.floor.x, z: club.floor.z - 1.75, zoom: .73 };
+    W.camSnap = true;
+    club.showVotes(votes.map(id => run.entries.get(id)));
     paint();
   }
   function settle(winner) {
@@ -187,6 +195,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     else { arrange(); paint(); }
   }
   function result() {
+    club.hideVotes();
     run.phase = 'result';
     hud.hidden = queue.hidden = actions.hidden = true;
     const won = run.champion === 'me';
@@ -206,6 +215,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   function exit() {
     if (!run) return;
     cancelPlayer();
+    club.hideVotes();
     const H = W.hero, { x, z, ry } = run.home;
     H.root.position.set(x, 0, z); H.root.rotation.y = H.st.face = ry;
     H.play(READY, { fade: .3 }); H.ws = null;
@@ -239,7 +249,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       }
     } else if (run.phase === 'watch') {
       run.delay -= dt;
-      if (run.delay <= 0) verdict(run.duel.winner);
+      if (run.delay <= 0) verdict(run.duel.winner, run.duel.votes);
       else dancePreview();
     } else if (run.phase === 'decision') {
       run.delay -= dt;
@@ -270,6 +280,10 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     else { arrange(); paint(); }
   };
   get('g3smokeExit').onclick = exit;
-  return { start, tick, playerVerdict: won => verdict(won ? 'me' : run.line[0] === 'me' ? run.line[1] : run.line[0]),
+  return { start, tick, playerVerdict(votes) {
+    const opponent = run.line[0] === 'me' ? run.line[1] : run.line[0];
+    const choices = votes.map(vote => vote === 'me' ? 'me' : opponent);
+    verdict(choices.filter(id => id === 'me').length >= 2 ? 'me' : opponent, choices);
+  },
     probe: () => run && ({ phase: run.phase, left: run.left, line: [...run.line], points: { ...run.points }, overtime: run.overtime }) };
 }

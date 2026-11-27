@@ -8,9 +8,9 @@ const UP = new THREE.Vector3(0, 1, 0);
 const TAU = Math.PI * 2;
 const envelope = (t, start, end) => smooth(t, start, start + .32) * (1 - smooth(t, end - .32, end));
 
-export function performDJ(person, booth, decks, meter, faders = []) {
+export function performDJ(person, booth, decks, meter, faders = [], name = 'Yard DJ') {
   const { root, B } = person;
-  root.name = 'Yard DJ';
+  root.name = name;
   root.position.set(0, 0, -.62);
   const height = Math.max(...decks.map(deck => deck.position.y));
   // Capture the textured back of the palm in bone space before a standing clip is applied.

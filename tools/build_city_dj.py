@@ -1,6 +1,7 @@
 """Build the DJ booth asset, editable scene and preview in Blender 4.3.
 
 blender -b -t 6 --factory-startup --python-exit-code 1 --python tools/build_city_dj.py -- /tmp/city-dj
+Add --club after the output directory for the Club booth.
 """
 from math import cos, pi, sin
 from pathlib import Path
@@ -12,7 +13,9 @@ from mathutils import Vector
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from city_blender_export import export_scene, paint, studio
 
-destination = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
+args = sys.argv[sys.argv.index("--") + 1:]
+destination = Path(args[0]).resolve()
+club = "--club" in args
 destination.mkdir(parents=True, exist_ok=True)
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
@@ -25,17 +28,17 @@ dark = matte("Dark graphite panels", "171922")
 panel = matte("Perforated guard", "393c46")
 side = matte("Vented side skirt", "202833")
 silver = metal("Anodized silver", "737d8b")
-trim = metal("Satin gunmetal", "38404d")
+trim = metal("Satin gunmetal", "414c50" if club else "38404d")
 rub = rubber("Rubber corners and feet", "111319")
-vinyl = rubber("Vinyl", "10131c")
+vinyl = paint("Vinyl", "252b2d", "club vinyl", .44, .15) if club else rubber("Vinyl", "10131c")
 groove = rubber("Vinyl grooves", "293642")
-amber = matte("Red-orange inner sleeve", "d86739")
+amber = matte("Copper inner label", "d79451" if club else "d86739")
 mint = matte("Teal inner sleeve", "65aba9")
 white = matte("Printed scale and index stripe", "b7bfc0")
 screen = matte("Muted screen", "183142")
 yellow = paint("Amber power LEDs", "ff9b52", "amber LEDs", .52, 0, .56)
 green = paint("Green-cyan level LEDs", "79d1b9", "teal LEDs", .52, 0, .41)
-signal = paint("Front meter light", "e96629", "front meter", .52, 0, .7)
+signal = paint("Front meter light", "edb56f" if club else "e96629", "front meter", .52, 0, .7)
 objects, pivots = [], {}
 
 
@@ -138,7 +141,11 @@ for x, label, key in ((-.66, amber, "record-left"), (.66, mint, "record-right"))
     cylinder("Bearing and milled platter rim", (deck_x, deck_y, 1.098), .275, .041, silver, 40)
     cylinder("Rubber slip mat", (deck_x, deck_y, 1.121), .260, .018, rub, 40)
     pivots[key] = (deck_x, deck_y, 1.135)
-    cylinder("Spinning vinyl", (deck_x, deck_y, 1.135), .25, .017, vinyl, 40, key)
+    disc = cylinder("Spinning vinyl", (deck_x, deck_y, 1.135), .25, .017, vinyl, 40, key)
+    if club:
+        for loop in disc.data.loops:
+            point = disc.data.vertices[loop.vertex_index].co
+            disc.data.uv_layers.active.data[loop.index].uv = (point.x / .5 + .5, point.y / .5 + .5)
     for radius in (.241, .225, .209, .191, .177, .155, .135):
         annulus("Pressed groove", deck_x, deck_y, 1.144, radius, .004, groove, key)
     cylinder("Printed label", (deck_x, deck_y, 1.1445), .088, .004, label, 28, key)
@@ -199,11 +206,38 @@ for x, offset in ((-.32, 0), (.61, .044)):
     for a, b in zip(points, points[1:]):
         rod("Angled audio cable", a, b, .012, rub)
 
+if club:
+    walnut = paint("Dark walnut panels", "9f7862", "club walnut", .54, 0)
+    bronze = metal("Copper anodized trim", "c18f5d")
+    for x in (-.918, .918):
+        block("Cabinet end in walnut", (x, -.03, .422), (.12, .71, .76), walnut, .025)
+        block("Steel cabinet toe", (x, -.03, .050), (.16, .75, .074), trim, .012)
+    block("Recessed behind the front slats", (0, -.348, .422), (1.75, .06, .738), dark, .009)
+    for i in range(23):
+        x = (i - 11) * .077
+        block("Grooved walnut front", (x, -.402, .423), (.047, .055, .695), walnut, .008)
+    for z in (.12, .74):
+        block("Brass kick rail", (0, -.433, z), (1.79, .028, .022), bronze, .004)
+    block("Low cable channel", (0, .30, .205), (1.6, .044, .053), dark, .009)
+    for side in (-1, 1):
+        x = side * 1.25
+        block("Monitor bracket", (x, .183, .968), (.31, .33, .043), trim, .009)
+        block("Nearfield cabinet", (x, .206, 1.176), (.28, .265, .391), case, .021)
+        block("Monitor acoustic baffle", (x, .066, 1.182), (.242, .026, .34), dark, .011)
+        for z, radius in ((1.109, .086), (1.286, .039)):
+            rod("Monitor surround", (x, .055, z), (x, .043, z), radius, rub, 24)
+            rod("Recessed driver", (x, .043, z), (x, .038, z), radius*.72, trim, 24)
+        block("Nearfield power light", (x + .083, .045, 1.031), (.022, .009, .010), green, .002)
+
 bpy.context.view_layer.update()
-export_scene(destination / "yard-dj.json", "DJ flight case", objects, pivots)
+asset_name = "club-dj" if club else "yard-dj"
+export_scene(destination / (asset_name + ".json"), "Club DJ booth" if club else "DJ flight case",
+             objects, pivots, textured=("club walnut", "club vinyl") if club else ())
 floor = matte("Studio slate", "1b2535")
 block("Preview floor", (0, 0, -.045), (200, 200, .08), floor)
 scene = bpy.context.scene
-studio(scene, (3.3, -4.35, 5.05), (0, 0, .74), 3.40, destination / "dj-blender.png")
-bpy.ops.wm.save_as_mainfile(filepath=str(destination / "dj-booth.blend"), compress=True)
+camera = (3.25, -4.45, 4.45) if club else (3.3, -4.35, 5.05)
+studio(scene, camera, (0, 0, .73), 3.55 if club else 3.40,
+       destination / ("club-dj-reference.png" if club else "dj-blender.png"))
+bpy.ops.wm.save_as_mainfile(filepath=str(destination / ("club-dj.blend" if club else "dj-booth.blend")), compress=True)
 bpy.ops.render.render(write_still=True)

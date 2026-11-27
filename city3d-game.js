@@ -11,10 +11,10 @@ import { initPower } from './city3d-power.js?v=22';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=1';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=3';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=1';
+import { CLUB_TRACKS } from './city3d-club.js?v=4';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=2';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
-import { performDJ } from './city3d-dj.js?v=1';
+import { performDJ } from './city3d-dj.js?v=2';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=1';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
@@ -820,6 +820,7 @@ export function initGame(ctx) {
       button.onclick = () => {
         S.clubTrack = i; save();
         ctx.backgroundMusic(CLUB_TRACKS[i]);
+        club.mix.cue();
         buttons.forEach((b, index) => {
           b.classList.toggle('sec', index !== i);
           b.setAttribute('aria-pressed', String(index === i));
@@ -1437,7 +1438,7 @@ export function initGame(ctx) {
     H.st.face = H.root.rotation.y;
     const votes = [0, 1, 2].map(() => (diff + (Math.random() - .5) * 2.4 > 0 ? 'me' : 'op')), myV = votes.filter(v => v === 'me').length, win = myV >= 2;
     H.play(win ? 'Breakdance_Ending_1' : 'Breakdance_Ready', { fade: .4 }); B.opp.play(win ? 'Breakdance_Ready' : 'Bboy_Uprock', { fade: .4 });
-    if (B.g.smoke) { B.smokeWon = win; return; }
+    if (B.g.smoke) { B.smokeVotes = votes; return; }
     let lines = [];
     const rkP = rankOf(S.rep), pf = B.perfFirst || [];
     if (pf.length) S.rep += pf.length * BAL.perfFirst;
@@ -1518,7 +1519,7 @@ export function initGame(ctx) {
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
     if (B) {
       if (B.phase !== 'end') battleTick(dt);
-      else if (B.g.smoke) { const won = B.smokeWon; clearSmokeBattle(); smoke.playerVerdict(won); }
+      else if (B.g.smoke) { const votes = B.smokeVotes; clearSmokeBattle(); smoke.playerVerdict(votes); }
       else { W.hero.tick(dt); B.opp.tick(dt); }
     }
     FZ.tick(dt);
