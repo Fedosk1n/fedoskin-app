@@ -1846,3 +1846,8 @@ Owner (screenshot of a battle with «Ночные совы»): «Снизь от
   the eight-person winner-stays queue described by Red Bull BC One (https://www.redbull.com/int-en/themed-battle-concepts-breaking).
   The app uses four minutes of active duels, with the current duel finishing before the cutoff and tied leaders dancing a tiebreak.
   The tournament is free and saves personal best, finishes and wins in `S.smoke`. The first win of the day gives +30 respect.
+
+- 27.11.2026 — Club material bake. `blender -b -t 3 --factory-startup --python-exit-code 1 --python tools/bake_club_materials.py -- /tmp/club-materials`
+  renders oak parquet, painted brick, terrazzo, garnet velour, blackened steel, and pressed vinyl. Copy the resulting WebPs to `img/`.
+  Base colors are sRGB, with red height and green roughness in the separate lossless linear surface map. The optional `--maps-only`
+  skips the Cycles preview and editable test scene. `city3d-club.js` loads the maps only when entering the Club.
