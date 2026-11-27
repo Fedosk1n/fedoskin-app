@@ -23,7 +23,7 @@ const DROP_HOLDS = [
   { c: 'Breakdance_Freeze_Var_2', at: .9, len: 2.1, nm: 'AIR FREEZE', lv: 2 },
   { c: 'Breakdance_Freezes', at: 1.6, len: 2.25, nm: 'AIR FREEZE', lv: 2 },
 ];
-const FLOOR = [['City_Floorrock_Roll', 'FLOORROCK'], ['City_Floorrock_Sweep', 'FLOORROCK']];
+const FLOOR = [['City_Floorrock_Sweep', 'FLOORROCK']];
 const TRICKS = [['City_Trick_Thread', 'LEG THREAD'], ['City_Trick_KickSwitch', 'KICK SWITCH']];
 const DROPS = ['Breakdance_Uprock_To_Ground', 'City_Sweep_Drop'];
 const ENTRIES = [
@@ -35,19 +35,19 @@ const patterns = {
   rock: ['top', 'extraTop', 'down', 'foot'],
   drop: ['top', 'dropHold', 'foot'],
   powerFirst: ['top', 'down', 'quickFoot'],
-  floorStart: ['down', 'floor', 'quickFoot', 'rise', 'top', 'down'],
+  floorStart: ['top', 'down', 'longFoot', 'rise', 'extraTop', 'down'],
   rebound: ['top', 'down', 'quickFoot', 'rise', 'extraTop', 'down'],
   freezeBreak: ['top', 'down', 'quickFoot', 'hold', 'quickFoot'],
-  floorFlow: ['top', 'down', 'floor', 'foot'],
+  floorFlow: ['top', 'down', 'quickFoot', 'floor', 'foot'],
   shapeHit: ['top', 'down', 'quickFoot', 'flex', 'trick'],
-  floorAnswer: ['top', 'down', 'quickFoot', 'floor', 'hold'],
+  floorAnswer: ['top', 'down', 'quickFoot', 'trick', 'hold'],
   threadBreak: ['top', 'down', 'trick', 'foot'],
   shapeStart: ['top', 'dropHold', 'flex', 'quickFoot'],
 };
 export const SHAPES = Object.keys(patterns);
 const accents = {
   groove: ['classic','rock','rebound','threadBreak'],
-  ground: ['floorStart','floorFlow','floorAnswer','threadBreak'],
+  ground: ['classic','floorStart','floorAnswer','threadBreak'],
   shapes: ['drop','shapeHit','freezeBreak','shapeStart'],
   power: ['powerFirst','classic','shapeHit','freezeBreak'],
 };
@@ -98,8 +98,10 @@ function phraseTime(native, bpm) {
 }
 
 export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, force, distance = 2.12, step = 0 }) {
-  const shape = Object.hasOwn(patterns, force) ? force : variety(memory, 'shape', SHAPES, r, 4,
-    s => accents[profile]?.includes(s) ? 3 : 1);
+  const shape = Object.hasOwn(patterns, force) ? force : variety(memory, 'shape', SHAPES, r, 4, s => {
+    if (s === 'floorFlow') return profile === 'ground' ? .55 : .20;
+    return accents[profile]?.includes(s) ? 3 : 1;
+  });
   const { bend, len } = variety(memory, 'entry', ENTRIES, r, 2);
   const seq = [];
   let mirror = r() < .5, dir = mirror ? -1 : 1, topScored = false, footScored = false, held;

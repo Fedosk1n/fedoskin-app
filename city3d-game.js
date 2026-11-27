@@ -13,7 +13,7 @@ import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=7';
 import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
-import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=1';
+import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=2';
 import { performDJ } from './city3d-dj.js?v=3';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=2';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
