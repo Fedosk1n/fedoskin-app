@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead, cityLocs } from './city3d-head.js?v=9';
+import { addCityHead, cityLocs } from './city3d-head.js?v=10';
 import { CITY_ANATOMY } from './city3d-anatomy.js?v=2';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 import { FINISH, characterFinish, loadCharacterFinish } from './city3d-character-finish.js?v=1';
@@ -1106,7 +1106,7 @@ export function mocapPerson(look, opt = {}) {
   if (/Locs$/.test(bd.style || '')) {
     const headScale = bd.head * .94;
     const matrix = B.Head.matrixWorld.clone().scale(new THREE.Vector3(headScale,headScale,headScale));
-    const locs = cityLocs(bd.style, !!(look.hat && C.hat), bd.pack ? .098 : hoodie || bd.hood ? .065 : 0);
+    const locs = cityLocs(bd.style, bd.pack ? .098 : hoodie || bd.hood ? .065 : 0, look.hat === 'bandana' && !!C.hat);
     G.locMesh(locs,matrix,C.hair,y => {
       const head = smooth(-.115,.065,y), back = 1-smooth(-.31,-.09,y);
       return [[BI.Head,head],[BI.Neck,1-head-back],[BI.Spine2,back]];
