@@ -1,7 +1,7 @@
 // Bake original city choreography onto the existing skeleton at 30 fps.
 // Run from the repo root: node tools/mocap/build_city_breaking.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
-import { Euler, Quaternion, Vector3 } from '../../vendor/three/three.module.js';
+import { Euler, Matrix4, Quaternion, Vector3 } from '../../vendor/three/three.module.js';
 
 const { rest, clips } = JSON.parse(readFileSync(new URL('../../anim/bboy.json', import.meta.url)));
 const bones = Object.keys(rest);
@@ -90,6 +90,10 @@ const own = (...key) => floor(...key);
 const open = own([.02,.25,.02],[-1.24,.08,.26],[.43,.47,.49],[-.30,.19,.58],[.28,.08,-.22],[-.36,.09,-.19]);
 const sweep = own([.06,.26,-.04],[-.92,.28,-.35],[.62,.13,.37],[-.22,.14,.27],[.36,.07,-.18],[-.28,.32,.21]);
 const seated = own([-.08,.29,.02],[-.70,-.32,.34],[.18,.14,.55],[-.58,.17,.35],[.27,.19,-.15],[-.35,.075,-.19]);
+const backspinWhip = own([-.025,.32,.075],[-1.68,-.20,.16],[.21,.33,.43],[-.46,.57,.76],
+  [.27,.15,-.17],[-.29,.17,-.20], { spine: .19, head: .24 });
+const backspinRelease = own([.01,.27,.045],[-1.27,.07,.17],[.24,.39,.45],[-.23,.15,.49],
+  [.24,.12,-.15],[-.32,.088,-.14]);
 const twist = own([.04,.32,.03],[-.77,.64,-.45],[.64,.17,.29],[-.27,.13,.42],[.36,.07,-.16],[-.17,.36,.37],
   { spine: -.18, twist: -.52, head: -.12 });
 const flex = own([.04,.39,.01],[-.96,.26,-.51],[.61,.20,.35],[-.06,.56,.70],[.45,.08,-.12],[-.26,.49,.43],
@@ -100,6 +104,22 @@ const kick = own([.02,.38,0],[-.69,.16,-.18],[.40,.44,.61],[-.43,.13,.36],[.31,.
 const switchKick = own([-.02,.42,0],[-.80,-.26,.22],[.39,.13,.34],[-.39,.40,.63],[.32,.09,-.14],[-.30,.09,-.12]);
 const squat = own([.05,.57,.10],[-.48,.34,.16],[.37,.14,.34],[-.17,.12,.04],[.24,.43,.16],[-.30,.31,-.04],
   { spine: .55 });
+
+function foldedLeg(pose, side, kneeTarget, shinDirection, anklePitch) {
+  const thigh = side + 'UpLeg', shin = side + 'Leg', foot = side + 'Foot';
+  const world = skeleton(pose);
+  const upper = kneeTarget.sub(world[thigh].pos).normalize();
+  const lower = shinDirection.normalize();
+  // The kneecap follows the hinge of the fold instead of inheriting the pelvis roll.
+  const hinge = lower.clone().cross(upper).normalize();
+  const frame = along => new Quaternion().setFromRotationMatrix(new Matrix4()
+    .makeBasis(hinge, along, hinge.clone().cross(along)));
+  const thighRotation = frame(upper);
+  pose.q[thigh] = world.Hips.q.clone().invert().multiply(thighRotation);
+  pose.q[shin] = thighRotation.clone().invert().multiply(frame(lower));
+  pose.q[foot].copy(neutral[foot]).multiply(rotation(anklePitch, 0, 0));
+}
+
 function backspinCoil() {
   const pose = { hip: v(0, .49, .13), q: Object.fromEntries(bones.map(n => [n, neutral[n].clone()])) };
   pose.q.Hips = rotation(-2.38, 0, .035);
@@ -107,14 +127,10 @@ function backspinCoil() {
     pose.q[bone].multiply(rotation(curl, 0, 0));
   }
   for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
-    const up = side + 'UpLeg', leg = side + 'Leg', foot = side + 'Foot';
-    const upper = skeleton(pose)[up].pos;
-    const knee = v(sign * .13, sign > 0 ? .44 : .46, -.27);
-    aim(pose, up, knee.sub(upper));
-    const kneePosition = skeleton(pose)[leg].pos;
-    // The ankles cross at two heights so each shin has its own space.
-    aim(pose, leg, v(-sign * .23, sign > 0 ? .37 : .84, .06).sub(kneePosition));
-    pose.q[foot] = skeleton(pose)[leg].q.clone().invert().multiply(rotation(-.51, sign * -.6, sign * .24).multiply(shoe[side]));
+    // Cross near the ankles. Both feet stay up, with the nearer shin tucked behind its partner.
+    const lead = sign > 0;
+    foldedLeg(pose, side, v(sign * .134, lead ? .458 : .472, -.31),
+      v(-sign * .154, lead ? .36 : .205, lead ? .194 : .359), -.22);
     poseLimb(pose, [side + 'Arm', side + 'ForeArm', side + 'Hand'], v(sign * .17, .48, -.22),
       v(sign * .35, .43, .11), rotation(-.61, sign * -.75, sign * .37));
   }
@@ -211,7 +227,7 @@ const authored = {
   City_Trick_Thread: { n: 37, keys: [[0,sit],[.25,tuck],[.48,thru],[.74,twist],[1,sit]] },
   City_Trick_KickSwitch: { n: 33, keys: [[0,sit],[.22,kick],[.38,sit],[.62,switchKick],[1,sit]] },
   City_Sweep_Drop: { n: 40, keys: [[0,stand],[.42,squat],[.70,sweep],[1,sit]] },
-  City_Backspin: { n: 67, keys: [[0,sit],[.15,seated],[.27,coil],[.75,coil],[.86,open],[1,sit]], spin: true },
+  City_Backspin: { n: 67, keys: [[0,sit],[.13,seated],[.203,backspinWhip],[.27,coil],[.75,coil],[.87,backspinRelease],[1,sit]], spin: true },
   City_Shoulder_Hold: { n: 62, keys: [[0,sit],[.17,open],[.35,shoulderHold],[1,shoulderHold]] },
 };
 
