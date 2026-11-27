@@ -1,4 +1,6 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
+import { performDJ } from './city3d-dj.js?v=2';
+import { seatedJudge } from './city3d-club-judges.js?v=1';
 const t = window._t;
 export const CLUB_TRACKS = ['club', 'club_floor'];
 export const CLUB_BREAKERS = [
@@ -51,7 +53,7 @@ async function loadClubSurfaces(THREE, load) {
 }
 
 export async function buildClub(TK) {
-  const { THREE, scene, W, box, circ, can, tex, loadSurfaceTexture, mocapPerson, bodyOf, HERO } = TK;
+  const { THREE, scene, W, box, circ, can, tex, loadSurfaceTexture, mocapPerson, bodyOf, HERO, boothModel, judgeModel } = TK;
   const material = await loadClubSurfaces(THREE, loadSurfaceTexture);
   const floor = { x: 0, z: -2.4 };
   const dj = { x: -6.2, z: 1.25, r: 1.8 };
@@ -160,23 +162,48 @@ export async function buildClub(TK) {
   }
   board();
 
-  // Listening booth and crate shelves.
-  block(3.2, 1.06, .92, dark, dj.x, .53, dj.z - 1.6); box(dj.x, dj.z - 1.6, 3.2, .96);
-  block(3.34, .08, 1, material('oak', { tint: '#b4a28a' }), dj.x, 1.09, dj.z - 1.6);
-  const disks = [-.97, .97].map(offset => {
-    const x = dj.x + offset, z = dj.z - 1.59;
-    block(.86, .11, .72, steel, x, 1.17, z);
-    const disk = mesh(new THREE.CylinderGeometry(.29, .29, .025, 48), vinyl, x, 1.24, z);
-    const sticker = mesh(new THREE.CylinderGeometry(.095, .095, .012, 16), flat(colors.gold), x, 1.258, z);
-    sticker.position.x += .11;
-    return { disk, sticker, x };
-  });
-  for (let i = 0; i < 5; i++) block(.038, .014, .36, flat(i % 2 ? colors.gold : colors.turquoise), dj.x - .22 + i * .105, 1.172, dj.z - 1.59);
-  block(.58, .095, .61, steel, dj.x, 1.13, dj.z - 1.59);
-  const host = mocapPerson(HERO.topDown(4, ['girl', 'c:djGloves', 'c:owlPhones']), { body: bodyOf(87, { type: 'slim', girl: true }) });
-  host.root.position.set(dj.x, 0, dj.z - 2.34); scene.add(host.root);
-  host.play('Breakdance_Ready', { speed: .96 });
-  circ(dj.x, dj.z - 2.34, .32);
+  const booth = new THREE.Group();
+  booth.name = 'Club DJ setup';
+  booth.position.set(dj.x, 0, dj.z - 1.60);
+  scene.add(booth);
+  const walnut = material('oak', { tint: '#9e8e7c' });
+  function imported(model) {
+    model.traverse(obj => {
+      if (!obj.isMesh) return;
+      const mapped = { 'club walnut': walnut, 'club upholstery': velvet, 'club vinyl': vinyl }[obj.name];
+      if (mapped) obj.material = mapped;
+      obj.castShadow = obj.name === 'matte' || obj.name === 'club upholstery' || obj.name === 'club walnut';
+    });
+  }
+  function boothMesh(geo, finish, x, y, z) {
+    const item = new THREE.Mesh(geo, finish);
+    item.position.set(x, y, z); item.receiveShadow = true; booth.add(item);
+    return item;
+  }
+  let decks = ['record-left', 'record-right'].map(name => boothModel?.getObjectByName(name));
+  let level = boothModel?.getObjectByName('front meter'), faders = [];
+  if (decks.every(Boolean) && level?.material) {
+    imported(boothModel);
+    booth.add(boothModel);
+    faders = ['fader-left', 'fader-right'].map(name => boothModel.getObjectByName(name));
+  } else {
+    boothMesh(new THREE.BoxGeometry(2.17, 1, .89), walnut, 0, .50, 0);
+    decks = [-.66, .66].map(x => {
+      boothMesh(new THREE.BoxGeometry(.69, .08, .72), steel, x, 1.04, .02);
+      return boothMesh(new THREE.CylinderGeometry(.25, .25, .021, 40), vinyl, x, 1.10, .055);
+    });
+    boothMesh(new THREE.BoxGeometry(.50, .12, .72), dark, 0, 1.06, .02);
+    level = boothMesh(new THREE.BoxGeometry(1.22, .035, .015),
+      new THREE.MeshStandardMaterial({ emissive: '#bf814b', color: '#c39562' }), 0, .89, .453);
+  }
+  const djLook = HERO.topDown(4, ['girl', 'c:djGloves']);
+  djLook.phones = true;
+  Object.assign(djLook.col, { phones: '#c79465', top: '#314851', sleeve: '#455761' });
+  const host = mocapPerson(djLook, { body: bodyOf(87, { type: 'slim', girl: true }) });
+  booth.add(host.root);
+  const mix = performDJ(host, booth, decks, level, faders, 'Club DJ');
+  box(booth.position.x, booth.position.z, 2.82, .97);
+  circ(booth.position.x, booth.position.z - .61, .32);
 
   // Archive wall: printed results above a low bench.
   const rz = records.z - 1.35, poster = material('oak', { tint: '#9c8985' });
@@ -203,35 +230,51 @@ export async function buildClub(TK) {
     J.play('Breakdance_Ready', { at: .15 * i, speed: .87 + .035 * i }); scene.add(J.root);
     return { ...b, name: t(b.name), J };
   });
-  const judges = [-1.33, 0, 1.33].map((x, i) => {
+  const judgeZ = -7.24;
+  const judgeXs = [-1.18, 0, 1.18];
+  const chair = judgeModel?.getObjectByName('chair');
+  if (chair) {
+    imported(judgeModel);
+    chair.removeFromParent();
+    for (const x of judgeXs) {
+      const seat = chair.clone();
+      seat.name = 'Club chair';
+      seat.position.x = x;
+      judgeModel.add(seat);
+    }
+    judgeModel.position.z = judgeZ;
+    scene.add(judgeModel);
+  } else {
+    for (const x of judgeXs) {
+      block(.83, .34, .69, dark, x, .17, judgeZ - .04);
+      block(.76, .17, .68, velvet, x, .386, judgeZ - .06);
+      block(.80, .61, .13, velvet, x, .731, judgeZ - .29);
+    }
+  }
+  const judges = judgeXs.map((x, i) => {
     const gear = [['c:goldChain'], ['girl', 'c:owlHoodie'], ['c:goldCap']][i];
     const J = mocapPerson(HERO.topDown(5 + i, gear), { body: bodyOf(925 + i * 21, { girl: i === 1 }) });
-    J.root.position.set(x, 0, -7.22);
-    J.play('Breakdance_Ready', { at: i * .38, speed: .85 + i * .05 });
-    scene.add(J.root); circ(x, -7.22, .3);
-    return J;
+    J.root.name = 'Club judge ' + (i + 1);
+    J.root.position.set(x, 0, judgeZ);
+    scene.add(J.root); box(x, judgeZ, .90, .82);
+    return seatedJudge(J, i, scene, can, tex);
   });
-  block(4.65, .61, .5, dark, 0, .305, -6.65); box(0, -6.65, 4.65, .53);
-  block(4.63, .04, .045, flat('#967653'), 0, .57, -6.377);
-  sign(t('СУДЬИ'), 1.32, .31, 0, .46, -6.39);
+  for (const x of [-1.91, 1.91]) box(x, judgeZ - .04, .40, .39);
 
   const signs = [
     label('←  ' + t('Пульт диджея'), -1.95, 1.4, 2.02, '#86e7e5', 2.5),
     label(t('Стена результатов') + '  →', 1.95, 1.4, 2.02, '#ffce8a', 2.5),
     label('7 TO SMOKE', floor.x, 2.3, floor.z + 3.5, '#ffce8a'),
-    label(t('Пульт диджея'), dj.x, 2.05, dj.z - .55, '#86e7e5'),
+    label(t('Пульт диджея'), dj.x, 1.05, dj.z - .40, '#86e7e5'),
     label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
     label(t('Выход в Промзону'), exit.x, 2.15, exit.z + .34, '#edb48b'),
   ];
-  W.tickers.push((dt, now, beats) => {
-    host.tick(dt);
-    judges.forEach(J => J.tick(dt));
-    for (const d of disks) {
-      d.disk.rotation.y += dt * 2.9;
-      d.sticker.position.x = d.x + Math.cos(now * 3) * .11;
-      d.sticker.position.z = d.disk.position.z + Math.sin(now * 3) * .11;
-    }
-    steel.emissive.set('#357378'); steel.emissiveIntensity = .12 + .17 * Math.pow(1 - (beats % 1), 4);
+  W.tickers.push(dt => {
+    mix.tick(dt);
+    judges.forEach(judge => judge.tick(dt));
   });
-  W.club = { floor, dj, records, exit, slots, dancers, board, signs };
+  W.club = { floor, dj, records, exit, slots, dancers, board, signs, mix,
+    showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
+    hideVotes: () => judges.forEach(judge => judge.hide()),
+  };
 }
