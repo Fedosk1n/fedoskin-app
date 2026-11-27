@@ -7,15 +7,16 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=28';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=29';
 import { shadowBatcher, trimCasters } from './city3d-perf.js?v=2';
-import { initGame } from './city3d-game.js?v=50';
+import { initGame } from './city3d-game.js?v=51';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=1';
 import { buildProm } from './city3d-prom.js?v=3';
 import { buildCenter } from './city3d-center.js?v=6';
 import { buildPark } from './city3d-park.js?v=6';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=1';
 import { addCitySound } from './city3d-sound.js?v=1';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=1';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -779,7 +780,18 @@ function heroEq() {
   return eq;
 }
 function myLook() {
-  const look = HERO.topDown(heroLv(), heroEq());
+  const eq = heroEq(), look = HERO.topDown(heroLv(), eq);
+  const appearance = cityAppearance(look.girl);
+  look.body = appearance.body;
+  if (appearance.layers && !eq.some(key => HERO.itemOf(key)?.slot === 'top')) {
+    look.top = 'teeBig';
+    look.layers = true;
+    look.col.sleeve = null;
+    if (!eq.some(key => HERO.itemOf(key)?.slot === 'pants')) {
+      look.pants = 'wind';
+      look.col.stripe = null;
+    }
+  }
   look.cus = myCustom();   // details added to the clothes in the city (city3d-game.js «Кастом»)
   return look;
 }
@@ -1085,6 +1097,8 @@ async function boot() {
   const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: setMusic,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
+  initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
+    busy:() => W.lock || GAME.busy(),rewear,t:_t});
   const soundSystem = addCitySound({ scene, W, game: GAME, library: soundModels, colliders });
   // ring where you tapped
   tapRing = new THREE.Mesh(new THREE.RingGeometry(.25, .32, 28), new THREE.MeshBasicMaterial({ color: OR, transparent: true, depthWrite: false, toneMapped: false })); tapRing.rotation.x = -Math.PI / 2; tapRing.visible = false; scene.add(tapRing);

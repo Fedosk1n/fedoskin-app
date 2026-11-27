@@ -308,8 +308,8 @@ function scalp(profile, style) {
   const shell = {...profile, features: FEATURES[0], old: false};
   const covered = style === 'underHat';
   const shear = style === 'buzz' || covered;
-  const wave = style === 'curly' || style === 'afro';
-  const volume = { buzz: .003, underHat: .002, short: .018, curly: .027, afro: .045, top: .039 };
+  const wave = style === 'curly' || style === 'afro' || /Locs$/.test(style);
+  const volume = { buzz: .003, underHat: .002, short: .018, curly: .027, afro: .045, top: .039, longLocs: .016, tiedLocs: .022 };
   const height = volume[style] || .013;
   const sections = covered ? [0, .035, .09, .17, .27, .4] : [0, .035, .09, .17, .27, .4, .53, .65, .76, .86, .93, .975, .994];
   const g = rings(sections, 32, (t, a) => {
@@ -555,6 +555,52 @@ const PIN = new THREE.CylinderGeometry(.012,.012,.006,12);
 const HEADBAND = new THREE.TorusGeometry(1,.085,6,28).rotateX(Math.PI / 2).scale(.101,.079,.141);
 const HAT_LIGHT = new THREE.TorusGeometry(1,.054,6,28).rotateX(Math.PI / 2);
 const HAIR_PARTS = new Map();
+
+export function cityLocs(style, covered, offset) {
+  const tied = style === 'tiedLocs';
+  const key = style + (covered ? '-covered' : '') + '-' + offset;
+  if (HAIR_PARTS.has(key)) return HAIR_PARTS.get(key);
+  const positions = [], colors = [], indices = [];
+  const sections = [.037,.09,.151,.221,.296,.374,.455,.541,.628,.709,.787,.854,.912,.954,.988];
+  for (let i = 0; i < 17; i++) {
+    const outer = i >= 9;
+    const slot = outer ? (i-9)/7 : i/8;
+    const angle = Math.PI*(1.05 + .90*slot);
+    const side = Math.cos(angle), rear = Math.sin(angle);
+    const endX = side * (tied ? .11 : .144) + .012*Math.sin(i*3.7);
+    const endY = -(outer ? .39 : .29) - .051*(.5+.5*Math.sin(i*2.2)) - (tied ? .018 : 0);
+    const rootX = side * (tied ? .059 : .086);
+    const rootY = covered ? .096 : (tied ? .209 : outer ? .156 : .207);
+    const rootZ = -.024 + rear * (tied ? .099 : .129);
+    const endZ = -.235 - offset + .028*Math.cos(i*2.3);
+    const path = new THREE.CatmullRomCurve3([
+      [rootX,rootY,rootZ], [side*(tied?.085:.109),.104,-.137+.038*Math.abs(side)],
+      [side*(tied?.093:.125),-.061,-.188-offset*.5+.029*Math.abs(side)],
+      [endX+.013*Math.sin(i),-.216,endZ+.019*Math.cos(i)], [endX,endY,endZ],
+    ].map(([x,y,z])=>new THREE.Vector3(x,y,z)));
+    const thick = .0095 + .0041*(.5+.5*Math.cos(i*2.83));
+    const part = rings(sections,7,(t,a) => {
+      const p = path.getPoint(t), tangent = path.getTangent(t);
+      const u = new THREE.Vector3(1,0,0).projectOnPlane(tangent).normalize();
+      const v = u.clone().cross(tangent);
+      const groove = Math.cos(a*2 + t*28 + i*.9);
+      const r = thick*(.82+.18*Math.sin(t*Math.PI))*(1-.69*smooth(.950,1,t))*(1+.075*groove);
+      p.addScaledVector(u,Math.cos(a)*r+.003*Math.sin(t*20+i)*Math.sin(t*Math.PI));
+      p.addScaledVector(v,Math.sin(a)*r);
+      const tone = .80+.115*groove+.12*(.5+.5*Math.cos(i*2.3))+.15*smooth(.67,1,t);
+      return [p.x,p.y,p.z,tone];
+    }, [...path.getPoint(1).toArray(),.94], [...path.getPoint(0).toArray(),.78]);
+    const start = positions.length/3;
+    positions.push(...part.attributes.position.array);
+    colors.push(...part.attributes.color.array);
+    for (const n of part.index.array) indices.push(start+n);
+    part.dispose();
+  }
+  const built = colouredSurface(positions,colors,indices);
+  HAIR_PARTS.set(key,built);
+  return built;
+}
+
 function hairPart(style) {
   if (HAIR_PARTS.has(style)) return HAIR_PARTS.get(style);
   let part;
@@ -659,6 +705,7 @@ export function addCityHead(bone, look, body, { M, MV, glowOf }) {
       const xs = style === 'buns' ? [-.065, .065] : [0];
       for (const x of xs) add(hairPart('bun'), MV(C.hair, .92), x, .205, -.105, true).rotation.x = .4;
     }
+    if (!hat && style === 'tiedLocs') add(hairPart('bun'),MV(C.hair,.92),0,.158,-.123,true).scale.set(.89,.67,.96);
     if (style === 'tail' || (hat && /^(bun|buns)$/.test(style))) {
       add(hairPart('tail'), MV(C.hair, .92), 0, .047, -.115, true).rotation.x = .40;
     }
