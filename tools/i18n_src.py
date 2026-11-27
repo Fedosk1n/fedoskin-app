@@ -1138,6 +1138,14 @@ t('Прямая шнуровка', 'Straight bar lacing', 'Cordones en paralelo'
 t('Шнуровка крестом', 'Crisscross lacing', 'Cordones cruzados', 'Amarração cruzada', 'Laçage croisé', 'Kreuzschnürung', '交差結び', '십자 끈 묶기', '交叉系带')
 t('Шнуровка зигзагом', 'Zigzag lacing', 'Cordones en zigzag', 'Amarração em zigue-zague', 'Laçage en zigzag', 'Zickzackschnürung', 'ジグザグ結び', '지그재그 끈 묶기', '之字形系带')
 
+
+t('Наушники', 'Headphones', 'Auriculares', 'Fones', 'Casque', 'Kopfhörer', 'ヘッドホン', '헤드폰', '耳机')
+t('Не надето', 'Not equipped', 'Sin equipar', 'Não equipado', 'Non équipé', 'Nicht ausgerüstet', '未装備', '미장착', '未装备')
+t('Закрыть карточку', 'Close item details', 'Cerrar detalles', 'Fechar detalhes', 'Fermer la fiche', 'Details schließen', '詳細を閉じる', '상세 닫기', '关闭详情')
+t('К образу', 'View outfit', 'Ver atuendo', 'Ver visual', 'Voir la tenue', 'Outfit ansehen', '衣装を見る', '의상 보기', '查看穿搭')
+t('Витрина', 'Shop display', 'Escaparate', 'Vitrine', 'Vitrine', 'Auslage', '商品一覧', '상품 목록', '商品陈列')
+t('В гардеробе пока пусто', 'Your wardrobe is empty', 'Tu armario está vacío', 'Seu guarda-roupa está vazio', 'Ta garde-robe est vide', 'Dein Kleiderschrank ist leer', 'クローゼットは空です', '옷장이 비어 있어요', '衣橱还是空的')
+
 dicts = {l: {k: v[l] for k, v in D.items()} for l in L}
 out = ('// Переводы интерфейса приложения. Ключ — русский текст, значение — перевод.\n'
        '// Языки: ' + ', '.join(n for _, n in LANGS) + '\n'
