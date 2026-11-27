@@ -1238,6 +1238,10 @@ export function mocapPerson(look, opt = {}) {
   J.tick = dt => {
     if (festivalLED) festivalPhase.value = reducedGlow.matches ? 0 : performance.now() / 5700 % 1;
     const a = J.act, r = a && RM[J.cur], t0 = a ? a.time : 0;
+    if (a && J.phraseTime != null) {
+      a.time = J.phraseTime - dt * a.timeScale;
+      J.phraseTime = null;
+    }
     mixer.update(dt);
     if (r && a.timeScale > 0) {
       let t1 = a.time; const loop = J.rmLoop;
@@ -1284,6 +1288,7 @@ export function mocapPerson(look, opt = {}) {
     const once = o.once ?? !!(c.userData && c.userData.once);
     const a = mixer.clipAction(c); a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = once;
     a.timeScale = (o.speed || 1) * (STANDS[name] ? STANDS[name].sp : 1); if (o.at) a.time = o.at % c.duration;
+    J.phraseTime = null;
     // the very first clip starts at full weight: a fade-in from 0 showed the T-pose for a moment (new people, the hero after changing clothes)
     a.play(); if (J.act && J.act !== a) J.act.crossFadeTo(a, o.fade ?? .25, false); else if (J.act === a || !J.act) a.setEffectiveWeight(1);
     J.act = a; J.cur = name;

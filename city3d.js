@@ -15,7 +15,7 @@ import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
 import { buildPark } from './city3d-park.js?v=8';
-import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=2';
+import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=3';
 import { addCitySound } from './city3d-sound.js?v=1';
 import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=7';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)

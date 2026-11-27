@@ -183,9 +183,9 @@ function plantBackspinHand(pose, t) {
   const weight = smooth(unit((t - 1.68) / .115)) * (1 - smooth(unit((t - 2.06) / .20)));
   if (!weight) return;
   const world = skeleton(pose);
-  const [upper, lower, hand] = catchArm;
-  poseLimb(pose, catchArm, world[hand].pos.lerp(catchPalm, weight), world[lower].pos,
-    world[hand].q.slerp(catchPalmRotation, weight));
+  const wrist = world.RightHand;
+  poseLimb(pose, catchArm, wrist.pos.lerp(catchPalm, weight), world.RightForeArm.pos,
+    wrist.q.slerp(catchPalmRotation, weight));
 }
 
 function backspin(time) {
