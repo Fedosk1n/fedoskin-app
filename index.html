@@ -1146,6 +1146,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .loot-icon{font-size:26px;line-height:1}
 .loot-entry-copy{flex:1;text-align:start}
 .loot-wardrobe{margin:3px 0 8px;min-height:42px}
+.loot-home{display:grid;grid-template-columns:clamp(88px,29vw,120px) minmax(0,1fr) 17px;align-items:center;gap:10px;
+  width:100%;min-height:76px;margin-top:8px;padding:5px 11px 5px 5px;border:1px solid #9b6c44;border-radius:14px;
+  background:linear-gradient(105deg,#26343a 6%,#24252b 49%,#30251f);color:#fff2dc;text-align:start;cursor:pointer}
+.loot-home img{width:100%;height:auto;aspect-ratio:7/4;object-fit:cover;display:block;border-radius:9px;background:#27353b}
+.loot-home b,.loot-home small{display:block;overflow-wrap:anywhere}
+.loot-home b{font-size:clamp(14px,3.9vw,17px);font-weight:800;line-height:1.17}
+.loot-home small{margin-top:4px;color:#ffd395;font-size:13px;font-weight:750;line-height:1.25}
+.loot-home .ico{width:17px;height:17px;color:#ffd395}
+.loot-home:focus-visible{outline:2px solid #ffcb85;outline-offset:3px}
 </style>
 <link rel="stylesheet" href="daily-gear-reveal.css?v=2">
 </head>
@@ -1161,6 +1170,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <button class="avatar" aria-label="Профиль" data-go="profile" style="padding:0;background:none;justify-self:end"><span class="av-slot" data-size="44"></span></button>
   </header>
   <button class="alphabar" data-go="profile"><span class="alphatag">α ALPHA</span><span style="flex:1;text-align:left" data-cfg="alphaBanner">Все уроки бесплатно на время альфа-теста</span><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button id="lootHome" class="loot-home" type="button" aria-haspopup="dialog" aria-controls="lootDialog" hidden>
+    <img width="224" height="128" alt="" decoding="async">
+    <span><b>Ежедневный ящик</b><small>Открыть бесплатно</small></span>
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+  </button>
   <aside class="vpn-notice" id="vpnNotice" hidden>
     <p><strong>Для работы приложения может понадобиться VPN.</strong> Попробуй его включить, если уроки или рейтинг не загружаются.</p>
     <button id="vpnNoticeDismiss" type="button" aria-label="Скрыть подсказку про VPN">×</button>
@@ -6558,13 +6572,60 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   // The Worker owns both the roll and the 24-hour clock. The player receives the committed item.
   const lootDialog = $('#lootDialog'), lootStage = $('#lootStage'), lootResult = $('#lootResult');
+  const lootHome = $('#lootHome'), lootHomeArt = $('img', lootHome), lootHomeScreen = $('#home'), lootHomeBody = $('#homeBody');
   const lootDefaultOdds = [8000, 1600, 350, 50, 0];
-  let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn, lootWorkerReady = false;
+  let lootState, lootClock = 0, lootWallClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn;
   let lootSession = 0, lootFlow = '', lootLast = null, lootOwner = '';
+  let lootHomeTimer = 0, lootHomeConfirmed = false, lootRefreshQueued = false, lootProfileReplaced = false;
+  let lootHomeVisit = false, lootRetryAt = 0, lootRetries = 0;
+  const lootRetryDelays = [2000, 8000];
   const lootSeconds = new Intl.NumberFormat(LANG, { minimumIntegerDigits: 2, useGrouping: false });
   const lootPercent = new Intl.NumberFormat(LANG, { style: 'percent', maximumFractionDigits: 1 });
   const lootAnnounce = message => { $('#lootAnnouncement').textContent = message; };
   const lootWait = () => lootState ? Math.max(0, lootState.next - lootState.now - (performance.now() - lootClock)) : 0;
+  const lootHomeAge = () => Math.max(performance.now() - lootClock, Date.now() - lootWallClock);
+  const lootAtHome = () => !document.hidden && !lootHomeScreen.hidden && !lootHomeBody.hidden && !lootDialog.open;
+  const lootReadyFromServer = () => lootState && lootState.next <= lootState.now;
+  const lootHomeCanClaim = () => lootAtHome() && navigator.onLine !== false && !lootProfileReplaced &&
+    lootOwner === prof.id && lootHomeConfirmed && lootReadyFromServer() && !lootBusy && !lootFailure &&
+    lootClaimStamp(prof.id) <= (lootState.last?.t || 0);
+  const lootClaimKey = owner => 'fedoskin-loot-claimed:' + owner;
+  function lootClaimStamp(owner){
+    try { return Number(localStorage.getItem(lootClaimKey(owner))) || 0; } catch (_) { return 0; }
+  }
+  function lootPaintHome(){
+    clearTimeout(lootHomeTimer);
+    const show = Boolean(lootHomeCanClaim());
+    if (show && !lootHomeArt.getAttribute('src')) lootHomeArt.src = 'img/loot-reveal-home.webp?v=1';
+    if (lootHome.hidden === show) lootHome.hidden = !show;
+    if (!lootAtHome() || navigator.onLine === false || lootProfileReplaced || lootBusy) return;
+    if (lootRetryAt) {
+      lootHomeTimer = setTimeout(lootSyncHome, Math.max(0, lootRetryAt - performance.now()));
+      return;
+    }
+    if (!lootHomeConfirmed || !lootState || lootReadyFromServer()) return;
+    // A local deadline wakes the check. Only the server can make the home card available.
+    lootHomeTimer = setTimeout(lootSyncHome, Math.max(1000, lootState.next - lootState.now - lootHomeAge()));
+  }
+  function lootSyncHome(reenter = false){
+    const active = lootAtHome() && navigator.onLine !== false;
+    if (lootHomeVisit !== active) {
+      lootHomeVisit = active;
+      lootRetryAt = lootRetries = 0;
+    }
+    if (active) {
+      if (lootProfileReplaced) { location.reload(); return; }
+      lootCheckOwner();
+      if ((reenter && lootReadyFromServer() && lootHomeAge() >= 30e3) ||
+          lootClaimStamp(prof.id) > (lootState?.last?.t || 0)) lootHomeConfirmed = false;
+      if (LB_URL && !lootBusy && performance.now() >= lootRetryAt &&
+          (!lootHomeConfirmed || !lootState || (!lootReadyFromServer() && lootHomeAge() >= lootState.next - lootState.now))) {
+        lootRetryAt = 0;
+        lootRequest(false); return;
+      }
+    }
+    lootPaintHome();
+  }
   const lootFilm = DailyGearReveal({ stage: lootStage, canvas: $('#lootFrames'), poster: $('#lootPoster'),
     mechanism: $('#lootMechanism'), art: $('#lootItemArt'),
     muted: () => soundOff, onFinish(item) {
@@ -6580,9 +6641,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   function lootPaint(){
     if (!lootDialog.open) return;
-    if (lootOwner !== prof.id) {
-      lootSession++;
-      lootClearView();
+    if (lootCheckOwner()) {
       if (!lootBusy) { lootRequest(false); return; }
     }
     const seconds = Math.ceil(lootWait() / 1000);
@@ -6620,10 +6679,19 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     lootShowItem(item, false);
   }
   function lootClearView(){
-    lootOwner = prof.id;
     lootFlow = lootFailure = '';
+    lootAnnounce(''); lootOdds(Array.isArray(lootState?.odds) ? lootState.odds : lootDefaultOdds); lootRestore();
+  }
+  function lootCheckOwner(){
+    if (lootOwner === prof.id) return false;
+    lootSession++;
+    lootOwner = prof.id;
     lootState = lootLast = null;
-    lootAnnounce(''); lootOdds(lootDefaultOdds); lootRestore();
+    lootHomeConfirmed = false;
+    lootRetryAt = lootRetries = 0;
+    if (lootBusy) lootRefreshQueued = true;
+    if (lootDialog.open) lootClearView();
+    return true;
   }
   function lootOdds(odds){
     const list = $('#lootOdds'); list.replaceChildren();
@@ -6633,7 +6701,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     });
   }
   function lootPresent(data, owner, legacyDuplicate, animate){
-    lootState = data; lootClock = performance.now();
+    lootState = data; lootClock = performance.now(); lootWallClock = Date.now();
+    lootHomeConfirmed = true;
+    lootRetryAt = lootRetries = 0;
+    const serverStamp = Number.isFinite(data.last?.t) ? data.last.t : 0;
+    if (serverStamp !== lootClaimStamp(owner)) {
+      try {
+        if (serverStamp) localStorage.setItem(lootClaimKey(owner), String(serverStamp));
+        else localStorage.removeItem(lootClaimKey(owner));
+      } catch (_) {}
+    }
     if (Array.isArray(data.owned)) btWallet(data);
     const item = data.last && HERO.itemOf(data.last.item);
     let duplicate = Boolean(data.last?.duplicate || legacyDuplicate);
@@ -6659,8 +6736,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }
   }
   async function lootRequest(claim){
-    if (lootBusy || (claim && (lootOwner !== prof.id || !lootState || lootWait() || lootFailure || (lootFlow && lootFlow !== 'example')))) return;
+    if (lootBusy || lootProfileReplaced ||
+        (claim && (lootOwner !== prof.id || !lootState || lootWait() || lootFailure || (lootFlow && lootFlow !== 'example')))) return;
+    if (!claim) lootCheckOwner();
     const owner = prof.id, session = lootSession;
+    const stampAtStart = lootClaimStamp(owner);
+    const homeLookup = !claim && lootAtHome();
     lootBusy = true; lootFailure = '';
     if (claim) {
       lootFlow = 'request';
@@ -6668,28 +6749,35 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       lootFilm.start();
       lootAnnounce(T('Открываем ящик…'));
     }
-    lootPaint();
+    lootPaint(); lootPaintHome();
     const existing = claim && new Set(wdOwned().map(item => item.id));
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
+    let temporary = false;
     try {
       if (!LB_URL) throw new Error('unavailable');
-      if (!lootWorkerReady) {
-        const status = await fetch(LB_URL + '/', { cache: 'no-store', signal: controller.signal });
-        const worker = await status.json();
-        if (!status.ok || worker.service !== 'fedoskin-push' || !Number.isInteger(worker.version)) throw new Error('unavailable');
-        if (worker.version < 4) throw new Error('update');
-        lootWorkerReady = true;
-      }
-      if (prof.id !== owner) return;
-      const r = await btPost('/hero/loot', { claim }, controller.signal);
-      if (r.status === 404) { lootWorkerReady = false; throw new Error('update'); }
+      const r = await btPost('/hero/loot', { claim }, controller.signal).catch(error => { temporary = true; throw error; });
+      temporary = r.status >= 500 || r.status === 408;
+      if (r.status === 404) throw new Error('update');
       if (!r.ok) throw new Error('unavailable');
       const data = await r.json();
-      if (!data.ok || !Number.isFinite(data.next)) throw new Error('unavailable');
-      if (prof.id !== owner) return;
+      if (!data.ok || !Number.isFinite(data.now) || !Number.isFinite(data.next) || typeof data.claimed !== 'boolean') throw new Error('unavailable');
+      if (prof.id !== owner || lootProfileReplaced) return;
+      const stamp = lootClaimStamp(owner);
+      // Another tab may update the receipt while this request is in flight.
+      // A pre-existing local receipt never overrides a new authoritative reply.
+      if (stamp !== stampAtStart && stamp !== (data.last?.t || 0)) {
+        lootRefreshQueued = true;
+        throw new Error('unavailable');
+      }
       lootPresent(data, owner, Boolean(data.claimed && existing?.has(data.last?.item)), claim && data.claimed && lootDialog.open && session === lootSession);
     } catch (error) {
-      if (!lootDialog.open || prof.id !== owner || session !== lootSession) return;
+      if (prof.id !== owner || lootProfileReplaced) return;
+      lootHomeConfirmed = false;
+      if (temporary && homeLookup && lootAtHome() && navigator.onLine !== false &&
+          session === lootSession && lootRetries < lootRetryDelays.length) {
+        lootRetryAt = performance.now() + lootRetryDelays[lootRetries++];
+      }
+      if (!lootDialog.open || session !== lootSession) return;
       lootFailure = T(error.message === 'update' ? 'Ящик откроется после обновления сервера.' : 'Ящик не загрузился. Проверь соединение.');
       if (lootFlow === 'request') { lootFlow = ''; lootRestore(); }
       lootAnnounce(lootFailure);
@@ -6697,18 +6785,25 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       clearTimeout(timeout); lootBusy = false;
       // A reopened dialog can reuse a confirmed state for this profile. After a stale
       // failure or profile change, check the server without attempting another claim.
-      if (lootDialog.open && lootOwner === prof.id && session !== lootSession && !lootState) lootRequest(false);
-      else lootPaint();
+      const needsRefresh = lootRefreshQueued && !lootHomeConfirmed;
+      lootRefreshQueued = false;
+      if (needsRefresh) lootRefresh();
+      else if (lootDialog.open && !lootProfileReplaced && (lootOwner !== prof.id || (session !== lootSession && !lootHomeConfirmed))) lootRequest(false);
+      else if (lootAtHome() && lootOwner !== prof.id) lootSyncHome();
+      else { lootPaint(); lootPaintHome(); }
     }
   }
-  function openLoot(){
+  function openLoot(claimNow = false){
     if (lootDialog.open) return;
+    if (lootProfileReplaced) { location.reload(); return; }
+    if (claimNow && !lootHomeCanClaim()) { lootSyncHome(); return; }
+    lootCheckOwner();
     lootSession++;
     clearInterval(lootTimer);
     lootReturn = document.activeElement;
     lootClearView(); lootFilm.preload();
     lootDialog.showModal();
-    lootPaint(); lootRequest(false);
+    lootRequest(claimNow); lootPaint(); lootPaintHome();
     lootTimer = setInterval(lootPaint, 250);
   }
   function lootExample(){
@@ -6719,8 +6814,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (!$('#lootSkip').hidden) $('#lootSkip').focus({ preventScroll: true });
     lootFilm.reveal(item);
   }
-  $('#lootEntry').onclick = openLoot;
-  $('#lootWardrobe').onclick = openLoot;
+  lootHome.onclick = () => openLoot(true);
+  $('#lootEntry').onclick = () => openLoot();
+  $('#lootWardrobe').onclick = () => openLoot();
   $('#lootClose').onclick = () => lootDialog.close();
   $('#lootClaim').onclick = () => lootRequest(true);
   $('#lootRetry').onclick = () => lootRequest(false);
@@ -6729,11 +6825,42 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#lootLeavePreview').onclick = () => { lootFlow = ''; lootRestore(); lootPaint(); $('#lootDemo').focus({ preventScroll: true }); };
   lootDialog.addEventListener('close', () => {
     if (lootDialog.open) return;
-    lootSession++; clearInterval(lootTimer); lootFilm.reset(); lootFlow = ''; lootReturn?.focus({ preventScroll: true });
+    if (lootBusy && lootFlow === 'request') lootRefreshQueued = true;
+    lootSession++; clearInterval(lootTimer); lootFilm.reset(); lootFlow = '';
+    lootSyncHome();
+    const focus = lootReturn === lootHome && lootHome.hidden ? tabsEl.querySelector('button[data-tab="home"]') : lootReturn;
+    focus?.focus({ preventScroll: true });
   });
+  function lootRefresh(){
+    if (lootDialog.open && lootFlow !== 'new' && navigator.onLine !== false && !lootBusy) lootRequest(false);
+    else lootSyncHome();
+  }
   addEventListener('storage', event => {
-    if (event.key === 'fedoskin-wardrobe-owned:' + prof.id && lootDialog.open && !lootBusy && lootFlow !== 'new') lootRequest(false);
+    if (event.key === 'fedoskin-profile') {
+      try { lootProfileReplaced = String(JSON.parse(event.newValue)?.id || '') !== String(prof.id); } catch (_) {}
+      if (lootProfileReplaced) {
+        lootHomeConfirmed = false; lootPaintHome();
+        if (lootDialog.open) lootDialog.close();
+        lootSyncHome();
+      }
+    }
+    if (event.key !== lootClaimKey(prof.id) || (Number(event.newValue) || 0) === (lootState?.last?.t || 0)) return;
+    lootHomeConfirmed = false; lootPaintHome();
+    if (lootBusy) lootRefreshQueued = true;
+    else lootRefresh();
   });
+  const lootHomeWatch = new MutationObserver(() => lootSyncHome(true));
+  lootHomeWatch.observe(lootHomeScreen, { attributes: true, attributeFilter: ['hidden'] });
+  lootHomeWatch.observe(lootHomeBody, { attributes: true, attributeFilter: ['hidden'] });
+  tabsEl.querySelector('button[data-tab="home"]')?.addEventListener('click', () => lootSyncHome(true));
+  document.addEventListener('visibilitychange', () => lootSyncHome(true));
+  addEventListener('pageshow', event => { if (event.persisted) lootSyncHome(true); });
+  addEventListener('offline', () => { lootHomeConfirmed = false; lootSyncHome(); });
+  addEventListener('online', () => {
+    if (lootBusy && !lootHomeConfirmed) lootRefreshQueued = true;
+    else lootRefresh();
+  });
+  setTimeout(lootSyncHome, 0);
 
   function btPaintScore(sc){
     if (!sc || (!sc.w && !sc.l)) return;
