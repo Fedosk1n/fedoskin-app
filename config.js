@@ -94,6 +94,15 @@ window.APP_CONFIG = {
    "mux": {
     "en": "dub-pw-swipes-en-voice-58b7323059e4.mp4"
    }
+  },
+  "gd-windmill-entry": {
+   "media": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
+   "tracks": {
+    "en": "dub-gd-windmill-entry-en-voice-7e60859da10c.mp4"
+   },
+   "mux": {
+    "en": "dub-gd-windmill-entry-en-voice-ac475754ccd8.mp4"
+   }
   }
  }
 };
