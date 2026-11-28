@@ -126,7 +126,8 @@ window.APP_CONFIG = {
     "en": "dub-pw-swipes-flare-en-voice-3d5d05b4478b.mp4"
    },
    "mux": {
-    "en": "dub-pw-swipes-flare-en-voice-5ca79b8b0abb.mp4"
+    "en": "dub-pw-swipes-flare-en-voice-5ca79b8b0abb.mp4",
+    "ja": "dub-pw-swipes-flare-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },

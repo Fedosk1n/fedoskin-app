@@ -168,7 +168,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-swipes": {
   "ks": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba",
