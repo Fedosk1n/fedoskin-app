@@ -41,7 +41,7 @@ body.g3balance #g3mv{opacity:0}
   function arm(J, s, { duration, wait, tolerance, direction, onEnd }) {
     const action = J.act;
     active = { J, action, speed: action.timeScale, duration, wait, tolerance, direction, onEnd,
-      pointer: null, offset: 0, t: 0, off: 0, followed: false, outside: false };
+      pointer: null, offset: 0, t: 0, off: 0, good: 0, followed: false, outside: false };
     action.timeScale = 0;
     panel.querySelector('h4').textContent = s.nm;
     panel.style.setProperty('--progress', 0);
@@ -65,9 +65,9 @@ body.g3balance #g3mv{opacity:0}
     document.body.classList.remove('g3balance');
   }
   function finish(ok) {
-    const done = active.onEnd;
+    const { onEnd, good, t } = active;
     cancel();
-    done(ok);
+    onEnd(ok, ok && t > 0 ? good / t : 0);
   }
   panel.addEventListener('pointerdown', event => {
     const p = active;
@@ -105,6 +105,7 @@ body.g3balance #g3mv{opacity:0}
     const progress = clamp(p.t / p.duration, 0, 1), target = p.direction * 36 * meter.drift(progress);
     const outside = Math.abs(p.offset - target) > p.tolerance;
     p.off = outside ? p.off + dt : 0;
+    if (!outside) p.good += dt;
     if (!outside && Math.abs(target) > p.tolerance + 2) p.followed = true;
     if (p.outside !== outside) {
       p.outside = outside;

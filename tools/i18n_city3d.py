@@ -57,6 +57,22 @@ t("Выраженная челюсть", "Defined jaw", "Mandíbula marcada", "M
 t("Узкое", "Narrow", "Estrecho", "Estreito", "Fin", "Schmal", "細面", "갸름한 얼굴", "窄脸")
 t("Короткая футболка поверх базового слоя", "Cropped tee over a base layer", "Camiseta corta sobre capa base", "Camiseta curta sobre camada base", "T-shirt court sur une couche de base", "Kurzes Shirt über einem Untershirt", "インナーに短めのTシャツを重ねる", "이너 위에 짧은 티셔츠", "短款T恤叠穿打底衫")
 
+# ---------- battle accents and grounded replies ----------
+t("Смена опоры", "Switch support", "Cambio de apoyo", "Troca de apoio", "Changer d’appui", "Stütze wechseln", "支えを切り替える", "지지 바꾸기", "换支点")
+t("Пауза внизу", "Low pause", "Pausa abajo", "Pausa no chão", "Pause au sol", "Pause am Boden", "低い姿勢で止める", "바닥에서 멈추기", "低位停顿")
+t("смена опоры", "support switch", "cambio de apoyo", "troca de apoio", "changement d’appui", "Stützwechsel", "支えの切り替え", "지지 전환", "换支点")
+t("остановка", "stop", "parada", "parada", "arrêt", "Stopp", "ストップ", "멈춤", "停顿")
+t("Мотив · смена опоры", "Motif · support switch", "Motivo · cambio de apoyo", "Motivo · troca de apoio", "Motif · changement d’appui", "Motiv · Stützwechsel", "モチーフ · 支えの切り替え", "모티프 · 지지 전환", "动机 · 换支点")
+t("Мотив · остановка", "Motif · stop", "Motivo · parada", "Motivo · parada", "Motif · arrêt", "Motiv · Stopp", "モチーフ · ストップ", "모티프 · 멈춤", "动机 · 停顿")
+t("Твой мотив · {motif}. Развей его: {answer}.", "Your motif · {motif}. Develop it with {answer}.", "Tu motivo · {motif}. Desarróllalo con {answer}.", "Seu motivo · {motif}. Desenvolva com {answer}.", "Ton motif · {motif}. Développe-le avec {answer}.", "Dein Motiv · {motif}. Entwickle es mit {answer} weiter.", "自分のモチーフ · {motif}。{answer}で展開しよう。", "내 모티프 · {motif}. {answer}로 이어 가.", "你的动机 · {motif}。用「{answer}」展开。")
+t("Мотив соперника · {motif}. Контраст: {answer}.", "Opponent motif · {motif}. Contrast with {answer}.", "Motivo rival · {motif}. Contrasta con {answer}.", "Motivo rival · {motif}. Faça contraste com {answer}.", "Motif adverse · {motif}. Crée un contraste avec {answer}.", "Motiv des Gegners · {motif}. Setz {answer} dagegen.", "相手のモチーフ · {motif}。{answer}で対比を出そう。", "상대 모티프 · {motif}. {answer}로 대비를 줘.", "对手的动机 · {motif}。用「{answer}」做对比。")
+t("Не повторяй прошлый ответ. Зелёная зона ≥ {n}% для +{points}.", "Vary your last reply. Green zone ≥ {n}% for +{points}.", "Varía tu última respuesta. Zona verde ≥ {n}% para +{points}.", "Varie a última resposta. Zona verde ≥ {n}% para +{points}.", "Varie ta dernière réponse. Zone verte ≥ {n}% pour +{points}.", "Variier deine letzte Antwort. Grüne Zone ≥ {n}% für +{points}.", "前と違う返しを。緑の範囲に{n}%以上で +{points}。", "직전 답변을 바꿔 봐. 초록 구간 {n}% 이상이면 +{points}.", "换掉上一轮的回应。绿区时间 ≥ {n}% 得 +{points}。")
+t("Зелёная зона ≥ {n}% для +{points}.", "Green zone ≥ {n}% for +{points}.", "Zona verde ≥ {n}% para +{points}.", "Zona verde ≥ {n}% para +{points}.", "Zone verte ≥ {n}% pour +{points}.", "Grüne Zone ≥ {n}% für +{points}.", "緑の範囲に{n}%以上で +{points}。", "초록 구간 {n}% 이상이면 +{points}.", "绿区时间 ≥ {n}% 得 +{points}。")
+t("Удержи фриз для +{points}.", "Hold the freeze for +{points}.", "Mantén el freeze para +{points}.", "Segure o freeze para +{points}.", "Tiens le freeze pour +{points}.", "Halte den Freeze für +{points}.", "フリーズをキープして +{points}。", "프리즈를 유지하면 +{points}.", "保持定格得 +{points}。")
+t("Мотив доведён · +{n}", "Motif carried through · +{n}", "Motivo desarrollado · +{n}", "Motivo desenvolvido · +{n}", "Motif développé · +{n}", "Motiv weitergeführt · +{n}", "モチーフを展開 · +{n}", "모티프 연결 · +{n}", "动机展开 · +{n}")
+t("Чистый контраст · +{n}", "Clean contrast · +{n}", "Contraste limpio · +{n}", "Contraste limpo · +{n}", "Contraste net · +{n}", "Sauberer Kontrast · +{n}", "クリーンな対比 · +{n}", "깔끔한 대비 · +{n}", "干净的对比 · +{n}")
+t("Зелёная зона {n}% · фриз +{points}", "Green zone {n}% · freeze +{points}", "Zona verde {n}% · freeze +{points}", "Zona verde {n}% · freeze +{points}", "Zone verte {n}% · freeze +{points}", "Grüne Zone {n}% · Freeze +{points}", "緑の範囲 {n}% · フリーズ +{points}", "초록 구간 {n}% · 프리즈 +{points}", "绿区 {n}% · 定格 +{points}")
+
 # ---------- ranks ----------
 t("Новичок двора", "Yard Rookie", "Novato del patio", "Novato do pátio", "Bleu de la cour", "Hof-Neuling", "ヤードの新入り", "야드 신입", "院子新人")
 t("Свой", "One of Us", "Uno de los nuestros", "Um dos nossos", "L’un des nôtres", "Einer von uns", "仲間", "우리 편", "自己人")
