@@ -19,8 +19,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
     parser.add_argument('--limit', type=int, default=60)
+    parser.add_argument('--app', type=Path, help='Run against another app worktree')
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
+    harness = Path(__file__).with_suffix('.mjs').read_text()
+    root = args.app or Path(__file__).resolve().parent.parent
     with ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=root)) as server:
         Thread(target=server.serve_forever, daemon=True).start()
         host = f'127.0.0.1:{server.server_port}'
@@ -41,6 +43,8 @@ def main():
                     interception.fulfill(content_type='text/html; charset=utf-8', body='''<!doctype html>
                         <html lang="ru"><meta name="viewport" content="width=device-width,initial-scale=1">
                         <script type="module" src="/tools/test_story_stage_runtime.mjs"></script><body></body></html>''')
+                elif address.path == '/tools/test_story_stage_runtime.mjs':
+                    interception.fulfill(content_type='text/javascript; charset=utf-8', body=harness)
                 else:
                     interception.continue_()
 

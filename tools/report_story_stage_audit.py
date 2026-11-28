@@ -59,7 +59,8 @@ def main():
             speaker, place, action = detail
             following = pure['prologue'][i]['title'] if i < len(PROLOGUE) else 'Общий сайфер состоялся'
             table.writerow(('Пролог', i, '', chapter['title'], speaker, place, '', action, following,
-                            'Порядок, сохранение и награда', '', '3D-движение и батлы вне этого прогона', '', '', '', ''))
+                            'Порядок, сохранение и награда', 'Переходы, цели и награды в CITY3D',
+                            'Позиции и исходы — локальные фикстуры; отрисовка отключена', '', '', '', ''))
         for episode in pure['episodes']:
             observed = stage[episode['episode']]
             stages = observed['stageMetrics']['active']
