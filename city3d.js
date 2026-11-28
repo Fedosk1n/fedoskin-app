@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js?v=2';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=41';
-import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=80';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=42';
+import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=4';
+import { initGame } from './city3d-game.js?v=81';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
@@ -20,7 +20,7 @@ import { buildCenter } from './city3d-center.js?v=8';
 import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=7';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=13';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=14';
 import { cityGraphicsMenu, cityPixelRatio, cityFramePacer, recommendCitySettings, supportedCityFPS } from './city3d-graphics.js?v=2';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
@@ -1215,22 +1215,25 @@ async function boot() {
   const VIEW = { x0: 0, x1: 0, z0: 0, z1: 0 };   // what the screen shows (ground up to 4 m), relative to the point the camera looks at
 
   // post: bloom on the bright bits, then vignette + grade + grain
-  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const rt = new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType, samples: 4, resolveDepthBuffer: false, storeMultisampledDepthBuffer: false,
+  });
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .46, .5, .84);
+  bloom.compositeOnly = true;
   comp.addPass(bloom);
   // a soft knee (17.11.2026, «пересвет»): a surface just over the threshold used to bloom at full strength — any lit light thing grew a
   // halo; now the glow fades in over .84…1.2, so only real light sources (lamp strips ≈ 1.4+, signs, LEDs) glow in full
   bloom.highPassUniforms.smoothWidth.value = .36;
-  // the tone curve + sRGB (OutputPass) and the look (vignette, cool shadows, grain) are ONE full-screen pass since 22.11.2026: before, the
-  // tone-mapped picture was written to a full-size half-float buffer and read back by a second pass — one more full-screen write and read
-  // every frame (≈1.3 million pixels on a phone) for the same result. The grade runs on the same numbers in the same order.
+  // Add the same HDR bloom in the output pass before tone mapping. The scene keeps 4× MSAA,
+  // resolves color once, and discards the multisampled depth that later passes do not read.
   const out = new OutputPass();
   // The final pass writes directly to the screen. Reuse the same multisampled scene buffer each frame.
   out.needsSwap = false;
-  Object.assign(out.uniforms, { uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } });
-  out.material.fragmentShader = out.material.fragmentShader.replace('varying vec2 vUv;', 'uniform float uT; uniform vec2 uR;\nvarying vec2 vUv;')
+  Object.assign(out.uniforms, { uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) }, bloomHDR: { value: bloom.bloomTexture } });
+  out.material.fragmentShader = out.material.fragmentShader.replace('varying vec2 vUv;', 'uniform float uT; uniform vec2 uR; uniform sampler2D bloomHDR;\nvarying vec2 vUv;')
+    .replace('gl_FragColor = texture2D( tDiffuse, vUv );', 'gl_FragColor = texture2D( tDiffuse, vUv ) + texture2D( bloomHDR, vUv );')
     .replace(/\}\s*$/, '  { vec4 c = gl_FragColor; vec2 d = (vUv - .5) * vec2(uR.x / uR.y, 1.); float v = smoothstep(1.05, .32, length(d) * 1.25); c.rgb *= mix(.42, 1., v); float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb += vec3(-.01, .0, .03) * (1. - l) * (1. - l); float n = fract(sin(dot(vUv * uR + fract(uT) * 91.7, vec2(12.9898, 78.233))) * 43758.5453); c.rgb += (n - .5) * .03; gl_FragColor = c; }\n}');
   comp.addPass(out);
   const fin = out;   // (the old name: fin.uniforms.uT / uR below)
@@ -1334,6 +1337,8 @@ async function boot() {
   { const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - (roomLead ? 2.1 * Math.max(1, W.zoom) + roomLead : 2.2)); camPos.copy(camLook).add(off); }
   // fog thins out when the camera is pulled back (pinch zoom), so the far side of the district isn't lost in haze
   const fog0 = scene.fog.density;
+  const streetShadowCell = .75;   // Its furthest corner fits inside the .8 m projection margin.
+  const lastShadowAnchor = new THREE.Vector3(Infinity, Infinity, Infinity);
   let last, fpsN = 0, fpsT = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
@@ -1389,15 +1394,23 @@ async function boot() {
     const shadowCenter = moon.target.position;
     // The normal fitted view has room for the duel. Keep a fixed projection while following the dancer.
     const stableShadow = battleFocus && W.zoom <= .75 && Math.hypot(camLook.x - battleFocus.x, camLook.z - battleFocus.z) < 1.8 && !W.camT?.off;
+    const streetShadow = DIST !== 'club' && !W.camT && !W.guideView;
     if (stableShadow) shadowCenter.set(battleFocus.x, 0, battleFocus.z);
+    else if (streetShadow) shadowCenter.set(
+      Math.round(camLook.x / streetShadowCell) * streetShadowCell, 0,
+      Math.round(camLook.z / streetShadowCell) * streetShadowCell,
+    );
     else shadowCenter.copy(camLook);
+    const shadowCellChanged = streetShadow && !shadowCenter.equals(lastShadowAnchor);
+    lastShadowAnchor.copy(shadowCenter);
     moon.position.copy(shadowCenter).add(MOON);
     moon.target.updateMatrixWorld();
-    SB.cacheStatic(moon, Boolean(stableShadow));
-    for (const spot of spots) SB.cacheStatic(spot.l, Boolean(battleFocus));
+    SB.cacheStatic(moon, Boolean(stableShadow || streetShadow));
+    // Mounted fixtures retain their projection when the player passes them.
+    for (const spot of spots) SB.cacheStatic(spot.l, true);
     // Keep the moon responsive in close-ups. During a walk on touch devices and in the overview, reuse every other map.
     const stagger = far || (TOUCH && !W.camT);
-    if (!stagger || cameraCut || farChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
+    if (!stagger || cameraCut || farChanged || shadowCellChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
     const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
     let nextSpot = null;
     for (const spot of spots) {

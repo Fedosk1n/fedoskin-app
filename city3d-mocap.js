@@ -3,8 +3,8 @@
 // The low-poly body and clothes follow those bones. Look = HERO.topDown(level, acc).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { personShadows } from './city3d-perf.js?v=2';
-import { addCityHead, cityLocs } from './city3d-head.js?v=10';
+import { personShadows, skinShadow } from './city3d-perf.js?v=4';
+import { addCityHead, cityLocs } from './city3d-head.js?v=11';
 import { CITY_ANATOMY } from './city3d-anatomy.js?v=2';
 import { FOLDED_HOOD } from './city3d-hood.js?v=1';
 import { FINISH, characterFinish, loadCharacterFinish } from './city3d-character-finish.js?v=1';
@@ -1211,6 +1211,9 @@ export function mocapPerson(look, opt = {}) {
     m.castShadow = g.type !== 'CircleGeometry' && rr >= .05; if (rr < .045 && g.type !== 'CircleGeometry' && !(m.material.emissive && m.material.emissive.getHex())) m.userData.tiny = true; });   // tiny = hidden when the map is zoomed far out (city3d.js)
   // the rigid pieces in plain clothing materials → one skinned piece on the same bones (22.11.2026, see mergeParts); opt.noMerge keeps them apart
   const parts = opt.noMerge ? [] : mergeParts(rig, body);
+  for (const mesh of [body, ...parts]) {
+    if (mesh.castShadow) skinShadow(mesh, opt.hero ? .024 : .035);
+  }
   personShadows(root);   // the rest (glowing details, patches): one merged shadow piece per bone
   // ground contact points from the real shapes: capsule = its two end centres + radius, sphere = centre + radius, anything else = box corners
   root.traverse(m => { if (!m.isMesh || m.isSkinnedMesh || m.parent === head || m.userData.clothDetail || m.geometry.type === 'CircleGeometry') return; const g = m.geometry, P = g.parameters || {}, sc = Math.max(m.scale.x, m.scale.y, m.scale.z) * scale;
