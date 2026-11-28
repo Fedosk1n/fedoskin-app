@@ -63,6 +63,7 @@ export function initWheel() {
   const prev = get('.wheel-prev'), next = get('.wheel-next');
   const auto = get('.wheel-auto'), back = get('.wheel-back');
   const instructions = _t('Веди палец к элементу и отпусти или нажми на сектор');
+  let roundHelp = instructions;
   const buttons = ANGLES.map((_, i) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -140,13 +141,13 @@ export function initWheel() {
     if (i === active) return;
     active = i;
     buttons.forEach((b, j) => b.toggleAttribute('data-active', j === i));
-    help.textContent = shown[i]?.locked ? shown[i].reason : instructions;
+    help.textContent = shown[i]?.locked ? shown[i].reason : roundHelp;
   }
   function showPage(i) {
     page = clamp(i, 0, pageCount - 1);
     shown = options.slice(page * ANGLES.length, (page + 1) * ANGLES.length);
     updateHighlight(-1);
-    help.textContent = instructions;
+    help.textContent = roundHelp;
     buttons.forEach((b, j) => {
       const option = shown[j];
       b.hidden = !option;
@@ -176,7 +177,7 @@ export function initWheel() {
     if (option.locked) { help.textContent = option.reason; return; }
     const choose = onChoose;
     close();
-    choose(option.move);
+    choose(option.move, true);
   }
   function hit(x, y) {
     const dx = x - geometry.x, dy = y - geometry.y;
@@ -234,10 +235,10 @@ export function initWheel() {
     if (!onChoose) return;
     const choose = onChoose;
     close();
-    choose(preferred);
+    choose(preferred, false);
   };
   return {
-    open(choices, fallback, last, choose, leave) {
+    open(choices, fallback, last, choose, leave, guidance) {
       options = choices; preferred = fallback; onChoose = choose; onBack = leave;
       back.hidden = !leave;
       auto.hidden = !!leave;
@@ -245,6 +246,7 @@ export function initWheel() {
       const first = options.findIndex(o => o.move === last || (!last && !o.locked));
       panel.showModal();
       position(.5, .5);
+      roundHelp = guidance || instructions;
       showPage(Math.floor(Math.max(0, first) / ANGLES.length));
     },
     close, position, active: () => panel.open,

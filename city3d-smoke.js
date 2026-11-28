@@ -1,10 +1,18 @@
 // Seven to Smoke: eight breakers, winner stays, loser goes to the back.
+import { beatEntry } from './city3d-breaking.js?v=5';
 const t = window._t;
 export const SMOKE_TARGET = 7;
 export const SMOKE_TIME = 4 * 60;
-const AI_TIME = 8;
+const SIGNAL = .36, APPROACH = 1.22, WALK_BACK = .85;
 const READY = 'Breakdance_Ready';
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+export function exhibitionClock(show, beat) {
+  const halfBeat = 30 / show.bpm;
+  const approach = beatEntry(APPROACH, show.bpm, beat);
+  const half = Math.ceil((APPROACH + halfBeat + show.time + SIGNAL + WALK_BACK) / halfBeat) * halfBeat;
+  return { half, approach, danceEnd: approach + show.time, time: half * 2 };
+}
 
 export function smokeStandings(state) {
   return Object.entries(state.points).sort((a, b) => b[1] - a[1] || Number(b[0] === state.champion) - Number(a[0] === state.champion));
@@ -54,7 +62,7 @@ body:has(#g3wheel[open]) #g3smoke,body.g3rep #g3smoke,body.g3draw #g3smoke,#g3sm
 #g3res.smoke-result{box-sizing:border-box;max-height:84dvh;overflow:auto;touch-action:pan-y}
 `;
 
-export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, record, end, sfx }) {
+export function initSmoke({ W, clipLen, currentBeat, playPlayer, cancelPlayer, preview, playMusic, record, end, sfx }) {
   const club = W.club;
   const style = document.createElement('style');
   style.textContent = CSS;
@@ -141,48 +149,68 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     } else {
       run.phase = 'watch';
       run.duel = createBotDuel();
-      run.delay = AI_TIME;
+      run.delay = run.duel.time;
+      W.camT.zoom = .84;
     }
     paint();
   }
   function createBotDuel() {
-    const [a, b] = run.line;
+    const [a, b] = run.line, first = preview(run.entries.get(a), run.track, run.lastExhibition);
+    const second = preview(run.entries.get(b), run.track, first);
+    run.lastExhibition = second;
     const quality = id => run.entries.get(id).lv * .2 + Math.random() * 1.8;
     const margin = quality(a) - quality(b);
     const [winner, loser] = margin >= 0 ? [a, b] : [b, a];
     const votes = [winner, winner, winner];
     if (Math.abs(margin) < .88) votes[Math.floor(Math.random() * 3)] = loser;
-    return { ids: [a, b], winner, votes, slot: -1, step: -1 };
+    // The phase changes the pickup. Viewing and skipping spend the same fixed budget.
+    const clock = exhibitionClock(first, currentBeat());
+    return { ids: [a, b], shows: [first, second], winner, votes, ...clock, slot: -1, step: -1, stage: null };
   }
-  function dancePreview() {
-    const duel = run.duel, used = AI_TIME - run.delay;
-    const side = Math.min(1, Math.floor(used / (AI_TIME / 2)));
-    const id = duel.ids[side], J = run.entries.get(id).J;
+  function finishPreview(dt) {
+    const { ids, slot } = run.duel;
+    if (slot < 0) return;
+    const J = run.entries.get(ids[slot]).J, home = club.duelSpots[slot];
+    if (J.ws) W.walk.move(J, dt, home.x, home.z, 1, home.yaw);
+    J.ws = null;
+    J.play(J.idle, { fade: .20 });
+  }
+  function dancePreview(dt) {
+    const duel = run.duel, used = duel.time - run.delay;
+    const { half, approach, danceEnd } = duel;
+    const side = Math.min(1, Math.floor(used / half)), now = used - side * half;
+    const J = run.entries.get(duel.ids[side]).J, home = club.duelSpots[side], show = duel.shows[side];
     if (side !== duel.slot) {
-      const other = run.entries.get(duel.ids[1 - side]).J;
-      const waiting = club.duelSpots[1 - side];
-      other.root.position.set(waiting.x, 0, waiting.z);
-      other.root.rotation.y = waiting.yaw;
-      other.play(READY, { fade: .24 });
-      J.root.position.set(club.floor.x, 0, club.floor.z);
-      duel.list = preview(run.entries.get(id), run.track);
-      duel.step = -1;
+      finishPreview(dt);
       duel.slot = side;
+      duel.step = -1;
+      duel.stage = null;
     }
-    const now = used % (AI_TIME / 2);
-    const i = duel.list.findIndex(step => now < step.b);
-    guestDancer = i >= 0 && duel.list[i].c ? J : null;
-    if (i !== duel.step) {
-      const step = duel.list[i];
-      if (step) J.play(step.c, { at: step.at, speed: step.sp, fade: .29 });
-      else J.play(READY, { fade: .24 });
+    const start = show.pre ? SIGNAL : 0, leave = show.post ? danceEnd + SIGNAL : danceEnd;
+    const stage = now < start ? 'before' : now < approach ? 'approach' : now < danceEnd ? 'dance' : now < leave ? 'after' : 'leave';
+    if (stage !== duel.stage) {
+      const before = duel.stage;
+      duel.stage = stage;
+      if (stage === 'before') J.play(show.pre, { fade: .13, speed: clipLen(show.pre) / SIGNAL });
+      if (stage === 'approach' || stage === 'leave') W.walk.start(J);
+      if (before === 'approach') J.ws = null;
+      if (stage === 'after') J.play(show.post, { fade: .14, speed: clipLen(show.post) / SIGNAL });
+    }
+    const weight = (from, to) => clamp((now - from) / (to - from), 0, 1);
+    if (stage === 'approach') {
+      const x = club.floor.x + (home.x - club.floor.x) * .13, z = club.floor.z + (home.z - club.floor.z) * .13;
+      W.walk.move(J, dt, x, z, weight(start, approach), home.yaw);
+    } else if (stage === 'leave') W.walk.move(J, dt, home.x, home.z, weight(leave, half), home.yaw);
+    else if (stage === 'dance') {
+      const i = show.steps.findIndex(step => now - approach < step.b);
+      const step = show.steps[i];
+      if (step && i !== duel.step) J.play(step.c, { at: step.at, speed: step.sp, fade: .18 });
       duel.step = i;
+      guestDancer = step ? J : null;
     }
   }
   function verdict(winner, votes) {
-    if (run.phase === 'watch' && run.duel.slot >= 0) {
-      run.entries.get(run.duel.ids[run.duel.slot]).J.play(READY, { fade: .24 });
-    }
+    if (run.phase === 'watch') finishPreview(0);
     run.winner = winner;
     run.voteCount = votes.filter(vote => vote === winner).length;
     run.phase = 'decision';
@@ -243,7 +271,8 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       return;
     }
     guestDancer = null;
-    if (!run.overtime && !paused && (run.phase === 'watch' || run.phase === 'player')) run.left = Math.max(0, run.left - dt);
+    const activeDt = run.phase === 'watch' ? Math.min(dt, run.delay) : dt;
+    if (!run.overtime && !paused && (run.phase === 'watch' || run.phase === 'player')) run.left = Math.max(0, run.left - activeDt);
     if (run.phase === 'entry') {
       run.delay -= dt;
       const f = clamp(1 - run.delay / .78, 0, 1), k = f * f * (3 - 2 * f);
@@ -255,9 +284,9 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       }
     } else if (run.phase === 'watch') {
       if (!paused) {
-        run.delay -= dt;
+        run.delay -= activeDt;
         if (run.delay <= 0) verdict(run.duel.winner, run.duel.votes);
-        else dancePreview();
+        else dancePreview(dt);
       }
     } else if (run.phase === 'decision') {
       run.delay -= dt;
@@ -277,12 +306,14 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   }
   skip.onclick = () => {
     if (run?.phase !== 'watch') return;
+    // The explicit fast-forward still completes the running actor's transition before rearranging the queue.
+    finishPreview(0);
     while (!playerInside() && run.line.includes('me') && !run.champion) {
       if (!run.overtime) run.left = Math.max(0, run.left - run.delay);
       scoreSmoke(run, run.duel.winner, run.left <= 0);
       if (run.champion || playerInside()) break;
       run.duel = createBotDuel();
-      run.delay = AI_TIME;
+      run.delay = run.duel.time;
     }
     const leader = run.champion || run.line[0];
     club.board(label(leader), run.points[leader]);
@@ -295,5 +326,5 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     const choices = votes.map(vote => vote === 'me' ? 'me' : opponent);
     verdict(choices.filter(id => id === 'me').length >= 2 ? 'me' : opponent, choices);
   },
-    probe: () => run && ({ phase: run.phase, left: run.left, line: [...run.line], points: { ...run.points }, overtime: run.overtime }) };
+    probe: () => run && ({ phase: run.phase, left: run.left, line: [...run.line], points: { ...run.points }, overtime: run.overtime, exhibition: run.phase === 'watch' ? run.duel.stage : null }) };
 }

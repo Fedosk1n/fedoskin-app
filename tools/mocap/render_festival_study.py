@@ -1,6 +1,7 @@
 """Render the packed game rig as a two-row contact sheet.
 
 blender -b -t 4 --python tools/mocap/render_festival_study.py -- /tmp/festival-pose-study.png
+Append "battle" to render the Club gesture and floor-transfer study.
 """
 import json
 import sys
@@ -12,7 +13,8 @@ from mathutils import Quaternion, Vector
 root = Path(__file__).resolve().parents[2]
 rig = json.loads((root / 'anim/bboy.json').read_text())
 clips = rig['clips'] | json.loads((root / 'anim/city-breaking.json').read_text())
-out = Path(sys.argv[sys.argv.index('--') + 1])
+args = sys.argv[sys.argv.index('--') + 1:]
+out = Path(args[0])
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 
@@ -97,12 +99,20 @@ def posed(label, values, floor_x, floor_y, shade):
     text.materials.append(light)
 
 
-for row, theme in enumerate([
+festival = [
     [('01  Entry','Festival_StitchSignal',.14), ('02  Cut','Festival_StitchSignal',.54),
      ('03  Hold','City_Shoulder_Hold',.64), ('04  Exit','Festival_StandThrough',.82)],
     [('01  Entry','City_Backspin',.17), ('02  Rotate','City_Backspin',.49),
      ('03  Hold','City_Shoulder_Hold',.76), ('04  Exit','Festival_StandThrough',.98)],
-]):
+]
+
+battle = [
+    [('01  Entry','City_Battle_Compact',.08), ('02  First palm','City_Battle_Support',.18),
+     ('03  Change support','City_Battle_Support',.62), ('04  Extend','City_Battle_Support',.79)],
+    [('01  Raise','City_Battle_Lift',.51), ('02  Arrest','City_Battle_Stop',.61),
+     ('03  Settle','City_Battle_Settle',.93), ('04  Square','City_Battle_Square',.93)],
+]
+for row, theme in enumerate(battle if args[1:] == ['battle'] else festival):
     for column, (label, clip, time) in enumerate(theme):
         posed(label, joints(clip,time), (column-1.5)*1.87, (0.5-row)*2.04, warm if row==0 else blue)
 

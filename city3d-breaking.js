@@ -44,7 +44,71 @@ const patterns = {
   threadBreak: ['top', 'down', 'trick', 'foot'],
   shapeStart: ['top', 'dropHold', 'flex', 'quickFoot'],
 };
+// The street uses these older forms for ambient cyphers. Duels add grounded links, accents and changes of level.
+const ambientShapes = Object.keys(patterns);
+Object.assign(patterns, {
+  crossArc: ['top', 'arc', 'down', 'foot'],
+  softDrop: ['top', 'compact', 'quickFoot', 'hold', 'foot'],
+  supportLine: ['top', 'down', 'quickFoot', 'support', 'hold'],
+  floorCheck: ['top', 'down', 'check', 'foot', 'rise', 'extraTop', 'down'],
+  cutBack: ['top', 'arc', 'compact', 'reverse', 'foot'],
+  hinge: ['top', 'down', 'support', 'quickFoot', 'rise', 'compact'],
+  releaseLine: ['top', 'compact', 'check', 'foot', 'trick'],
+  clubArc: ['top', 'arc', 'down', 'quickFoot'],
+  clubLink: ['top', 'compact', 'support', 'quickFoot'],
+  clubPivot: ['top', 'down', 'reverse', 'quickFoot'],
+  clubCheck: ['top', 'compact', 'check', 'quickFoot'],
+  clubLift: ['top', 'dropHold', 'quickFoot', 'rise', 'down'],
+  clubThread: ['top', 'down', 'trick', 'quickFoot'],
+});
 export const SHAPES = Object.keys(patterns);
+
+const streets = {
+  yard: ['classic', 'rock', 'drop', 'crossArc', 'softDrop'],
+  center: ['crossArc', 'cutBack', 'softDrop', 'rock', 'drop', 'floorAnswer'],
+  park: ['supportLine', 'floorCheck', 'cutBack', 'floorStart', 'floorFlow', 'threadBreak'],
+  prom: ['hinge', 'releaseLine', 'floorCheck', 'freezeBreak', 'powerFirst', 'shapeHit'],
+  club: ['clubArc', 'clubLink', 'clubPivot', 'clubCheck', 'clubLift', 'clubThread'],
+};
+const profiles = {
+  groove: { motif: 'stop', pre: ['Lift','Nod',null], post: ['Chest',null,'Yield'], shape: ['crossArc','floorCheck','cutBack','rock','clubArc','clubCheck'] },
+  ground: { motif: 'switch', pre: ['Nod','Offer',null], post: [null,'Yield','Nod'], shape: ['supportLine','cutBack','hinge','floorAnswer','floorStart','clubLink','clubPivot'] },
+  shapes: { motif: 'stop', pre: ['Offer',null,'Nod'], post: ['Nod','Chest',null], shape: ['softDrop','releaseLine','shapeStart','freezeBreak','clubCheck','clubLift'] },
+  power: { motif: 'switch', pre: ['Listen','Offer',null], post: ['Chest',null,'Nod'], shape: ['cutBack','supportLine','powerFirst','hinge','clubPivot','clubThread'] },
+};
+const clubStyles = { needle:'ground', echo:'groove', tape:'shapes', pulse:'power', pivot:'groove', mono:'ground', fader:'shapes' };
+export const battleStyle = (id, fallback) => clubStyles[id] || fallback || 'groove';
+
+const answer = (id, c, motif, name) => ({ id, c, motif, name, lv: 1, pts: 2, risk: 0 });
+export const BATTLE_ANSWERS = [
+  answer('replySwitch', 'City_Battle_Reverse', 'switch', 'Смена опоры'),
+  answer('replyStop', 'City_Battle_Check', 'stop', 'Пауза внизу'),
+];
+export const otherMotif = motif => motif === 'switch' ? 'stop' : 'switch';
+export const REPLY_PRECISION = { park: 0, prom: .85, club: .90 };
+export const battleTechnique = (motif, leads) => leads ? motif : otherMotif(motif);
+export function battleReplyPoints({ district, call, leads, answer, eligible, clean, precision = 0, previous }) {
+  if (!call || answer !== battleTechnique(call, leads) || !eligible || !clean) return 0;
+  if (precision < (REPLY_PRECISION[district] || 0) || (district === 'club' && !leads && answer === previous)) return 0;
+  return .5;
+}
+
+export function duelPlan({ district, profile, memory, r, duration, opening = false, hero = false }) {
+  if (!duration(BATTLE_ANSWERS[0].c) || !duration(BATTLE_ANSWERS[1].c)) return {};
+  const style = profiles[profile] || profiles.groove;
+  const label = (key, names) => {
+    const choice = variety(memory, key, names, r);
+    return choice ? 'City_Battle_' + choice : null;
+  };
+  const post = label('afterFloor', hero ? ['Settle','Square'] : style.post);
+  const before = hero ? [post === 'City_Battle_Square' ? 'Settle' : 'Square', null] : style.pre;
+  return {
+    district, forms: style.shape, post, pre: label('beforeFloor', before),
+    motif: opening && ['park','prom','club'].includes(district)
+      ? variety(memory, 'call', [style.motif, otherMotif(style.motif)], r, 1, value => value === style.motif ? 2.4 : 1)
+      : null,
+  };
+}
 const accents = {
   groove: ['classic','rock','rebound','threadBreak'],
   ground: ['classic','floorStart','floorAnswer','threadBreak'],
@@ -72,7 +136,8 @@ const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 function variety(memory, key, options, r, forget = 1, weight = () => 1, identify = item => item) {
   const recent = memory[key] || [];
   const pool = options.filter(item => !recent.includes(identify(item)));
-  const available = pool.length ? pool : options;
+  const different = options.filter(item => identify(item) !== recent[0]);
+  const available = pool.length ? pool : different.length ? different : options;
   let draw = r() * available.reduce((sum, item) => sum + weight(item), 0);
   const item = available.find(candidate => (draw -= weight(candidate)) < 0) || available.at(-1);
   memory[key] = [identify(item), ...recent].slice(0, forget);
@@ -97,14 +162,17 @@ function phraseTime(native, bpm) {
   return clamp(Math.round(native / halfBeat) * halfBeat, native * .83, native * 1.19);
 }
 
-export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, force, distance = 2.12, step = 0 }) {
-  const shape = Object.hasOwn(patterns, force) ? force : variety(memory, 'shape', SHAPES, r, 4, s => {
+export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, force, distance = 2.12, step = 0, duel, call, response, avoid }) {
+  const districtForms = streets[duel?.district] || ambientShapes;
+  const forms = districtForms.filter(shape => shape !== avoid);
+  const shape = Object.hasOwn(patterns, force) ? force : variety(memory, 'shape', forms, r, 4, s => {
+    if (duel?.forms?.includes(s)) return 4;
     if (s === 'floorFlow') return profile === 'ground' ? .55 : .20;
     return accents[profile]?.includes(s) ? 3 : 1;
   });
   const { bend, len } = variety(memory, 'entry', ENTRIES, r, 2);
   const seq = [];
-  let mirror = r() < .5, dir = mirror ? -1 : 1, topScored = false, footScored = false, held;
+  let mirror = r() < .5, dir = mirror ? -1 : 1, topScored = false, footScored = false, held, shown = false;
   const push = (c, len, at = 0, details = {}) => seq.push({ c, len, at, ...details });
   const source = (c, at, span, details = {}) => {
     const len = phraseTime(span, bpm);
@@ -116,7 +184,8 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
     const raw = duration(c);
     const at = pick([0, .11, .21], r) * Math.min(raw, 2.1);
     const available = raw - at - .05;
-    const beats = Math.min(topScored ? (r() < .55 ? 2 : 3) : (r() < .65 ? 4 : 5), Math.floor(available * bpm / 51));
+    const compact = topScored || duel?.district === 'club';
+    const beats = Math.min(compact ? (r() < .55 ? 2 : 3) : (r() < .65 ? 4 : 5), Math.floor(available * bpm / 51));
     const len = beats * 60 / bpm;
     const sp = Math.min(.91 + r()*.17, available / len);
     push(side(c, mirror), len, at, { nm, sp, kind: topScored ? 'top2' : 'top', pts: topScored ? 0 : 1 + step, fade: .32 });
@@ -135,8 +204,10 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
       if (i ? r() < .42 : r() < .28) mirror = !mirror;
       if (r() < .28) dir = -dir;
       const len = phraseTime(span, bpm);
-      out.push({ c: side(c, mirror), len, at, sp: span / len, fade: i ? .32 : .38,
-        nm: 'FOOTWORK', kind: !i && scored ? 'foot' : 'foot2', pts: !i && scored ? 1.5 + step : 0,
+      const alternative = scored && !i ? response : null;
+      out.push({ c: side(alternative?.c || c, mirror), len, at: alternative ? 0 : at,
+        sp: (alternative ? duration(alternative.c) : span) / len, fade: i ? .32 : .38,
+        nm: 'FOOTWORK', answer: alternative?.motif, kind: !i && scored ? 'foot' : 'foot2', pts: !i && scored ? 1.5 + step : 0,
         yaw: dir * (.16 + r()*.35), yt: Math.min(.72, len) });
     }
   };
@@ -153,14 +224,37 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
     held = actual.nm;
     source(actual.c, actual.at, drop ? actual.len : actual.len - .55, { kind: 'hold', nm: held, fade: .4 });
   };
+  const part = (c, kind, extra = {}) => { if (duration(c) > 0) source(c, 0, duration(c) - .02, { kind, fade: .27, ...extra }); };
   const phases = {
     top, extraTop: () => { mirror = !mirror; top(); }, down, rise, foot: () => foot(2),
     quickFoot: () => foot(1), longFoot: () => foot(r() < .7 ? 2 : 3),
     floor: () => accent(FLOOR, 'floor', 'floor'), trick: () => accent(TRICKS, 'trick', 'trick'),
     flex: () => accent([['City_Flex_Reach', 'FLEX']], 'flex', 'flex'),
     hold: () => hold(false), dropHold: () => hold(true),
+    arc: () => part('City_Battle_Arc', 'top2', { yaw: dir * .39, yt: .76 }),
+    compact: () => duel ? part('City_Battle_Compact', 'down') : down(),
+    support: () => call === 'switch' && shown ? accent(FLOOR, 'floor', 'floor') : part('City_Battle_Support', 'floor'),
+    reverse: () => part(response?.motif === 'switch' ? 'City_Trick_Thread' : 'City_Battle_Reverse', 'trick', { yaw: -dir * .51, yt: .88 }),
+    check: () => part(response?.motif === 'stop' ? 'City_Flex_Reach' : 'City_Battle_Check', 'hold'),
   };
-  for (const phase of patterns[shape]) phases[phase]();
+  for (const phase of patterns[shape]) {
+    const dualUse = !shown && ((call === 'stop' && phase === 'arc') || (call === 'switch' && phase === 'support'));
+    if (dualUse) {
+      part(call === 'stop' ? 'City_Battle_Stop' : 'City_Battle_Support', 'motif', { motif: call });
+      shown = true;
+      continue;
+    }
+    phases[phase]();
+    if (shown || !call) continue;
+    if (call === 'stop' && phase === 'top' && !patterns[shape].includes('arc')) {
+      part('City_Battle_Stop', 'motif', { motif: call });
+      shown = true;
+    }
+    if (call === 'switch' && !patterns[shape].includes('support') && ['down','compact','dropHold'].includes(phase)) {
+      part('City_Battle_Support', 'motif', { motif: call, yaw: -dir * .48, yt: .82 });
+      shown = true;
+    }
+  }
   return { seq, shape, held, enter: Math.max(len, .36 + distance / 2), bend,
     afterPower: out => { if (shape === 'powerFirst') addFoot(out, 1, false); }, rise };
 }
@@ -212,4 +306,33 @@ export function cypherSet({ memory, r, lv, duration, bpm, profile }) {
   const F = pickHold(memory, lv, r, opening.held, duration);
   seq.push({ ...F, c: side(F.c, r() < .5), kind: 'hold', fade: .4 });
   return { ...opening, list: seq, len: setTimes(seq, 0, 0) };
+}
+
+// Each exhibition gets an eight-beat phrase with four beats reserved for the middle link. The end uses a held low shape or a clear rise before the walk.
+export const CLUB_PREVIEW_BEATS = 8;
+const exhibitions = [
+  { id:'arcHold', profiles:['groove','shapes'], motif:'stop',
+    parts:[['City_Battle_Arc', 0, 1.0], ['City_Battle_Compact', .01, 1.41], ['City_Battle_Check', .07, .78]] },
+  { id:'lowCross', profiles:['ground','power'], motif:'switch',
+    parts:[['City_Battle_Compact', .03, 1.29], ['City_Battle_Support', .02, 1.96], ['City_Battle_Check', .11, .69]] },
+  { id:'closeFloor', profiles:['shapes','ground'], motif:'stop',
+    parts:[['City_Sweep_Drop', .05, 1.17], ['City_Battle_Check', 0, 1.43], ['Festival_StandThrough', 0, 1.03]] },
+  { id:'wideSwitch', profiles:['power','groove'], motif:'switch',
+    parts:[['Breakdance_Uprock_To_Ground', .02, .92], ['City_Battle_Reverse', 0, 1.43], ['Breakdance_Footwork_To_Freeze', 1.04, 1.03]] },
+  { id:'crossFloor', profiles:['ground','power'], motif:'switch',
+    parts:[['City_Battle_Compact', .10, 1.21], ['City_Battle_Reverse', .02, 1.41], ['Festival_StandThrough', .08, .99]] },
+];
+export function clubExhibition({ memory, profile, duration, bpm, r, heard, avoid }) {
+  const beat = 60 / bpm, time = CLUB_PREVIEW_BEATS * beat, cuts = [0, 2, 6, CLUB_PREVIEW_BEATS];
+  const pool = exhibitions.filter(show => show.id !== avoid && show.parts.every(([clip, at, span]) => duration(clip) >= at + span));
+  if (!pool.length) {
+    const c = 'Breakdance_Uprock', span = duration(c) - .12;
+    return { time, steps: [{ c, at: .12, b: time, sp: span / time }] };
+  }
+  const choice = variety(memory, 'exhibition', pool, r, 2, show =>
+    (show.profiles.includes(profile) ? 3 : 1) * (heard && show.motif !== heard ? 1.6 : 1), show => show.id);
+  const mirrored = r() < .5;
+  return { time, form: choice.id, motif: choice.motif, steps: choice.parts.map(([c, at, span], i) => ({
+    c: side(c, mirrored), at, sp: span / ((cuts[i + 1] - cuts[i]) * beat), b: cuts[i + 1] * beat,
+  })) };
 }

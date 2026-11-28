@@ -372,6 +372,48 @@ function floorrock(marks) {
   };
 }
 
+// The hands leave and return to a standing capture. These signals do not move the feet.
+const edge = capture('Breakdance_Ready', .20);
+function signal(left, right, pitch, twist = 0) {
+  const pose = blend(edge, edge, 0);
+  pose.q.Spine1.multiply(rotation(pitch * .34, twist, 0));
+  pose.q.Head.multiply(rotation(pitch, twist * .32, 0));
+  const chest = skeleton(pose).Spine2.pos;
+  for (const [side, sign, offset] of [['Left', 1, left], ['Right', -1, right]]) {
+    if (!offset) continue;
+    const hand = chest.clone().add(v(sign * offset[0], offset[1], offset[2]));
+    const elbow = chest.clone().add(v(sign * (.48 + offset[0] * .28), -.24, -.07));
+    poseLimb(pose, [side+'Arm', side+'ForeArm', side+'Hand'], hand, elbow);
+  }
+  return pose;
+}
+
+const nod = signal(null, null, .39, .09);
+const offer = signal([.48,-.04,.40], null, -.04, .14);
+const raisedHand = signal([.27,.57,.20], null, -.07, .12);
+const listen = signal(null, [.29,.21,.18], -.10, -.18);
+const touchChest = signal(null, [.09,-.08,.31], .09, -.10);
+const yieldFloor = signal([.42,-.33,.38], null, .14, .18);
+const quietSquare = signal(null, null, -.16, -.11);
+const quietSettle = signal(null, null, -.10, .15);
+const drawWide = signal([.56,.15,.28], [.38,-.19,.20], -.12, .19);
+const standCheck = signal([.37,-.11,.41], [.18,-.11,.34], .16, -.05);
+const edgeCross = capture('Breakdance_Uprock', .48);
+const edgeRock = capture('Brooklyn_Uprock', .58);
+
+// Both footwork answers begin and finish in the same crouch. The support-side switch has two different grounded
+// palms and a reverse sweep. The check uses a quiet low shape, gathers its weight, then opens on the late accent.
+const changeLeft = own([.14,.29,.025],[-.92,-.22,-.70], [-.05,.12,.58],[-.53,.14,.32],
+  [.52,.064,.18],[-.21,.63,.34], {spine:.12,twist:-.19});
+const gatherFloor = own([.005,.27,.035],[-1.11,.00,.02], [.24,.12,.42],[-.20,.12,.42],
+  [.37,.064,.025],[-.37,.064,.025], {spine:.08,twist:.03});
+const changeRight = own([-.15,.285,.035],[-.90,.25,.76], [.54,.14,.48],[.06,.12,.39],
+  [.23,.65,.32],[-.52,.064,.18], {spine:.10,twist:.22});
+const floorCheck = own([-.11,.286,.025],[-.89,.15,.43], [.36,.12,.44],[-.09,.12,.33],
+  [.30,.40,.24],[-.47,.066,.20], {spine:.13,twist:.16});
+const afterCheck = own([-.12,.27,.025],[-1.08,.24,.72], [.65,.39,.27],[.16,.12,.49],
+  [.29,.55,.37],[-.52,.064,.18], {spine:.08,twist:.17});
+
 const authored = {
   City_Floorrock_Roll: { n: 70, poseAt: floorrock(backrock) },
   City_Floorrock_Sweep: { n: 64, poseAt: floorrock(hipSweep) },
@@ -391,6 +433,20 @@ const authored = {
   Festival_GraniteSignal: { n: 62, keys: [[0,sit],[.15,open],[.39,shoulderHold],[.75,shoulderHold],[.90,tuck],[1,sit]] },
   Festival_AnswerCut: { n: 32, keys: [[0,stand],[.25,squat],[.54,kick],[.73,switchKick],[1,sit]] },
   Festival_AnswerThread: { n: 32, keys: [[0,stand],[.24,squat],[.53,tuck],[.75,thru],[1,sit]] },
+  City_Battle_Square: { n: 18, keys: [[0,edge],[.52,quietSquare],[1,quietSquare]] },
+  City_Battle_Settle: { n: 18, keys: [[0,edge],[.50,quietSettle],[1,quietSettle]] },
+  City_Battle_Nod: { n: 18, keys: [[0,edge],[.42,nod],[.63,nod],[1,edge]] },
+  City_Battle_Offer: { n: 19, keys: [[0,edge],[.43,offer],[.68,offer],[1,edge]] },
+  City_Battle_Lift: { n: 20, keys: [[0,edge],[.43,raisedHand],[.73,raisedHand],[1,edge]] },
+  City_Battle_Listen: { n: 19, keys: [[0,edge],[.43,listen],[.65,listen],[1,edge]] },
+  City_Battle_Chest: { n: 18, keys: [[0,edge],[.45,touchChest],[.65,touchChest],[1,edge]] },
+  City_Battle_Yield: { n: 18, keys: [[0,edge],[.50,yieldFloor],[.70,yieldFloor],[1,edge]] },
+  City_Battle_Arc: { n: 32, keys: [[0,edge],[.27,edgeCross],[.54,drawWide],[.77,edgeRock],[1,edge]] },
+  City_Battle_Stop: { n: 27, keys: [[0,edge],[.24,edgeCross],[.53,standCheck],[.76,standCheck],[1,edge]] },
+  City_Battle_Support: { n: 61, keys: [[0,sit],[.18,changeLeft],[.39,gatherFloor],[.62,changeRight],[.79,afterCheck],[1,sit]] },
+  City_Battle_Reverse: { n: 45, keys: [[0,sit],[.22,changeRight],[.48,gatherFloor],[.76,changeLeft],[1,sit]] },
+  City_Battle_Check: { n: 45, keys: [[0,sit],[.23,floorCheck],[.53,floorCheck],[.79,afterCheck],[1,sit]] },
+  City_Battle_Compact: { n: 44, keys: [[0,edge],[.17,edgeCross],[.38,squat],[.62,changeLeft],[.83,floorCheck],[1,sit]] },
 };
 
 function bake({ n, keys, poseAt }) {

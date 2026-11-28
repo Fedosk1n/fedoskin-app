@@ -5,18 +5,18 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=38';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=39';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loadFestivalStage } from './city3d-festival-art.js?v=3';
-import { initPower } from './city3d-power.js?v=28';   // the hero's power move is DRAWN by the finger (17.11)
-import { initFreeze } from './city3d-freeze.js?v=2';
-import { initWheel } from './city3d-wheel.js?v=2';
+import { initPower } from './city3d-power.js?v=29';   // the hero's power move is DRAWN by the finger (17.11)
+import { initFreeze } from './city3d-freeze.js?v=3';
+import { initWheel } from './city3d-wheel.js?v=3';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=12';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=5';
-import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=4';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=6';
+import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry, duelPlan, battleStyle, BATTLE_ANSWERS, battleTechnique, battleReplyPoints, REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=5';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
@@ -673,7 +673,7 @@ export function initGame(ctx) {
     PLACES.push({ id: 'ring', x: PZ.ring.x, z: PZ.ring.z + PZ.ring.r + .6, r: 2 }, { id: 'zpark', x: PZ.gatePark.x, z: PZ.gatePark.z, r: 1.4 }, { id: 'club', x: PZ.gateClub.x, z: PZ.gateClub.z, r: 1.6 });
     stashToday().forEach(i => { const s = PZ.stash[i]; s.g.visible = !S.stash.got.includes(i); if (s.g.visible) { ctx.circ && ctx.circ(s.x, s.z, .42); PLACES.push({ id: 'stash', i, x: s.x, z: s.z, r: 1.5 }); } }); }
   const club = W.club;
-  const smoke = club && initSmoke({ W, playPlayer: smokeBattle, cancelPlayer: clearSmokeBattle, preview: smokePreview,
+  const smoke = club && initSmoke({ W, clipLen, currentBeat, playPlayer: smokeBattle, cancelPlayer: clearSmokeBattle, preview: smokePreview,
     playMusic: ctx.music, record: recordSmoke, end: endAct, sfx });
   if (club) {
     $('#g3tf').hidden = true;
@@ -1192,13 +1192,14 @@ export function initGame(ctx) {
     startBattle({ c: { id: opponent.id, name: opponent.name, col: opponent.col, lv: opponent.lv }, smoke: { track, holder },
       people: [opponent.J], x: club.floor.x, z: club.floor.z, ambientEnabled: true, ring: { visible: true } });
   }
-  function smokePreview(opponent, track) {
+  function smokePreview(opponent, track, heard) {
     const r = rng(Math.floor(Math.random() * 0x100000000));
-    const { seq } = makeTurn(opponent.J, opponent.lv, r, 'op', undefined, null, 1.8, false, battleBpm(track));
-    const featured = [seq.find(s => s.kind === 'top'), seq.find(s => s.kind === 'power'), seq.find(s => s.kind === 'freeze')].filter(s => s?.c);
-    const lengths = featured.map(s => Math.min(s.len, s.kind === 'power' ? 2.1 : 1.05));
-    let end = 0;
-    return featured.map((s, i) => ({ ...s, b: end += lengths[i] }));
+    const profile = battleStyle(opponent.id), memory = turnMemory(opponent.J, 'op');
+    const { pre, post } = dancerPlan(opponent.J, 'op', profile, r, false);
+    const bpm = battleBpm(track);
+    const show = clubExhibition({ memory, profile, duration: clipLen, bpm, r, heard: heard?.motif, avoid: heard?.form });
+    const standing = show.steps.at(-1).c.startsWith(RISE_FROM_FREEZE);
+    return { pre, post: standing ? post : null, bpm, ...show };
   }
   function clearSmokeBattle() {
     if (!B?.g.smoke) return;
@@ -1555,24 +1556,66 @@ export function initGame(ctx) {
     };
   }
   const heroChoreo = {}, opponentChoreo = new WeakMap();
+  function turnMemory(J, who) {
+    if (who === 'me') return heroChoreo;
+    if (!opponentChoreo.has(J)) opponentChoreo.set(J, {});
+    return opponentChoreo.get(J);
+  }
+  function dancerPlan(J, who, profile, r, opening) {
+    return duelPlan({ district: ctx.dist, profile, memory: turnMemory(J, who), r, duration: clipLen, opening, hero: who === 'me' });
+  }
+  const motifName = motif => _t(motif === 'switch' ? 'смена опоры' : 'остановка');
+  const callName = motif => _t(motif === 'switch' ? 'Мотив · смена опоры' : 'Мотив · остановка');
+  const scoreNumber = new Intl.NumberFormat(window.CITY_LANG || 'ru', { maximumFractionDigits: 1 });
+  const replyValue = scoreNumber.format(.5);
+  function replyPrompt(T) {
+    const motif = T.reply.contract.motif;
+    const target = BATTLE_ANSWERS.find(move => move.motif === battleTechnique(motif, T.call));
+    const copy = T.call ? 'Твой мотив · {motif}. Развей его: {answer}.'
+      : 'Мотив соперника · {motif}. Контраст: {answer}.';
+    const line = _t(copy, { motif: motifName(motif), answer: _t(target.name) });
+    const needed = REPLY_PRECISION[ctx.dist] * 100;
+    const tip = ctx.dist === 'club' && !T.call
+      ? _t('Не повторяй прошлый ответ. Зелёная зона ≥ {n}% для +{points}.', { n: needed, points: replyValue })
+      : needed ? _t('Зелёная зона ≥ {n}% для +{points}.', { n: needed, points: replyValue })
+      : _t('Удержи фриз для +{points}.', { points: replyValue });
+    return line + ' ' + tip;
+  }
+  function earnedReply(T, precision) {
+    const { contract, eligible, played, previous } = T.reply;
+    const pts = battleReplyPoints({ district: ctx.dist, call: contract?.shown && contract.motif, leads: T.call,
+      answer: played, eligible, clean: T.clean, precision, previous });
+    T.reply.earned = pts;
+    T.score += pts;
+    return pts;
+  }
+  const replyFeedback = T => _t(T.call ? 'Мотив доведён · +{n}' : 'Чистый контраст · +{n}', { n: replyValue });
   // today's buffs from the DJ and the practice mat (only for me)
   const buff = () => { const c = S.cus || {}, gear = HERO.gearBoost(ctx.heroEq());
     return { fall: (S.form.day === today() ? .03 * S.form.n : 0) + (S.djDay === today() ? .03 : 0) + (S.warmDay === today() ? BAL.warm : 0), style: (S.djDay === today() ? .4 : 0) + (S.form.day === today() ? .15 * S.form.n : 0) + (c.top || 0) * BAL.cusStyle,
       // custom (the tailor): sneakers → steps, knees → freezes, spin pad → power and headspins
       step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin, spinTol: gear.spin, elbow: gear.elbow }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
-  const OUT = 2.3, OUTW = 1.7;
+  const OUT = 2.3, OUTW = 1.7, PRE_SIGNAL = .45, POST_RISE = .52, POST_SIGNAL = .55;
+  const RISE_FROM_FREEZE = 'Festival_StandThrough';
   const SMOKE_DANCE_ZOOM = .62;
   function alignEntry(T) {
     T.enter = beatEntry(T.enter, T.bpm, currentBeat());
     T.len = setTimes(T.seq, 0, T.enter) + OUT;
     if (T.pending) T.pending.at = T.seq.at(-1).b;
   }
-  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12, choosePower = false, bpm, profile) {
+  function makeTurn(J, lv, r, who, bf = { fall: 0, style: 0 }, gear = null, distance = 2.12, choosePower = false, bpm,
+    profile, duel, contract, call, avoid) {
     const me = who === 'me';
-    let memory = me ? heroChoreo : opponentChoreo.get(J);
-    if (!memory) { memory = {}; opponentChoreo.set(J, memory); }
-    const opening = breakingOpening({ memory, lv, r, duration: clipLen, bpm, profile, distance,
+    const memory = turnMemory(J, who);
+    const reply = { contract, eligible: !me, played: null, previous: memory.lastClubReply };
+    // AI uses the same two grounded responses. It can choose poorly or lose the freeze.
+    const wanted = contract && battleTechnique(contract.motif, call);
+    const selectedMotif = wanted && !me && (r() < .72 ? wanted : battleTechnique(wanted, false));
+    const response = selectedMotif && BATTLE_ANSWERS.find(move => move.motif === selectedMotif);
+    const precision = response ? clamp(.75 + lv * .019 + (r() - .5) * .21, .55, 1) : 0;
+    const opening = breakingOpening({ memory, lv, r, duration: clipLen, bpm, profile, distance, duel,
+      call: call && contract?.motif, response, avoid,
       force: me && SHAPES.includes(W.forceSet) ? W.forceSet : undefined, step: Math.round((bf.step || 0) * 100) / 100 });
     const { seq, shape, enter, bend } = opening;
     const step = (c, len, at = 0, options = {}) => ({ c, len, at, ...options });
@@ -1586,14 +1629,15 @@ export function initGame(ctx) {
       const P = selected || forced || pickPower(memory, r, lv, clipLen, profile);
       const need = selected ? BattleStudy.levels[P.id] || P.lv : P.lv;
       const failP = clamp(.13 + P.risk - .06 * (lv - need) - bf.fall - (bf.pw || 0) - (P.c === 'Head_Spinning' ? bf.spin || 0 : 0), .03, .32);
-      const pFail = r() < failP && !gear && P !== FOOT_OPTION;
+      const pFail = r() < failP && !gear && P !== FOOT_OPTION && !P.motif;
       if (P.pre && !gear?.move) push(P.pre, 1.6, 1.0, { kind: 'pre' });
       if (P.id === 'ninety' && !gear?.move) opening.rise();
-      const reps = selected ? Math.max(1, Math.round(2.6 / clipLen(P.c)))
+      const reps = P.motif ? 1 : selected ? Math.max(1, Math.round(2.6 / clipLen(P.c)))
         : P.id === 'backspin' ? 1 : Math.max(1, Math.round((2.2 + r() * .8) / clipLen(P.c)));
       const failAt = P.id === 'backspin' ? 1 - (1.15 - r() * .17) / clipLen(P.c) : .45 + r() * .35;
       if (gear?.move) push(null, HERO.MOVES[gear.move].dur, 0, { nm: HERO.MYTHIC_MOVES[gear.move], pts: P.pts + 6, kind: 'power', gear });
-      else push(side(P.c, P.id === 'backspin' && r() < .5), reps * clipLen(P.c), 0, { nm: P === FOOT_OPTION ? _t('Футворк') : P.nm, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fade: P.fade, fail: pFail, failAt, lv: need, gear });
+      else push(side(P.c, (P.motif || P.id === 'backspin') && r() < .5), reps * clipLen(P.c), 0, {
+        nm: P.motif ? _t(P.name) : P === FOOT_OPTION ? _t('Футворк') : P.nm, answer: P.motif, pts: gear?.assist && P !== FOOT_OPTION ? Math.round(P.pts * BAL.perfMul * 10) / 10 : P.pts, kind: 'power', fade: P.fade, fail: pFail, failAt, lv: need, gear });
       // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
       const pwS = seq[seq.length - 1], ok = [], bad = [step(null, 2.2, 0, { kind: 'fall' })];
       if (P.post && !gear?.move) ok.push(step(P.post, 1.4, 0, { kind: 'post' }));
@@ -1611,15 +1655,17 @@ export function initGame(ctx) {
       seq.push(...(pFail ? bad : ok)); pwS.tails = { ok, bad };
     }
     if (!choosePower) appendPower(null);
-    const T = { J, who, seq, shape, enter, bend, bpm, len: setTimes(seq, 0, enter) + OUT, score: 0,
+    const T = { J, who, seq, shape, enter, bend, bpm, pre: duel?.pre, post: duel?.post, call,
+      reply, precision, clean: true, len: setTimes(seq, 0, enter) + OUT, score: 0,
       style: Math.round((r() * .8 + .15 * lv + bf.style) * 10) / 10 };
     if (choosePower) {
       // The power suffix is built once the player picks. The entry and scored steps stay in place.
       const from = seq.length;
-      T.pending = { at: seq.at(-1).b, resolve(move) {
+      T.pending = { at: seq.at(-1).b, resolve(move, manual = false) {
         if (!T.pending) return;
         const { at } = T.pending;
         T.pending = null;
+        reply.eligible = manual;
         appendPower(move);
         T.len = setTimes(seq, from, at) + OUT;
       } };
@@ -1642,11 +1688,22 @@ export function initGame(ctx) {
     const [opSpot, meSpot] = g.smoke ? club.duelSpots : [{ x: cx + .3, z: cz - 2.1 }, { x: cx - .3, z: cz + 2.1 }];
     const turns = [], rounds = g.smoke || c.tour ? 1 : c.lv >= 3 ? 2 : 1;
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq), choices = availablePower();
+    let lastForm;
     for (let i = 0; i < rounds; i++) {
       const gear = g.smoke ? null : HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
-      const theirTurn = makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, profile);
-      const myTurn = makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm);
-      turns.push(...(g.smoke?.holder ? [myTurn, theirTurn] : [theirTurn, myTurn]));
+      const holder = Boolean(g.smoke?.holder), theirStyle = battleStyle(c.id, profile);
+      const theirPlan = dancerPlan(opp, 'op', theirStyle, r, !holder);
+      const myPlan = dancerPlan(H, 'me', i % 2 ? 'ground' : 'groove', r, holder);
+      const planned = (holder ? myPlan : theirPlan).motif;
+      const responderMemory = holder ? turnMemory(opp, 'op') : heroChoreo;
+      const motif = planned && ctx.dist === 'club' ? responderMemory.lastClubReply || planned : planned;
+      const contract = motif ? { motif, shown: false } : null;
+      const theirTurn = avoid => makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, theirStyle, theirPlan, contract, !holder, avoid);
+      const myTurn = avoid => makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm, undefined, myPlan, contract, holder, avoid);
+      const first = holder ? myTurn(lastForm) : theirTurn(lastForm);
+      const second = holder ? theirTurn(first.shape) : myTurn(first.shape);
+      turns.push(first, second);
+      lastForm = second.shape;
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
@@ -1661,13 +1718,20 @@ export function initGame(ctx) {
   function face(J, x, z) { J.root.rotation.y = Math.atan2(x - J.root.position.x, z - J.root.position.z); }
   function moveTurn(T, t, dt, home, cx, cz, back) {
     const J = T.J;
+    const prep = T.pre ? PRE_SIGNAL : 0;
+    if (!T.walking) {
+      if (t < prep) return;
+      T.walking = true;
+      W.walk.start(J);
+    }
     if (!J.ws) return;
     const facing = Math.atan2(cx - home.x, cz - home.z);
     if (back) {
-      const k = ease(clamp((t - (T.len - OUT)) / OUTW, 0, 1));
-      W.walk.move(J, dt, home.x, home.z, k, facing);
+      const lead = T.posted ? POST_RISE + POST_SIGNAL : 0;
+      const progress = clamp((t - (T.len - OUT + lead)) / (lead ? OUT - lead : OUTW), 0, 1);
+      W.walk.move(J, dt, home.x, home.z, lead ? progress : ease(progress), facing);
     } else {
-      const k = ease(clamp(t / T.enter, 0, 1));
+      const k = ease(clamp((t - prep) / (T.enter - prep), 0, 1));
       W.walk.move(J, dt, cx, cz, k, facing, T.bend);
       if (k >= 1) J.ws = null;
     }
@@ -1699,6 +1763,11 @@ export function initGame(ctx) {
 
   function openWheel(T) {
     const { options, fallback } = B.choices;
+    const answering = T.reply.contract?.shown;
+    const offered = answering
+      ? [...BATTLE_ANSWERS.map(move => ({ move, name: _t(move.name), locked: false })),
+        ...options.filter(option => option.move !== FOOT_OPTION)]
+      : options;
     const action = T.J.act, speed = action?.timeScale;
     if (action) action.timeScale = 0;
     const { x, z } = T.J.root.position;
@@ -1707,15 +1776,17 @@ export function initGame(ctx) {
     mythCut(null, null, 0);
     $('#g3mv').innerHTML = '';
     $('#g3skip').style.display = 'none';
-    wheel.open(options, fallback, B.lastMove, move => {
-      if (action) action.timeScale = speed;
+    wheel.open(offered, fallback, answering ? null : B.lastMove, (move, manual) => {
       const now = performance.now() / 1000;
-      B.t0 = now - T.pending.at;
+      const pickup = move?.motif ? beatEntry(0, T.bpm, currentBeat()) : 0;
+      if (pickup > .015) T.pickup = { until: now + pickup, action, speed };
+      else if (action) action.timeScale = speed;
+      B.t0 = now - T.pending.at + pickup;
       B.ln = now;
       B.lastMove = move;
-      T.pending.resolve(move);
+      T.pending.resolve(move, manual);
       if (!B.g.smoke) $('#g3skip').style.display = '';
-    });
+    }, null, answering ? replyPrompt(T) : undefined);
   }
   function battleTick(dt) {
     const H = W.hero, now = performance.now() / 1000;
@@ -1732,6 +1803,11 @@ export function initGame(ctx) {
       else if (PM.state() === 'arm') B.t0 += Math.max(0, now - (B.ln || now) - dt);
       B.ln = now;
       const T = B.turns[B.i], J = T.J, home = T.who === 'me' ? B.meSpot : B.opSpot;
+      if (T.pickup) {
+        if (now < T.pickup.until) return;
+        if (T.pickup.action) T.pickup.action.timeScale = T.pickup.speed;
+        T.pickup = null;
+      }
       const final = T.seq[T.seq.length - 1], freezeAt = final.balance && !final.done ? final.a + final.balance.at : Infinity;
       const elapsed = now - B.t0, t = Math.min(elapsed, freezeAt, T.pending?.at ?? Infinity);
       moveTurn(T, t, dt, home, B.cx, B.cz, T.back);
@@ -1747,6 +1823,15 @@ export function initGame(ctx) {
       if (t >= T.enter && si >= 0 && si !== T.si) {
         const s = T.seq[si]; T.si = si;
         if (s.c) J.play(s.c, { fade: s.fade ?? (s.kind === 'down' ? .3 : s.kind === 'freeze' ? .45 : .4), at: s.at, speed: s.sp });
+        if (s.motif) {
+          T.reply.contract.shown = true;
+          mvText({ nm: callName(s.motif) });
+        }
+        if (s.answer) {
+          T.reply.played = s.answer;
+          if (ctx.dist === 'club' && !T.call && T.reply.eligible) turnMemory(J, T.who).lastClubReply = s.answer;
+          s.nm = _t(BATTLE_ANSWERS.find(move => move.motif === s.answer).name);
+        }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
         else if (s.nm) mvText(s);
         paintScore(T);
@@ -1760,15 +1845,17 @@ export function initGame(ctx) {
         B.t0 = now - freezeAt;
         J.act.time = Math.min(s.at + s.balance.at, clipLen(s.c) - .01);
         FZ.arm(J, s, { duration: B.freezeDuration, wait: S.freezePlayed ? 3.5 : 5.5, tolerance: s.balance.tolerance,
-          direction: s.balance.direction, onEnd: ok => scoreFreeze(T, s, ok) });
+          direction: s.balance.direction, onEnd: (ok, precision) => scoreFreeze(T, s, ok, precision) });
         S.freezePlayed = true; save();
       }
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.balance && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
-        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); if (T.who === 'me') B.clean = false; }
+        if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); T.clean = false; if (T.who === 'me') B.clean = false; }
         else {
           T.score += s.pts;
-          mvText(s, s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]);
+          const reply = s.kind === 'freeze' ? earnedReply(T, T.precision) : 0;
+          mvText(s, reply ? ['ok', replyFeedback(T)]
+            : s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]);
           sfx('hit');
           const camera = W.camT, zoom = B.g.smoke ? SMOKE_DANCE_ZOOM : .4;
           camera.zoom = .34;
@@ -1781,7 +1868,24 @@ export function initGame(ctx) {
       if (si < 0 && !T.back) {
         // a drawn move that came out clean: first a replay at the real tempo (city3d-power.js), then he walks back
         if (T.rec) { const rec = T.rec; T.rec = null; if (J.fall) fallEnd(J); PM.replay(J, rec); }
-        else if (!PM.holds()) { T.back = true; if (J.fall) fallEnd(J); W.walk.start(J); $('#g3mv').innerHTML = ''; }
+        else if (!PM.holds()) {
+          if (J.fall) fallEnd(J);
+          const ending = T.len - OUT, riseEnd = ending + POST_RISE;
+          const postEnd = riseEnd + POST_SIGNAL;
+          if (T.post && T.clean && t < postEnd) {
+            if (t < riseEnd && !T.rising) {
+              T.rising = true;
+              J.play(RISE_FROM_FREEZE, { fade: .19, speed: clipLen(RISE_FROM_FREEZE) / POST_RISE });
+            } else if (t >= riseEnd && !T.posted) {
+              T.posted = true;
+              J.play(T.post, { fade: .11, speed: clipLen(T.post) / POST_SIGNAL });
+            }
+          } else {
+            T.back = true;
+            W.walk.start(J);
+            $('#g3mv').innerHTML = '';
+          }
+        }
       }
       if (t >= T.len) { if (J.fall) fallEnd(J); T.score += T.style; paintScore(T); nextTurn(); }
       if (!PM.holds()) { W.camT.x = lerp(W.camT.x, J.root.position.x, 1 - Math.exp(-dt * 2)); W.camT.z = lerp(W.camT.z, J.root.position.z + .3, 1 - Math.exp(-dt * 2)); }
@@ -1790,12 +1894,20 @@ export function initGame(ctx) {
     }
     H.tick(dt); B.opp.tick(dt); if (B) [H, B.opp].forEach(J => { if (J.ws) W.walk.pose(J, dt); });
   }
-  function scoreFreeze(T, s, ok) {
+  function scoreFreeze(T, s, ok, precision) {
     s.done = true; s.fail = !ok;
     if (ok) {
-      T.score += s.pts; sfx('hit'); mvText(s, ['ok', _t('Чисто! +{n}', { n: s.pts })]);
+      T.score += s.pts; sfx('hit');
+      const reply = earnedReply(T, precision);
+      const motif = T.reply.contract?.motif;
+      const underTarget = motif && T.reply.eligible && T.reply.played === battleTechnique(motif, T.call)
+        && precision < REPLY_PRECISION[ctx.dist];
+      const feedback = underTarget ? _t('Зелёная зона {n}% · фриз +{points}', {
+        n: Math.floor(precision * 100), points: scoreNumber.format(s.pts),
+      }) : _t('Чисто! +{n}', { n: s.pts });
+      mvText(s, ['ok', reply ? replyFeedback(T) : feedback]);
     } else {
-      B.clean = false;
+      T.clean = B.clean = false;
       const fall = { a: s.b, b: s.b + 1.6, kind: 'fall', soft: true };
       T.seq.push(fall); T.len += 1.6;
       fallStart(T.J); sfx('crash'); mvText(s, ['bad', _t('Не удержал! 0')]);
@@ -1820,7 +1932,7 @@ export function initGame(ctx) {
     if (!B) return;
     if (res.grade === 'auto') {   // nobody drew: the old random outcome goes on
       s.pm = false;
-      if (res.late && !s.done) { s.done = true; T.score += s.fail ? .5 : s.pts; if (s.fail) B.clean = false; paintScore(T); }
+      if (res.late && !s.done) { s.done = true; T.score += s.fail ? .5 : s.pts; if (s.fail) T.clean = B.clean = false; paintScore(T); }
       return;
     }
     const J = T.J, i = T.seq.indexOf(s), ok = res.grade !== 'miss', now = performance.now() / 1000;
@@ -1835,7 +1947,7 @@ export function initGame(ctx) {
     if (!ok) {
       fallStart(J); sfx('crash');
       mvText(s, ['bad', res.reason === 'no-start' ? _t('Попытка не начата') : _t('Срыв! +0.5 за попытку')]);
-      B.clean = false;
+      T.clean = B.clean = false;
     }
     else {
       T.rec = res.rec;
@@ -1851,14 +1963,18 @@ export function initGame(ctx) {
   }
   function paintScore(T) {
     const me = B.turns.filter(x => x.who === 'me').reduce((a, x) => a + x.score, 0), op = B.turns.filter(x => x.who === 'op').reduce((a, x) => a + x.score, 0);
-    B.me = me; B.op = op; $('#g3a').textContent = (Math.round(me * 10) / 10).toString(); $('#g3b').textContent = (Math.round(op * 10) / 10).toString();
+    B.me = me; B.op = op; $('#g3a').textContent = scoreNumber.format(me); $('#g3b').textContent = scoreNumber.format(op);
   }
   function nextTurn() {
     B.i++; const H = W.hero; H.ws = B.opp.ws = null;
     if (B.i >= B.turns.length) { judge(); return; }
     const T = B.turns[B.i]; alignEntry(T); B.t0 = performance.now() / 1000; T.si = -1;
     const other = T.who === 'me' ? B.opp : H; other.play('Breakdance_Ready', { fade: .4, speed: 1.05 });
-    W.walk.start(T.J);
+    if (T.pre) T.J.play(T.pre, { fade: .17, speed: clipLen(T.pre) / PRE_SIGNAL });
+    else {
+      T.walking = true;
+      W.walk.start(T.J);
+    }
     const turnTitle = T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name });
     $('#g3turn').textContent = B.g.smoke ? turnTitle : turnTitle + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });
     $('#g3mv').innerHTML = '';
@@ -1878,7 +1994,8 @@ export function initGame(ctx) {
     H.root.position.set(B.meSpot.x, 0, B.meSpot.z); B.opp.root.position.set(B.opSpot.x, 0, B.opSpot.z); face(H, B.cx, B.cz); face(B.opp, B.cx, B.cz);
     H.st.face = H.root.rotation.y;
     const votes = [0, 1, 2].map(() => (diff + (Math.random() - .5) * 2.4 > 0 ? 'me' : 'op')), myV = votes.filter(v => v === 'me').length, win = myV >= 2;
-    H.play(win ? 'Breakdance_Ending_1' : 'Breakdance_Ready', { fade: .4 }); B.opp.play(win ? 'Breakdance_Ready' : 'Bboy_Uprock', { fade: .4 });
+    H.play(H.idle, { fade: .32 });
+    B.opp.play(B.opp.idle, { fade: .32 });
     if (B.g.smoke) { B.smokeVotes = votes; return; }
     let lines = [];
     const rkP = rankOf(S.rep), pf = B.perfFirst || [];
