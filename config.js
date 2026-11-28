@@ -248,10 +248,12 @@ window.APP_CONFIG = {
   "pw-airflare": {
    "media": "de8dad97-f470-4552-93c4-45575e6d3f29",
    "mux": {
-    "ja": "dub-pw-airflare-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-pw-airflare-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-pw-airflare-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   }
  }
