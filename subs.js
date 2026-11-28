@@ -62,7 +62,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-airflare": {
   "ks": "de8dad97-f470-4552-93c4-45575e6d3f29",

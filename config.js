@@ -134,10 +134,12 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-gd-windmill-entry-en-voice-ac475754ccd8.mp4",
-    "ja": "dub-gd-windmill-entry-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-gd-windmill-entry-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-gd-windmill-entry-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "pw-swipes-flare": {
