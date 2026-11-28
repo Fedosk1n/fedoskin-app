@@ -107,7 +107,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-headspin": {
   "ks": "8a2e472e-d16f-4c45-9032-b4781ba7d840",
@@ -228,7 +228,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "tr-airchair": {
   "ks": "",

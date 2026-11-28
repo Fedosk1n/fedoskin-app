@@ -200,7 +200,8 @@ window.APP_CONFIG = {
     "en": "dub-pw-flare-wm-en-voice-8cd00524b94a.mp4"
    },
    "mux": {
-    "en": "dub-pw-flare-wm-en-voice-4afd390a279a.mp4"
+    "en": "dub-pw-flare-wm-en-voice-4afd390a279a.mp4",
+    "ja": "dub-pw-flare-wm-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },
@@ -220,7 +221,8 @@ window.APP_CONFIG = {
     "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ccb16d7c8470.mp4"
    },
    "mux": {
-    "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ed84da3bc9e6.mp4"
+    "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ed84da3bc9e6.mp4",
+    "ja": "dub-tn-flare-to-airflare-to-flare-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },
