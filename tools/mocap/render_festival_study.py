@@ -112,7 +112,13 @@ battle = [
     [('01  Plant','City_Battle_LegArc',.14), ('02  Curl','City_Battle_LegArc',.28),
      ('03  Sweep','City_Battle_LegArc',.54), ('04  Next step','City_Battle_LegArc',.81)],
 ]
-for row, theme in enumerate(battle if args[1:] == ['battle'] else festival):
+footwork = [
+    [('01  Catch','City_Foot_Circle',.12), ('02  Rear step','City_Foot_Circle',.45),
+     ('03  Reverse','City_Foot_Circle',.65), ('04  Return','City_Foot_Circle',.87)],
+    [('01  Open','City_Foot_ThreadRise',.14), ('02  Thread','City_Foot_ThreadRise',.31),
+     ('03  Load the foot','City_Foot_ThreadRise',.56), ('04  Rise and step','City_Foot_ThreadRise',.91)],
+]
+for row, theme in enumerate({'battle': battle, 'footwork': footwork}.get(args[1] if len(args) > 1 else '', festival)):
     for column, (label, clip, time) in enumerate(theme):
         posed(label, joints(clip,time), (column-1.5)*1.87, (0.5-row)*2.04, warm if row==0 else blue)
 

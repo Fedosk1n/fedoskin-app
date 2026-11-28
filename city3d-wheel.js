@@ -14,6 +14,7 @@ const CSS = `
 #g3wheel button{color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #g3wheel button:focus-visible{outline:2px solid #ffbe6b;outline-offset:2px;border-radius:9px}
 #g3wheel .wheel-option{position:absolute;transform:translate(-50%,-50%);width:var(--label);min-height:44px;padding:2px 0;font:400 var(--move-font)/1.05 Anton,Inter,sans-serif;overflow-wrap:break-word;text-shadow:0 1px 5px #090604}
+#g3wheel .wheel-option[data-vertical]{width:var(--label-vertical)}
 #g3wheel .wheel-option[hidden]{display:none}
 #g3wheel .wheel-option[data-locked]{color:#dbd2c4}
 #g3wheel .wheel-option[data-active]{color:#fff9eb}
@@ -66,6 +67,7 @@ export function initWheel() {
   let roundHelp = instructions;
   const buttons = ANGLES.map((_, i) => {
     const b = document.createElement('button');
+    b.toggleAttribute('data-vertical', i % 2 === 0);
     b.type = 'button';
     b.className = 'wheel-option';
     b.innerHTML = '<span class="wheel-mark" aria-hidden="true"></span><span></span>';
@@ -130,6 +132,7 @@ export function initWheel() {
     panel.style.setProperty('--cy', y + 'px');
     panel.style.setProperty('--r', r + 'px');
     panel.style.setProperty('--label', Math.max(45, r * .55) + 'px');
+    panel.style.setProperty('--label-vertical', Math.max(78, r * .84) + 'px');
     panel.style.setProperty('--move-font', clamp(r * .12, 11, 16) + 'px');
     buttons.forEach((b, i) => {
       b.style.left = x + Math.cos(ANGLES[i]) * r * .755 + 'px';
