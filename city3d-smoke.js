@@ -1,5 +1,5 @@
 // Seven to Smoke: eight breakers, winner stays, loser goes to the back.
-import { beatEntry, samplePhrase } from './city3d-breaking.js?v=6';
+import { beatEntry, samplePhrase } from './city3d-breaking.js?v=7';
 const t = window._t;
 export const SMOKE_TARGET = 7;
 export const SMOKE_TIME = 4 * 60;

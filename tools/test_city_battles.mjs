@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Vector3, Quaternion } from '../vendor/three/three.module.js';
-import { BATTLE_ANSWERS, battleReplyPoints, battleTechnique, battleStyle, breakingOpening,
+import { BATTLE_ANSWERS, battleFootMoves, battleReplyPoints, battleTechnique, battleStyle, breakingOpening, clubCall,
   CLUB_PREVIEW_BEATS, clubExhibition, cypherSet, duelPlan, REPLY_PRECISION, setTimes, pickPower, pickHold,
-  samplePhrase, spinTick, WHEEL_FOOTWORK } from '../city3d-breaking.js';
+  samplePhrase, spinTick, threadCatch, WHEEL_FOOTWORK } from '../city3d-breaking.js';
 
 const load = file => JSON.parse(readFileSync(new URL('../anim/' + file, import.meta.url)));
 const { rest, clips: source } = load('bboy.json');
@@ -20,6 +20,9 @@ function random(seed) {
 const styles = ['groove','ground','shapes','power'];
 const districts = ['yard','center','park','prom','club'];
 const retired = /City_Battle_(Check|Stop)/;
+const baseClip = c => c?.replace(/_M$/, '');
+const circle = 'City_Foot_Circle', thread = 'City_Foot_ThreadRise', catchClip = 'City_Foot_ThreadCatch';
+const rear = 'City_Foot_RearStep', front = 'City_Foot_KickThrough';
 assert(!Object.keys(original).some(clip => retired.test(clip)));
 let turns = 0;
 for (const district of districts) for (let seed = 1; seed <= 64; seed++) {
@@ -69,9 +72,13 @@ for (let seed = 1; seed <= 128; seed++) {
   }
 }
 
-for (const district of ['park','prom','club']) for (const call of ['arc','switch']) for (const leads of [false,true]) {
-  const answer = battleTechnique(call, leads);
-  const other = battleTechnique(answer, false);
+for (const district of districts) {
+  const available = battleFootMoves(district,length);
+  assert.equal(available.length, ['prom','club'].includes(district) ? 3 : 2);
+}
+for (const district of ['park','prom','club']) for (const {motif:call} of battleFootMoves(district,length)) for (const leads of [false,true]) {
+  const answer = battleTechnique(call, leads, district !== 'park');
+  const other = battleTechnique(answer, false, district !== 'park');
   assert(BATTLE_ANSWERS.some(move => move.motif === answer && move.lv === 1 && length(move.c)));
   const state = { district, call, leads, answer, eligible: true, clean: true, precision: 1, previous: other };
   assert.equal(battleReplyPoints(state), .5);
@@ -86,8 +93,23 @@ for (const district of ['park','prom','club']) for (const call of ['arc','switch
     assert.notEqual(battleTechnique(answer, false), answer);
   }
 }
+const clubMoves = battleFootMoves('club',length);
+for (const plan of clubMoves) for (const previous of clubMoves) for (const seed of [1,200]) {
+  const call = clubCall(plan.motif,previous.motif,clubMoves,random(seed));
+  assert.notEqual(battleTechnique(call,false,true), previous.motif);
+}
+for (const [shape, clip] of [['returnCircle',circle], ['threadAscent',thread]]) {
+  for (const call of [null,...clubMoves.map(move => move.motif)]) for (const response of [undefined,...clubMoves]) {
+    const { seq } = breakingOpening({ memory:{}, r:random(71), duration:length, force:shape, duel:{district:'club'}, call, response });
+    assert.equal(seq.filter(s => baseClip(s.c) === clip).length,1,`${shape} must play its core form for ${call}/${response?.motif}`);
+    assert.equal(seq.filter(s => s.answer).length,Number(Boolean(response)));
+    if (response) assert(seq.some(s => s.answer === response.motif));
+    for (let i = 1; i < seq.length; i++) assert.notEqual(baseClip(seq[i].c),baseClip(seq[i-1].c));
+  }
+}
 
 let previews = 0;
+const previewsByForm = {};
 for (const id of ['needle','echo','tape','pulse','pivot','mono','fader']) {
   const memory = {}, r = random(74);
   let last, lastForm;
@@ -95,7 +117,7 @@ for (const id of ['needle','echo','tape','pulse','pivot','mono','fader']) {
     const show = clubExhibition({ memory, profile: battleStyle(id), duration: length, r, bpm: 116, avoid: lastForm });
     const signature = show.steps.map(s => [s.c.replace(/_M$/, ''), s.at]).flat().join('/');
     assert.notEqual(signature, last);
-    assert(show.steps.length >= 2 && ['arc','switch'].includes(show.motif));
+    assert(show.steps.length >= 2 && ['arc','switch','thread'].includes(show.motif));
     assert(Math.abs(show.steps.at(-1).b - CLUB_PREVIEW_BEATS * 60 / 116) < 1e-9);
     assert.equal(show.steps.length, 3);
     assert(show.steps[0].b > 0 && show.steps[0].b < show.steps[1].b);
@@ -106,9 +128,11 @@ for (const id of ['needle','echo','tape','pulse','pivot','mono','fader']) {
     }
     last = signature;
     lastForm = show.form;
+    previewsByForm[show.form] = (previewsByForm[show.form] || 0) + 1;
     previews++;
   }
 }
+assert(previewsByForm.circleReturn >= 10 && previewsByForm.frontThread >= 10,'the complete new phrases ship in watched rounds');
 const fallback = clubExhibition({ memory:{}, duration:clip => source[clip] ? length(clip) : 0, bpm:122, r:random(5) });
 assert.deepEqual(fallback.steps.map(s => s.c), ['Breakdance_Uprock','Breakdance_Uprock_To_Ground','Breakdance_Footwork_2']);
 assert.equal(fallback.steps.at(-1).b, CLUB_PREVIEW_BEATS * 60 / 122);
@@ -142,13 +166,30 @@ assert(jointPositions(arc,.60).Head.distanceTo(arcFront.Head) > .12, 'torso foll
 assert(jointPositions('Breakdance_Freeze_Var_2',2.5 / length('Breakdance_Freeze_Var_2')).LeftFoot.y > 1.4);
 assert(jointPositions('Breakdance_Freeze_Var_2',3.63 / length('Breakdance_Freeze_Var_2')).RightFoot.y < .23);
 const joints = ['Hips','LeftFoot','RightFoot','LeftHand','RightHand'];
-for (const name of [arc, WHEEL_FOOTWORK, 'City_Flex_Reach','City_Backspin']) {
+for (const name of [arc, WHEEL_FOOTWORK, 'City_Flex_Reach','City_Backspin', circle, thread, catchClip, rear, front]) {
   const frames = original[name].n - 1;
   for (let i = 0; i <= frames - 4; i++) {
     const start = jointPositions(name,i / frames), end = jointPositions(name,(i + 4) / frames);
     assert(Math.max(...joints.map(j => start[j].distanceTo(end[j]))) > .016, `${name} stalls at frame ${i}`);
   }
 }
+for (const [name, side, from, to] of [[circle,'Right',.12,.29], [circle,'Right',.42,.65],
+  [circle,'Left',.39,.85], [rear,'Left',.24,.70], [rear,'Right',.24,.63], [thread,'Left',.13,.40]]) {
+  const hand = side + 'Hand', plant = jointPositions(name,from)[hand];
+  for (let phase = from; phase <= to; phase += .025) {
+    const p = jointPositions(name,phase)[hand];
+    assert(p.y >= .051 && p.y <= .082 && p.distanceTo(plant) < .028, `${name} ${hand} slips at ${phase}`);
+  }
+}
+const back = jointPositions(circle,.51), reversal = jointPositions(circle,.61), cross = jointPositions(circle,.84);
+assert(reversal.RightFoot.z < back.RightFoot.z - .03 && cross.RightFoot.z > reversal.RightFoot.z + .6);
+assert(back.Head.x - back.Hips.x > .29 && cross.Head.x - cross.Hips.x > .25);
+assert(back.Head.z - back.Hips.z > .36 && cross.Head.z - cross.Hips.z < -.08, 'the pelvis and torso turn out of the rear phase');
+const open = jointPositions(thread,.13), through = jointPositions(thread,.43), rising = jointPositions(thread,.70);
+assert(open.RightFoot.x < open.Hips.x && through.RightFoot.x > through.Hips.x && through.RightFoot.z > through.LeftFoot.z + .35);
+assert(through.Hips.y < .35 && rising.Hips.y > .64 && rising.RightFoot.distanceTo(through.RightFoot) < .028);
+assert(joints.every(j => jointPositions(thread,1)[j].distanceTo(jointPositions(catchClip,0)[j]) < .003));
+assert.equal(threadCatch(length,122,false).c,catchClip);
 const first = jointPositions(WHEEL_FOOTWORK,0), last = jointPositions(WHEEL_FOOTWORK,1);
 assert(joints.every(j => first[j].distanceTo(last[j]) < .004), 'waiting footwork closes its joint and root seam');
 const late = { cur:arc };
@@ -177,34 +218,53 @@ for (const bpm of [122, 134]) {
     }
     assert(clock.half - clock.danceEnd > 1.1);
   }
-  let reachable = Infinity;
-  // Bound the active-clock cost of a clean champion route using normal forms and a basic answer.
-  // The verdict sequence below exercises the real queue and target. This isn't a simulation of the judges' votes.
-  for (let seed = 1; seed <= 64; seed++) {
-    const r = random(seed), memory = [{}, {}];
-    let cost = 0;
+  const costs = [];
+  const queueProfiles = ['ground','groove','shapes','power','groove','ground','shapes'];
+  const levels = [5,6,6,7,7,8,8];
+  // Price a clean seven-win route with the normal order, three techniques and their actual joins.
+  // Source timings use the scheduled clips; judging and the result of each duel are checked separately.
+  for (let seed = 1; seed <= 1200; seed++) {
+    const r = random(seed), hero = {};
+    let cost = 0, lastReply;
     for (let round = 0; round < SMOKE_TARGET; round++) {
-      const lv = Math.min(8, 5 + round), profile = styles[round % styles.length];
+      const district = 'club', holder = round > 0, opponent = {}, profile = queueProfiles[round], lv = levels[round];
+      const theirs = duelPlan({ district, profile, memory:opponent, r, duration:length, opening:!holder });
+      const ours = duelPlan({ district, profile:'groove', memory:hero, r, duration:length, hero:true, opening:holder });
+      const call = clubCall((holder ? ours : theirs).motif, holder ? undefined : lastReply, clubMoves, r);
+      if (!holder) lastReply = battleTechnique(call,false,true);
       let avoid;
-      for (let i = 0; i < 2; i++) {
-        const duel = duelPlan({ district:'club', profile, memory:memory[i], r, duration:length, hero:i===0, opening:i===0 });
-        const opening = breakingOpening({ memory:memory[i], r, duration:length, bpm, duel, call:duel.motif, avoid, technical:i===1 });
-        const move = i===0 ? BATTLE_ANSWERS[0] : pickPower(memory[i], r, lv, length, profile);
-        const hold = pickHold(memory[i], lv, r, length);
-        const repeats = i===0 || move.id==='backspin' ? 1 : Math.max(1, Math.round(2.85 / length(move.c)));
-        cost += setTimes(opening.seq, 0, opening.enter) + 30 / bpm + 2.3 + length(move.c) * repeats + hold.len
-          + (move.pre ? 1.6 : 0) + (move.post ? 1.4 : 0) + (move.id==='ninety' ? length('Festival_StandThrough') : 0)
-          + (i===0 ? 4 * 60 / bpm + 1.45 : 0);
+      for (const isHero of [holder,!holder]) {
+        const duel = isHero ? ours : theirs, memory = isHero ? hero : opponent;
+        const leads = isHero === holder, wanted = battleTechnique(call,leads,true);
+        const responseMove = clubMoves.find(move => move.motif === wanted);
+        let response;
+        if (!isHero) {
+          const other = clubMoves.filter(move => move.motif !== wanted);
+          response = r() < .72 ? responseMove : other[Math.floor(r() * other.length)];
+          r(); // opponent's independent freeze-precision sample
+        }
+        const opening = breakingOpening({ memory, r, duration:length, bpm, duel, call:leads ? call : null,
+          response, technical:!isHero, avoid });
         avoid = opening.shape;
+        const move = isHero ? responseMove : pickPower(memory,r,lv,length,profile);
+        const hold = pickHold(memory,isHero ? 8 : lv,r,length);
+        const repeats = isHero || move.id === 'backspin' ? 1 : Math.max(1,Math.round(2.85 / length(move.c)));
+        cost += setTimes(opening.seq,0,opening.enter) + 30 / bpm + 2.3 + length(move.c) * repeats + hold.len
+          + (move.pre ? 1.6 : 0) + (move.post ? 1.4 : 0) + (move.id === 'ninety' ? 1.3 : 0)
+          + (move.motif === 'thread' ? threadCatch(length,bpm,false).len : 0)
+          + (isHero ? 4 * 60 / bpm + 30 / bpm : 0);
       }
+      cost += 1.45;
     }
-    reachable = Math.min(reachable, cost);
+    costs.push(cost);
   }
-  assert(reachable < SMOKE_TIME, `${bpm} BPM: projected clean route ${reachable.toFixed(1)} s`);
+  costs.sort((a,b) => a-b);
+  const withinBudget = costs.filter(cost => cost < SMOKE_TIME).length;
+  assert(withinBudget >= costs.length / 2, `${bpm} BPM: only ${withinBudget}/${costs.length} clean routes could finish on time`);
   const state = { points:{me:0,a:0,b:0,c:0,d:0,e:0,f:0,g:0}, line:['me','a','b','c','d','e','f','g'] };
   for (let win = 0; win < SMOKE_TARGET; win++) scoreSmoke(state, 'me', false);
   assert.equal(state.champion,'me');
   assert.equal(state.points.me,SMOKE_TARGET);
-  console.log(`${bpm} BPM: eight-beat halves, timed watch ≈ ${budget.toFixed(2)} s, clean seven-win route budget ≈ ${reachable.toFixed(1)} s.`);
+  console.log(`${bpm} BPM: eight-beat halves, timed watch ≈ ${budget.toFixed(2)} s, ${withinBudget}/${costs.length} clean routes within 4:00, median ${costs[costs.length / 2].toFixed(2)} s.`);
 }
 console.log(`${turns} seeded turns across five districts, ${previews} watched Club phrases, 128 ambient cyphers, both roles, continuous links, technical freeze and a seamless wheel.`);

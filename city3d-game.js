@@ -5,18 +5,20 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=40';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=41';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loadFestivalStage } from './city3d-festival-art.js?v=3';
-import { initPower } from './city3d-power.js?v=30';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=31';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=3';
-import { initWheel } from './city3d-wheel.js?v=3';
+import { initWheel } from './city3d-wheel.js?v=4';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=12';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=7';
-import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry, duelPlan, battleStyle, BATTLE_ANSWERS, WHEEL_FOOTWORK, battleTechnique, battleReplyPoints, REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=6';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=8';
+import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry,
+  duelPlan, battleStyle, BATTLE_ANSWERS, WHEEL_FOOTWORK, battleTechnique, battleFootMoves, battleReplyPoints, clubCall, threadCatch,
+  REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=7';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
@@ -1198,7 +1200,7 @@ export function initGame(ctx) {
     const { pre, post } = dancerPlan(opponent.J, 'op', profile, r, false);
     const bpm = battleBpm(track);
     const show = clubExhibition({ memory, profile, duration: clipLen, bpm, r, heard: heard?.motif, avoid: heard?.form });
-    const standing = show.steps.at(-1).c.startsWith(RISE_FROM_FREEZE);
+    const standing = show.standing || show.steps.at(-1).c.startsWith(RISE_FROM_FREEZE);
     return { pre, post: standing ? post : null, bpm, ...show };
   }
   function clearSmokeBattle() {
@@ -1564,13 +1566,13 @@ export function initGame(ctx) {
   function dancerPlan(J, who, profile, r, opening) {
     return duelPlan({ district: ctx.dist, profile, memory: turnMemory(J, who), r, duration: clipLen, opening, hero: who === 'me' });
   }
-  const motifName = motif => _t(motif === 'switch' ? 'смена опоры' : 'дуга ноги');
-  const callName = motif => _t(motif === 'switch' ? 'Мотив · смена опоры' : 'Мотив · дуга ноги');
+  const motifName = motif => _t({ switch:'смена опоры', arc:'дуга ноги', thread:'продевание с подъёмом' }[motif]);
+  const callName = motif => _t({ switch:'Мотив · смена опоры', arc:'Мотив · дуга ноги', thread:'Мотив · продевание с подъёмом' }[motif]);
   const scoreNumber = new Intl.NumberFormat(window.CITY_LANG || 'ru', { maximumFractionDigits: 1 });
   const replyValue = scoreNumber.format(.5);
   function replyPrompt(T) {
-    const motif = T.reply.contract.motif;
-    const target = BATTLE_ANSWERS.find(move => move.motif === battleTechnique(motif, T.call));
+    const { motif, moves, advanced } = T.reply.contract;
+    const target = moves.find(move => move.motif === battleTechnique(motif, T.call, advanced));
     const copy = T.call ? 'Твой мотив · {motif}. Развей его: {answer}.'
       : 'Мотив соперника · {motif}. Контраст: {answer}.';
     const line = _t(copy, { motif: motifName(motif), answer: _t(target.name) });
@@ -1584,7 +1586,7 @@ export function initGame(ctx) {
   function earnedReply(T, precision) {
     const { contract, eligible, played, previous } = T.reply;
     const pts = battleReplyPoints({ district: ctx.dist, call: contract?.shown && contract.motif, leads: T.call,
-      answer: played, eligible, clean: T.clean, precision, previous });
+      answer: played, eligible, clean: T.clean, precision, previous, advanced: contract?.advanced });
     T.reply.earned = pts;
     T.score += pts;
     return pts;
@@ -1609,10 +1611,14 @@ export function initGame(ctx) {
     const me = who === 'me';
     const memory = turnMemory(J, who);
     const reply = { contract, eligible: !me, played: null, previous: memory.lastClubReply };
-    // AI uses the same two grounded responses. It can choose poorly or lose the freeze.
-    const wanted = contract && battleTechnique(contract.motif, call);
-    const selectedMotif = wanted && !me && (r() < .72 ? wanted : battleTechnique(wanted, false));
-    const response = selectedMotif && BATTLE_ANSWERS.find(move => move.motif === selectedMotif);
+    // The opponent can read the cue, choose a different technique or lose the freeze.
+    const wanted = contract && battleTechnique(contract.motif, call, contract.advanced);
+    let response;
+    if (wanted && !me) {
+      const alternatives = contract.moves.filter(move => move.motif !== wanted);
+      response = r() < .72 ? contract.moves.find(move => move.motif === wanted)
+        : alternatives[Math.floor(r() * alternatives.length)];
+    }
     const precision = response ? clamp(.75 + lv * .019 + (r() - .5) * .21, .55, 1) : 0;
     const opening = breakingOpening({ memory, r, duration: clipLen, bpm, profile, distance, duel,
       call: call && contract?.motif, response, avoid, technical: !me && lv >= 5,
@@ -1643,6 +1649,8 @@ export function initGame(ctx) {
       });
       // both endings are made: the hero's power move may be DRAWN (city3d-power.js) — then the finger, not the dice, picks one
       const pwS = seq[seq.length - 1], ok = [], bad = [step(null, 2.2, 0, { kind: 'fall' })];
+      const landing = P.motif === 'thread' && pwS.c && threadCatch(clipLen, bpm, pwS.c.endsWith('_M'));
+      if (landing) ok.push(landing);
       if (P.post && !gear?.move) ok.push(step(P.post, 1.4, 0, { kind: 'post' }));
       opening.afterPower(ok);
       const F = pickHold(pFail && !me ? { ...memory } : memory, lv, r, clipLen);
@@ -1691,6 +1699,7 @@ export function initGame(ctx) {
     const [opSpot, meSpot] = g.smoke ? club.duelSpots : [{ x: cx + .3, z: cz - 2.1 }, { x: cx - .3, z: cz + 2.1 }];
     const turns = [], rounds = g.smoke || c.tour ? 1 : c.lv >= 3 ? 2 : 1;
     const eq = ctx.heroEq(), chance = HERO.gearChances(eq), choices = availablePower();
+    const footMoves = battleFootMoves(ctx.dist, clipLen);
     let lastForm;
     for (let i = 0; i < rounds; i++) {
       const gear = g.smoke ? null : HERO.gearEvent(chance, Math.floor(Math.random() * 10000), Math.floor(Math.random() * 3));
@@ -1699,8 +1708,8 @@ export function initGame(ctx) {
       const myPlan = dancerPlan(H, 'me', i % 2 ? 'ground' : 'groove', r, holder);
       const planned = (holder ? myPlan : theirPlan).motif;
       const responderMemory = holder ? turnMemory(opp, 'op') : heroChoreo;
-      const motif = planned && ctx.dist === 'club' ? responderMemory.lastClubReply || planned : planned;
-      const contract = motif ? { motif, shown: false } : null;
+      const motif = planned && ctx.dist === 'club' ? clubCall(planned, responderMemory.lastClubReply, footMoves, r) : planned;
+      const contract = motif ? { motif, advanced: footMoves.length === BATTLE_ANSWERS.length, moves: footMoves, shown: false } : null;
       const theirTurn = avoid => makeTurn(opp, c.lv, r, 'op', undefined, null, 2.12, false, bpm, theirStyle, theirPlan, contract, !holder, avoid);
       const myTurn = avoid => makeTurn(H, lv, r, 'me', buff(), gear, 2.12, true, bpm, undefined, myPlan, contract, holder, avoid);
       const first = holder ? myTurn(lastForm) : theirTurn(lastForm);
@@ -1710,7 +1719,7 @@ export function initGame(ctx) {
     }
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
-    B = { g, opp, turns, choices, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
+    B = { g, opp, turns, choices, footMoves, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
     W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: g.smoke ? 1.15 : .4 }; document.body.classList.add('g3fight'); g.ambientEnabled = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
     $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
@@ -1740,7 +1749,7 @@ export function initGame(ctx) {
     }
   }
   function mvText(s, res) {
-    const e = $('#g3mv'); e.innerHTML = (s.nm || '') + (res ? `<small class="${res[0]}">${res[1]}</small>` : '');
+    const e = $('#g3mv'); e.innerHTML = (s.nm ? _t(s.nm) : '') + (res ? `<small class="${res[0]}">${res[1]}</small>` : '');
     e.classList.add('pop'); setTimeout(() => e.classList.remove('pop'), 180);
   }
   function mythCut(T, step, t) {
@@ -1767,10 +1776,11 @@ export function initGame(ctx) {
   function openWheel(T) {
     const { options, fallback } = B.choices;
     const answering = T.reply.contract?.shown;
-    const offered = answering
-      ? [...BATTLE_ANSWERS.map(move => ({ move, name: _t(move.name), locked: false })),
-        ...options.filter(option => option.move !== FOOT_OPTION)]
-      : options;
+    const footMoves = answering || ctx.dist === 'center' ? B.footMoves : [];
+    const offered = footMoves.length ? [
+      ...footMoves.map(move => ({ move, name: _t(move.motif === 'thread' ? 'Продевание' : move.name), locked: false })),
+      ...options.filter(option => option.move !== FOOT_OPTION),
+    ] : options;
     const footwork = clipLen(WHEEL_FOOTWORK) ? WHEEL_FOOTWORK : FOOT_OPTION.c;
     const lastStep = T.seq.at(-1);
     T.J.play(side(footwork, lastStep.c?.endsWith('_M')), {
@@ -1791,7 +1801,7 @@ export function initGame(ctx) {
       B.lastMove = move;
       T.pending.resolve(move, manual);
       if (!B.g.smoke) $('#g3skip').style.display = '';
-    }, null, answering ? replyPrompt(T) : undefined);
+    }, null, answering ? replyPrompt(T) : footMoves.length ? _t('Попробуй один из двух рисунков футворка, затем удержи фриз.') : undefined);
   }
   function battleTick(dt) {
     const H = W.hero, now = performance.now() / 1000;
@@ -1837,7 +1847,7 @@ export function initGame(ctx) {
           s.nm = _t(BATTLE_ANSWERS.find(move => move.motif === s.answer).name);
         }
         if (s.kind === 'top' || s.kind === 'foot') { T.score += s.pts; mvText(s, ['ok', '+' + s.pts]); }
-        else if (s.nm) mvText(s);
+        else if (s.nm && !s.motif) mvText(s);
         paintScore(T);
         // MY power move: drawn by the finger (the old random outcome only if nobody draws)
         if (s.kind === 'power' && T.who === 'me' && !s.answer && !s.done && !s.gear && PM.can(s.c)) { s.pm = true; armDraw(T, s); }
@@ -1903,8 +1913,8 @@ export function initGame(ctx) {
     if (ok) {
       T.score += s.pts; sfx('hit');
       const reply = earnedReply(T, precision);
-      const motif = T.reply.contract?.motif;
-      const underTarget = motif && T.reply.eligible && T.reply.played === battleTechnique(motif, T.call)
+      const contract = T.reply.contract;
+      const underTarget = contract && T.reply.eligible && T.reply.played === battleTechnique(contract.motif, T.call, contract.advanced)
         && precision < REPLY_PRECISION[ctx.dist];
       const feedback = underTarget ? _t('Зелёная зона {n}% · фриз +{points}', {
         n: Math.floor(precision * 100), points: scoreNumber.format(s.pts),
