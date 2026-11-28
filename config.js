@@ -48,7 +48,10 @@ window.APP_CONFIG = {
     "ja": "dub-pw-windmill-ja-voice-fe099e80-mux.mp4",
     "ko": "dub-pw-windmill-ko-voice-93de4037-mux.mp4",
     "zh": "dub-pw-windmill-zh-voice-b0aa8a38-mux.mp4"
-   }
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "fr-airbaby": {
    "media": "fr-airbaby-to0b3ely.mp4",
