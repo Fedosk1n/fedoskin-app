@@ -183,7 +183,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-turtle": {
   "ks": "634db7c3-35bc-4a80-b160-c44a09cdbab8",

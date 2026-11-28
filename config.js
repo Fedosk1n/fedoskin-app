@@ -100,8 +100,12 @@ window.APP_CONFIG = {
     "en": "dub-pw-swipes-en-voice-2ef014ace362.mp4"
    },
    "mux": {
-    "en": "dub-pw-swipes-en-voice-58b7323059e4.mp4"
-   }
+    "en": "dub-pw-swipes-en-voice-58b7323059e4.mp4",
+    "ja": "dub-pw-swipes-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "gd-windmill-entry": {
    "media": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",
