@@ -22,7 +22,7 @@ import { TOP, SHAPES, CORE_POWER as POWER, BACKSPIN, crewStyle, breakingOpening,
   REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=8';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
-import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, mountStoryPortraits, STORY_CSS } from './city3d-story.js?v=3';
+import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, mountStoryPortraits, STORY_CSS } from './city3d-story.js?v=4';
 import { initFestival } from './city3d-campaign.js?v=7';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
@@ -191,7 +191,7 @@ const WRITER_PALETTE = { yard: 'fire', center: 'ice', park: 'candy', prom: 'volt
 const GOALS = [
   { id: 'win', t: 'Выиграй батл', n: 1 }, { id: 'win2', t: 'Выиграй 2 батла', n: 2, k: 'win' }, { id: 'clean', t: 'Выиграй батл без срывов', n: 1 },
   { id: 'paint', t: 'Закрась стену банды своим граффити', n: 1 }, { id: 'lesson', t: 'Посмотри урок 3 минуты (энергия)', n: 3 },
-  { id: 'cypher', t: 'Посмотри выход в сайфере (постой у круга)', n: 1 }, { id: 'strong', t: 'Победи банду 2 уровня или выше', n: 1 },
+  { id: 'cypher', t: 'Посмотри раунд сайфера (постой у круга)', n: 1 }, { id: 'strong', t: 'Победи банду 2 уровня или выше', n: 1 },
   { id: 'show', t: 'Выйди сам в круг сайфера', n: 1 }, { id: 'perf', t: 'Нарисуй пауэрмув в батле идеально', n: 1 }, { id: 'train', t: 'Потренируйся на мате 2 раза', n: 2 }, { id: 'dj', t: 'Закажи бит у диджея', n: 1 },
   // only after the Centre has been visited
   { id: 'mall', t: 'Станцуй шоу у ТЦ и не попадись охраннику', n: 1, c: 1 }, { id: 'cwin', t: 'Победи банду Центра', n: 1, c: 1 },
@@ -1413,7 +1413,7 @@ export function initGame(ctx) {
       if (A.guest === finaleGuests.length) {
         A.t0 = performance.now() / 1000;
         W.walk.start(W.hero);
-        $('#g3turn').textContent = _t('Общий сайфер · твой выход');
+        $('#g3turn').textContent = _t('Общий сайфер · твой раунд');
       }
     }
     return true;
@@ -1437,7 +1437,7 @@ export function initGame(ctx) {
       save();
     }
     W.lock = true; W.cyBusy = true; W.camT = { x: C0.x, z: C0.z + .3, zoom: story ? .53 : .42 }; document.body.classList.add('g3fight');
-    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t(story ? 'Общий сайфер' : 'Твой выход в сайфере'); paintAct();
+    $('#g3bt').classList.add('on'); $('#g3sc').style.display = 'none'; $('#g3skip').style.display = 'none'; $('#g3turn').textContent = _t(story ? 'Общий сайфер' : 'Твой раунд в сайфере'); paintAct();
   }
   // a street show on the mall's tiles: my random set, passers-by come to watch — and the guard walks his round.
   // If he gets close while I dance (his red ring reaches me), the show is over and almost nothing is earned.
@@ -2082,8 +2082,12 @@ export function initGame(ctx) {
       T.walking = true;
       W.walk.start(T.J);
     }
-    const turnTitle = T.who === 'me' ? _t('Твой выход') : _t('Выход: {x}', { x: B.g.c.name });
-    $('#g3turn').textContent = B.g.smoke ? turnTitle : turnTitle + ' · ' + _t('раунд {n}', { n: Math.floor(B.i / 2) + 1 });
+    const player = T.who === 'me', x = B.g.c.name;
+    if (B.g.smoke) $('#g3turn').textContent = player ? _t('Твой раунд') : _t('Раунд: {x}', { x });
+    else {
+      const n = Math.floor(B.i / 2) + 1;
+      $('#g3turn').textContent = player ? _t('Раунд {n} · ты', { n }) : _t('Раунд {n} · {x}', { n, x });
+    }
     $('#g3mv').innerHTML = '';
   }
   function finishSkip() {
