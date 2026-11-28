@@ -8,10 +8,11 @@ import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=43';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loadFestivalStage } from './city3d-festival-art.js?v=3';
+import { festivalLightRig, festivalLight } from './city3d-festival-light.js?v=1';
 import { initPower } from './city3d-power.js?v=33';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=3';
 import { initWheel } from './city3d-wheel.js?v=4';
-import { initPowerModes } from './city3d-power-modes.js?v=2';
+import { initPowerModes } from './city3d-power-modes.js?v=3';
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=12';
@@ -21,11 +22,11 @@ import { TOP, SHAPES, CORE_POWER as POWER, BACKSPIN, crewStyle, breakingOpening,
   REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=8';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
-import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
-import { initFestival } from './city3d-campaign.js?v=5';
+import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, mountStoryPortraits, STORY_CSS } from './city3d-story.js?v=3';
+import { initFestival } from './city3d-campaign.js?v=6';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
-import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=3';
+import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=4';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -713,7 +714,7 @@ export function initGame(ctx) {
     PLACES.push({ ...club.smokeEntry, id: 'smoke' },
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
-  const guide = initCityGuide(_t);
+  const guide = initCityGuide(_t), coarsePointer = matchMedia('(pointer: coarse)');
   const landmark = initLandmarkView({ scene, district:D });
   const guideColliders = ctx.colliders || [], placements = new Map();
   const groundArt = (id, point) => {
@@ -722,7 +723,9 @@ export function initGame(ctx) {
     return placements.get(key);
   };
   let festivalGuest = null, festivalScene = null, festivalHome = null;
-  let festivalPeople = [];
+  const stageLights = festivalLightRig(ctx.camera);
+  const narrativeDancers = new Map(), stageDancers = new Map();
+  let stageAsset, setLights = [], festivalPeople = [];
   let narrativeCast = null, festivalSpin = null, openingShow = null;
   let clubFestivalMove = null;
   const clubWorldPoint = club && new THREE.Vector3();
@@ -734,11 +737,33 @@ export function initGame(ctx) {
       clubFestivalMove = { dancer, clip, until: performance.now() + 1000 * Math.min(cue?.seconds || seconds, seconds) };
     }
   }
+  function applyStageLights() {
+    stageLights.set([...(narrativeCast?.lights || []), ...setLights]);
+  }
   function clearNarrativeCast() {
     if (!narrativeCast) return;
-    narrativeCast.group.traverse(object => { if (object.isMesh) object.geometry.dispose(); });
     narrativeCast.group.removeFromParent();
     narrativeCast = null;
+    applyStageLights();
+  }
+  function narrativeDancer(actor) {
+    let dancer = narrativeDancers.get(actor);
+    if (dancer) return dancer;
+    const stitch = actor === 'stitch';
+    const outfit = HERO.topDown(stitch ? 3 : 5, stitch ? ['c:stencilBandana','c:cleanLaces'] : ['c:rebarCap','c:chromeTrack']);
+    outfit.col.top = stitch ? '#eec477' : '#5379ae';
+    outfit.col.sleeve = outfit.col.top;
+    outfit.col.trim = stitch ? '#452e46' : '#d9e6ec';
+    dancer = mocapPerson(outfit, { body: bodyOf(stitch ? 410 : 611, { type: stitch ? 'slim' : 'athl' }) });
+    dancer.root.name = 'FestivalDancer:' + actor;
+    narrativeDancers.set(actor, dancer);
+    return dancer;
+  }
+  function resetStageDancer(dancer, at = 0) {
+    dancer.home0();
+    dancer.mixer.stopAllAction();
+    dancer.cur = dancer.act = null;
+    dancer.play('Breakdance_Ready', { at });
   }
   function setFestivalCast(point, order, lead) {
     const show = lead && W.cyph;
@@ -757,29 +782,20 @@ export function initGame(ctx) {
     group.name = 'FestivalNarrativeCast';
     scene.add(group);
     group.position.set(centre.x, .025, centre.z);
-    if (show) {
-      const light = new THREE.PointLight('#ffd09b', 10, 5);
-      light.position.set(.35, 2.2, -.12);
-      group.add(light);
-    }
     order.forEach((actor, index) => {
-      const stitch = actor === 'stitch';
-      const outfit = HERO.topDown(stitch ? 3 : 5, stitch ? ['c:stencilBandana','c:cleanLaces'] : ['c:rebarCap','c:chromeTrack']);
-      outfit.col.top = stitch ? '#eec477' : '#5379ae';
-      outfit.col.sleeve = outfit.col.top;
-      outfit.col.trim = stitch ? '#452e46' : '#d9e6ec';
-      const dancer = mocapPerson(outfit, { body: bodyOf(stitch ? 410 : 611, { type: stitch ? 'slim' : 'athl' }) });
-      dancer.root.name = 'FestivalDancer:' + actor;
+      const dancer = narrativeDancer(actor);
       dancer.root.userData.role = actor === lead ? 'performs' : 'waits';
       const x = show ? actor === lead ? 0 : 2.75 : index ? 1.78 : -1.45;
       dancer.root.position.set(x, 0, show ? actor === lead ? 0 : -.72 : -2.05);
       if (show && actor === lead) dancer.root.rotation.y = .25;
       else face(dancer, 0, 0);
-      dancer.play('Breakdance_Ready');
+      resetStageDancer(dancer);
       group.add(dancer.root);
       actors[actor] = dancer;
     });
-    narrativeCast = { key, group, actors };
+    const lights = show ? [festivalLight(group, [.35, 2.2, -.12], '#ffd09b', 10, 5)] : [];
+    narrativeCast = { key, group, actors, lights };
+    applyStageLights();
   }
   function playFestivalMove(dancer, clip, cue, fade) {
     const length = clipLen(clip);
@@ -803,24 +819,36 @@ export function initGame(ctx) {
     festivalHome ||= W.hero.root.position.clone();
     W.hero.root.position.set(layout.position.x, 0, centerZ);
     const industrial = decisions.venue === 'prom';
-    const amber = new THREE.PointLight('#ff995c', industrial ? 18 : 10, 8);
-    const side = new THREE.PointLight(decisions.sound === 'relay' ? '#c3a8ff' : '#72cadd', 14, 9);
-    amber.position.set(-2.6, 2.5, .6); side.position.set(2.7, 2.9, -1.4);
-    layout.add(amber, side);
-    loadFestivalStage().then(props => {
-      if (festivalScene !== layout) return;
+    setLights = [
+      festivalLight(layout, [-2.6, 2.5, .6], '#ff995c', industrial ? 18 : 10, 8),
+      festivalLight(layout, [2.7, 2.9, -1.4], decisions.sound === 'relay' ? '#c3a8ff' : '#72cadd', 14, 9),
+    ];
+    applyStageLights();
+    stageAsset ||= loadFestivalStage().then(props => {
+      try { ctx.batchStageProps?.(props); }
+      catch (error) { console.warn('Festival prop batching unavailable', error); }
+      return props;
+    }).catch(() => { stageAsset = null; });
+    stageAsset.then(props => {
+      if (festivalScene !== layout || !props) return;
       props.scale.setScalar(industrial ? .88 : .70);
       layout.add(props);
-    }).catch(() => {});
+    });
     const clothes = [['c:stencilBandana'], ['c:waveKicks'], ['girl', 'c:rebarCap'], ['c:rootsBeanie']];
     const order = decisions.roster === 'crew' ? [2, 0, 3, 1] : [0, 1, 2, 3];
+    const level = act === 7 ? 4 : 6;
     for (const [i, n] of order.entries()) {
-      const look = HERO.topDown(act === 7 ? 4 : 6, clothes[n]);
-      const dancer = mocapPerson(look, { body: bodyOf(308 + n * 23, { type:['slim','athl','small','lanky'][n], girl: n === 2 }) });
+      const key = level * 10 + n;
+      let dancer = stageDancers.get(key);
+      if (!dancer) {
+        const look = HERO.topDown(level, clothes[n]);
+        dancer = mocapPerson(look, { body: bodyOf(308 + n * 23, { type:['slim','athl','small','lanky'][n], girl: n === 2 }) });
+        stageDancers.set(key, dancer);
+      }
       const angle = .27 + i * (Math.PI - .52) / (order.length - 1);
       dancer.root.position.set(Math.cos(angle) * 2.35, 0, -Math.sin(angle) * 1.95);
       face(dancer, 0, 0);
-      dancer.play('Breakdance_Ready', { at: i / 4 });
+      resetStageDancer(dancer, i / 4);
       layout.add(dancer.root);
       festivalPeople[n] = dancer;
     }
@@ -843,8 +871,9 @@ export function initGame(ctx) {
       }
       if (!locked && festivalScene) {
         if (festivalHome) W.hero.root.position.copy(festivalHome);
-        festivalScene.traverse(mesh => { if (mesh.isMesh && !mesh.geometry.userData.sharedCityGeometry) mesh.geometry.dispose(); });
         festivalScene.removeFromParent(); festivalScene = festivalHome = null; festivalPeople = [];
+        setLights = [];
+        applyStageLights();
       }
       paintAct();
     },
@@ -915,7 +944,7 @@ export function initGame(ctx) {
   }
   function guidanceEntry(chapter, line, object, festivalStep) {
     if (line !== 'festival' && S.story.length === 1 && festivalStep && !courseStarted() && !guide.inviteResolved()) {
-      return { id:'festival-invite', line:'festival', art:'mat', title:_t('Винт зовёт на фестиваль'),
+      return { id:'festival-invite', line:'festival', art:'mat', speaker:'vint', title:_t('Винт зовёт на фестиваль'),
         where:_t('Двор · тренировочный коврик'),
         text:_t('Продолжи задание Винта у тренировочного мата во Дворе или собери общий сайфер.'),
         button:_t('К фестивалю'), action:() => { guide.choose('festival'); $('#c3').focus({preventScroll:true}); },
@@ -930,12 +959,13 @@ export function initGame(ctx) {
     if (line !== 'story' || !chapter) return null;
     let text = _t(chapter.imageHint);
     if (chapter.id === 'cypher' && object) {
-      text = _t(matchMedia('(pointer: coarse)').matches ?
+      text = _t(coarsePointer.matches ?
         'Проведи пальцем по двору. Встань на следы у картона и смотри круг {n} секунд.' :
         'Подойди к следам у картона стрелками, клавишами WASD или кликом. Смотри круг {n} секунд.', { n:WATCH_TIME });
     }
     if (!object) text = festivalOnly ? _t('Выйди из сюжетного визита и продолжи общий сайфер.') : storyHint(chapter);
     return { id:'story:'+chapter.id+':'+D, line, art:CHAPTER_ART[chapter.id],
+      speaker:chapter.id === 'cypher' ? chapter.speaker : null,
       title:_t(chapter.id === 'cypher' ? 'Винт · Смотреть круг' : chapter.title),
       where:_t(chapter.location), text, button:_t(object ? 'Показать место' : festivalOnly ? 'Вернуться в обычный город' : 'Открыть цель'),
       action:object ? () => showLandmark(object.point) : festivalOnly ? () => travel(S.where) : openStory };
@@ -976,6 +1006,7 @@ export function initGame(ctx) {
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
     panel.setAttribute('aria-labelledby', 'g3storyTitle');
+    mountStoryPortraits(panel, _t);
     panel.scrollTop = 0;
     $('#g3storyTitle').focus({ preventScroll: true });
   }
@@ -2251,7 +2282,8 @@ export function initGame(ctx) {
         object = null;
       }
     } else storyWatchStart = null;
-    storyNear.hidden = !byCircle || storyWatch >= WATCH_TIME;
+    const hideStoryNear = !byCircle || storyWatch >= WATCH_TIME;
+    if (storyNear.hidden !== hideStoryNear) storyNear.hidden = hideStoryNear;
     if (!storyNear.hidden) {
       const text = stopped ? _t('Осталось у круга · {n} с',{n:Math.ceil(WATCH_TIME-storyWatch)}) : _t('Остановись на следах, чтобы начать отсчёт');
       if (storyNear.textContent !== text) storyNear.textContent = text;
@@ -2262,6 +2294,7 @@ export function initGame(ctx) {
     landmark.set(exploring ? object : null);
   }
   function post(dt) {
+    stageLights.view();
     PM.post(dt);
     if (!wheel.active()) return;
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
@@ -2269,5 +2302,8 @@ export function initGame(ctx) {
   }
   const traceActive = () => A?.kind === 'powerPractice' || A?.kind === 'powerContest';
   const shadowFocus = () => B ? B.g : smoke?.active() ? club.floor : A?.kind === 'powerPractice' ? matAt : A?.kind === 'powerContest' ? Y.arena : null;
-  return { update, post, traceActive, scratchActive: () => A?.kind === 'scratch', shadowFocus, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing || festival.busy(), _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => [...PLACES, festival.target()].filter(Boolean), _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  const holdBackdrop = () => festival.renderMode?.() === 'held' ||
+    Boolean(choosing && !A && !B && !P && !festival.busy() && storyOverlays[2].classList.contains('on'));
+  const festivalCamera = () => Boolean(festival.renderMode?.() === 'live' && W.camT && !W.camT.off);
+  return { update, post, traceActive, holdBackdrop, festivalCamera, scratchActive: () => A?.kind === 'scratch', shadowFocus, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing || festival.busy(), _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => [...PLACES, festival.target()].filter(Boolean), _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

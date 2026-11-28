@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createStoryPortrait } from './city3d-story-portraits.js?v=1';
 import { loadUntexturedModel } from './city3d-festival-art.js?v=3';
 
 import { LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
@@ -25,12 +26,13 @@ const CSS = `
 #g3guide.first-watch,#g3guideOpen.first-watch{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}
 body.city-guide-intro :is(#hint,#ztip){display:none}
 #g3guide header{display:flex;align-items:center;justify-content:space-between;gap:6px}
-#g3guide h2{font:800 17px/1.16 Inter,system-ui,sans-serif;margin:0;overflow-wrap:anywhere}
+#g3guide h2{font:800 17px/1.16 Inter,system-ui,sans-serif;margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
 #g3guide .guide-content{display:grid;grid-template-columns:minmax(0,1fr) min(97px,31%);gap:8px;align-items:start}
 #g3guide .guide-copy p{margin:3px 0 0}
 #g3guide .guide-where{color:#ffe0a5;font:800 11px/1.25 Inter,system-ui,sans-serif}
 #g3guide.festival .guide-where{color:#9ce5d4}
-#g3guide img{width:100%;display:block;aspect-ratio:1.56;object-fit:cover;border:1px solid #6b6561;border-radius:7px;box-sizing:border-box}
+#g3guide .guide-portrait{--portrait-size:34px;flex:0 0 34px}
+#g3guide .guide-content>img{width:100%;display:block;aspect-ratio:1.56;object-fit:cover;border:1px solid #6b6561;border-radius:7px;box-sizing:border-box}
 #g3guide .guide-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
 #g3guide button,#g3guideOpen{font:800 12px/1.2 Inter,system-ui,sans-serif;min-height:44px;cursor:pointer;color:#fdf0db;background:#30323a;
  border:1px solid #82715d;border-radius:8px;padding:6px 9px;pointer-events:auto}
@@ -59,7 +61,7 @@ export function initCityGuide(t) {
   document.head.append(style);
   const holder = document.createElement('div');
   holder.innerHTML = `<aside id="g3guide" hidden aria-labelledby="g3guide-title">
- <header><h2 id="g3guide-title"></h2><button class="guide-close" type="button">×</button></header>
+ <header><span class="guide-portrait" hidden></span><h2 id="g3guide-title"></h2><button class="guide-close" type="button">×</button></header>
  <div class="guide-content"><div class="guide-copy"><div class="guide-where"></div><p></p></div><img decoding="async"></div>
  <div class="guide-actions"><button type="button" class="guide-first"></button><button type="button" class="guide-other" hidden></button></div>
  </aside><button id="g3guideOpen" type="button" hidden aria-controls="g3guide" aria-expanded="false"></button>
@@ -68,20 +70,22 @@ export function initCityGuide(t) {
   const $ = selector => holder.querySelector(selector);
   const ui = $('#g3guide'), reopen = $('#g3guideOpen'), title = $('#g3guide-title');
   const first = $('.guide-first'), other = $('.guide-other'), text = $('.guide-copy p'), where = $('.guide-where');
-  const close = $('.guide-close'), photo = $('img'), status = $('#g3guide-status');
+  const close = $('.guide-close'), photo = $('.guide-content>img'), portrait = $('.guide-portrait'), status = $('#g3guide-status');
   close.setAttribute('aria-label',t('Закрыть подсказку'));
   reopen.textContent = t('Подсказка');
   const state = readGuide();
-  let current = null, key = '', wantOpen = false, allowed = false;
+  let current = null, key = '', speaker, wantOpen = false, allowed = false;
 
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify({ line:state.line, invite:state.invite, seen:[...state.seen].slice(-360) })); } catch (_) {}
   }
   function visibility() {
     const open = Boolean(allowed && current && wantOpen);
-    ui.hidden = !open;
-    reopen.hidden = !allowed || !current || open;
-    reopen.setAttribute('aria-expanded',String(open));
+    if (ui.hidden === open) ui.hidden = !open;
+    const hideReopen = !allowed || !current || open;
+    if (reopen.hidden !== hideReopen) reopen.hidden = hideReopen;
+    const expanded = String(open);
+    if (reopen.getAttribute('aria-expanded') !== expanded) reopen.setAttribute('aria-expanded', expanded);
     const label = current?.id === 'festival-invite' ? current.title : t('Подсказка');
     if (reopen.textContent !== label) reopen.textContent = label;
     if (open && !state.seen.has(key)) {
@@ -107,7 +111,13 @@ export function initCityGuide(t) {
                                  [first,entry.button],[other,entry.alternate?.button || '']]) {
         if (node.textContent !== value) node.textContent = value;
       }
-      other.hidden = !entry.alternate;
+      if (other.hidden === Boolean(entry.alternate)) other.hidden = !entry.alternate;
+      if (speaker !== entry.speaker) {
+        speaker = entry.speaker;
+        portrait.replaceChildren();
+        if (speaker) portrait.append(createStoryPortrait(speaker, entry.title, { showName: false }));
+        portrait.hidden = !speaker;
+      }
       if (photo.getAttribute('src') !== landmarkImage(entry.art)) photo.src = landmarkImage(entry.art);
       if (photo.alt !== t(LANDMARKS[entry.art][1])) photo.alt = t(LANDMARKS[entry.art][1]);
     }
