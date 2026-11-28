@@ -1,6 +1,7 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { buildClubAudience } from './city3d-club-audience.js?v=1';
+import { buildClubLighting } from './city3d-club-lighting.js?v=1';
 import { performDJ } from './city3d-dj.js?v=4';
 import { seatedJudge } from './city3d-club-judges.js?v=2';
 const t = window._t;
@@ -64,7 +65,6 @@ export function buildClub(TK) {
   });
   const records = { x: 6.1, z: 1.35, r: 1.8 };
   const exit = { x: -.1, z: 8.4, r: 1.6 };
-  const colors = { gold: '#e7a84f', turquoise: '#48d3ca' };
   const mat = (color, roughness = .75, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
   const flat = color => new THREE.MeshBasicMaterial({ color, toneMapped: false });
   function mesh(geometry, material, x, y, z) {
@@ -111,7 +111,10 @@ export function buildClub(TK) {
   p.fillStyle = 'rgba(244,212,163,.93)'; p.fillText('7 TO SMOKE', 512, 805, 535);
   block(21, .18, 22, material('terrazzo', { repeat: [5, 5] }), 0, -.10, -.8);
   const disk = new THREE.CircleGeometry(floor.r, 96);
-  const wood = mesh(disk, material('oak'), floor.x, .018, floor.z);
+  const parquet = material('oak');
+  parquet.roughnessMap = null;
+  parquet.roughness = .71;
+  const wood = mesh(disk, parquet, floor.x, .018, floor.z);
   wood.name = 'Club dance floor';
   wood.rotation.x = -Math.PI / 2;
   const marks = mesh(disk, new THREE.MeshStandardMaterial({
@@ -131,9 +134,6 @@ export function buildClub(TK) {
   for (let i = -15; i <= 15; i++) block(.07, 2.2, .11, slat, i * .58, 1.66, -8.61);
   block(15.4, .12, .28, steel, 0, 3.47, -8.51);
   [-6.1, 6.1].forEach(x => {
-    block(.95, 2.25, .38, dark, x, 1.25, -8.47);
-    for (let j = 0; j < 3; j++) mesh(new THREE.CircleGeometry(j === 0 ? .22 : .31, 18), flat(j === 0 ? '#607575' : '#1a1818'), x, .65 + j * .62, -8.267);
-    block(.085, 2.17, .16, flat(colors.turquoise), x - 1.05, 1.5, -8.49);
     block(2.25, .7, .8, velvet, x, .35, -6.8); box(x, -6.8, 2.25, .8);
   });
   const scoreCv = can(1024, 256), ink = scoreCv.getContext('2d');
@@ -237,14 +237,6 @@ export function buildClub(TK) {
   });
   const queueMark = flat('#508480');
   for (const { x, z, yaw } of slots) block(.59, .009, .033, queueMark, x, .019, z).rotation.y = yaw;
-  for (const [color, strength, x, y, z] of [
-    ['#ffc895', 47, 0, 5.1, -2.8], ['#70d6ea', 41, -5.4, 3.9, -4.7], ['#e29b8a', 29, 5.2, 3.6, -.15],
-    ['#8edde2', 19, dj.x, 2.8, dj.z], ['#fbbb87', 20, records.x, 2.6, records.z],
-  ]) {
-    const light = new THREE.PointLight(color, strength * TK.FILL_K, 12, 1.6);
-    light.position.set(x, y, z); scene.add(light);
-  }
-
   const dancers = CLUB_BREAKERS.map((b, i) => {
     const J = mocapPerson(HERO.topDown(b.lv, b.gear), { body: bodyOf(602 + i * 31, { type: b.body, girl: b.gear.includes('girl') }) });
     J.clubRest = slots[i];
@@ -304,7 +296,8 @@ export function buildClub(TK) {
     judges.forEach(judge => judge.tick(dt));
   });
   const audience = buildClubAudience(TK, TK.audienceModel, floor);
-  W.club = { audience, floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, mix,
+  const lighting = buildClubLighting(TK, TK.lightingModel, floor);
+  W.club = { audience, lighting, floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, mix,
     showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
     hideVotes: () => judges.forEach(judge => judge.hide()),
   };

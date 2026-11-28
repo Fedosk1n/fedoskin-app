@@ -9,10 +9,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=38';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=76';
-import { buildClub, loadClubSurfaces } from './city3d-club.js?v=11';
+import { initGame } from './city3d-game.js?v=77';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
+import { loadClubLighting } from './city3d-club-lighting.js?v=1';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=8';
@@ -592,12 +593,12 @@ const W = { hero: null, crew: [], cyph: DIST === 'yard' ? { x: 1.5, z: -7.2 } : 
 // the player's own zoom (owner 17.11.2026 «добавь возможность двумя пальцами зумить экран (карту), чтобы можно было видеть всю область»):
 // 1 = the normal view, up to ZMAX pulled back (the camera goes further along the same angle), down to ZMIN closer. Kept between visits.
 const ZMIN = .7, ZMAX = 3;
-const defaultZoom = DIST === 'club' ? 1.13 : 1;
+const defaultZoom = DIST === 'club' ? 1.25 : 1;
 W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom'); return z ? clamp(z, ZMIN, ZMAX) : defaultZoom; } catch (_) { return defaultZoom; } })();
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals, audienceModel, wayfinding) {
+async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals, audienceModel, wayfinding, lightingModel) {
   if (DIST !== 'club') {
     WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   }
@@ -607,7 +608,7 @@ async function build(scene, asphalt, props, playgroundModel, clubJudges, surface
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
   else if (DIST === 'prom') await buildProm(TK);
-  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces, audienceModel, wayfinding });
+  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces, audienceModel, wayfinding, lightingModel });
   else buildYard(scene, asphalt, facade, facadeMurals);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
@@ -1154,6 +1155,7 @@ async function boot() {
     }) : null,
     DIST === 'club' ? loadClubAudience() : null,
     DIST === 'club' || DIST === 'yard' ? loadWayfinding() : null,
+    DIST === 'club' ? loadClubLighting() : null,
   ]);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
@@ -1170,7 +1172,7 @@ async function boot() {
   scene.add(moon, moon.target);
 
   const [loaded] = await Promise.all([assets, graphics.ready]);
-  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade, audienceModel, wayfinding] = loaded;
+  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade, audienceModel, wayfinding, lightingModel] = loaded;
   scene.environmentIntensity = .45;
   if (reflection) scene.environment = reflection;
   else {
@@ -1181,7 +1183,7 @@ async function boot() {
     pm.dispose();
   }
 
-  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades, audienceModel, wayfinding);
+  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades, audienceModel, wayfinding, lightingModel);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
@@ -1329,7 +1331,9 @@ async function boot() {
   // the hero is read EVERY frame: after a change of clothes (gear won in a battle, a detail from the tailor) W.hero is a NEW person —
   // the camera used to keep following the old, removed one and the hero ran out of the picture (owner 17.11.2026 «мой человечек
   // выбежал за кадр и его не видно»)
-  { const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - 2.2); camPos.copy(camLook).add(off); }
+  // Include the mounted lights at the Club entrance. Action cameras still take over the view.
+  const roomLead = DIST === 'club' ? 1.05 : 0;
+  { const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - (roomLead ? 2.1 * Math.max(1, W.zoom) + roomLead : 2.2)); camPos.copy(camLook).add(off); }
   // fog thins out when the camera is pulled back (pinch zoom), so the far side of the district isn't lost in haze
   const fog0 = scene.fog.density;
   let last, fpsN = 0, fpsT = 0, worst = 0;
@@ -1365,7 +1369,7 @@ async function boot() {
     // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
     // battles take over with their own close-ups (W.camT) and give it back afterwards
     const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;
-    look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) + s.vz * .25);
+    look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) - roomLead + s.vz * .25);
     const view = W.camT || W.guideView;
     if (view) look.set(view.x, view.y || 0, view.z);
     // W.camSnap: a replay's cut — the camera jumps instead of gliding
