@@ -334,7 +334,7 @@ propPaint.onBeforeCompile = shader => {
 };
 
 // Use on groups of fixed props after trimCasters, so pieces with different shadow settings stay separate.
-function batchStaticProps(root) {
+function batchStaticProps(root, { combinePaint = true } = {}) {
   root.updateWorldMatrix(true, true);
   const inverse = root.matrixWorld.clone().invert(), groups = new Map();
   function collect(object) {
@@ -351,7 +351,7 @@ function batchStaticProps(root) {
     if (matrix.determinant() < 0) return;
     const plain = m.side === THREE.FrontSide && m.shadowSide === null && m.opacity === 1 && m.depthTest && m.depthWrite && m.fog && m.toneMapped &&
       !m.emissive.getHex() && !m.flatShading && textures.length === 0;
-    const material = plain ? propPaint : m;
+    const material = combinePaint && plain ? propPaint : m;
     const key = `${material.id}/${object.castShadow}/${object.receiveShadow}`;
     if (!groups.has(key)) groups.set(key, { material, parts: [] });
     groups.get(key).parts.push({ object, matrix });
@@ -1293,7 +1293,7 @@ async function boot() {
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit, returnToMat, batchProps: queueYardProps,
-    batchStageProps: TOUCH ? batchStaticProps : null,
+    batchStageProps: TOUCH ? props => batchStaticProps(props, { combinePaint: false }) : null,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
