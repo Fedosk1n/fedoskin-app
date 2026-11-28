@@ -56,8 +56,12 @@ window.APP_CONFIG = {
     "en": "dub-fr-airbaby-en-voice-cb4f52b4.mp4"
    },
    "mux": {
-    "en": "dub-fr-airbaby-en-voice-cb4f52b4-mux.mp4"
-   }
+    "en": "dub-fr-airbaby-en-voice-cb4f52b4-mux.mp4",
+    "ja": "dub-fr-airbaby-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "pw-reverse-1990": {
    "media": "pw-reverse-1990-jun24gi0.mp4",
