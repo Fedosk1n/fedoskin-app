@@ -153,6 +153,16 @@ window.APP_CONFIG = {
     "en": "dub-tr-windmill-head-en-voice-28f95e163f1c.mp4"
    },
    "preferMux": true
+  },
+  "pw-flare-1990": {
+   "media": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f",
+   "tracks": {
+    "en": "dub-pw-flare-1990-en-voice-bf03e9abb7d9.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-flare-1990-en-voice-a0c2f1b67ed1.mp4"
+   },
+   "preferMux": true
   }
  }
 };
