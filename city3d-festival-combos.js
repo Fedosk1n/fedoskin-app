@@ -29,10 +29,10 @@ export const SIGNATURES = {
 };
 
 export const COMBOS = {
-  openingStitch: { name: 'Дробный вход Стежка', guide: 'Сначала посмотри выход. В музыкальной фразе два отдельных удара приходятся на долю и «и».',
+  openingStitch: { name: 'Дробный вход Стежка', guide: 'Сначала посмотри раунд. В музыкальной фразе два отдельных удара приходятся на долю и «и».',
     steps: [step(0,0,rock),step(1,2,drop,true),step(3,0,kick,true),step(3.5,3,kick,true),accent(5,2),accent(6,0),
       step(7,1,rise,true),step(8,3,rock),step(10,2,drop,true),accent(12,0),step(15,1,rise,true)] },
-  openingGranite: { name: 'Долгая пауза Гранита', guide: 'Сначала посмотри выход. После первого акцента оставь две пустые доли, затем войди и поднимись в музыку.',
+  openingGranite: { name: 'Долгая пауза Гранита', guide: 'Сначала посмотри раунд. После первого акцента оставь две пустые доли, затем войди и поднимись в музыку.',
     steps: [step(0,3,rock),step(3,2,drop,true),step(4,3,thread,true),step(5,0,reset,true),accent(6,2),accent(7,3),
       step(8,1,rise,true),step(9,0,rock),step(11,2,drop,true),accent(13,3),step(15,1,rise,true)] },
   drop: { name: 'Крест и смена уровня', guide: 'Две верхние доли, затем спуск. Пройди футворк и поднимись на стрелке вверх.',
