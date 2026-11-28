@@ -20,6 +20,13 @@ export async function buildProm(TK) {
     x.fillText(t, px, py); };
   const flat = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -PI / 2; m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); return m; };
   const put = (o, x, z, ry = 0) => { o.position.set(x, o.position.y, z); o.rotation.y = ry; scene.add(o); return o; };
+  const props = () => {
+    if (!TK.TOUCH) return scene;
+    const group = new THREE.Group();
+    scene.add(group);
+    TK.batchProps(group);
+    return group;
+  };
 
   // a rusty brown night: darker and dirtier than the Park, lit by sodium lamps and fire
   scene.background.set('#0d0a09'); scene.fog.color.set('#0d0a09'); scene.fog.density = .017;
@@ -98,7 +105,12 @@ export async function buildProm(TK) {
 
   // ---------- the rail line with a trolley of hot metal (north, behind the hazard band) ----------
   { const RZ = -11.5, rail = M('#8b9099', .35, .8), tie = M('#3a2c22', .95);
-    for (let px = -16.5; px <= 16.5; px += .75) { const s = mesh(new THREE.BoxGeometry(.22, .07, 1.7), tie, px, .035, RZ); s.castShadow = false; }
+    let ties;
+    for (let i = 0, px = -16.5; px <= 16.5; i++, px += .75) {
+      // Keep each section small enough for street-level frustum culling.
+      if (i % 8 === 0) ties = props();
+      mesh(new THREE.BoxGeometry(.22, .07, 1.7), tie, px, .035, RZ, ties).castShadow = false;
+    }
     [-.55, .55].forEach(k => mesh(new THREE.BoxGeometry(34, .1, .08), rail, 0, .11, RZ + k).castShadow = false);
     const tr = new THREE.Group(); scene.add(tr);
     mesh(new THREE.BoxGeometry(1.9, .22, 1.3), M('#2c2f36', .6, .5), 0, .42, 0, tr); [-.6, .6].forEach(px => [-.55, .55].forEach(pz => { const w = mesh(new THREE.CylinderGeometry(.2, .2, .1, 12), M('#17181b', .5, .6), px, .25, pz, tr); w.rotation.x = PI / 2; }));
@@ -141,11 +153,26 @@ export async function buildProm(TK) {
     // plywood sheets straight on the concrete (flush with the ground: dancers walk on and off it), spare pallets behind
     mesh(new THREE.BoxGeometry(RS * 2 + .1, .05, RS * 2 + .1), M('#5a4630', .85), RX, .025, RZ0).castShadow = false;
     flat(new THREE.PlaneGeometry(RS * 2, RS * 2), new THREE.MeshStandardMaterial({ map: tex(fc), roughness: .7 }), RX, .052, RZ0);
-    [0, .15, .3].forEach((y, i) => { const p = pallet(); p.position.y = y; put(p, RX + RS + 1.5, RZ0 - RS + .4, .1 * i); }); box(RX + RS + 1.5, RZ0 - RS + .4, 1.4, 1.2);
+    const sparePallets = props();
+    [0, .15, .3].forEach((y, i) => {
+      const p = pallet();
+      p.position.set(RX + RS + 1.5, y, RZ0 - RS + .4);
+      p.rotation.y = .1 * i;
+      sparePallets.add(p);
+    });
+    box(RX + RS + 1.5, RZ0 - RS + .4, 1.4, 1.2);
     // corner posts and sagging chains on three sides (the south side is open — the camera and the hero come from there)
     const post = M('#D9A43A', .6, .3), ch = M('#b9bcc4', .35, .85);
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => { mesh(new THREE.CylinderGeometry(.07, .08, 1.25, 10), post, RX + a * (RS + .12), .625, RZ0 + b * (RS + .12)); circ(RX + a * (RS + .12), RZ0 + b * (RS + .12), .16); });
-    const chain = (x0, z0, x1, z1) => { for (let i = 0; i < 9; i++) { const u = (i + .5) / 9, m = mesh(new THREE.BoxGeometry(Math.hypot(x1 - x0, z1 - z0) / 9 + .02, .05, .05), ch, lerp(x0, x1, u), 1.05 - Math.sin(u * PI) * .22, lerp(z0, z1, u)); m.rotation.y = Math.atan2(-(z1 - z0), x1 - x0); m.castShadow = false; } };
+    const chain = (x0, z0, x1, z1) => {
+      const side = props(), length = Math.hypot(x1 - x0, z1 - z0) / 9 + .02;
+      const link = new THREE.BoxGeometry(length, .05, .05), yaw = Math.atan2(-(z1 - z0), x1 - x0);
+      for (let i = 0; i < 9; i++) {
+        const u = (i + .5) / 9, m = mesh(link, ch, lerp(x0, x1, u), 1.05 - Math.sin(u * PI) * .22, lerp(z0, z1, u), side);
+        m.rotation.y = yaw;
+        m.castShadow = false;
+      }
+    };
     const e = RS + .12; chain(RX - e, RZ0 - e, RX + e, RZ0 - e); chain(RX - e, RZ0 - e, RX - e, RZ0 + e); chain(RX + e, RZ0 - e, RX + e, RZ0 + e);
     box(RX, RZ0 - e, e * 2, .12); box(RX - e, RZ0, .12, e * 2); box(RX + e, RZ0, .12, e * 2);
     // a truss with two work lamps over the back, a banner, speakers made of barrels
