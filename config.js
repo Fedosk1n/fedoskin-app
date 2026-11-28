@@ -61,10 +61,12 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-fr-airbaby-en-voice-cb4f52b4-mux.mp4",
-    "ja": "dub-fr-airbaby-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-fr-airbaby-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-fr-airbaby-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "pw-reverse-1990": {
@@ -87,10 +89,12 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-pw-headspin-en-voice-3c75d9c672b3.mp4",
-    "ja": "dub-pw-headspin-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-pw-headspin-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-pw-headspin-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "fr-one-hand-freeze": {
@@ -100,10 +104,12 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-fr-one-hand-freeze-en-voice-f1757d762385.mp4",
-    "ja": "dub-fr-one-hand-freeze-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-fr-one-hand-freeze-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-fr-one-hand-freeze-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "pw-swipes": {
@@ -113,10 +119,12 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-pw-swipes-en-voice-58b7323059e4.mp4",
-    "ja": "dub-pw-swipes-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-pw-swipes-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-pw-swipes-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "gd-windmill-entry": {

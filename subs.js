@@ -15,7 +15,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "fr-one-hand-freeze": {
   "ks": "",
@@ -31,7 +31,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "fr-turtle-freeze-variations": {
   "ks": "",
@@ -122,7 +122,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-munchmill": {
   "ks": "dfb81103-2a48-4752-938a-b851625ae79f",
@@ -183,7 +183,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-turtle": {
   "ks": "634db7c3-35bc-4a80-b160-c44a09cdbab8",
