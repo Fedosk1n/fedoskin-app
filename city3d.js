@@ -19,7 +19,7 @@ import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=4';
 import { addCitySound } from './city3d-sound.js?v=1';
 import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=10';
-import { cityGraphicsMenu, cityPixelRatio, cityFramePacer } from './city3d-graphics.js?v=1';
+import { cityGraphicsMenu, cityPixelRatio, cityFramePacer, recommendCitySettings, supportedCityFPS } from './city3d-graphics.js?v=2';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -1257,22 +1257,59 @@ async function boot() {
     if (sh.mapSize.x !== w || sh.mapSize.y !== h) { sh.mapSize.set(w, h); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   };
   const pace = cityFramePacer();
+  let trialResolution, observeFrame;
+  const pixelRatio = (preset, w, h) => cityPixelRatio(preset, w, h, devicePixelRatio || 1, maxW, maxH);
+  function sameSize(a, b) {
+    const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
+    const left = pixelRatio(a, w, h), right = pixelRatio(b, w, h);
+    return Math.floor(w * left) === Math.floor(w * right) && Math.floor(h * left) === Math.floor(h * right);
+  }
   const resize = () => {
     const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
-    const ratio = cityPixelRatio(graphics.settings.resolution, w, h, devicePixelRatio || 1, maxW, maxH);
+    const ratio = pixelRatio(trialResolution || graphics.settings.resolution, w, h);
+    const viewport = fin.uniforms.uR.value;
+    if (viewport.x === w && viewport.y === h && renderer.getPixelRatio() === ratio) return;
     renderer.setDrawingBufferSize(w, h, ratio);
     // The composer receives integer physical sizes, including its bloom chain. The camera stays in viewport units.
     comp.setSize(Math.max(1, cv.width), Math.max(1, cv.height));
     camera.aspect = w / h;
     const halfWidth = 4.3, dist = 18;
     camera.fov = clamp(2 * Math.atan(halfWidth / dist / camera.aspect) * 180 / Math.PI, 30, 52);
-    camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows();
+    camera.updateProjectionMatrix(); viewport.set(w, h); fitShadows();
   };
+  function sampleResolution(resolution, signal) {
+    trialResolution = resolution;
+    resize(); pace.reset();
+    return new Promise(resolve => {
+      let first, previous, started;
+      const intervals = [];
+      function finish() {
+        observeFrame = null;
+        clearTimeout(timeout);
+        signal.removeEventListener('abort', finish);
+        resolve(supportedCityFPS(intervals));
+      }
+      const timeout = setTimeout(finish, 1850);
+      signal.addEventListener('abort', finish, { once: true });
+      observeFrame = now => {
+        first ??= now;
+        if (now - first < 180) return;
+        started ??= now;
+        if (previous !== undefined) intervals.push(now - previous);
+        previous = now;
+        if (now - started >= 660) finish();
+      };
+    });
+  }
+  async function checkGraphics(signal) {
+    try {
+      return await recommendCitySettings(sampleResolution, sameSize, signal);
+    } finally {
+      trialResolution = null;
+      resize(); pace.reset();
+    }
+  }
   addEventListener('resize', resize); resize();
-  graphics.enable(() => !W.lock && !GAME.busy() && !$('#lookDialog').open, (settings, previous) => {
-    if (settings.resolution !== previous.resolution) resize();
-    if (settings.fps !== previous.fps) pace.reset();
-  });
   setupInput(cv, camera);
   function compileDistrict() {
     try {
@@ -1313,7 +1350,7 @@ async function boot() {
     nextFrame = requestAnimationFrame(frame);
     // The turntable overlay has its own beat clock and input. Leave the dimmed street frame in place.
     if (GAME.scratchActive()) { last = undefined; return; }
-    if (!pace.shouldDraw(now, graphics.settings.fps)) return;
+    if (!pace.shouldDraw(now, trialResolution ? 120 : graphics.settings.fps)) return;
     const c0 = performance.now(), iv = last === undefined ? 0 : now - last;
     const dt = clamp(iv / 1000, 0, .05); worst = Math.max(worst, iv); last = now;
     frameNumber++;
@@ -1386,10 +1423,16 @@ async function boot() {
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
     comp.render(dt);
+    observeFrame?.(now);
     if (firstFrame) {
       firstFrame = false;
       last = undefined;   // Shader compilation and the initial drawing-buffer setup are not steady-state FPS.
       $('#cityLoading').hidden = true;
+      graphics.enable(() => !W.lock && !GAME.busy() && !$('#lookDialog').open, (settings, previous) => {
+        if (trialResolution) return;
+        if (settings.resolution !== previous.resolution) resize();
+        if (settings.fps !== previous.fps) pace.reset();
+      }, checkGraphics);
       if (TOUCH) warmDistrictTextures(scene, renderer, true);
     }
     SB.tick();
