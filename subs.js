@@ -31,7 +31,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "fr-turtle-freeze-variations": {
   "ks": "",

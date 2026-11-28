@@ -87,8 +87,12 @@ window.APP_CONFIG = {
     "en": "dub-fr-one-hand-freeze-en-voice-d1b8b8696f06.mp4"
    },
    "mux": {
-    "en": "dub-fr-one-hand-freeze-en-voice-f1757d762385.mp4"
-   }
+    "en": "dub-fr-one-hand-freeze-en-voice-f1757d762385.mp4",
+    "ja": "dub-fr-one-hand-freeze-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "pw-swipes": {
    "media": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba",
