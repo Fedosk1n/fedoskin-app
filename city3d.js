@@ -358,6 +358,7 @@ function batchStaticProps(root) {
   }
   collect(root);
 
+  const batches = [];
   for (const { material, parts } of groups.values()) {
     if (parts.length < 2) continue;
     const geometry = mergePositions(parts.map(({ object, matrix }) => ({ geo: object.geometry, e: matrix.elements })));
@@ -392,6 +393,10 @@ function batchStaticProps(root) {
     merged.castShadow = parts[0].object.castShadow;
     merged.receiveShadow = parts[0].object.receiveShadow;
     merged.matrixAutoUpdate = false;
+    batches.push({ merged, parts });
+  }
+  // Prepare all batches before replacing any meshes, so a failing build leaves the source model intact.
+  for (const { merged, parts } of batches) {
     root.add(merged);
     for (const { object } of parts) {
       object.castShadow = false;
@@ -1288,6 +1293,7 @@ async function boot() {
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit, returnToMat, batchProps: queueYardProps,
+    batchStageProps: TOUCH ? batchStaticProps : null,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
