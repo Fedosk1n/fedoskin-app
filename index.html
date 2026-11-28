@@ -1124,6 +1124,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-steps>li>span{display:block;margin-top:3px;font-size:13px;line-height:1.4;color:var(--soft)}
 .cr-confirm{display:flex;align-items:center;gap:11px;margin-top:9px;cursor:pointer;font-size:13px;line-height:1.4;min-height:44px}
 .cr-confirm input{width:22px;height:22px;flex:none;margin:0;accent-color:#81D9BA}
+.cr-chat-hint{margin:4px 0 0;padding:2px 0 2px 11px;border-inline-start:2px solid #568673;color:var(--soft);font-size:13px;line-height:1.45}
+.cr-chat-hint b{display:block;margin-bottom:3px;color:#B8F2DB;font-size:14px}
 .cr-action{width:100%;margin-top:12px;min-height:50px;padding:8px 12px;line-height:1.25}
 .cr-action:disabled{background:var(--surface-2);color:var(--muted);cursor:default}
 #cryptoSheet :is(button,input):focus-visible,.cr-public:focus-visible{outline:2px solid #A4DFC9;outline-offset:2px}
@@ -1650,6 +1652,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div id="cryptoConfirm" hidden>
         <label class="cr-confirm"><input id="cryptoAck" type="checkbox"><span>Я выберу USDT в сети TRON (TRC-20) и сверю сумму к получению.</span></label>
       </div>
+      <p class="cr-chat-hint" id="orderChatHint" hidden><b>Пиши на своём языке</b><span>Во встроенном чате при включённом ИИ-переводе тренер увидит твой текст по-русски, а ты — его ответ на своём языке.</span></p>
       <button type="button" class="btn btn-accent cr-action" id="cryptoContinue" hidden></button>
     </div>
     <div id="cryptoDetails" hidden>
@@ -1956,7 +1959,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=14"></script>
+<script src="i18n.js?v=15"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
@@ -4972,7 +4975,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   $('#chatName').addEventListener('change', () => { const v = $('#chatName').value.trim(); if (v.length >= 2) { chSet('fedoskin-chat-name', v); $('#chatNameRow').hidden = true; } });
   $('#ccChat').addEventListener('click', () => openChat('', ''));
-  function chPaintEntry(){ $('#ccChat').hidden = !chHas(); $('#svcMsgr').hidden = !CHAT.on; chPaintBadge(); }
+  function chPaintEntry(){ $('#ccChat').hidden = !chHas(); $('#svcMsgr').hidden = !CHAT.on; chPaintBadge(); paintOrderChatHint(); }
   setTimeout(async () => { // is the chat switched on (the coach's bot connected)?
     if (!CH_BASE) return;
     try { CHAT.on = !!(await fetch(CH_BASE + '/chat/on', { cache: 'no-store' }).then(x => x.json())).on; } catch (_) {}
@@ -5036,7 +5039,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       try { sendEv('tg', s.id, 'chat'); } catch (_) {}
       openChat(orderText(s), s.id);
     };
-    if (+(LANG === 'ru' ? s.rub : s.usd) > 0) showCrypto({ mode: 'order', kind: 'service', item: s, opener, next });
+    if (+(LANG === 'ru' ? s.rub : s.usd) > 0) showCrypto({ mode: 'order', kind: 'service', item: s, opener, next, messenger });
     else next();
   }
   function openContact(text, noChat){
@@ -5077,6 +5080,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const cryptoCoursePending = id => crsOwns(id) || crsOrder(id)?.st === 'paid';
   let cryptoFlow = null, cryptoLeaving = false;
 
+  function paintOrderChatHint(){
+    $('#orderChatHint').hidden = !(CHAT.on && cryptoFlow?.mode === 'order' && !cryptoFlow.messenger);
+  }
   function paintCryptoBtn(){ $('#cryptoBtn').hidden = !cryptoAvailable(curSvc); }
   function cryptoCopy(text, msg){
     const ok = () => toast(msg);
@@ -5139,6 +5145,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     next.hidden = mode === 'info';
     next.disabled = mode === 'pay';
     next.textContent = mode === 'order' ? T('К обсуждению заказа') : mode === 'course' ? T('К выбору оплаты') : T('К реквизитам');
+    paintOrderChatHint();
     cryptoHeading.textContent = T('Инструкция по оплате криптой');
     cryptoStep(1);
   }

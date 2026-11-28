@@ -357,6 +357,17 @@ t('Важно:', 'Important:', 'Importante:', 'Importante:', 'Important :', 'Wic
 t('Как оплатить', 'How to pay', 'Cómo pagar', 'Como pagar', 'Comment payer', 'So bezahlst du', '支払い方法', '결제 방법', '如何付款')
 t('Как оплатить криптой', 'How to pay with crypto', 'Cómo pagar con cripto', 'Como pagar com cripto', 'Comment payer en crypto',
   'So bezahlst du mit Krypto', '支払い方法（暗号資産）', '결제 방법 (암호화폐)', '如何付款（加密货币）')
+t('Пиши на своём языке', 'Write in your language', 'Escribe en tu idioma', 'Escreva no seu idioma', 'Écris dans ta langue',
+  'Schreib in deiner Sprache', '自分の言葉でメッセージを', '편한 언어로 메시지를 보내', '用自己的语言发消息')
+t('Во встроенном чате при включённом ИИ-переводе тренер увидит твой текст по-русски, а ты — его ответ на своём языке.',
+  'When AI translation is enabled in the in-app chat, your coach sees your message in Russian and you get the reply in your language.',
+  'Si la traducción con IA está activada en el chat de la app, el entrenador verá tu mensaje en ruso y tú recibirás la respuesta en tu idioma.',
+  'Quando a tradução por IA está ativada no chat do app, o treinador lê sua mensagem em russo e você recebe a resposta no seu idioma.',
+  'Quand la traduction par IA est activée dans le chat de l’appli, ton coach lit ton message en russe et tu reçois sa réponse dans ta langue.',
+  'Ist die KI-Übersetzung im App-Chat aktiviert, liest dein Coach deine Nachricht auf Russisch und du bekommst seine Antwort in deiner Sprache.',
+  'アプリ内チャットでAI翻訳が有効なら、コーチにはロシア語で届き、返信はあなたの言語で読めます。',
+  '앱 내 채팅에서 AI 번역이 켜져 있으면 코치는 메시지를 러시아어로 읽고, 너는 답장을 네 언어로 받아볼 수 있어.',
+  '应用内聊天开启 AI 翻译时，教练会用俄语阅读你的消息，你也可以用自己的语言阅读回复。')
 t('Открой приложение, где есть USDT', 'Open the app where you have USDT', 'Abre la app donde tienes USDT', 'Abra o app onde você tem USDT', 'Ouvre l’appli où tu as tes USDT', 'Öffne die App, in der du USDT hast', 'USDTがあるアプリを開く', 'USDT가 있는 앱을 열어', '打开有 USDT 的应用')
 t('Биржа (Binance, Bybit, OKX, Kraken) или кошелёк → «Вывод» или «Отправить» → USDT.', 'An exchange (Binance, Bybit, OKX, Kraken) or a wallet → “Withdraw” or “Send” → USDT.', 'Un exchange (Binance, Bybit, OKX, Kraken) o una billetera → «Retirar» o «Enviar» → USDT.', 'Uma corretora (Binance, Bybit, OKX, Kraken) ou carteira → “Sacar” ou “Enviar” → USDT.', 'Une plateforme (Binance, Bybit, OKX, Kraken) ou un portefeuille → « Retirer » ou « Envoyer » → USDT.', 'Eine Börse (Binance, Bybit, OKX, Kraken) oder ein Wallet → „Auszahlen“ oder „Senden“ → USDT.', '取引所（Binance、Bybit、OKX、Kraken）またはウォレット →「出金」か「送金」→ USDT。', '거래소(Binance, Bybit, OKX, Kraken)나 지갑 → ‘출금’ 또는 ‘보내기’ → USDT.', '交易所（Binance、Bybit、OKX、Kraken）或钱包 →「提现」或「发送」→ USDT。')
 t('Выбери сеть TRON (TRC-20)', 'Choose the TRON (TRC-20) network', 'Elige la red TRON (TRC-20)', 'Escolha a rede TRON (TRC-20)', 'Choisis le réseau TRON (TRC-20)', 'Wähle das Netzwerk TRON (TRC-20)', 'ネットワークはTRON（TRC-20）を選ぶ', 'TRON(TRC-20) 네트워크를 선택해', '选择 TRON（TRC-20）网络')
