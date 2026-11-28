@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=37';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=72';
+import { initGame } from './city3d-game.js?v=73';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=9';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
@@ -18,6 +18,7 @@ import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=3';
 import { addCitySound } from './city3d-sound.js?v=1';
 import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=9';
+import { cityGraphicsMenu, cityPixelRatio, cityFramePacer } from './city3d-graphics.js?v=1';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -1123,7 +1124,12 @@ function warmDistrictTextures(scene, renderer, defer) {
 
 async function boot() {
   const cv = $('#c3');
+  const graphics = cityGraphicsMenu();
   try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); } catch (_) { cityLoadFailed($('#cityError').textContent); return; }
+  const gl = renderer.getContext();
+  const maxBuffer = Math.min(renderer.capabilities.maxTextureSize, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
+  const [viewportW, viewportH] = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+  const maxW = Math.min(maxBuffer, viewportW), maxH = Math.min(maxBuffer, viewportH);
   maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const fontStyles = $('#cityFonts');
   const loadFonts = () => Promise.allSettled([document.fonts.load('80px Anton'), document.fonts.load('900 40px Inter')]);
@@ -1145,9 +1151,6 @@ async function boot() {
       return null;
     }) : null,
   ]);
-  const PR = Math.min(devicePixelRatio || 1, TOUCH ? 2 : 1.5);
-  renderer.setPixelRatio(PR);
-  renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#0a0c11'); scene.fog = new THREE.FogExp2('#0a0c11', .016);
@@ -1162,7 +1165,7 @@ async function boot() {
   moon.shadow.mapSize.set(2048, 2048); moon.shadow.camera.left = -16; moon.shadow.camera.right = 16; moon.shadow.camera.top = 16; moon.shadow.camera.bottom = -16; moon.shadow.camera.near = 1; moon.shadow.camera.far = 60; moon.shadow.bias = -.0005; moon.shadow.normalBias = .03; moon.shadow.radius = 4;
   scene.add(moon, moon.target);
 
-  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade] = await assets;
+  const [[, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade]] = await Promise.all([assets, graphics.ready]);
   scene.environmentIntensity = .45;
   if (reflection) scene.environment = reflection;
   else {
@@ -1219,6 +1222,8 @@ async function boot() {
   // tone-mapped picture was written to a full-size half-float buffer and read back by a second pass — one more full-screen write and read
   // every frame (≈1.3 million pixels on a phone) for the same result. The grade runs on the same numbers in the same order.
   const out = new OutputPass();
+  // The final pass writes directly to the screen. Reuse the same multisampled scene buffer each frame.
+  out.needsSwap = false;
   Object.assign(out.uniforms, { uT: { value: 0 }, uR: { value: new THREE.Vector2(1, 1) } });
   out.material.fragmentShader = out.material.fragmentShader.replace('varying vec2 vUv;', 'uniform float uT; uniform vec2 uR;\nvarying vec2 vUv;')
     .replace(/\}\s*$/, '  { vec4 c = gl_FragColor; vec2 d = (vUv - .5) * vec2(uR.x / uR.y, 1.); float v = smoothstep(1.05, .32, length(d) * 1.25); c.rgb *= mix(.42, 1., v); float l = dot(c.rgb, vec3(.299,.587,.114)); c.rgb += vec3(-.01, .0, .03) * (1. - l) * (1. - l); float n = fract(sin(dot(vUv * uR + fract(uT) * 91.7, vec2(12.9898, 78.233))) * 43758.5453); c.rgb += (n - .5) * .03; gl_FragColor = c; }\n}');
@@ -1248,14 +1253,27 @@ async function boot() {
     const tx = 2048 / 32, w = Math.min(2048, Math.ceil((cm.right - cm.left) * tx / 64) * 64), h = Math.min(2048, Math.ceil((cm.top - cm.bottom) * tx / 64) * 64);
     if (sh.mapSize.x !== w || sh.mapSize.y !== h) { sh.mapSize.set(w, h); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   };
-  const resize = () => { const w = innerWidth, h = innerHeight;
-    renderer.setSize(w, h, false); comp.setSize(w, h);
-    camera.aspect = w / h; const hw = 4.3, dist = 18; camera.fov = clamp(2 * Math.atan(hw / dist / camera.aspect) * 180 / Math.PI, 30, 52); camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows(); };
+  const pace = cityFramePacer();
+  const resize = () => {
+    const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
+    const ratio = cityPixelRatio(graphics.settings.resolution, w, h, devicePixelRatio || 1, maxW, maxH);
+    renderer.setDrawingBufferSize(w, h, ratio);
+    // The composer receives integer physical sizes, including its bloom chain. The camera stays in viewport units.
+    comp.setSize(Math.max(1, cv.width), Math.max(1, cv.height));
+    camera.aspect = w / h;
+    const halfWidth = 4.3, dist = 18;
+    camera.fov = clamp(2 * Math.atan(halfWidth / dist / camera.aspect) * 180 / Math.PI, 30, 52);
+    camera.updateProjectionMatrix(); fin.uniforms.uR.value.set(w, h); fitShadows();
+  };
   addEventListener('resize', resize); resize();
+  graphics.enable(() => !W.lock && !GAME.busy() && !$('#lookDialog').open, (settings, previous) => {
+    if (settings.resolution !== previous.resolution) resize();
+    if (settings.fps !== previous.fps) pace.reset();
+  });
   setupInput(cv, camera);
   function compileDistrict() {
     try {
-      renderer.setRenderTarget(rt);
+      renderer.setRenderTarget(comp.readBuffer);
       renderer.compile(scene, camera);
     } catch (e) {
       console.warn(e);
@@ -1283,6 +1301,7 @@ async function boot() {
   let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
   document.addEventListener('visibilitychange', () => {
     last = undefined;
+    pace.reset();
     fpsN = fpsT = worst = cpuS = cpuN = 0;
   });
   const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
@@ -1291,6 +1310,7 @@ async function boot() {
     nextFrame = requestAnimationFrame(frame);
     // The turntable overlay has its own beat clock and input. Leave the dimmed street frame in place.
     if (GAME.scratchActive()) { last = undefined; return; }
+    if (!pace.shouldDraw(now, graphics.settings.fps)) return;
     const c0 = performance.now(), iv = last === undefined ? 0 : now - last;
     const dt = clamp(iv / 1000, 0, .05); worst = Math.max(worst, iv); last = now;
     frameNumber++;
@@ -1300,7 +1320,8 @@ async function boot() {
     const hb = window.cityMusic?.beat();
     const tb = hb != null && hb >= 0 ? hb : ((now - W.t0) / 1000) * 88 / 60;
     W.ambient.view(camera, firstFrame || W.camSnap);
-    updateHero(dt, tb); updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
+    if (!graphics.open) updateHero(dt, tb);
+    updateCrew(tb, dt); for (const f of W.tickers) f(dt, now / 1000, tb); GAME.update(dt);
     // camera follows with a little lead in the walking direction; W.uZoom = the player's own zoom (two fingers / wheel), actions and
     // battles take over with their own close-ups (W.camT) and give it back afterwards
     const hp = W.hero.root.position, s = W.hero.st, zW = W.zoom || 1;

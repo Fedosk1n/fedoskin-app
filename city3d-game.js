@@ -1934,7 +1934,7 @@ export function initGame(ctx) {
   }
 
   let cyT = 0, storyWatchStart = null;
-  const storyOverlays = ['#cityLoading', '#alpha', '#g3info', '#lookDialog'].map($);
+  const storyOverlays = ['#cityLoading', '#alpha', '#g3info', '#lookDialog', '#graphicsDialog'].map($);
   const storyNear = $('#g3storyNear');
   const resetWatch = () => { storyWatchStart = null; };
   document.addEventListener('visibilitychange',resetWatch);
@@ -1942,6 +1942,7 @@ export function initGame(ctx) {
   addEventListener('pageshow',resetWatch);
   // ---------- per frame ----------
   function update(dt) {
+    const [loading, alpha, sheet, appearance, graphics] = storyOverlays;
     if (P) paintTick(dt);
     if (A) actTick(dt);
     if (Y) { djMix.tick(dt);
@@ -1999,11 +2000,10 @@ export function initGame(ctx) {
       const key = o => !o ? null : o.paint ? 'p:' + o.g.c.id : o.place ? 'l:' + o.place.id : 'c:' + o.c.id;
       if (key(best) !== key(near)) { near = best; paintAct(); }
       // to-do «watch a turn in the cypher»: stand near the circle for 8 s
-      if (W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
+      if (!graphics.open && W.cyph && Math.hypot(p.x - W.cyph.x, p.z - W.cyph.z) < 5.5) { cyT += dt; if (cyT > 8) { cyT = -1e9; bumpGoal('cypher'); } }
     }
-    const [loading, alpha, sheet, appearance] = storyOverlays;
     const exploring = !traveling && !W.lock && !B && !A && !P && !choosing && !festival.busy() && !document.hidden &&
-      loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open && !$('#g3res').classList.contains('on');
+      loading.hidden && alpha.hidden && !sheet.classList.contains('on') && !appearance.open && !graphics.open && !$('#g3res').classList.contains('on');
     if (W.guideView && (!exploring || performance.now() >= W.guideView.until)) {
       if (W.guideView.snap) { W.camSnap = true; W.zoom = W.uZoom; }
       W.guideView = null;
