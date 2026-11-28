@@ -69,8 +69,12 @@ window.APP_CONFIG = {
     "en": "dub-pw-reverse-1990-en-voice-d209b09f.mp4"
    },
    "mux": {
-    "en": "dub-pw-reverse-1990-en-voice-b424df2e-mux.mp4"
-   }
+    "en": "dub-pw-reverse-1990-en-voice-b424df2e-mux.mp4",
+    "ja": "dub-pw-reverse-1990-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "pw-headspin": {
    "media": "8a2e472e-d16f-4c45-9032-b4781ba7d840",

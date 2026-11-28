@@ -153,7 +153,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-swipes-flare": {
   "ks": "6faac4e1-de8a-4952-8d09-6134e13ee34a",
