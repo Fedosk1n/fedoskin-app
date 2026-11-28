@@ -19,7 +19,7 @@ export async function loadMocap(url = 'anim/bboy.json?v=2') {
   if (DATA) return DATA;
   const [capture, authored] = await Promise.all([
     fetch(url).then(response => response.json()),
-    fetch(new URL('./anim/city-breaking.json?v=7', import.meta.url))
+    fetch(new URL('./anim/city-breaking.json?v=8', import.meta.url))
       .then(response => response.ok ? response.json() : null).catch(() => null),
     loadCharacterFinish(),
   ]);
@@ -1257,7 +1257,7 @@ export function mocapPerson(look, opt = {}) {
     if (hoodBone) {
       // The folded fabric compresses under the shoulder load, using the same bone for the mesh and contact tests.
       const backspinTime = /^City_Backspin/.test(J.cur) ? a.time : 0;
-      const flatten = .91 * smooth(.68, 1.06, backspinTime) * (1 - smooth(2.20, 2.51, backspinTime));
+      const flatten = .91 * smooth(.80, 1.10, backspinTime) * (1 - smooth(2.20, 2.51, backspinTime));
       hoodBone.scale.z = 1 - flatten;
       hoodBone.position.z = -.094 * dp * flatten;
     }

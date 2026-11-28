@@ -12,7 +12,7 @@
 // The line is not invented: it is MEASURED from the same motion capture (the angle of the legs round the hips, frame by frame), and
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
-import { mocapPerson, getClip } from './city3d-mocap.js?v=37';
+import { mocapPerson, getClip } from './city3d-mocap.js?v=38';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 // the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
