@@ -123,6 +123,26 @@ window.APP_CONFIG = {
     "en": "dub-fr-turtle-freeze-variations-en-voice-af41949bd52c.mp4"
    },
    "preferMux": true
+  },
+  "pw-turtle": {
+   "media": "634db7c3-35bc-4a80-b160-c44a09cdbab8",
+   "tracks": {
+    "en": "dub-pw-turtle-en-voice-3828ebf3d7b4.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-turtle-en-voice-91eaf160efbe.mp4"
+   },
+   "preferMux": true
+  },
+  "tr-airchair": {
+   "media": "tr-airchair-ke4ejzel.mp4",
+   "tracks": {
+    "en": "dub-tr-airchair-en-voice-c24bab45f740.mp4"
+   },
+   "mux": {
+    "en": "dub-tr-airchair-en-voice-9b6bb5d48acc.mp4"
+   },
+   "preferMux": true
   }
  }
 };

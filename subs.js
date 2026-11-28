@@ -198,7 +198,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "pw-windmill": {
   "ks": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
@@ -244,7 +244,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "tr-windmill-head": {
   "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df",
