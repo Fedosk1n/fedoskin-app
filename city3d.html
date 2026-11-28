@@ -10,7 +10,7 @@
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js?v=2", "three/addons/": "./vendor/three/addons/" } }
 </script>
-<link rel="modulepreload" href="city3d.js?v=79">
+<link rel="modulepreload" href="city3d.js?v=80">
 <link rel="modulepreload" href="vendor/three/three.module.js?v=2">
 <link rel="modulepreload" href="vendor/three/three.core.js">
 <link rel="preload" as="fetch" crossorigin href="anim/bboy.json?v=2">
@@ -23,7 +23,7 @@
   #cityLoading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 4;
     background: linear-gradient(180deg, #10141c, #10141cb8 40%, #10141c), #141923 url("img/city3d.jpg?v=1") center / cover no-repeat; }
   #cityLoading[hidden] { display: none; }
-  #cityLoading:not([hidden]) ~ .hud :is(.ttl, #lookOpen),
+  #cityLoading:not([hidden]) ~ .hud :is(.ttl, #lookOpen, #graphicsOpen),
   #cityLoading:not([hidden]) ~ :is(#hint, #ztip) { visibility: hidden; }
   .city-load-status { display: grid; justify-items: center; gap: 14px; padding: 18px;
     text-align: center; font: 700 16px/1.4 Inter, system-ui, sans-serif; }
@@ -39,7 +39,32 @@
   .hb:active { scale: .94; }
   .ttl { flex: 1; text-align: center; font: 400 17px Anton, sans-serif; letter-spacing: .06em; text-shadow: 0 2px 8px #000; pointer-events: none; }
   .ttl small { display: block; font: 600 10px Inter, sans-serif; letter-spacing: .14em; color: #E2611A; opacity: .9; }
-  .g3fight #lookOpen { display: none; }
+  .g3fight :is(#lookOpen, #graphicsOpen) { display: none; }
+  #graphicsOpen { flex: none; padding: 0; font-size: 20px; }
+  html:has(#graphicsDialog[open]), body:has(#graphicsDialog[open]) { touch-action: pan-y; }
+  #graphicsDialog { box-sizing: border-box; width: min(414px, calc(100% - 26px)); max-height: 90dvh; overflow: auto; touch-action: pan-y;
+    margin: auto; padding: clamp(14px, 5vw, 22px); color: #F2EFE8; background: #171920; border: 1px solid #514449; border-radius: 21px; box-shadow: 0 24px 80px #0009; }
+  #graphicsDialog::backdrop { background: #080a10ba; }
+  #graphicsDialog form { display: grid; gap: 16px; }
+  #graphicsDialog h2 { margin: 0; font: 750 clamp(21px, 6vw, 26px)/1.16 Inter, system-ui, sans-serif; }
+  #graphicsDialog fieldset { border: 0; min-width: 0; padding: 0; margin: 0; }
+  #graphicsDialog legend { padding: 0 0 8px; font-size: 14px; font-weight: 700; }
+  .graphics-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .graphics-options.graphics-rates { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .graphics-options label { position: relative; display: block; cursor: pointer; }
+  .graphics-options input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+  .graphics-options label > span { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 52px; box-sizing: border-box;
+    padding: 5px 1px; border: 1px solid #55525a; border-radius: 10px; background: #22252e; font: 750 15px/1.18 Inter, system-ui, sans-serif; }
+  .graphics-rates label > span { min-height: 46px; }
+  .graphics-options small { font-size: 11px; color: #cfc4c0; font-weight: 600; }
+  .graphics-options input:checked + span { border-color: #f5a779; background: #413028; color: #ffd9b6; }
+  .graphics-options input:focus-visible + span, #graphicsDialog menu > :focus-visible { outline: 2px solid #ffd8ac; outline-offset: 2px; }
+  #graphicsDialog p { margin: -6px 0 0; color: #cac0be; font-size: 12px; line-height: 1.4; }
+  #graphicsDialog menu { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 8px; padding: 0; margin: 0; }
+  #graphicsDialog menu > * { display: grid; place-items: center; min-height: 44px; padding: 4px 6px; box-sizing: border-box; border-radius: 10px;
+    border: 1px solid #55525a; background: #22252e; color: #F2EFE8; text-align: center; text-decoration: none; font: 750 13px/1.3 Inter, system-ui, sans-serif; cursor: pointer; }
+  #graphicsDialog menu [value=save] { background: #efa575; border-color: #efa575; color: #251811; }
+  #graphicsDialog[data-entry=true] menu [value=cancel], #graphicsDialog[data-entry=false] menu a { display: none; }
   #lookDialog { width: min(408px, calc(100% - 34px)); max-height: 85dvh; border: 1px solid #59505A; border-radius: 20px; padding: 18px; color: #F2EFE8; background: #171922; box-sizing: border-box; overflow: auto; touch-action: pan-y; }
   #lookDialog::backdrop { background: #040409a8; }
   #lookDialog form { display: grid; gap: 13px; }
@@ -101,6 +126,7 @@
 <div class="hud">
   <a class="hb" href="./?city=play" id="back" aria-label="Назад">←</a>
   <div class="ttl">ДВОР<small>α АЛЬФА-ВЕРСИЯ</small></div>
+  <button class="hb" id="graphicsOpen" type="button" aria-label="Настройки графики" disabled>⚙</button>
   <button class="hb" id="lookOpen" type="button" aria-label="Внешность" disabled>👤</button>
   <button class="hb" id="mus" type="button" aria-label="Музыка">🎵</button>
 </div>
@@ -114,13 +140,41 @@
     <menu><button type="submit" value="cancel" data-copy="Отмена"></button><button type="submit" value="save" data-copy="Сохранить"></button></menu>
   </form>
 </dialog>
+<dialog id="graphicsDialog" aria-labelledby="graphicsTitle" aria-describedby="graphicsHelp">
+  <form method="dialog">
+    <h2 id="graphicsTitle" data-copy="Настройки графики">Настройки графики</h2>
+    <fieldset>
+      <legend data-copy="Разрешение">Разрешение</legend>
+      <div class="graphics-options">
+        <label><input type="radio" name="resolution" value="hd"><span>HD<small>720p</small></span></label>
+        <label><input type="radio" name="resolution" value="fhd" checked><span>FHD<small>1080p</small></span></label>
+        <label><input type="radio" name="resolution" value="ultra"><span>Ultra<small>1440p</small></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend data-copy="Лимит FPS">Лимит FPS</legend>
+      <div class="graphics-options graphics-rates">
+        <label><input type="radio" name="fps" value="30"><span>30</span></label>
+        <label><input type="radio" name="fps" value="60" checked><span>60</span></label>
+        <label><input type="radio" name="fps" value="90"><span>90</span></label>
+        <label><input type="radio" name="fps" value="120"><span>120</span></label>
+      </div>
+    </fieldset>
+    <p id="graphicsHelp" data-copy="Экран и устройство определяют доступное разрешение и FPS.">Экран и устройство определяют доступное разрешение и FPS.</p>
+    <menu>
+      <a href="./?city=play" data-copy="Назад">Назад</a>
+      <button type="submit" value="cancel" data-copy="Отмена">Отмена</button>
+      <button type="submit" value="save">Войти в город</button>
+    </menu>
+  </form>
+</dialog>
 <div id="joy"><i></i></div>
 <div id="hint">Веди пальцем по экрану — герой пойдёт</div>
 <div id="ztip"><i><b></b><b></b></i><span>Двумя пальцами — отдалить или приблизить карту</span></div>
 <div id="err" role="alert"><p id="cityError">Этот телефон не умеет показывать 3D-графику (WebGL).</p><a href="./?city=play">Вернуться в приложение</a></div>
 <div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
-<script defer src="city3d-i18n.js?v=16"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
+<script defer src="city3d-i18n.js?v=17"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
 <script defer src="rhythm.js?v=34"></script>
 <script defer src="city3d-audio.js?v=2"></script>
 <script>
@@ -162,6 +216,8 @@
   window.cityLoadFailed = (message = loadCopy[1]) => {
     window.cityMusic?.stop();
     loading.hidden = box.hidden = true;
+    if ($('#graphicsDialog').open) $('#graphicsDialog').close();
+    $('#graphicsOpen').disabled = true;
     $('#cityError').textContent = message;
     err.style.display = 'flex';
   };
@@ -179,7 +235,13 @@
     // back: to where the app was (its «Город» screen) if we came from it, else open the app on that screen
     $('#back').addEventListener('click', e => { try { const r = new URL(document.referrer); if (r.origin === location.origin && r.pathname.replace(/index\.html$/, '') === location.pathname.replace(/city3d\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); } } catch (_) {} });
     let seen = false; try { seen = localStorage.getItem('fedoskin-city3d-alpha') === '1'; } catch (_) {}
-    if (!seen && err.style.display !== 'flex') { box.hidden = false; $('#aOk').addEventListener('click', e => { e.stopPropagation(); box.hidden = true; try { localStorage.setItem('fedoskin-city3d-alpha', '1'); } catch (_) {} }); }
+    if (!seen) {
+      const showAlpha = () => { if (err.style.display !== 'flex') box.hidden = false; };
+      const graphics = $('#graphicsDialog');
+      if (graphics.open) graphics.addEventListener('close', showAlpha, { once: true });
+      else showAlpha();
+      $('#aOk').addEventListener('click', e => { e.stopPropagation(); box.hidden = true; try { localStorage.setItem('fedoskin-city3d-alpha', '1'); } catch (_) {} });
+    }
   });
 })();
 </script>
@@ -188,6 +250,10 @@
 <script defer src="lessons.js"></script>
 <script defer src="battle-study.js?v=1"></script>
 <script defer src="city-gfx.js?v=11"></script>
-<script type="module" src="city3d.js?v=79" onerror="cityLoadFailed()"></script>
+<script type="module">
+import { cityGraphicsMenu } from './city3d-graphics.js?v=1';
+cityGraphicsMenu();
+</script>
+<script type="module" src="city3d.js?v=80" onerror="cityLoadFailed()"></script>
 </body>
 </html>
