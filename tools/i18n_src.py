@@ -1164,6 +1164,14 @@ t('Ящик не загрузился. Проверь соединение.', 'T
 t('Уже в коллекции', 'Already in your collection', 'Ya está en tu colección', 'Já está na sua coleção', 'Déjà dans ta collection', 'Bereits in deiner Sammlung', 'コレクションに所持済み', '이미 컬렉션에 있음', '已在收藏中')
 t('Добавлено в гардероб', 'Added to your wardrobe', 'Añadido a tu armario', 'Adicionado ao seu guarda-roupa', 'Ajouté à ta garde-robe', 'Zur Garderobe hinzugefügt', 'ワードローブに追加', '옷장에 추가됨', '已添加到衣柜')
 
+t('Предпросмотр', 'Preview', 'Vista previa', 'Prévia', 'Aperçu', 'Vorschau', 'プレビュー', '미리 보기', '预览')
+t('Шансы выпадения', 'Drop chances', 'Probabilidades', 'Chances de obtenção', 'Chances de tirage', 'Fundchancen', '入手確率', '드롭 확률', '掉落概率')
+t('Посмотреть анимацию', 'Preview the animation', 'Ver la animación', 'Ver a animação', 'Voir l’animation', 'Animation ansehen', 'アニメーションを見る', '애니메이션 보기', '查看动画')
+t('Пропустить анимацию', 'Skip animation', 'Omitir animación', 'Pular animação', 'Passer l’animation', 'Animation überspringen', 'アニメーションをスキップ', '애니메이션 건너뛰기', '跳过动画')
+t('Назад к ящику', 'Back to the case', 'Volver a la caja', 'Voltar à caixa', 'Retour à la caisse', 'Zurück zur Kiste', 'ケースに戻る', '상자로 돌아가기', '返回装备箱')
+t('Открываем ящик…', 'Opening the case…', 'Abriendo la caja…', 'Abrindo a caixa…', 'Ouverture de la caisse…', 'Kiste wird geöffnet…', 'ケースを開けています…', '상자를 여는 중…', '正在开启装备箱…')
+t('Пример предмета из ящика', 'Example of an item from the case', 'Ejemplo de objeto de la caja', 'Exemplo de item da caixa', 'Exemple d’objet dans la caisse', 'Beispiel für einen Gegenstand aus der Kiste', 'このケースのアイテム例', '이 상자에서 나오는 아이템 예시', '装备箱物品示例')
+
 t('Уже получено', 'Already claimed', 'Ya obtenido', 'Já recebido', 'Déjà récupéré', 'Bereits abgeholt', '受け取り済み', '이미 받음', '已领取')
 
 t('Кроссовки «Грань круга»', 'Circle Edge sneakers', 'Zapatillas Borde del Círculo', 'Tênis Borda da Roda', 'Baskets Bord du Cercle', 'Kreiskante-Sneaker', 'サークルエッジ・スニーカー', '서클 엣지 스니커즈', '舞圈边缘运动鞋')
