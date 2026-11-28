@@ -1,9 +1,9 @@
-import { ACTS, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES } from './city3d-campaign-data.js?v=1';
-import { createPhrase, DIRECTIONS, displayNote, MOVES, postInput, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=1';
+import { ACTS, MODE_GUIDES, MODE_NAMES, STORY_TURNS, VENUES } from './city3d-campaign-data.js?v=2';
+import { createPhrase, DIRECTIONS, displayNote, MOVES, postInput, recordPhrase, RUNNERS, TEMPOS } from './city3d-campaign-engine.js?v=2';
 import { FESTIVAL_CSS } from './city3d-campaign-style.js?v=4';
-import { examCourse, FESTIVAL_CHECKPOINTS, FESTIVAL_OFFICIAL, FESTIVAL_PRIZE, judgeFestivalExam } from './city3d-festival-exams.js?v=1';
-import { FESTIVAL_CAST, FESTIVAL_EPISODES, REVISED_TURNS, STORY_CHOICES, actAvailable, finalOrder, legacyMeeting, recordStoryDecision, storyCourse, storyDecision, storyLine, storyVenue, waitingDancer } from './city3d-festival-story.js?v=1';
-import { COMBOS, REPLY_LINES, SIGNATURES, STYLE_NAMES, comboEvents, comboInput, comboRival, playablePhrase, playableVerdict } from './city3d-festival-combos.js?v=1';
+import { examCourse, FESTIVAL_CHECKPOINTS, FESTIVAL_OFFICIAL, FESTIVAL_PRIZE, judgeFestivalExam } from './city3d-festival-exams.js?v=2';
+import { FESTIVAL_CAST, FESTIVAL_EPISODES, REVISED_TURNS, STORY_CHOICES, actAvailable, finalOrder, legacyMeeting, recordStoryDecision, storyCourse, storyDecision, storyLine, storyVenue, waitingDancer } from './city3d-festival-story.js?v=2';
+import { COMBOS, REPLY_LINES, SIGNATURES, STYLE_NAMES, comboEvents, comboInput, comboRival, playablePhrase, playableVerdict } from './city3d-festival-combos.js?v=2';
 import { LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
 import { createStoryPortrait, STORY_PORTRAIT_CSS } from './city3d-story-portraits.js?v=1';
 

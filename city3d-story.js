@@ -1,5 +1,5 @@
 import { createStoryPortrait } from './city3d-story-portraits.js?v=1';
-import { CAST } from './city3d-campaign-data.js?v=1';
+import { CAST } from './city3d-campaign-data.js?v=2';
 import { CHAPTER_ART, LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
 
 export const WATCH_TIME = 8;

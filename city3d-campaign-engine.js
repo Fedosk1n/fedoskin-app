@@ -1,4 +1,4 @@
-import { DECISIONS, EPISODES } from './city3d-campaign-data.js?v=1';
+import { DECISIONS, EPISODES } from './city3d-campaign-data.js?v=2';
 
 export const TEMPOS = { training: .85, normal: 1, quick: 1.12 };
 export const PHRASE_BEATS = 16;

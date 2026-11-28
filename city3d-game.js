@@ -24,7 +24,7 @@ import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, mountStoryPortraits, STORY_CSS } from './city3d-story.js?v=4';
 import { initFestival } from './city3d-campaign.js?v=7';
-import { loadFestivalState } from './city3d-festival-story.js?v=1';
+import { loadFestivalState } from './city3d-festival-story.js?v=2';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
 import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=4';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});

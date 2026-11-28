@@ -1,4 +1,4 @@
-import { createPhrase, phraseVerdict } from './city3d-campaign-engine.js?v=1';
+import { createPhrase, phraseVerdict } from './city3d-campaign-engine.js?v=2';
 
 const rock = 'Breakdance_Uprock', foot = 'Breakdance_Footwork_2', idle = 'Breakdance_Ready';
 const drop = 'Festival_CrossDrop', rise = 'Festival_StandThrough', reset = 'Festival_FootReset';

@@ -1,5 +1,5 @@
-import { CAST, DECISIONS, EPISODES, STORY_TURNS, VENUES, venueFor } from './city3d-campaign-data.js?v=1';
-import { loadCampaign, pieceAt, recordDecision } from './city3d-campaign-engine.js?v=1';
+import { CAST, DECISIONS, EPISODES, STORY_TURNS, VENUES, venueFor } from './city3d-campaign-data.js?v=2';
+import { loadCampaign, pieceAt, recordDecision } from './city3d-campaign-engine.js?v=2';
 
 export const FESTIVAL_CAST = { ...CAST, stitch: 'Стежок', granite: 'Гранит' };
 export const ACT_ENDS = [6, 13, 20, 28, 38, 48, 59, 60];
