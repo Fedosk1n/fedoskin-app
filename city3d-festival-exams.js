@@ -1,4 +1,4 @@
-import { createPhrase, displayNote, PHRASE_BEATS, postInput, TEMPOS } from './city3d-campaign-engine.js?v=1';
+import { createPhrase, displayNote, PHRASE_BEATS, postInput, TEMPOS } from './city3d-campaign-engine.js?v=2';
 
 export const FESTIVAL_EXAMS = [
   { id: 'pulse', name: 'Три паузы Маятника', rival: 'Маятник', bpm: 116, modes: 'ggb', precision: .88, clean: 2, variety: 2, rivalMarks: [.90, 2, 1] },
