@@ -143,6 +143,16 @@ window.APP_CONFIG = {
     "en": "dub-tr-airchair-en-voice-9b6bb5d48acc.mp4"
    },
    "preferMux": true
+  },
+  "tr-windmill-head": {
+   "media": "8da3c6ff-6f53-41ab-9f02-755358e3e5df",
+   "tracks": {
+    "en": "dub-tr-windmill-head-en-voice-077d08ab917d.mp4"
+   },
+   "mux": {
+    "en": "dub-tr-windmill-head-en-voice-28f95e163f1c.mp4"
+   },
+   "preferMux": true
   }
  }
 };
