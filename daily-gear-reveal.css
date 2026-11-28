@@ -10,6 +10,7 @@
 #lootStage[data-rarity="2"]{--spot:#d5a8f4;--halo:28%}
 #lootStage[data-rarity="3"]{--spot:#f5bf69;--halo:34%}
 #lootPoster,#lootFrames{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#lootMechanism{position:absolute;inset:0;background-size:300% 200%;background-repeat:no-repeat;pointer-events:none}
 #lootItemArt{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0;transform:translate(5%,21%) scale(.56) perspective(310px) rotateX(31deg) rotate(-12deg);transition:opacity .16s ease,transform .31s cubic-bezier(.16,.75,.28,1)}
 #lootItemShadow{position:absolute;inset-inline-start:43%;top:67%;transform:translateX(-50%) scale(.85);width:34%;aspect-ratio:4.9;background:radial-gradient(ellipse,#141114b0,transparent 71%);opacity:0;transition:opacity .28s ease,transform .26s ease;pointer-events:none}
 #lootStage:is([data-phase="lift"],[data-phase="result"]) #lootItemShadow{opacity:.70;transform:translateX(-50%)}
