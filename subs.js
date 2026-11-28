@@ -244,7 +244,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "tr-windmill-head": {
   "ks": "8da3c6ff-6f53-41ab-9f02-755358e3e5df",

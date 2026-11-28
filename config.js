@@ -158,7 +158,8 @@ window.APP_CONFIG = {
     "en": "dub-tr-airchair-en-voice-c24bab45f740.mp4"
    },
    "mux": {
-    "en": "dub-tr-airchair-en-voice-9b6bb5d48acc.mp4"
+    "en": "dub-tr-airchair-en-voice-9b6bb5d48acc.mp4",
+    "ja": "dub-tr-airchair-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },
