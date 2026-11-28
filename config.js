@@ -50,7 +50,8 @@ window.APP_CONFIG = {
     "zh": "dub-pw-windmill-zh-voice-b0aa8a38-mux.mp4"
    },
    "preferMuxLangs": [
-    "ja"
+    "ja",
+    "es"
    ]
   },
   "fr-airbaby": {
