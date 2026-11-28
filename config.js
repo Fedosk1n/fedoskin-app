@@ -211,7 +211,8 @@ window.APP_CONFIG = {
     "en": "dub-pw-munchmill-en-voice-8f35d6e54865.mp4"
    },
    "mux": {
-    "en": "dub-pw-munchmill-en-voice-2ec93b37a4e4.mp4"
+    "en": "dub-pw-munchmill-en-voice-2ec93b37a4e4.mp4",
+    "ja": "dub-pw-munchmill-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },

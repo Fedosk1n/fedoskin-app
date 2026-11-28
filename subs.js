@@ -137,7 +137,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-reverse-1990": {
   "ks": "",
