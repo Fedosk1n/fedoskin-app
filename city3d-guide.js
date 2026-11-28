@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadUntexturedModel } from './city3d-festival-art.js?v=2';
+import { loadUntexturedModel } from './city3d-festival-art.js?v=3';
 
 import { LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
 
