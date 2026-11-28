@@ -2703,7 +2703,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const entry = lesson && CFG.dubs && CFG.dubs[lesson.id];
     const valid = entry && entry.media === (lesson.ks || lesson.r2);
     dubTracks = valid ? entry.tracks : null;
-    dubMuxTracks = valid && isApple && R2_BASE ? entry.mux : null;
+    dubMuxTracks = valid && R2_BASE && (isApple || entry.preferMux === true) ? entry.mux : null;
     dubMuxKey = '';
     dubLang.replaceChildren(new Option(T('Оригинал'), 'original'));
     for (const [code, name] of I18N.langs) {

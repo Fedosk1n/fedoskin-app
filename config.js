@@ -103,6 +103,16 @@ window.APP_CONFIG = {
    "mux": {
     "en": "dub-gd-windmill-entry-en-voice-ac475754ccd8.mp4"
    }
+  },
+  "pw-swipes-flare": {
+   "media": "6faac4e1-de8a-4952-8d09-6134e13ee34a",
+   "tracks": {
+    "en": "dub-pw-swipes-flare-en-voice-3d5d05b4478b.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-swipes-flare-en-voice-5ca79b8b0abb.mp4"
+   },
+   "preferMux": true
   }
  }
 };
