@@ -105,8 +105,10 @@ export function cityGraphicsMenu() {
     const controller = check = new AbortController();
     recommend.disabled = true;
     report.textContent = t('Проверяем производительность…');
-    // Start loading the real scene while the player stays on the entry menu.
-    finishEntry?.();
+    // Let the entry menu paint the status before starting the scene build.
+    if (entering) requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!controller.signal.aborted) finishEntry();
+    }));
     try {
       const run = await checkReady;
       if (controller.signal.aborted) return;
