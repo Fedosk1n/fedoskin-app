@@ -6,7 +6,7 @@ export function workerFixture() {
   class Query {
     constructor(sql, params = []) { this.sql = sql; this.params = params; }
     bind(...params) { return new Query(this.sql, params); }
-    run() { return { meta: { changes: Number(raw.prepare(this.sql).run(...this.params).changes) } }; }
+    run() { const result = raw.prepare(this.sql).run(...this.params); return { meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid) } }; }
     first() { return raw.prepare(this.sql).get(...this.params) || null; }
     all() { return { results: raw.prepare(this.sql).all(...this.params) }; }
   }
@@ -25,9 +25,9 @@ export function workerFixture() {
     },
   };
   const env = { DB, PUSH: { get: async key => key === 'lb:mig' ? '1' : null, put: async () => {} } };
-  const fetch = request => worker.fetch(request, env);
+  const fetch = (request, ctx) => worker.fetch(request, env, ctx);
   const store = (path, payload) => fetch(new Request('https://test.invalid' + path, {
     method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload),
   }));
-  return { raw, fetch, store };
+  return { raw, fetch, store, env };
 }
