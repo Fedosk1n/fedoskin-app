@@ -259,6 +259,6 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  }
 };

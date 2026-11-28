@@ -173,7 +173,8 @@ window.APP_CONFIG = {
     "en": "dub-tr-windmill-head-en-voice-077d08ab917d.mp4"
    },
    "mux": {
-    "en": "dub-tr-windmill-head-en-voice-28f95e163f1c.mp4"
+    "en": "dub-tr-windmill-head-en-voice-28f95e163f1c.mp4",
+    "ja": "dub-tr-windmill-head-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },
