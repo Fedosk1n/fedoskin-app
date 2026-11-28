@@ -173,7 +173,8 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-pw-turtle-en-voice-91eaf160efbe.mp4",
-    "ja": "dub-pw-turtle-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-pw-turtle-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-pw-turtle-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMux": true
   },

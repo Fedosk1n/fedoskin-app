@@ -198,7 +198,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-windmill": {
   "ks": "8b3ef664-01b9-42db-a1e1-b88ad726c46c",
