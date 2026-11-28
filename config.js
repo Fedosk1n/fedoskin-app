@@ -204,7 +204,8 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-pw-flare-1990-en-voice-a0c2f1b67ed1.mp4",
-    "ja": "dub-pw-flare-1990-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-pw-flare-1990-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-pw-flare-1990-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMux": true
   },

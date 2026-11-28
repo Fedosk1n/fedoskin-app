@@ -92,7 +92,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 3
+  "v": 4
  },
  "pw-flare-wm": {
   "ks": "fcbcbb79-43ca-482d-b0f2-01472155230a",
