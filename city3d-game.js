@@ -12,8 +12,9 @@ import { initPower } from './city3d-power.js?v=28';   // the hero's power move i
 import { initFreeze } from './city3d-freeze.js?v=2';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
+import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=10';
+import { CLUB_TRACKS } from './city3d-club.js?v=11';
 import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=5';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=4';
 import { performDJ } from './city3d-dj.js?v=4';
@@ -22,7 +23,7 @@ import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJ
 import { initFestival } from './city3d-campaign.js?v=4';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
-import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=2';
+import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=3';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -437,7 +438,7 @@ export function initGame(ctx) {
 
   // crews of this district
   const crews = HERE.map((c, ci) => {
-    const g = { c, people: [], x: c.at[0], z: c.at[1] };
+    const g = { c, people: [], ambientEnabled: true, x: c.at[0], z: c.at[1] };
     const r = rng(ci * 77 + 3);
     c.looks.forEach((acc, i) => {
       const { lk, body } = crewLook(c, ci, i, D), J = mocapPerson(lk, { body });
@@ -450,18 +451,11 @@ export function initGame(ctx) {
       J.play(i === 0 ? pick(TOP, r)[0] : 'Breakdance_Ready', { at: r() * 2, speed: .9 + r() * .2 });
       scene.add(J.root); g.people.push(J); ctx.circ(J.home.x, J.home.z, .3);
     });
-    // ground ring + floating name
+    // The painted circle and crew wall locate the battle. The action button names the crew.
     const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const x = cv.getContext('2d');
     x.strokeStyle = c.col; x.lineWidth = 10; x.setLineDash([26, 16]); x.beginPath(); x.arc(128, 128, 112, 0, 7); x.stroke();
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, opacity: .6, toneMapped: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(g.x, .02, g.z); scene.add(ring); g.ring = ring;
-    const lc = document.createElement('canvas'); lc.width = 512; lc.height = 128; const lx = lc.getContext('2d');
-    lx.font = '400 64px Anton, sans-serif'; lx.textAlign = 'center'; { const m = lx.measureText(c.name.toUpperCase()).width; if (m > 370) lx.font = '400 ' + Math.floor(64 * 370 / m) + 'px Anton, sans-serif'; }
-    lx.fillStyle = 'rgba(10,11,15,.72)'; const tw = lx.measureText(c.name.toUpperCase()).width + 120;
-    lx.beginPath(); lx.roundRect(256 - tw / 2, 14, tw, 100, 50); lx.fill(); lx.fillStyle = c.col; lx.fillText(c.name.toUpperCase(), 236, 88);
-    lx.fillStyle = '#F2EFE8'; lx.font = '700 40px Inter, sans-serif'; lx.fillText(c.lv, 256 + tw / 2 - 52, 84);
-    const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(lc), depthTest: false, toneMapped: false }));
-    lab.scale.set(2.6, .65, 1); lab.position.set(g.x, 2.7, g.z); lab.renderOrder = 10; scene.add(lab); g.label = lab;
     return g;
   });
   // ---------- crew walls (graffiti turf) ----------
@@ -512,7 +506,7 @@ export function initGame(ctx) {
     const off = new THREE.Vector3(Math.sin(yaw) * dist, dist * .52, Math.cos(yaw) * dist);
     W.lock = true; W.camT = { x: w.at.x, y: 1.10, z: w.at.z, zoom: 1, off }; W.zoom = 1; W.camSnap = true;
     document.body.classList.add('g3fight');
-    for (const crew of crews) crew.label.visible = false;
+    for (const crew of crews) crew.ambientEnabled = false;
     H.play('Breakdance_Ready', { fade: .3 }); try { window.RB && RB.hiss && RB.hiss(true); } catch (_) {}
     paintAct();
   }
@@ -546,7 +540,7 @@ export function initGame(ctx) {
     const rewards = collectGear('paint', g.c.id);
     bumpGoal('paint'); save(); paintHud();
     W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); W.hero.play('Bboy_Uprock', { fade: .3 });
-    for (const crew of crews) crew.label.visible = shown(crew);
+    for (const crew of crews) crew.ambientEnabled = shown(crew);
     toast(_t('🎨 Стена «{x}» теперь твоя! +{a} ★, и +{b} ★ каждый день', { x: g.c.name, a: BAL.repPaint, b: BAL.turfRep }), rewards);
     if (IDS.every(id => S.turf[id])) setTimeout(() => toast(_t(ALLMINE[D] || ALLMINE.yard)), 2800);
     near = null; paintAct();
@@ -565,10 +559,6 @@ export function initGame(ctx) {
     return { x: px, z: pz }; };
   const M = (c, r = .7, m = 0, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m, emissive: e || '#000', emissiveIntensity: e ? 1.6 : 0 });
   const mk = (g, geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
-  const label = (txt, col, x, z, y = 2.5) => { txt = _t(txt); const lc = document.createElement('canvas'); lc.width = 512; lc.height = 128; const lx = lc.getContext('2d');
-    lx.font = '400 60px Anton, sans-serif'; lx.textAlign = 'center'; { const m = lx.measureText(txt).width; if (m > 430) lx.font = '400 ' + Math.floor(60 * 430 / m) + 'px Anton, sans-serif'; } const tw = lx.measureText(txt).width + 70; lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill();
-    lx.fillStyle = col; lx.fillText(txt, 256, 86); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(lc), depthTest: false, toneMapped: false }));
-    sp.scale.set(2.4, .6, 1); sp.position.set(x, y, z); sp.renderOrder = 10; scene.add(sp); return sp; };
   const C0 = W.cyph || { x: 1.5, z: -7.2 };
   const Y = D !== 'yard' ? null : (() => {
   // DJ booth by the cypher: a table, two decks with spinning records, a mixer, a laptop glow and a DJ
@@ -604,14 +594,13 @@ export function initGame(ctx) {
   const djP = mocapPerson(djLook, { body: bodyOf(5, { type: 'heavy', style: 'longLocs', skin: '#613B2E', beard: true }) });
   dj.add(djP.root);
   const djMix = performDJ(djP, dj, recs, strip, faders);
-  const djSign = dj.localToWorld(new THREE.Vector3(0, 2.83, -.49));
-  const djLab = label('ДИДЖЕЙ', '#FFB547', djSign.x, djSign.z, djSign.y);
+  const djSign = mountSign(ctx.wayfinding, 'decks-badge', dj, -.49, .49, .448);
+  if (djSign) plaqueInk(djSign, 'DJ', { width:.23, height:.095, z:.088, color:'#25222a' });
   const djFront = { x: djAt.x + Math.sin(dj.rotation.y) * 1.1, z: djAt.z + Math.cos(dj.rotation.y) * 1.1 };
   // practice mat: a padded mat with taped lines and a pair of cones
   const matAt = freeNear(9.6, 3.6, 1.6), mat = new THREE.Group(); mat.position.set(matAt.x, 0, matAt.z); scene.add(mat);
   mk(mat, new RoundedBoxGeometry(2.6, .06, 2.6, 2, .02), M('#2b3f63', .9), 0, .03, 0);
   [-1, 1].forEach(k => { mk(mat, new THREE.BoxGeometry(2.4, .005, .05), M('#e9e4d8', .8), 0, .065, k * 1.1); mk(mat, new THREE.ConeGeometry(.12, .3, 10), M('#E2611A', .6), k * 1.45, .15, 1.45 * k); });
-  const matLab = label('ТРЕНИРОВКА', '#7CC4FF', matAt.x, matAt.z, 2.2);
   // the tailor «Игла» (16.11.2026 custom): a stall with a sewing machine, a rack of jackets, a dummy with a back patch, a neon sign
   const atAt = freeNear(8.6, -2.2, 1.9), at = new THREE.Group(); at.position.set(atAt.x, 0, atAt.z); scene.add(at);   // faces +z: the camera sees the sign, the tailor and the rack
   mk(at, new RoundedBoxGeometry(3.4, .04, 2.2, 2, .015), M('#3a2a2a', .95), 0, .02, -.1);                              // a worn rug
@@ -631,15 +620,14 @@ export function initGame(ctx) {
     const tor = mk(dm, new RoundedBoxGeometry(.42, .55, .24, 3, .1), M('#18181B', .8), 0, 1.3, 0);
     const bp = new THREE.Mesh(new THREE.CircleGeometry(.14, 26), M('#F2EFE8', .8)); bp.position.set(0, .04, -.125); bp.rotation.y = Math.PI; tor.add(bp);
     const bp2 = new THREE.Mesh(new THREE.CircleGeometry(.12, 26), M('#E2611A', .8, 0, '#E2611A')); bp2.material.emissiveIntensity = .25; bp2.position.set(0, .04, -.127); bp2.rotation.y = Math.PI; tor.add(bp2); }
-  const sg = document.createElement('canvas'); sg.width = 512; sg.height = 128; { const x = sg.getContext('2d'); x.font = '400 92px Anton, sans-serif'; x.textAlign = 'center'; x.shadowColor = '#FF4FD8'; x.shadowBlur = 18; x.fillStyle = '#FFB3F0'; const s = _t('КАСТОМ'), m = x.measureText(s).width; if (m > 490) x.font = '400 ' + Math.floor(92 * 490 / m) + 'px Anton, sans-serif'; x.fillText(s, 256, 102); }
-  const atSign = mk(at, new THREE.PlaneGeometry(1.5, .37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sg), transparent: true, toneMapped: false, color: new THREE.Color(.8, .8, .8) }), -.35, 2.5, -.9);   // 2.05 → 2.5: was hidden behind the place's name
-  [-1.05, .35].forEach(x => mk(at, new THREE.CylinderGeometry(.02, .02, 2.55, 6), M('#2a2c31', .5, .5), x, 1.27, -.92));
+  const atelierSign = mountSign(ctx.wayfinding, 'yard-sewing-plate', at, -.35, 2.33, -.89);
+  if (atelierSign) plaqueInk(atelierSign, _t('АТЕЛЬЕ «ИГЛА»'), { width:1.43, height:.235, z:.06, color:'#f3d5bc' });
+  [-1.10, .40].forEach(x => mk(at, new THREE.CylinderGeometry(.022, .022, 2.34, 6), M('#3a3d44', .5, .5), x, 1.167, -.94));
   const atP = mocapPerson(HERO.topDown(5, []), { body: bodyOf(77, { girl: true, type: 'slim', style: 'bun' }), idle: 'Stand_Calm' }); atP.root.position.set(0, 0, -.55); at.add(atP.root); atP.play('Breakdance_Ready');
   ctx.circ && ctx.circ(atAt.x, atAt.z, .95); ctx.box && ctx.box(atAt.x + .2, atAt.z - .9, 1.8, .3); ctx.circ && ctx.circ(atAt.x + 1.25, atAt.z - .4, .3);
   { // a bare bulb on a wire over the table and its warm light on the stall (the corner was dark)
     mk(at, new THREE.CylinderGeometry(.006, .006, .7, 4), M('#111', .9), .05, 2.55, .1); const bulb = mk(at, new THREE.SphereGeometry(.07, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.35, 1.1, .75), toneMapped: false }), .05, 2.17, .1); bulb.castShadow = false;
     const sp = new THREE.SpotLight('#ffcf9a', 20, 0, 1.05, .85, 2); /* 46 → 20 (17.11.2026): the table and the cloth burnt out white */ sp.position.set(atAt.x + .05, 2.12, atAt.z + .1); sp.target.position.set(atAt.x + .1, 0, atAt.z + .75); scene.add(sp, sp.target); }
-  const atLab = label('АТЕЛЬЕ «ИГЛА»', '#FFB3F0', atAt.x, atAt.z, 2.7);
   const atFront = { x: atAt.x, z: atAt.z + 1.25 };
   // the gate to the next district: an arch with a lit sign, closed by a chain until the right rank
   const gAt = freeNear(-1.2, -14.2, 1.4), gate = new THREE.Group(); gate.position.set(gAt.x, 0, gAt.z); scene.add(gate);
@@ -658,15 +646,16 @@ export function initGame(ctx) {
   paintRing.rotation.x = -Math.PI / 2;
   paintRing.position.set(arena.x, .026, arena.z);
   scene.add(paintRing);
-  const arenaLabel = label('ПАУЭРМУВ-КОНТЕСТ', '#FFAE5D', arena.x, arena.z, 2.25);
+  const stencil = plaqueInk(scene, _t('ПАУЭРМУВ-КОНТЕСТ'), { width:2.15, height:.17, x:arena.x, y:.028, z:arena.z + 1.44, color:'#efba80' });
+  stencil.rotation.x = -Math.PI / 2;
   const PLACES = [
     { id: 'powerContest', x: arena.x, z: arena.z, r: 2.15 },
     { id: 'show', x: C0.x, z: C0.z + 3.2, r: 1.5 }, { id: 'dj', x: djFront.x, z: djFront.z, r: 1.4 }, { id: 'mat', x: matAt.x, z: matAt.z, r: 1.7 }, { id: 'gate', x: gAt.x, z: gAt.z + 1.2, r: 1.7 },
     { id: 'storyFinale', x: C0.x + 1.4, z: C0.z + 2.8, r: 1.6 },
     { id: 'atelier', x: atFront.x, z: atFront.z, r: 1.6 },
   ];
-  return { djMix, djLab, matAt, matLab, arena, arenaLabel, chain, atP, atLab, atSign, atFront, PLACES }; })();
-  const { djMix = null, djLab = null, matAt = null, matLab = null, chain = null, atP = null, atLab = null, atSign = null, atFront = null } = Y || {};
+  return { djMix, matAt, arena, chain, atP, atFront, PLACES }; })();
+  const { djMix = null, matAt = null, chain = null, atP = null, atFront = null } = Y || {};
   // the Centre's places are built by city3d-center.js (W.center); here is only what they do
   const CN = W.center || null;
   const PLACES = Y ? Y.PLACES : !CN ? [] : [
@@ -693,7 +682,7 @@ export function initGame(ctx) {
       { ...club.dj, id: 'clubDJ' }, { ...club.records, id: 'clubRecords' }, { ...club.exit, id: 'backProm' });
   }
   const guide = initCityGuide(_t);
-  const landmark = initLandmarkView({ scene, camera:ctx.camera, node:guide.label, district:D, t:_t });
+  const landmark = initLandmarkView({ scene, district:D });
   const guideColliders = ctx.colliders || [], placements = new Map();
   const groundArt = (id, point) => {
     const key = [id,point.x,point.z,guideColliders.length].join(':');
@@ -1067,7 +1056,7 @@ export function initGame(ctx) {
   // next win pay more (the streak is kept across days, up to streakMax steps); a loss resets it. Same battle engine, flag c.ringB.
   function startRing() { const r = rng(Date.now() >>> 0), d = RING[Math.floor(r() * RING.length)], J = PZ.fighters[Math.floor(r() * PZ.fighters.length)], lv = BAL.ringLv[Math.floor(r() * BAL.ringLv.length)];
     S.en -= energyCost(BAL.ring); if (S.ringDay.day !== today()) S.ringDay = { day: today(), n: 0 }; S.ringDay.n++; save(); paintHud(); J.busy = true; PZ.crowd(true);
-    startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, label: { visible: true }, ring: { visible: true } }); }
+    startBattle({ c: { id: 'ring', tour: true, ringB: true, name: d.name, lv, col: d.col, gear: [] }, people: [J], x: PZ.ring.x, z: PZ.ring.z, ambientEnabled: true, ring: { visible: true } }); }
   function ringResult(win) { const lines = [], rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.ringRep + Math.min(S.streak, BAL.streakMax) * BAL.streakRep; S.streak++; S.best = Math.max(S.best, S.streak); S.gearProgress.ringWins++; S.rep += rep; bumpGoal('ring'); bumpGoal('win'); if (B.clean) bumpGoal('clean'); bumpGoal('strong');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span>`, _t('🔥 Серия побед на ринге: <b>{n}</b>', { n: S.streak }) + (S.streak > 1 ? _t(' — каждая следующая стоит дороже') : '')); }
@@ -1081,7 +1070,7 @@ export function initGame(ctx) {
   let JM = null;
   function startJam() { S.en -= energyCost(BAL.jam); S.jamDay = today(); save(); paintHud(); JM = { i: 0, rep: 0, over: false, clean: true }; PK.crowd(true); jamRound(); }
   function jamRound() { const J = PK.dancers[JM.i], d = JAM[JM.i]; J.busy = true;
-    startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, label: { visible: true }, ring: { visible: true } }); }
+    startBattle({ c: { id: 'jam' + JM.i, tour: true, name: d.name, lv: BAL.jamLv[JM.i], col: d.col, gear: [] }, people: [J], x: PK.stage.x, z: PK.stage.z + .2, ambientEnabled: true, ring: { visible: true } }); }
   function jamResult(win) { const lines = [], i = JM.i, rk0 = rankOf(S.rep);
     if (win) { const rep = BAL.jamRep[i] + (i === 2 ? BAL.jamChamp : 0); S.rep += rep; JM.rep += rep; JM.i++; JM.clean &&= B.clean; bumpGoal('jam'); bumpGoal('win'); if (B.clean) bumpGoal('clean');
       lines.push(`<span class="rw">${_t('+{n} ★ уважения', { n: rep })}</span> · ${_t('раунд {i} из 3', { i: i + 1 })}`);
@@ -1201,7 +1190,7 @@ export function initGame(ctx) {
   }
   function smokeBattle(opponent, track, holder) {
     startBattle({ c: { id: opponent.id, name: opponent.name, col: opponent.col, lv: opponent.lv }, smoke: { track, holder },
-      people: [opponent.J], x: club.floor.x, z: club.floor.z, label: { visible: true }, ring: { visible: true } });
+      people: [opponent.J], x: club.floor.x, z: club.floor.z, ambientEnabled: true, ring: { visible: true } });
   }
   function smokePreview(opponent, track) {
     const r = rng(Math.floor(Math.random() * 0x100000000));
@@ -1476,7 +1465,7 @@ export function initGame(ctx) {
   function endAct() { A = null; W.hero.ws = null; W.lock = false; W.camT = null; document.body.classList.remove('g3fight'); paintHud(); near = null; paintAct(); }
 
   const shown = g => !S.beat[g.c.id];
-  const setShown = g => { const v = shown(g); g.people.forEach(J => J.root.visible = v); g.ring.visible = g.label.visible = v; };
+  const setShown = g => { const v = shown(g); g.people.forEach(J => J.root.visible = v); g.ring.visible = v; g.ambientEnabled = v; };
   crews.forEach(setShown);
 
   // ---------- proximity button ----------
@@ -1662,7 +1651,7 @@ export function initGame(ctx) {
     W.walk.start(H); W.walk.start(opp);
     const walkIn = Math.max(1.45, .35 + Math.max(Math.hypot(H.ws.x0 - meSpot.x, H.ws.z0 - meSpot.z), Math.hypot(opp.ws.x0 - opSpot.x, opp.ws.z0 - opSpot.z)) / 2.2);
     B = { g, opp, turns, choices, i: -1, t0: 0, me: 0, op: 0, cx, cz, meSpot, opSpot, lv, phase: 'walk', pt: performance.now() / 1000, walkIn, clean: true, freezeDuration: 4 * 60 / bpm };
-    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: g.smoke ? 1.15 : .4 }; document.body.classList.add('g3fight'); g.label.visible = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
+    W.lock = true; W.camT = { x: cx, z: cz + .4, zoom: g.smoke ? 1.15 : .4 }; document.body.classList.add('g3fight'); g.ambientEnabled = false; $('#g3skip').style.display = g.smoke ? 'none' : '';
     $('#g3bt').classList.add('on'); $('#g3bt').style.setProperty('--oc', c.col); $('#g3on').textContent = c.name.toUpperCase();
     $('#g3a').textContent = '0'; $('#g3b').textContent = '0'; $('#g3turn').textContent = _t('Выход в круг'); $('#g3mv').innerHTML = '';
     paintAct();
@@ -1966,16 +1955,18 @@ export function initGame(ctx) {
     const [loading, alpha, sheet, appearance, graphics] = storyOverlays;
     if (P) paintTick(dt);
     if (A) actTick(dt);
-    if (Y) { djMix.tick(dt);
-      chain.visible = rankOf(S.rep) < BAL.gateRank; Y.arenaLabel.visible = matLab.visible = djLab.visible = atLab.visible = !A && !B && !P;
-      W.tickAmbient(atP, dt); atSign.material.color.setScalar(.72 + .1 * Math.sin(performance.now() / 420) + (Math.random() < .004 ? -.35 : 0)); }
+    if (Y) {
+      djMix.tick(dt);
+      chain.visible = rankOf(S.rep) < BAL.gateRank;
+      W.tickAmbient(atP, dt);
+    }
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) PZ.gateClub.chain.visible = !S.wins.forge;
     if (club) {
       clubBattleDancer = null;
       smoke.tick(dt, B, B?.phase === 'end' || wheel.active() || PM.state() === 'replay');
     }
-    if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
+    if (CN) CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park);
     if (B) {
       if (B.phase !== 'end') battleTick(dt);
       else if (B.g.smoke) { const votes = B.smokeVotes; clearSmokeBattle(); smoke.playerVerdict(votes); }
@@ -1983,7 +1974,7 @@ export function initGame(ctx) {
     }
     FZ.tick(dt);
     crews.forEach(g => {
-      if (!g.label.visible && B?.g !== g) return;
+      if (!g.ambientEnabled && B?.g !== g) return;
       g.people.forEach(J => { if (J !== B?.opp) W.tickAmbient(J, dt); });
     });
     if (festival.busy()) {
@@ -2041,10 +2032,6 @@ export function initGame(ctx) {
     let object = null;
     if (festivalTarget) object = { art:festivalStep.art, point:festivalTarget, line };
     if (storyObject) object = { art:storyArt, point:storyObject, line };
-    if (club) {
-      const duplicate = exploring && club.activitySigns[object?.art];
-      club.signs.forEach(label => { label.visible = !A && label !== duplicate; });
-    }
     const byCircle = exploring && object?.art === 'watch' && inWatchArea(watchPoint,p);
     const stopped = Math.hypot(W.hero.st.vx || 0,W.hero.st.vz || 0) < .22;
     let storyWatch = 0;
@@ -2070,11 +2057,9 @@ export function initGame(ctx) {
     const entry = guidanceEntry(storyChapter(),line,object,festivalStep);
     document.body.classList.toggle('city-guide-intro',exploring && storyChapter()?.id === 'cypher' && line === 'story');
     guide.set(entry,exploring && !byCircle);
-    landmark.set(exploring && object ? { ...object,
-      label:!byCircle && (Boolean(W.guideView) || Math.hypot(p.x-object.point.x,p.z-object.point.z)<4.4) } : null);
+    landmark.set(exploring ? object : null);
   }
   function post(dt) {
-    landmark.post();
     PM.post(dt);
     if (!wheel.active()) return;
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);

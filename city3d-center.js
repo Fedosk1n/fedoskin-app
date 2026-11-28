@@ -263,8 +263,6 @@ export async function buildCenter(TK) {
   // ---------- people: the guard, passers-by, two by the entrance ----------
   let pn = 0; const person = (lv, acc, fix, body) => { const look = HERO.topDown(lv, acc); if (fix) fix(look); const J = mocapPerson(look, { body: bodyOf(200 + (pn++) * 17, Object.assign({ girl: acc.includes('girl') }, body)) }); J.play('Breakdance_Ready', { at: Math.random() }); scene.add(J.root); J.st = { wk: 0, ph: Math.random() * 6 }; return J; };
   const turn = (J, a, dt, k = 8) => { let d = a - J.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); J.root.rotation.y += d * (1 - Math.exp(-dt * k)); };
-  const tag = (txt, col) => { txt = _t(txt); const lc = can(512, 128), lx = lc.getContext('2d'); lx.font = '400 60px Anton, sans-serif'; const tw = Math.min(500, lx.measureText(txt).width + 70); lx.fillStyle = 'rgba(10,11,15,.72)'; lx.beginPath(); lx.roundRect(256 - tw / 2, 18, tw, 92, 46); lx.fill(); text(lx, txt, 256, 66, '400 60px Anton, sans-serif', col);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(lc), depthTest: false, toneMapped: false })); sp.scale.set(2.4, .6, 1); sp.renderOrder = 10; scene.add(sp); return sp; };
   // walk a person: straight to (tx, tz) at speed v; returns true when there
   const go = (J, tx, tz, v, dt) => { const p = J.root.position, dx = tx - p.x, dz = tz - p.z, l = Math.hypot(dx, dz); if (l < .12) { standPose(J); J.tick(dt); stride(J, J.st, 0, false, 0, dt); return true; }
     const s = Math.min(l, v * dt); p.x += dx / l * s; p.z += dz / l * s; turn(J, Math.atan2(dx, dz), dt); standPose(J); J.tick(dt); stride(J, J.st, v, true, .55, dt); return false; };
@@ -278,12 +276,12 @@ export async function buildCenter(TK) {
     const b = new THREE.Mesh(new THREE.PlaneGeometry(.3, .11), new THREE.MeshBasicMaterial({ map: tex(bc) })); b.position.set(0, .12, -.128); b.rotation.y = PI; guard.J.B.Spine2.add(b);
     const zc = paintCanvas(512, 512, (x) => { const g = x.createRadialGradient(256, 256, 120, 256, 256, 250); g.addColorStop(0, 'rgba(255,60,50,0)'); g.addColorStop(1, 'rgba(255,60,50,.22)'); x.fillStyle = g; x.beginPath(); x.arc(256, 256, 250, 0, 7); x.fill(); x.strokeStyle = 'rgba(255,90,79,.95)'; x.lineWidth = 9; x.setLineDash([30, 20]); x.beginPath(); x.arc(256, 256, 244, 0, 7); x.stroke(); }, 0, 1);
     guard.ring = new THREE.Mesh(new THREE.PlaneGeometry(SEE * 2, SEE * 2), new THREE.MeshBasicMaterial({ map: tex(zc), transparent: true, depthWrite: false, toneMapped: false })); guard.ring.rotation.x = -PI / 2; guard.ring.renderOrder = 3; scene.add(guard.ring);
-    guard.tag = tag('ОХРАНА', '#FF5A4F'); guard.J.setIdle('Stand_Calm'); guard.J.root.position.set(guard.x, 0, guard.z); guard.J.root.rotation.y = PI / 2; }
+    guard.J.setIdle('Stand_Calm'); guard.J.root.position.set(guard.x, 0, guard.z); guard.J.root.rotation.y = PI / 2; }
   W.tickers.push((dt, now) => { const G = guard, J = G.J, p = J.root.position;
     if (G.alert > 0) { G.alert -= dt; const h = W.hero.root.position; stand(J, dt, Math.atan2(h.x - p.x, h.z - p.z)); if (W.walkBase) J.B.RightArm.quaternion.copy(W.walkBase.q.RightArm).multiply(_qa); }
     else if (G.wait > 0) { G.wait -= dt; stand(J, dt, 0); }
     else { const tx = G.dir * GX; if (go(J, tx, GZ, 1.25, dt)) { G.dir *= -1; G.wait = 4.5; } }
-    G.x = p.x; G.z = p.z; G.ring.position.set(p.x, .035, p.z); G.ring.rotation.z = now * .25; G.tag.position.set(p.x, 2.35, p.z); });
+    G.x = p.x; G.z = p.z; G.ring.position.set(p.x, .035, p.z); G.ring.rotation.z = now * .25; });
 
   // PASSERS-BY walk a loop around the square; when a show starts, those who are near come to watch
   const LOOP = [[-5.3, -8.5], [11, -8.5], [11, 11.5], [-5.3, 11.5]], LEN = LOOP.map((p, i) => { const q = LOOP[(i + 1) % 4]; return Math.hypot(q[0] - p[0], q[1] - p[1]); }), TOT = LEN.reduce((a, b) => a + b, 0);

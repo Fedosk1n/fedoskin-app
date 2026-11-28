@@ -9,12 +9,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=38';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=75';
-import { buildClub, loadClubSurfaces } from './city3d-club.js?v=10';
+import { initGame } from './city3d-game.js?v=76';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=11';
+import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
-import { buildCenter } from './city3d-center.js?v=7';
+import { buildCenter } from './city3d-center.js?v=8';
 import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=4';
 import { addCitySound } from './city3d-sound.js?v=1';
@@ -596,7 +597,7 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals, audienceModel) {
+async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals, audienceModel, wayfinding) {
   if (DIST !== 'club') {
     WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   }
@@ -606,7 +607,7 @@ async function build(scene, asphalt, props, playgroundModel, clubJudges, surface
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
   else if (DIST === 'prom') await buildProm(TK);
-  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces, audienceModel });
+  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces, audienceModel, wayfinding });
   else buildYard(scene, asphalt, facade, facadeMurals);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
@@ -1152,6 +1153,7 @@ async function boot() {
       return null;
     }) : null,
     DIST === 'club' ? loadClubAudience() : null,
+    DIST === 'club' || DIST === 'yard' ? loadWayfinding() : null,
   ]);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
@@ -1168,7 +1170,7 @@ async function boot() {
   scene.add(moon, moon.target);
 
   const [loaded] = await Promise.all([assets, graphics.ready]);
-  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade, audienceModel] = loaded;
+  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade, audienceModel, wayfinding] = loaded;
   scene.environmentIntensity = .45;
   if (reflection) scene.environment = reflection;
   else {
@@ -1179,7 +1181,7 @@ async function boot() {
     pm.dispose();
   }
 
-  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades, audienceModel);
+  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades, audienceModel, wayfinding);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);
@@ -1187,7 +1189,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit,
+  const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
@@ -1330,8 +1332,6 @@ async function boot() {
   { const hp = W.hero.root.position; camLook.set(hp.x, 0, hp.z - 2.2); camPos.copy(camLook).add(off); }
   // fog thins out when the camera is pulled back (pinch zoom), so the far side of the district isn't lost in haze
   const fog0 = scene.fog.density;
-  // name tags (crews, places, the guard) grow a little when the camera is pulled back, so they stay readable from far away
-  const tags = []; scene.traverse(o => { if (o.isSprite && o.material.depthTest === false) tags.push({ o, s: o.scale.clone() }); }); let tagK = 1;
   let last, fpsN = 0, fpsT = 0, worst = 0;
   // ?fps — frames per second, the worst frame of the last 2 s (a stutter shows up here even when the average looks fine) and draw calls
   const showFps = Q.has('fps'); if (showFps) renderer.info.autoReset = false;
@@ -1378,7 +1378,6 @@ async function boot() {
     // Hide subpixel rig details in the wider view.
     const far = W.zoom > 1.7, farChanged = far !== farOn;
     if (farChanged) { farOn = far; scene.traverse(o => { if (o.userData.tiny) o.visible = !far; }); }
-    { const k = Math.pow(Math.max(1, W.zoom), .6); if (Math.abs(k - tagK) > .004) { tagK = k; for (const t of tags) t.o.scale.copy(t.s).multiplyScalar(k); } }
     { const zb = zoomBucket(); if (zb !== fitZ) fitShadows(zb); }
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
     camera.lookAt(camLook);
