@@ -638,6 +638,25 @@ REUSE += ['Напульсники «Пятый подход»', 'Налокот�
 REUSE += ['Начать батл', 'Как удержать фриз', 'Держи и веди палец вбок', 'Верни точку в зелёную зону']
 
 L = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'ko', 'zh']
+# ---------- manual tracing on the training mat ----------
+t("Выбери элемент и обведи весь контур одним движением, начиная с жёлтой точки.", "Choose a move and trace the full path in one stroke, starting at the yellow dot.", "Elige un movimiento y recorre todo el trazado de un solo trazo desde el punto amarillo.", "Escolha um movimento e contorne todo o percurso sem soltar o dedo, a partir do ponto amarelo.", "Choisis un mouvement et suis tout le tracé d’un seul geste, en partant du point jaune.", "Wähle einen Move und ziehe ab dem gelben Punkt in einem Zug die ganze Linie nach.", "ムーブを選び、黄色い点から線を最後まで一筆でなぞろう。", "동작을 고르고 노란 점에서 시작해 전체 경로를 한 번에 따라 그려.", "选择一个动作，从黄点开始一笔描完整条路线。")
+t("К уроку", "Open lesson", "Ir a la lección", "Abrir aula", "Voir le cours", "Zur Lektion", "レッスンへ", "강의 보기", "打开课程")
+t("Урок для {x}", "{x} lesson", "Lección para {x}", "Aula de {x}", "Cours pour {x}", "Lektion für {x}", "{x}のレッスン", "{x} 강의", "{x}课程")
+t("Рекорд {n}%", "Best {n}%", "Récord {n}%", "Recorde {n}%", "Record {n} %", "Bestwert {n} %", "最高 {n}%", "최고 {n}%", "最佳 {n}%")
+t("Чтобы начать, открой SWIPES в уроках.", "Study SWIPES in the lessons to get started.", "Aprende SWIPES en las lecciones para empezar.", "Aprenda SWIPES nas aulas para começar.", "Apprends les SWIPES dans les cours pour commencer.", "Lerne zuerst SWIPES in den Lektionen.", "まずレッスンで SWIPES を学ぼう。", "시작하려면 강의에서 SWIPES를 배워.", "先在课程中学习 SWIPES，然后开始练习。")
+t("Энергия списывается только за полный проход.", "Energy is charged only when you finish the full path.", "La energía solo se gasta cuando completas todo el trazado.", "A energia só é descontada quando você completa todo o percurso.", "L’énergie est débitée uniquement à la fin du tracé.", "Energie wird erst nach einer vollständigen Runde abgezogen.", "線を最後までなぞったときだけエネルギーを消費します。", "경로를 끝까지 그렸을 때만 에너지가 차감돼.", "只有完成整条路线才消耗能量。")
+t("Тренироваться бесплатно", "Practice for free", "Practicar gratis", "Treinar grátis", "S’entraîner gratuitement", "Kostenlos üben", "無料で練習", "무료로 연습", "免费练习")
+t("Заработать форму · {n} ⚡", "Build form · {n} ⚡", "Mejorar forma · {n} ⚡", "Ganhar forma · {n} ⚡", "Améliorer la forme · {n} ⚡", "Form steigern · {n} ⚡", "調子アップ · {n} ⚡", "컨디션 올리기 · {n} ⚡", "提升状态 · {n} ⚡")
+t("{x} · раздел про вращение на спине", "{x} · backspin section", "{x} · sección de giro de espalda", "{x} · seção de backspin", "{x} · passage sur la rotation sur le dos", "{x} · Abschnitt zum Backspin", "{x} · 背中で回るパート", "{x} · 백스핀 구간", "{x} · 背旋教学片段")
+t("Тренировка формы", "Form training", "Entrenamiento de forma", "Treino de forma", "Travail de la forme", "Formtraining", "調子アップ練習", "컨디션 훈련", "状态训练")
+t("Попытка отменена", "Attempt canceled", "Intento cancelado", "Tentativa cancelada", "Tentative annulée", "Versuch abgebrochen", "練習をキャンセルしました", "시도가 취소됐어", "已取消本次尝试")
+t("Энергия не списана", "No energy spent", "No se gastó energía", "Nenhuma energia gasta", "Aucune énergie dépensée", "Keine Energie verbraucht", "エネルギーは消費していません", "에너지를 쓰지 않았어", "未消耗能量")
+t("Обведи контур до конца, не отрывая палец", "Trace to the end without lifting your finger", "Completa el trazado sin levantar el dedo", "Siga até o fim sem levantar o dedo", "Suis le tracé jusqu’au bout sans lever le doigt", "Ziehe die Linie bis zum Ende nach, ohne den Finger zu heben", "指を離さず最後までなぞろう", "손가락을 떼지 말고 끝까지 따라 그려", "手指不要离开屏幕，沿线描到终点")
+t("Точность {n}%", "Accuracy {n}%", "Precisión {n}%", "Precisão {n}%", "Précision {n} %", "Genauigkeit {n} %", "精度 {n}%", "정확도 {n}%", "准确度 {n}%")
+t("Форма недоступна. Энергия не списана.", "Form is unavailable. No energy spent.", "La forma no está disponible. No se gastó energía.", "Forma indisponível. Nenhuma energia gasta.", "Forme indisponible. Aucune énergie dépensée.", "Form nicht verfügbar. Keine Energie verbraucht.", "調子を上げられません。エネルギーは消費していません。", "컨디션을 올릴 수 없어. 에너지를 쓰지 않았어.", "暂时无法提升状态。未消耗能量。")
+t("Повторить бесплатно", "Retry for free", "Repetir gratis", "Repetir grátis", "Réessayer gratuitement", "Kostenlos wiederholen", "無料でもう一度", "무료로 다시", "免费再练一次")
+t("Веди по стрелкам", "Follow the arrows", "Sigue las flechas", "Siga as setas", "Suis les flèches", "Folge den Pfeilen", "矢印の向きになぞろう", "화살표를 따라 그려", "按箭头方向描绘")
+
 if __name__ == '__main__':
     import json, os, re
     here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
