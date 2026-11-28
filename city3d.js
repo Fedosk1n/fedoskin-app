@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=39';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=40';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=78';
+import { initGame } from './city3d-game.js?v=79';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
@@ -18,9 +18,9 @@ import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=8';
 import { buildPark } from './city3d-park.js?v=8';
-import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=5';
+import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=6';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=11';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=12';
 import { cityGraphicsMenu, cityPixelRatio, cityFramePacer, recommendCitySettings, supportedCityFPS } from './city3d-graphics.js?v=2';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
@@ -854,7 +854,6 @@ function updateCrew(beat, dt) {
   }
   const { bend } = T.plan, walk = T.plan.enter, back = 2.9;
   const rel = now - T.start - walk;
-  let freezeNow = false;
   if (rel < 0) {
     walkMove(J, dt, cx, cz, ease(clamp((rel + walk) / walk, 0, 1)), toMid, bend);
     W.power = false;
@@ -865,7 +864,7 @@ function updateCrew(beat, dt) {
       T.seg = i; J.play(s.c, { at: s.at, speed: s.sp, fade: s.fade ?? .35 });
     }
     spinTick(J, T.plan.list, rel);
-    freezeNow = s.kind === 'hold' && rel - s.a > .65; W.power = s.kind === 'power';
+    W.power = s.kind === 'power';
   } else if (rel < T.plan.len + back) {
     // the set is over: he gets up and WALKS back to his place, then turns to the circle again
     if (!T.out) { T.out = true; walkStart(J); }
@@ -876,7 +875,6 @@ function updateCrew(beat, dt) {
     if (D === J || D.ws) { D.tick(dt); if (D.ws) walkPose(D, dt); }
     else W.tickAmbient(D, dt);
   });
-  W.freezeNow = freezeNow;
 }
 
 // ---------- controls ----------

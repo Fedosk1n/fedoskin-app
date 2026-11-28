@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Vector3, Quaternion } from '../vendor/three/three.module.js';
 import { BATTLE_ANSWERS, battleReplyPoints, battleTechnique, battleStyle, breakingOpening,
-  CLUB_PREVIEW_BEATS, clubExhibition, duelPlan, REPLY_PRECISION, setTimes, pickPower, pickHold } from '../city3d-breaking.js';
+  CLUB_PREVIEW_BEATS, clubExhibition, cypherSet, duelPlan, REPLY_PRECISION, setTimes, pickPower, pickHold,
+  samplePhrase, spinTick, WHEEL_FOOTWORK } from '../city3d-breaking.js';
 
 const load = file => JSON.parse(readFileSync(new URL('../anim/' + file, import.meta.url)));
 const { rest, clips: source } = load('bboy.json');
@@ -18,6 +19,8 @@ function random(seed) {
 
 const styles = ['groove','ground','shapes','power'];
 const districts = ['yard','center','park','prom','club'];
+const retired = /City_Battle_(Check|Stop)/;
+assert(!Object.keys(original).some(clip => retired.test(clip)));
 let turns = 0;
 for (const district of districts) for (let seed = 1; seed <= 64; seed++) {
   const r = random(seed), memory = [{}, {}], lastForm = [null, null];
@@ -27,7 +30,8 @@ for (const district of districts) for (let seed = 1; seed <= 64; seed++) {
     for (const i of [holder, 1 - holder]) {
       const lv = i === 0 ? 1 : round + 1, profile = styles[(i + round) % styles.length];
       const duel = duelPlan({ district, profile, memory: memory[i], r, duration: length, opening: i === holder, hero: i === 0 });
-      const opening = breakingOpening({ memory: memory[i], r, lv, bpm: 110 + round * 5, duration: length, duel, call: duel.motif, avoid });
+      const opening = breakingOpening({ memory: memory[i], r, bpm: 110 + round * 5, duration: length,
+        duel, call: duel.motif, avoid, technical: i !== 0 && lv >= 5 });
       assert.notEqual(opening.shape, lastForm[i], `${district} immediate same dancer form`);
       assert.notEqual(opening.shape, avoid, `${district} immediate copy across the floor`);
       lastForm[i] = avoid = opening.shape;
@@ -41,13 +45,31 @@ for (const district of districts) for (let seed = 1; seed <= 64; seed++) {
       assert(Number.isFinite(end) && end > opening.enter);
       for (const [k, s] of opening.seq.entries()) {
         assert(length(s.c) && Number.isFinite(s.a) && s.b > s.a && (k === 0 || s.a === opening.seq[k - 1].b));
+        assert(!retired.test(s.c) && !['hold','freeze'].includes(s.kind));
+        assert(s.at + s.len * s.sp <= length(s.c) + .005, `${s.c} would hold its last frame`);
       }
       turns++;
     }
   }
 }
+const technicalForm = options => breakingOpening({ memory:{}, r:random(333), duration:length, force:'clubLift', ...options }).seq;
+assert(!technicalForm({}).some(s => s.kind === 'technical'));
+const technical = technicalForm({ technical:true });
+const freezeIndex = technical.findIndex(s => s.kind === 'technical');
+assert.equal(technical[freezeIndex].c.replace(/_M$/, ''), 'Breakdance_Freeze_Var_2');
+assert.equal(technical[freezeIndex + 1].kind, 'down');
+assert(!technical[freezeIndex].pts && !technical[freezeIndex].fail && !technical[freezeIndex].balance);
 
-for (const district of ['park','prom','club']) for (const call of ['stop','switch']) for (const leads of [false,true]) {
+for (let seed = 1; seed <= 128; seed++) {
+  const whole = cypherSet({ memory:{}, r:random(seed), lv:6, duration:length, bpm:104, profile:styles[seed % styles.length] });
+  assert(!whole.list.slice(0,-1).some(s => ['hold','freeze'].includes(s.kind) || retired.test(s.c)));
+  assert.equal(whole.list.at(-1).kind, 'freeze');
+  for (const s of whole.list.filter(s => s.sp || ['pre','post'].includes(s.kind))) {
+    assert(s.at + s.len * (s.sp || 1) <= length(s.c) + .005, `${s.c} would hold in the middle of the cypher`);
+  }
+}
+
+for (const district of ['park','prom','club']) for (const call of ['arc','switch']) for (const leads of [false,true]) {
   const answer = battleTechnique(call, leads);
   const other = battleTechnique(answer, false);
   assert(BATTLE_ANSWERS.some(move => move.motif === answer && move.lv === 1 && length(move.c)));
@@ -73,15 +95,23 @@ for (const id of ['needle','echo','tape','pulse','pivot','mono','fader']) {
     const show = clubExhibition({ memory, profile: battleStyle(id), duration: length, r, bpm: 116, avoid: lastForm });
     const signature = show.steps.map(s => [s.c.replace(/_M$/, ''), s.at]).flat().join('/');
     assert.notEqual(signature, last);
-    assert(show.steps.length >= 2 && ['stop','switch'].includes(show.motif));
+    assert(show.steps.length >= 2 && ['arc','switch'].includes(show.motif));
     assert(Math.abs(show.steps.at(-1).b - CLUB_PREVIEW_BEATS * 60 / 116) < 1e-9);
     assert.equal(show.steps.length, 3);
     assert(show.steps[0].b > 0 && show.steps[0].b < show.steps[1].b);
+    let from = 0;
+    for (const stage of show.steps) {
+      assert(!retired.test(stage.c) && stage.at + (stage.b - from) * stage.sp <= length(stage.c) + 1e-7);
+      from = stage.b;
+    }
     last = signature;
     lastForm = show.form;
     previews++;
   }
 }
+const fallback = clubExhibition({ memory:{}, duration:clip => source[clip] ? length(clip) : 0, bpm:122, r:random(5) });
+assert.deepEqual(fallback.steps.map(s => s.c), ['Breakdance_Uprock','Breakdance_Uprock_To_Ground','Breakdance_Footwork_2']);
+assert.equal(fallback.steps.at(-1).b, CLUB_PREVIEW_BEATS * 60 / 122);
 
 function jointPositions(clip, fraction) {
   const { n, t } = clips[clip], i = Math.round(fraction * (n - 1)), world = {};
@@ -99,6 +129,33 @@ for (const [fraction, side, opposite] of [[.18,'Left','Right'],[.62,'Right','Lef
   assert(Math.abs(p.Hips.x - p[side+'Hand'].x) > .31);
   assert(Math.abs(p.Head.x - p.Hips.x) > .30, 'visible weight shift');
 }
+const arc = 'City_Battle_LegArc';
+const arcStart = jointPositions(arc,.14), arcFront = jointPositions(arc,.28), arcSide = jointPositions(arc,.60);
+assert(arcFront.LeftFoot.z > .57 && arcSide.LeftFoot.x > .5 && arcSide.LeftFoot.z < .22);
+assert(arcStart.LeftFoot.distanceTo(arcFront.LeftFoot) > .30 && arcFront.LeftFoot.distanceTo(arcSide.LeftFoot) > .50);
+for (const phase of [.14,.28,.44,.60]) {
+  const p = jointPositions(arc,phase);
+  assert(p.RightHand.y < .08 && p.RightHand.distanceTo(arcStart.RightHand) < .025 && p.LeftHand.y > .28);
+}
+assert(jointPositions(arc,.89).RightFoot.distanceTo(arcSide.RightFoot) > .14, 'other foot picks up the next step');
+assert(jointPositions(arc,.60).Head.distanceTo(arcFront.Head) > .12, 'torso follows the leg arc');
+assert(jointPositions('Breakdance_Freeze_Var_2',2.5 / length('Breakdance_Freeze_Var_2')).LeftFoot.y > 1.4);
+assert(jointPositions('Breakdance_Freeze_Var_2',3.63 / length('Breakdance_Freeze_Var_2')).RightFoot.y < .23);
+const joints = ['Hips','LeftFoot','RightFoot','LeftHand','RightHand'];
+for (const name of [arc, WHEEL_FOOTWORK, 'City_Flex_Reach','City_Backspin']) {
+  const frames = original[name].n - 1;
+  for (let i = 0; i <= frames - 4; i++) {
+    const start = jointPositions(name,i / frames), end = jointPositions(name,(i + 4) / frames);
+    assert(Math.max(...joints.map(j => start[j].distanceTo(end[j]))) > .016, `${name} stalls at frame ${i}`);
+  }
+}
+const first = jointPositions(WHEEL_FOOTWORK,0), last = jointPositions(WHEEL_FOOTWORK,1);
+assert(joints.every(j => first[j].distanceTo(last[j]) < .004), 'waiting footwork closes its joint and root seam');
+const late = { cur:arc };
+spinTick(late, [{ c:arc, a:2, b:3.5, at:.02, sp:.96 }], 3.25);
+assert.equal(late.phraseTime, 1.22, 'a slow frame samples the actual place in the arc');
+samplePhrase(late, { c:'City_Battle_Support', at:0, sp:1 }, .4);
+assert.equal(late.phraseTime, 1.22, 'a previous motion cannot seek the current clip');
 const raised = jointPositions('City_Battle_Lift',.55);
 assert(raised.LeftHand.y > raised.Head.y, 'the hand visibly rises above the head');
 for (const name of ['City_Battle_Square','City_Battle_Settle']) {
@@ -131,12 +188,12 @@ for (const bpm of [122, 134]) {
       let avoid;
       for (let i = 0; i < 2; i++) {
         const duel = duelPlan({ district:'club', profile, memory:memory[i], r, duration:length, hero:i===0, opening:i===0 });
-        const opening = breakingOpening({ memory:memory[i], r, duration:length, bpm, lv, duel, call:duel.motif, avoid });
+        const opening = breakingOpening({ memory:memory[i], r, duration:length, bpm, duel, call:duel.motif, avoid, technical:i===1 });
         const move = i===0 ? BATTLE_ANSWERS[0] : pickPower(memory[i], r, lv, length, profile);
-        const hold = pickHold(memory[i], lv, r, opening.held, length);
+        const hold = pickHold(memory[i], lv, r, length);
         const repeats = i===0 || move.id==='backspin' ? 1 : Math.max(1, Math.round(2.85 / length(move.c)));
         cost += setTimes(opening.seq, 0, opening.enter) + 30 / bpm + 2.3 + length(move.c) * repeats + hold.len
-          + (move.pre ? 1.6 : 0) + (move.post ? 1.4 : 0) + (move.id==='ninety' ? 1.3 : 0)
+          + (move.pre ? 1.6 : 0) + (move.post ? 1.4 : 0) + (move.id==='ninety' ? length('Festival_StandThrough') : 0)
           + (i===0 ? 4 * 60 / bpm + 1.45 : 0);
         avoid = opening.shape;
       }
@@ -150,4 +207,4 @@ for (const bpm of [122, 134]) {
   assert.equal(state.points.me,SMOKE_TARGET);
   console.log(`${bpm} BPM: eight-beat halves, timed watch ≈ ${budget.toFixed(2)} s, clean seven-win route budget ≈ ${reachable.toFixed(1)} s.`);
 }
-console.log(`${turns} seeded turns across five districts, ${previews} watched Club phrases, both roles, accuracy and wrist contact.`);
+console.log(`${turns} seeded turns across five districts, ${previews} watched Club phrases, 128 ambient cyphers, both roles, continuous links, technical freeze and a seamless wheel.`);

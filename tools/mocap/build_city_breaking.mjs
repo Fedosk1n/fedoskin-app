@@ -323,11 +323,17 @@ const hipSweep = [
   [1,  [.19,.33,0],    [-.74,.13,.28], [.26,.12,.19],[.72,.12,.32],[.12,.51,.32],[.02,.06,-.03]],
 ];
 
-function travelCurve(marks) {
+function travelCurve(marks, closed = false) {
   const values = marks.map(row => row.slice(1).flat());
   const times = marks.map(([time]) => time);
   const slope = (i, channel) => {
-    if (!i || i === times.length - 1) return 0;
+    if (!i || i === times.length - 1) {
+      if (!closed) return 0;
+      const end = times.length - 1;
+      const left = (values[0][channel] - values[end-1][channel]) / (1 - times[end-1]);
+      const right = (values[1][channel] - values[0][channel]) / times[1];
+      return left * right <= 0 ? 0 : 2 * left * right / (left + right);
+    }
     const left = (values[i][channel] - values[i-1][channel]) / (times[i] - times[i-1]);
     const right = (values[i+1][channel] - values[i][channel]) / (times[i+1] - times[i]);
     return left * right <= 0 ? 0 : 2 * left * right / (left + right);
@@ -397,27 +403,55 @@ const yieldFloor = signal([.42,-.33,.38], null, .14, .18);
 const quietSquare = signal(null, null, -.16, -.11);
 const quietSettle = signal(null, null, -.10, .15);
 const drawWide = signal([.56,.15,.28], [.38,-.19,.20], -.12, .19);
-const standCheck = signal([.37,-.11,.41], [.18,-.11,.34], .16, -.05);
 const edgeCross = capture('Breakdance_Uprock', .48);
 const edgeRock = capture('Brooklyn_Uprock', .58);
 
-// Both footwork answers begin and finish in the same crouch. The support-side switch has two different grounded
-// palms and a reverse sweep. The check uses a quiet low shape, gathers its weight, then opens on the late accent.
+// The support-side switch crosses two grounded palms. The leg arc carries the pelvis around the same palm
+// before the far foot picks up the next step.
 const changeLeft = own([.14,.29,.025],[-.92,-.22,-.70], [-.05,.12,.58],[-.53,.14,.32],
   [.52,.064,.18],[-.21,.63,.34], {spine:.12,twist:-.19});
 const gatherFloor = own([.005,.27,.035],[-1.11,.00,.02], [.24,.12,.42],[-.20,.12,.42],
   [.37,.064,.025],[-.37,.064,.025], {spine:.08,twist:.03});
 const changeRight = own([-.15,.285,.035],[-.90,.25,.76], [.54,.14,.48],[.06,.12,.39],
   [.23,.65,.32],[-.52,.064,.18], {spine:.10,twist:.22});
-const floorCheck = own([-.11,.286,.025],[-.89,.15,.43], [.36,.12,.44],[-.09,.12,.33],
-  [.30,.40,.24],[-.47,.066,.20], {spine:.13,twist:.16});
-const afterCheck = own([-.12,.27,.025],[-1.08,.24,.72], [.65,.39,.27],[.16,.12,.49],
+const lowKick = own([-.12,.27,.025],[-1.08,.24,.72], [.65,.39,.27],[.16,.12,.49],
   [.29,.55,.37],[-.52,.064,.18], {spine:.08,twist:.17});
+
+const legArc = [
+  [0,   [-.035,.33,.025],[-.74,.12,.27],[.04,.12,.19],[.43,.12,.32],[-.07,.51,.32],[-.37,.12,.08]],
+  [.14, [-.15,.32,.02],  [-.91,.08,.50],[.01,.22,.32],[-.11,.12,.37],[.22,.41,.42],[-.50,.064,.13]],
+  [.28, [-.23,.29,.01],  [-1.07,.18,.65],[.19,.31,.65],[-.11,.12,.37],[.29,.36,.35],[-.50,.064,.13]],
+  [.44, [-.20,.28,-.04], [-1.21,.47,.67],[.48,.23,.52],[-.11,.12,.37],[.36,.32,.25],[-.50,.064,.13]],
+  [.60, [-.11,.30,-.04], [-1.10,.75,.51],[.56,.13,.17],[-.09,.17,.33],[.39,.32,.09],[-.50,.064,.13]],
+  [.76, [-.02,.34,.005], [-.89,.48,.30],[.51,.12,.12],[.09,.22,.43],[.38,.38,.09],[-.43,.14,.15]],
+  [.89, [.06,.31,.04],   [-.77,.25,.16],[.48,.15,.17],[.07,.12,.29],[.22,.45,.27],[-.29,.26,.17]],
+  [1,   [.015,.34,.02],  [-.70,.10,.15],[.30,.12,.25],[-.10,.12,.24],[.06,.48,.38],[-.29,.34,.31]],
+];
+
+// Small alternating steps under the wheel. The continuous pose and velocity across the seam are intentional.
+const wheelFootwork = [
+  [0,   [.018,.48,.12], [.15,.10,-.035],[.26,.098,.22],[-.27,.18,.27],[.25,.55,.37],[-.37,.53,.29]],
+  [.13, [.04,.46,.14],  [.18,.19,-.09], [.26,.098,.22],[-.36,.11,.07],[.20,.52,.45],[-.40,.48,.32]],
+  [.28, [-.035,.45,.12],[.21,.11,.07],  [.26,.14,.31],[-.36,.098,.07],[.31,.51,.45],[-.43,.49,.35]],
+  [.42, [-.08,.46,.115],[.20,-.08,.12], [.34,.19,.34],[-.36,.098,.07],[.45,.54,.36],[-.32,.51,.45]],
+  [.56, [-.005,.48,.12],[.13,-.20,.035],[.39,.098,.15],[-.36,.098,.07],[.49,.53,.29],[-.24,.54,.46]],
+  [.70, [.06,.47,.13],  [.14,-.14,-.10],[.39,.098,.15],[-.36,.13,.21],[.45,.53,.28],[-.25,.54,.48]],
+  [.84, [.045,.45,.14], [.20,-.04,-.03],[.30,.15,.16],[-.28,.10,.36],[.32,.54,.27],[-.31,.52,.46]],
+  [1,   [.018,.48,.12], [.15,.10,-.035],[.26,.098,.22],[-.27,.18,.27],[.25,.55,.37],[-.37,.53,.29]],
+];
+
+function footworkPath(marks, loop = false) {
+  const sample = travelCurve(marks, loop);
+  return time => {
+    const controls = sample(time);
+    return floor(...controls, { spine: .15, twist: -.32 * controls[1][1] });
+  };
+}
 
 const authored = {
   City_Floorrock_Roll: { n: 70, poseAt: floorrock(backrock) },
   City_Floorrock_Sweep: { n: 64, poseAt: floorrock(hipSweep) },
-  City_Flex_Reach: { n: 40, keys: [[0,sit],[.23,twist],[.46,flex],[.67,flex],[1,sit]] },
+  City_Flex_Reach: { n: 40, keys: [[0,sit],[.23,twist],[.46,flex],[.72,tuck],[1,sit]] },
   City_Trick_Thread: { n: 37, keys: [[0,sit],[.25,tuck],[.48,thru],[.74,twist],[1,sit]] },
   City_Trick_KickSwitch: { n: 33, keys: [[0,sit],[.22,kick],[.38,sit],[.62,switchKick],[1,sit]] },
   City_Sweep_Drop: { n: 40, keys: [[0,stand],[.42,squat],[.70,sweep],[1,sit]] },
@@ -442,11 +476,11 @@ const authored = {
   City_Battle_Chest: { n: 18, keys: [[0,edge],[.45,touchChest],[.65,touchChest],[1,edge]] },
   City_Battle_Yield: { n: 18, keys: [[0,edge],[.50,yieldFloor],[.70,yieldFloor],[1,edge]] },
   City_Battle_Arc: { n: 32, keys: [[0,edge],[.27,edgeCross],[.54,drawWide],[.77,edgeRock],[1,edge]] },
-  City_Battle_Stop: { n: 27, keys: [[0,edge],[.24,edgeCross],[.53,standCheck],[.76,standCheck],[1,edge]] },
-  City_Battle_Support: { n: 61, keys: [[0,sit],[.18,changeLeft],[.39,gatherFloor],[.62,changeRight],[.79,afterCheck],[1,sit]] },
+  City_Battle_Support: { n: 61, keys: [[0,sit],[.18,changeLeft],[.39,gatherFloor],[.62,changeRight],[.79,lowKick],[1,sit]] },
   City_Battle_Reverse: { n: 45, keys: [[0,sit],[.22,changeRight],[.48,gatherFloor],[.76,changeLeft],[1,sit]] },
-  City_Battle_Check: { n: 45, keys: [[0,sit],[.23,floorCheck],[.53,floorCheck],[.79,afterCheck],[1,sit]] },
-  City_Battle_Compact: { n: 44, keys: [[0,edge],[.17,edgeCross],[.38,squat],[.62,changeLeft],[.83,floorCheck],[1,sit]] },
+  City_Battle_LegArc: { n: 45, poseAt: footworkPath(legArc) },
+  City_Battle_WheelFootwork: { n: 49, poseAt: footworkPath(wheelFootwork, true) },
+  City_Battle_Compact: { n: 44, keys: [[0,edge],[.17,edgeCross],[.38,squat],[.62,changeLeft],[.83,open],[1,sit]] },
 };
 
 function bake({ n, keys, poseAt }) {

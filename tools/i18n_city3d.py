@@ -59,11 +59,11 @@ t("Короткая футболка поверх базового слоя", "C
 
 # ---------- battle accents and grounded replies ----------
 t("Смена опоры", "Switch support", "Cambio de apoyo", "Troca de apoio", "Changer d’appui", "Stütze wechseln", "支えを切り替える", "지지 바꾸기", "换支点")
-t("Пауза внизу", "Low pause", "Pausa abajo", "Pausa no chão", "Pause au sol", "Pause am Boden", "低い姿勢で止める", "바닥에서 멈추기", "低位停顿")
+t("Дуга ноги", "Leg sweep", "Barrido de pierna", "Varredura de perna", "Balayage de jambe", "Beinschwung", "脚のスイープ", "다리 쓸기", "扫腿弧线")
 t("смена опоры", "support switch", "cambio de apoyo", "troca de apoio", "changement d’appui", "Stützwechsel", "支えの切り替え", "지지 전환", "换支点")
-t("остановка", "stop", "parada", "parada", "arrêt", "Stopp", "ストップ", "멈춤", "停顿")
+t("дуга ноги", "leg sweep", "barrido de pierna", "varredura de perna", "balayage de jambe", "Beinschwung", "脚のスイープ", "다리 쓸기", "扫腿弧线")
 t("Мотив · смена опоры", "Motif · support switch", "Motivo · cambio de apoyo", "Motivo · troca de apoio", "Motif · changement d’appui", "Motiv · Stützwechsel", "モチーフ · 支えの切り替え", "모티프 · 지지 전환", "动机 · 换支点")
-t("Мотив · остановка", "Motif · stop", "Motivo · parada", "Motivo · parada", "Motif · arrêt", "Motiv · Stopp", "モチーフ · ストップ", "모티프 · 멈춤", "动机 · 停顿")
+t("Мотив · дуга ноги", "Motif · leg sweep", "Motivo · barrido de pierna", "Motivo · varredura de perna", "Motif · balayage de jambe", "Motiv · Beinschwung", "モチーフ · 脚のスイープ", "모티프 · 다리 쓸기", "动机 · 扫腿弧线")
 t("Твой мотив · {motif}. Развей его: {answer}.", "Your motif · {motif}. Develop it with {answer}.", "Tu motivo · {motif}. Desarróllalo con {answer}.", "Seu motivo · {motif}. Desenvolva com {answer}.", "Ton motif · {motif}. Développe-le avec {answer}.", "Dein Motiv · {motif}. Entwickle es mit {answer} weiter.", "自分のモチーフ · {motif}。{answer}で展開しよう。", "내 모티프 · {motif}. {answer}로 이어 가.", "你的动机 · {motif}。用「{answer}」展开。")
 t("Мотив соперника · {motif}. Контраст: {answer}.", "Opponent motif · {motif}. Contrast with {answer}.", "Motivo rival · {motif}. Contrasta con {answer}.", "Motivo rival · {motif}. Faça contraste com {answer}.", "Motif adverse · {motif}. Crée un contraste avec {answer}.", "Motiv des Gegners · {motif}. Setz {answer} dagegen.", "相手のモチーフ · {motif}。{answer}で対比を出そう。", "상대 모티프 · {motif}. {answer}로 대비를 줘.", "对手的动机 · {motif}。用「{answer}」做对比。")
 t("Не повторяй прошлый ответ. Зелёная зона ≥ {n}% для +{points}.", "Vary your last reply. Green zone ≥ {n}% for +{points}.", "Varía tu última respuesta. Zona verde ≥ {n}% para +{points}.", "Varie a última resposta. Zona verde ≥ {n}% para +{points}.", "Varie ta dernière réponse. Zone verte ≥ {n}% pour +{points}.", "Variier deine letzte Antwort. Grüne Zone ≥ {n}% für +{points}.", "前と違う返しを。緑の範囲に{n}%以上で +{points}。", "직전 답변을 바꿔 봐. 초록 구간 {n}% 이상이면 +{points}.", "换掉上一轮的回应。绿区时间 ≥ {n}% 得 +{points}。")

@@ -109,8 +109,8 @@ festival = [
 battle = [
     [('01  Entry','City_Battle_Compact',.08), ('02  First palm','City_Battle_Support',.18),
      ('03  Change support','City_Battle_Support',.62), ('04  Extend','City_Battle_Support',.79)],
-    [('01  Raise','City_Battle_Lift',.51), ('02  Arrest','City_Battle_Stop',.61),
-     ('03  Settle','City_Battle_Settle',.93), ('04  Square','City_Battle_Square',.93)],
+    [('01  Plant','City_Battle_LegArc',.14), ('02  Curl','City_Battle_LegArc',.28),
+     ('03  Sweep','City_Battle_LegArc',.54), ('04  Next step','City_Battle_LegArc',.81)],
 ]
 for row, theme in enumerate(battle if args[1:] == ['battle'] else festival):
     for column, (label, clip, time) in enumerate(theme):

@@ -1,5 +1,5 @@
 // Seven to Smoke: eight breakers, winner stays, loser goes to the back.
-import { beatEntry } from './city3d-breaking.js?v=5';
+import { beatEntry, samplePhrase } from './city3d-breaking.js?v=6';
 const t = window._t;
 export const SMOKE_TARGET = 7;
 export const SMOKE_TIME = 4 * 60;
@@ -204,7 +204,10 @@ export function initSmoke({ W, clipLen, currentBeat, playPlayer, cancelPlayer, p
     else if (stage === 'dance') {
       const i = show.steps.findIndex(step => now - approach < step.b);
       const step = show.steps[i];
-      if (step && i !== duel.step) J.play(step.c, { at: step.at, speed: step.sp, fade: .18 });
+      if (step) {
+        if (i !== duel.step) J.play(step.c, { at: step.at, speed: step.sp, fade: .18 });
+        samplePhrase(J, step, now - approach - (show.steps[i-1]?.b || 0));
+      }
       duel.step = i;
       guestDancer = step ? J : null;
     }

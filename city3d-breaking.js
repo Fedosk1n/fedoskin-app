@@ -17,12 +17,6 @@ export const HOLDS = [
   { c: 'Breakdance_Freeze_Var_3', at: 1.2, len: 2.3, nm: 'BABY FREEZE' },
   { c: 'City_Shoulder_Hold', at: 0, len: 2.0, nm: 'SHOULDER FREEZE', lv: 2, risk: .02 },
 ];
-const DROP_HOLDS = [
-  { c: 'Breakdance_Freeze_Var_4', at: .8, len: 2.1, nm: 'BABY FREEZE' },
-  { c: 'Breakdance_Freeze_Var_3', at: .8, len: 2.7, nm: 'BABY FREEZE' },
-  { c: 'Breakdance_Freeze_Var_2', at: .9, len: 2.1, nm: 'AIR FREEZE', lv: 2 },
-  { c: 'Breakdance_Freezes', at: 1.6, len: 2.25, nm: 'AIR FREEZE', lv: 2 },
-];
 const FLOOR = [['City_Floorrock_Sweep', 'FLOORROCK']];
 const TRICKS = [['City_Trick_Thread', 'LEG THREAD'], ['City_Trick_KickSwitch', 'KICK SWITCH']];
 const DROPS = ['Breakdance_Uprock_To_Ground', 'City_Sweep_Drop'];
@@ -33,32 +27,32 @@ const ENTRIES = [
 const patterns = {
   classic: ['top', 'down', 'longFoot'],
   rock: ['top', 'extraTop', 'down', 'foot'],
-  drop: ['top', 'dropHold', 'foot'],
+  drop: ['top', 'sweepDrop', 'foot'],
   powerFirst: ['top', 'down', 'quickFoot'],
   floorStart: ['top', 'down', 'longFoot', 'rise', 'extraTop', 'down'],
   rebound: ['top', 'down', 'quickFoot', 'rise', 'extraTop', 'down'],
-  freezeBreak: ['top', 'down', 'quickFoot', 'hold', 'quickFoot'],
+  sweepBreak: ['top', 'down', 'quickFoot', 'sweep', 'quickFoot'],
   floorFlow: ['top', 'down', 'quickFoot', 'floor', 'foot'],
   shapeHit: ['top', 'down', 'quickFoot', 'flex', 'trick'],
-  floorAnswer: ['top', 'down', 'quickFoot', 'trick', 'hold'],
+  floorAnswer: ['top', 'down', 'quickFoot', 'trick', 'sweep'],
   threadBreak: ['top', 'down', 'trick', 'foot'],
-  shapeStart: ['top', 'dropHold', 'flex', 'quickFoot'],
+  shapeStart: ['top', 'sweepDrop', 'flex', 'quickFoot'],
 };
 // The street uses these older forms for ambient cyphers. Duels add grounded links, accents and changes of level.
 const ambientShapes = Object.keys(patterns);
 Object.assign(patterns, {
   crossArc: ['top', 'arc', 'down', 'foot'],
-  softDrop: ['top', 'compact', 'quickFoot', 'hold', 'foot'],
-  supportLine: ['top', 'down', 'quickFoot', 'support', 'hold'],
-  floorCheck: ['top', 'down', 'check', 'foot', 'rise', 'extraTop', 'down'],
+  softDrop: ['top', 'compact', 'quickFoot', 'sweep', 'foot'],
+  supportLine: ['top', 'down', 'quickFoot', 'support', 'sweep'],
+  floorArc: ['top', 'down', 'sweep', 'foot', 'rise', 'extraTop', 'down'],
   cutBack: ['top', 'arc', 'compact', 'reverse', 'foot'],
   hinge: ['top', 'down', 'support', 'quickFoot', 'rise', 'compact'],
-  releaseLine: ['top', 'compact', 'check', 'foot', 'trick'],
+  releaseLine: ['top', 'compact', 'sweep', 'foot', 'trick'],
   clubArc: ['top', 'arc', 'down', 'quickFoot'],
   clubLink: ['top', 'compact', 'support', 'quickFoot'],
   clubPivot: ['top', 'down', 'reverse', 'quickFoot'],
-  clubCheck: ['top', 'compact', 'check', 'quickFoot'],
-  clubLift: ['top', 'dropHold', 'quickFoot', 'rise', 'down'],
+  clubSweep: ['top', 'compact', 'sweep', 'quickFoot'],
+  clubLift: ['top', 'sweepDrop', 'quickFoot', 'rise', 'down'],
   clubThread: ['top', 'down', 'trick', 'quickFoot'],
 });
 export const SHAPES = Object.keys(patterns);
@@ -66,14 +60,14 @@ export const SHAPES = Object.keys(patterns);
 const streets = {
   yard: ['classic', 'rock', 'drop', 'crossArc', 'softDrop'],
   center: ['crossArc', 'cutBack', 'softDrop', 'rock', 'drop', 'floorAnswer'],
-  park: ['supportLine', 'floorCheck', 'cutBack', 'floorStart', 'floorFlow', 'threadBreak'],
-  prom: ['hinge', 'releaseLine', 'floorCheck', 'freezeBreak', 'powerFirst', 'shapeHit'],
-  club: ['clubArc', 'clubLink', 'clubPivot', 'clubCheck', 'clubLift', 'clubThread'],
+  park: ['supportLine', 'floorArc', 'cutBack', 'floorStart', 'floorFlow', 'threadBreak'],
+  prom: ['hinge', 'releaseLine', 'floorArc', 'sweepBreak', 'powerFirst', 'shapeHit'],
+  club: ['clubArc', 'clubLink', 'clubPivot', 'clubSweep', 'clubLift', 'clubThread'],
 };
 const profiles = {
-  groove: { motif: 'stop', pre: ['Lift','Nod',null], post: ['Chest',null,'Yield'], shape: ['crossArc','floorCheck','cutBack','rock','clubArc','clubCheck'] },
+  groove: { motif: 'arc', pre: ['Lift','Nod',null], post: ['Chest',null,'Yield'], shape: ['crossArc','floorArc','cutBack','rock','clubArc','clubSweep'] },
   ground: { motif: 'switch', pre: ['Nod','Offer',null], post: [null,'Yield','Nod'], shape: ['supportLine','cutBack','hinge','floorAnswer','floorStart','clubLink','clubPivot'] },
-  shapes: { motif: 'stop', pre: ['Offer',null,'Nod'], post: ['Nod','Chest',null], shape: ['softDrop','releaseLine','shapeStart','freezeBreak','clubCheck','clubLift'] },
+  shapes: { motif: 'arc', pre: ['Offer',null,'Nod'], post: ['Nod','Chest',null], shape: ['softDrop','releaseLine','shapeStart','sweepBreak','clubSweep','clubLift'] },
   power: { motif: 'switch', pre: ['Listen','Offer',null], post: ['Chest',null,'Nod'], shape: ['cutBack','supportLine','powerFirst','hinge','clubPivot','clubThread'] },
 };
 const clubStyles = { needle:'ground', echo:'groove', tape:'shapes', pulse:'power', pivot:'groove', mono:'ground', fader:'shapes' };
@@ -82,9 +76,10 @@ export const battleStyle = (id, fallback) => clubStyles[id] || fallback || 'groo
 const answer = (id, c, motif, name) => ({ id, c, motif, name, lv: 1, pts: 2, risk: 0 });
 export const BATTLE_ANSWERS = [
   answer('replySwitch', 'City_Battle_Reverse', 'switch', 'Смена опоры'),
-  answer('replyStop', 'City_Battle_Check', 'stop', 'Пауза внизу'),
+  answer('replyArc', 'City_Battle_LegArc', 'arc', 'Дуга ноги'),
 ];
-export const otherMotif = motif => motif === 'switch' ? 'stop' : 'switch';
+export const otherMotif = motif => motif === 'switch' ? 'arc' : 'switch';
+export const WHEEL_FOOTWORK = 'City_Battle_WheelFootwork';
 export const REPLY_PRECISION = { park: 0, prom: .85, club: .90 };
 export const battleTechnique = (motif, leads) => leads ? motif : otherMotif(motif);
 export function battleReplyPoints({ district, call, leads, answer, eligible, clean, precision = 0, previous }) {
@@ -112,8 +107,8 @@ export function duelPlan({ district, profile, memory, r, duration, opening = fal
 const accents = {
   groove: ['classic','rock','rebound','threadBreak'],
   ground: ['classic','floorStart','floorAnswer','threadBreak'],
-  shapes: ['drop','shapeHit','freezeBreak','shapeStart'],
-  power: ['powerFirst','classic','shapeHit','freezeBreak'],
+  shapes: ['drop','shapeHit','sweepBreak','shapeStart'],
+  power: ['powerFirst','classic','shapeHit','sweepBreak'],
 };
 const crewStyles = {
   rusty: 'groove', acid: 'power', owls: 'ground', gold: 'shapes',
@@ -151,8 +146,8 @@ export function pickPower(memory, r, level, duration, profile) {
       : profile === 'ground' && p.id === 'backspin' ? 2.4 : 1, p => p.id);
 }
 
-export function pickHold(memory, level, r, exclude, duration) {
-  const choices = HOLDS.filter(f => (f.lv || 1) <= level && f.nm !== exclude && duration(f.c));
+export function pickHold(memory, level, r, duration) {
+  const choices = HOLDS.filter(f => (f.lv || 1) <= level && duration(f.c));
   return variety(memory, 'finish', choices, r, 1, undefined, f => f.nm);
 }
 
@@ -162,7 +157,7 @@ function phraseTime(native, bpm) {
   return clamp(Math.round(native / halfBeat) * halfBeat, native * .83, native * 1.19);
 }
 
-export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, force, distance = 2.12, step = 0, duel, call, response, avoid }) {
+export function breakingOpening({ memory, r, duration, bpm = 112, profile, force, distance = 2.12, step = 0, duel, call, response, avoid, technical = false }) {
   const districtForms = streets[duel?.district] || ambientShapes;
   const forms = districtForms.filter(shape => shape !== avoid);
   const shape = Object.hasOwn(patterns, force) ? force : variety(memory, 'shape', forms, r, 4, s => {
@@ -172,7 +167,7 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
   });
   const { bend, len } = variety(memory, 'entry', ENTRIES, r, 2);
   const seq = [];
-  let mirror = r() < .5, dir = mirror ? -1 : 1, topScored = false, footScored = false, held, shown = false;
+  let mirror = r() < .5, dir = mirror ? -1 : 1, topScored = false, footScored = false, shown = false;
   const push = (c, len, at = 0, details = {}) => seq.push({ c, len, at, ...details });
   const source = (c, at, span, details = {}) => {
     const len = phraseTime(span, bpm);
@@ -197,16 +192,22 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
     const time = phraseTime(span, bpm);
     source(c, 0, span, { kind: 'down', fade: .29, yaw: dir * (.22 + r()*.31), yt: time });
   };
-  const rise = () => source('Crossleg_Freeze', .76, 1.24, { kind: 'rise', fade: .34, yaw: -dir * .32, yt: .85 });
+  const rise = () => {
+    const riseMove = { kind: 'rise', fade: .30, yaw: -dir * .32, yt: .85 };
+    const authored = duration('Festival_StandThrough');
+    if (authored) source('Festival_StandThrough', 0, authored - .02, riseMove);
+    else source('Crossleg_Freeze', .85, .95, riseMove);
+  };
   const addFoot = (out, count, scored) => {
     for (let i=0; i<count; i++) {
       const [c, at, span] = variety(memory, 'feet', FOOT, r, 1, undefined, f => f[0]);
       if (i ? r() < .42 : r() < .28) mirror = !mirror;
       if (r() < .28) dir = -dir;
-      const len = phraseTime(span, bpm);
       const alternative = scored && !i ? response : null;
+      const material = alternative ? duration(alternative.c) : span;
+      const len = phraseTime(material, bpm);
       out.push({ c: side(alternative?.c || c, mirror), len, at: alternative ? 0 : at,
-        sp: (alternative ? duration(alternative.c) : span) / len, fade: i ? .32 : .38,
+        sp: material / len, fade: alternative ? .20 : i ? .32 : .38,
         nm: 'FOOTWORK', answer: alternative?.motif, kind: !i && scored ? 'foot' : 'foot2', pts: !i && scored ? 1.5 + step : 0,
         yaw: dir * (.16 + r()*.35), yt: Math.min(.72, len) });
     }
@@ -218,44 +219,40 @@ export function breakingOpening({ memory, r, lv, duration, bpm = 112, profile, f
     const [c, nm] = variety(memory, key, supported, r, 1);
     source(c, 0, duration(c) - .018, { kind, nm, fade: .3 });
   };
-  const hold = drop => {
-    const choice = drop ? DROP_HOLDS : HOLDS.filter(h => h.nm === 'BABY FREEZE' || h.nm === 'CHAIR FREEZE');
-    const actual = variety(memory, 'accentHold', choice.filter(f => (f.lv || 1) <= lv), r, 1, undefined, f => f.c);
-    held = actual.nm;
-    source(actual.c, actual.at, drop ? actual.len : actual.len - .55, { kind: 'hold', nm: held, fade: .4 });
-  };
   const part = (c, kind, extra = {}) => { if (duration(c) > 0) source(c, 0, duration(c) - .02, { kind, fade: .27, ...extra }); };
   const phases = {
     top, extraTop: () => { mirror = !mirror; top(); }, down, rise, foot: () => foot(2),
     quickFoot: () => foot(1), longFoot: () => foot(r() < .7 ? 2 : 3),
     floor: () => accent(FLOOR, 'floor', 'floor'), trick: () => accent(TRICKS, 'trick', 'trick'),
     flex: () => accent([['City_Flex_Reach', 'FLEX']], 'flex', 'flex'),
-    hold: () => hold(false), dropHold: () => hold(true),
+    sweepDrop: () => duration('City_Sweep_Drop') ? part('City_Sweep_Drop', 'down') : down(),
+    airAccent: () => source('Breakdance_Freeze_Var_2', 1.51, 2.12, { kind: 'technical', fade: .23, nm: 'AIR FREEZE' }),
     arc: () => part('City_Battle_Arc', 'top2', { yaw: dir * .39, yt: .76 }),
     compact: () => duel ? part('City_Battle_Compact', 'down') : down(),
-    support: () => call === 'switch' && shown ? accent(FLOOR, 'floor', 'floor') : part('City_Battle_Support', 'floor'),
+    support: () => part('City_Battle_Support', 'floor'),
     reverse: () => part(response?.motif === 'switch' ? 'City_Trick_Thread' : 'City_Battle_Reverse', 'trick', { yaw: -dir * .51, yt: .88 }),
-    check: () => part(response?.motif === 'stop' ? 'City_Flex_Reach' : 'City_Battle_Check', 'hold'),
+    sweep: () => response?.motif === 'arc' ? accent(FLOOR, 'floor', 'floor')
+      : part('City_Battle_LegArc', 'floor'),
   };
-  for (const phase of patterns[shape]) {
-    const dualUse = !shown && ((call === 'stop' && phase === 'arc') || (call === 'switch' && phase === 'support'));
-    if (dualUse) {
-      part(call === 'stop' ? 'City_Battle_Stop' : 'City_Battle_Support', 'motif', { motif: call });
-      shown = true;
+  // The experienced Club dancer can hit a one-hand air freeze and land upright before taking the next drop.
+  const form = shape === 'clubLift' && technical && duration('Breakdance_Freeze_Var_2') >= 3.63
+    ? ['top','airAccent','sweepDrop','quickFoot'] : patterns[shape];
+  const motifPhase = call === 'switch' ? 'support' : 'sweep';
+  const inForm = form.includes(motifPhase);
+  const showMotif = () => {
+    part(call === 'switch' ? 'City_Battle_Support' : 'City_Battle_LegArc', 'motif',
+      { motif: call, yaw: -dir * .31, yt: .82 });
+    shown = true;
+  };
+  for (const phase of form) {
+    if (call && !shown && phase === motifPhase) {
+      showMotif();
       continue;
     }
     phases[phase]();
-    if (shown || !call) continue;
-    if (call === 'stop' && phase === 'top' && !patterns[shape].includes('arc')) {
-      part('City_Battle_Stop', 'motif', { motif: call });
-      shown = true;
-    }
-    if (call === 'switch' && !patterns[shape].includes('support') && ['down','compact','dropHold'].includes(phase)) {
-      part('City_Battle_Support', 'motif', { motif: call, yaw: -dir * .48, yt: .82 });
-      shown = true;
-    }
+    if (call && !shown && !inForm && ['down','compact','sweepDrop'].includes(phase)) showMotif();
   }
-  return { seq, shape, held, enter: Math.max(len, .36 + distance / 2), bend,
+  return { seq, shape, enter: Math.max(len, .36 + distance / 2), bend,
     afterPower: out => { if (shape === 'powerFirst') addFoot(out, 1, false); }, rise };
 }
 
@@ -268,13 +265,17 @@ export function setTimes(seq, from, time) {
   return time;
 }
 
+// Sample a timed link on the phrase clock even when a long frame caps the mixer's delta.
+export function samplePhrase(dancer, step, elapsed) {
+  if (step.c !== dancer.cur) return;
+  if (step.c?.startsWith('City_Backspin')) dancer.phraseTime = elapsed;
+  else if (step.sp) dancer.phraseTime = step.at + elapsed * step.sp;
+}
+
 // Preserve the dancer's world-space travel when the next phrase changes direction.
 export function spinTick(dancer, seq, time) {
   for (const step of seq) {
-    // Keep the exit on the set clock when a slow frame caps the animation delta.
-    if (step.c?.startsWith('City_Backspin') && dancer.cur === step.c && time >= step.a && time < step.b) {
-      dancer.phraseTime = time - step.a;
-    }
+    if (time >= step.a && time < step.b) samplePhrase(dancer, step, time - step.a);
     if (!step.yaw || time < step.a || step.turned === 1) continue;
     const t = clamp((time - step.a) / step.yt, 0, 1), ease = t*t*(3-2*t);
     const d = step.yaw * (ease - (step.turned || 0));
@@ -294,29 +295,29 @@ export function beatEntry(time, bpm, beat) {
 }
 
 export function cypherSet({ memory, r, lv, duration, bpm, profile }) {
-  const opening = breakingOpening({ memory, r, lv, duration, bpm, profile });
+  const opening = breakingOpening({ memory, r, duration, bpm, profile });
   const { seq } = opening, P = pickPower(memory, r, lv, duration, profile);
-  if (P.pre) seq.push({ c: P.pre, at: 1, len: 1.8, kind: 'pre' });
+  if (P.pre) seq.push({ c: P.pre, at: 1, len: 1.6, kind: 'pre' });
   if (P.id === 'ninety') opening.rise();
   const native = duration(P.c);
   const steps = P.id === 'backspin' ? 1 : Math.max(1, Math.round((2.15 + r()*.6) / native));
   seq.push({ c: side(P.c, P.id === 'backspin' && r() < .5), at: 0, len: native * steps, kind: 'power', fade: P.fade });
   if (P.post) seq.push({ c: P.post, at: 0, len: 1.8, kind: 'post' });
   opening.afterPower(seq);
-  const F = pickHold(memory, lv, r, opening.held, duration);
-  seq.push({ ...F, c: side(F.c, r() < .5), kind: 'hold', fade: .4 });
+  const F = pickHold(memory, lv, r, duration);
+  seq.push({ ...F, c: side(F.c, r() < .5), kind: 'freeze', fade: .4 });
   return { ...opening, list: seq, len: setTimes(seq, 0, 0) };
 }
 
 // Each exhibition gets an eight-beat phrase with four beats reserved for the middle link. The end uses a held low shape or a clear rise before the walk.
 export const CLUB_PREVIEW_BEATS = 8;
 const exhibitions = [
-  { id:'arcHold', profiles:['groove','shapes'], motif:'stop',
-    parts:[['City_Battle_Arc', 0, 1.0], ['City_Battle_Compact', .01, 1.41], ['City_Battle_Check', .07, .78]] },
+  { id:'arcDown', profiles:['groove','shapes'], motif:'arc',
+    parts:[['City_Battle_Arc', 0, 1.0], ['City_Battle_Compact', .01, 1.41], ['City_Battle_LegArc', .02, 1.42]] },
   { id:'lowCross', profiles:['ground','power'], motif:'switch',
-    parts:[['City_Battle_Compact', .03, 1.29], ['City_Battle_Support', .02, 1.96], ['City_Battle_Check', .11, .69]] },
-  { id:'closeFloor', profiles:['shapes','ground'], motif:'stop',
-    parts:[['City_Sweep_Drop', .05, 1.17], ['City_Battle_Check', 0, 1.43], ['Festival_StandThrough', 0, 1.03]] },
+    parts:[['City_Battle_Compact', .03, 1.29], ['City_Battle_Support', .02, 1.96], ['City_Trick_Thread', .09, 1.10]] },
+  { id:'closeFloor', profiles:['shapes','ground'], motif:'arc',
+    parts:[['City_Sweep_Drop', .05, 1.17], ['City_Battle_LegArc', 0, 1.43], ['Festival_StandThrough', 0, 1.03]] },
   { id:'wideSwitch', profiles:['power','groove'], motif:'switch',
     parts:[['Breakdance_Uprock_To_Ground', .02, .92], ['City_Battle_Reverse', 0, 1.43], ['Breakdance_Footwork_To_Freeze', 1.04, 1.03]] },
   { id:'crossFloor', profiles:['ground','power'], motif:'switch',
@@ -326,8 +327,11 @@ export function clubExhibition({ memory, profile, duration, bpm, r, heard, avoid
   const beat = 60 / bpm, time = CLUB_PREVIEW_BEATS * beat, cuts = [0, 2, 6, CLUB_PREVIEW_BEATS];
   const pool = exhibitions.filter(show => show.id !== avoid && show.parts.every(([clip, at, span]) => duration(clip) >= at + span));
   if (!pool.length) {
-    const c = 'Breakdance_Uprock', span = duration(c) - .12;
-    return { time, steps: [{ c, at: .12, b: time, sp: span / time }] };
+    return { time, steps: [
+      { c: 'Breakdance_Uprock', at: 0, b: 3 * beat, sp: 1 },
+      { c: 'Breakdance_Uprock_To_Ground', at: 0, b: 5 * beat, sp: (duration('Breakdance_Uprock_To_Ground') - .035) / (2 * beat) },
+      { c: 'Breakdance_Footwork_2', at: 0, b: time, sp: duration('Breakdance_Footwork_2') / (3 * beat) },
+    ] };
   }
   const choice = variety(memory, 'exhibition', pool, r, 2, show =>
     (show.profiles.includes(profile) ? 3 : 1) * (heard && show.motif !== heard ? 1.6 : 1), show => show.id);
