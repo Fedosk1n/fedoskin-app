@@ -1,5 +1,5 @@
 // The city keeps the cosmetic model separate from the player's equipment and profile rank.
-import { SKINS } from './city3d-mocap.js?v=39';
+import { SKINS } from './city3d-mocap.js?v=40';
 
 const KEY = 'fedoskin-city-appearance';
 const saved = {};

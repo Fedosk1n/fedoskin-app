@@ -10,11 +10,11 @@
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js?v=2", "three/addons/": "./vendor/three/addons/" } }
 </script>
-<link rel="modulepreload" href="city3d.js?v=85">
+<link rel="modulepreload" href="city3d.js?v=86">
 <link rel="modulepreload" href="vendor/three/three.module.js?v=2">
 <link rel="modulepreload" href="vendor/three/three.core.js">
 <link rel="preload" as="fetch" crossorigin href="anim/bboy.json?v=2">
-<link rel="preload" as="fetch" crossorigin href="anim/city-breaking.json?v=8">
+<link rel="preload" as="fetch" crossorigin href="anim/city-breaking.json?v=10">
 <link rel="preload" as="image" crossorigin href="img/city-environment.png?v=1">
 <style>
   html, body { margin: 0; height: 100%; background: #0B0D12; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -183,7 +183,7 @@
 <div id="err" role="alert"><p id="cityError">Этот телефон не умеет показывать 3D-графику (WebGL).</p><a href="./?city=play">Вернуться в приложение</a></div>
 <div id="alpha" hidden><div class="box"><span class="tag">α ALPHA</span><h2></h2><p id="aP1"></p><p id="aP2"></p><p id="aP3" hidden></p><button type="button" id="aOk"></button></div></div>
 <div id="fps"></div>
-<script defer src="city3d-i18n.js?v=19"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
+<script defer src="city3d-i18n.js?v=20"></script><!-- the city's translations (tools/i18n_city3d.py) — bump ?v when regenerated -->
 <script defer src="rhythm.js?v=34"></script>
 <script defer src="city3d-audio.js?v=2"></script>
 <script>
@@ -263,6 +263,6 @@
 import { cityGraphicsMenu } from './city3d-graphics.js?v=2';
 cityGraphicsMenu();
 </script>
-<script type="module" src="city3d.js?v=85" onerror="cityLoadFailed()"></script>
+<script type="module" src="city3d.js?v=86" onerror="cityLoadFailed()"></script>
 </body>
 </html>
