@@ -1124,7 +1124,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .loot-entry-copy{flex:1;text-align:start}
 .loot-wardrobe{margin:3px 0 8px;min-height:42px}
 #lootDialog{position:fixed;box-sizing:border-box;width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 30px);margin:auto;border:1px solid #51443d;border-radius:19px;padding:14px 16px 16px;background:#181b23;color:#f6f0ec;overflow:auto;overscroll-behavior:contain}
-#lootDialog::backdrop{background:#05070bbd}
+#lootDialog::backdrop,#dubPreviewDialog::backdrop{background:#05070bbd}
+#dubPreviewButton{max-width:100%;margin-top:8px}
+#dubPreviewDialog{box-sizing:border-box;width:min(640px,calc(100% - 24px));max-height:calc(100dvh - 24px);padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2);color:var(--fg)}
+#dubPreviewDialog header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+#dubPreviewDialog h2{margin:0;font-size:17px}
+#dubPreviewVideo{display:block;width:100%;max-height:calc(100dvh - 110px);aspect-ratio:16/9;background:#000;border-radius:10px}
 #lootDialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #lootDialog h2{margin:5px 0;font-size:21px;line-height:1.15}
 #lootDialog p{margin:7px 0}
@@ -1318,6 +1323,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <span id="dubLabel"></span>
     <select id="dubLang" aria-labelledby="dubLabel" class="chip" style="min-height:44px;max-width:67%;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:0 10px"></select>
   </label>
+  <button type="button" class="btn btn-ghost" id="dubPreviewButton" aria-haspopup="dialog" hidden></button>
   <!-- the speed choice itself (logic + keyboard); the round «Скорость» button above cycles 1x → 0.5x → 0.25x -->
   <div class="seg" role="group" aria-label="Скорость" id="speedSeg" hidden>
     <button aria-pressed="true" data-rate="1">1x</button><button aria-pressed="false" data-rate="0.5">0.5x</button><button aria-pressed="false" data-rate="0.25">0.25x</button>
@@ -1791,6 +1797,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <div class="btns"><button class="btn btn-ghost" id="lvlUpOk" type="button" style="flex:1">Круто!</button><button class="btn btn-accent" id="lvlUpShare" type="button" style="flex:2">Поделиться в сторис</button></div>
   </div>
 </div>
+<dialog id="dubPreviewDialog" aria-labelledby="dubPreviewTitle">
+  <header><h2 id="dubPreviewTitle"></h2><button type="button" class="btn btn-ghost" id="dubPreviewClose" aria-label="Закрыть">×</button></header>
+  <video id="dubPreviewVideo" controls playsinline preload="none"></video>
+</dialog>
 <dialog id="lootDialog" aria-labelledby="lootTitle">
   <header><h2 id="lootTitle">Ежедневный ящик</h2><button type="button" id="lootClose" class="btn btn-ghost" aria-label="Закрыть">×</button></header>
   <img class="loot-case" src="img/daily-gear-case.webp?v=1" alt="" loading="lazy">
@@ -2642,6 +2652,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const quiet = () => soundOff || (typeof P !== 'undefined' && P.rate < 1);
   const dubChoice = $('#dubChoice'), dubLang = $('#dubLang'), dubAudio = new Audio();
   dubAudio.crossOrigin = 'anonymous';
+  const dubPreviewButton = $('#dubPreviewButton'), dubPreviewDialog = $('#dubPreviewDialog'), dubPreviewVideo = $('#dubPreviewVideo');
+  let dubPreviewKey = '';
   let dubTracks = null, dubMuxTracks = null, dubMuxKey = '', dubSource = '', dubPlay = null, dubWaiting = true;
   const dubOn = () => !!dubSource && $('#badgeOwn').hidden;
   function syncDub(){
@@ -2702,6 +2714,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     setDub('original');
     const entry = lesson && CFG.dubs && CFG.dubs[lesson.id];
     const valid = entry && entry.media === (lesson.ks || lesson.r2);
+    const preview = valid && entry.preview;
+    dubPreviewKey = R2_BASE && typeof preview === 'string' && /^[a-z0-9][a-z0-9-]{0,80}\.mp4$/.test(preview) ? preview : '';
+    dubPreviewButton.hidden = !dubPreviewKey;
+    if (dubPreviewKey) dubPreviewButton.textContent = (LANG === 'ru' ? 'Проба английской озвучки' : 'English audio preview') + ' · 0:27';
+    if (dubPreviewDialog.open) dubPreviewDialog.close();
     dubTracks = valid ? entry.tracks : null;
     dubMuxTracks = valid && isApple && R2_BASE ? entry.mux : null;
     dubMuxKey = '';
@@ -2733,6 +2750,34 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     if (playing) setPlaying(true);
   }
   dubLang.addEventListener('change', changeDub);
+  function dubPreviewError(){
+    if (!dubPreviewDialog.open) return;
+    dubPreviewDialog.close();
+    toast(LANG === 'ru' ? 'Не удалось загрузить пробу озвучки' : 'Could not load the audio preview');
+  }
+  dubPreviewButton.addEventListener('click', () => {
+    if (!dubPreviewKey || dubPreviewDialog.open) return;
+    setPlaying(false);
+    const key = dubPreviewKey;
+    $('#dubPreviewTitle').textContent = dubPreviewButton.textContent;
+    $('#dubPreviewClose').setAttribute('aria-label', T('Закрыть'));
+    dubPreviewDialog.showModal();
+    function playPreview(pass){
+      if (!dubPreviewDialog.open || key !== dubPreviewKey || dubPreviewVideo.getAttribute('src')) return;
+      dubPreviewVideo.src = R2_BASE + '/v/' + encodeURIComponent(key) + '?p=' + encodeURIComponent(pass.p);
+      dubPreviewVideo.play().catch(() => {});
+    }
+    if (passFresh()) playPreview(vPass);
+    else getPass().then(playPreview, dubPreviewError);
+  });
+  $('#dubPreviewClose').addEventListener('click', () => dubPreviewDialog.close());
+  dubPreviewVideo.addEventListener('error', dubPreviewError);
+  dubPreviewDialog.addEventListener('close', () => {
+    if (dubPreviewDialog.open) return;
+    dubPreviewVideo.pause();
+    dubPreviewVideo.removeAttribute('src');
+    dubPreviewVideo.load();
+  });
   vid.addEventListener('error', () => {
     if (!dubMuxKey || !vid.src.includes('/v/' + dubMuxKey)) return;
     dubLang.value = 'original';
