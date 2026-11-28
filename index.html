@@ -1147,7 +1147,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .loot-entry-copy{flex:1;text-align:start}
 .loot-wardrobe{margin:3px 0 8px;min-height:42px}
 </style>
-<link rel="stylesheet" href="daily-gear-reveal.css?v=1">
+<link rel="stylesheet" href="daily-gear-reveal.css?v=2">
 </head>
 <body>
 
@@ -1819,6 +1819,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       <div id="lootStage" data-phase="closed" aria-hidden="true">
         <img id="lootPoster" src="img/loot-reveal-closed.webp?v=1" alt="" width="400" height="272" loading="lazy">
         <canvas id="lootFrames" width="400" height="272" hidden></canvas>
+        <div id="lootMechanism" hidden></div>
         <div id="lootItemShadow"></div><div id="lootItemArt"></div>
       </div>
     </div>
@@ -1980,7 +1981,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <script src="reviews.js"></script>
 <script src="battle-study.js?v=1"></script>
 <script src="hero.js?v=27"></script>
-<script src="daily-gear-reveal.js?v=1"></script>
+<script src="daily-gear-reveal.js?v=2"></script>
 <script src="rhythm.js?v=34"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -6559,12 +6560,13 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   const lootDialog = $('#lootDialog'), lootStage = $('#lootStage'), lootResult = $('#lootResult');
   const lootDefaultOdds = [8000, 1600, 350, 50, 0];
   let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn, lootWorkerReady = false;
-  let lootSession = 0, lootFlow = '', lootLast = null;
+  let lootSession = 0, lootFlow = '', lootLast = null, lootOwner = '';
   const lootSeconds = new Intl.NumberFormat(LANG, { minimumIntegerDigits: 2, useGrouping: false });
   const lootPercent = new Intl.NumberFormat(LANG, { style: 'percent', maximumFractionDigits: 1 });
   const lootAnnounce = message => { $('#lootAnnouncement').textContent = message; };
   const lootWait = () => lootState ? Math.max(0, lootState.next - lootState.now - (performance.now() - lootClock)) : 0;
-  const lootFilm = DailyGearReveal({ stage: lootStage, canvas: $('#lootFrames'), poster: $('#lootPoster'), art: $('#lootItemArt'),
+  const lootFilm = DailyGearReveal({ stage: lootStage, canvas: $('#lootFrames'), poster: $('#lootPoster'),
+    mechanism: $('#lootMechanism'), art: $('#lootItemArt'),
     muted: () => soundOff, onFinish(item) {
       if (!lootDialog.open) return;
       const preview = lootFlow === 'preview';
@@ -6578,6 +6580,11 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   });
   function lootPaint(){
     if (!lootDialog.open) return;
+    if (lootOwner !== prof.id) {
+      lootSession++;
+      lootClearView();
+      if (!lootBusy) { lootRequest(false); return; }
+    }
     const seconds = Math.ceil(lootWait() / 1000);
     const playing = lootFlow === 'new' || lootFlow === 'preview', preview = lootFlow === 'example' || lootFlow === 'preview';
     const status = lootFlow === 'request' || playing ? T('Открываем ящик…') : lootFailure || (lootBusy ? T('Проверяем ящик…') : lootState ? seconds
@@ -6592,7 +6599,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const label = T(seconds ? 'Уже получено' : 'Открыть бесплатно');
     if (claim.textContent !== label) claim.textContent = label;
     if (readResult && !claim.disabled) claim.focus({ preventScroll: true });
-    $('#lootSkip').hidden = !playing;
+    $('#lootSkip').hidden = !(playing || lootFlow === 'request') || !lootFilm.canSkip();
     $('#lootRetry').hidden = !lootFailure || playing || preview;
     $('#lootDemo').hidden = playing || lootFlow === 'request' || preview;
     $('#lootLeavePreview').hidden = lootFlow !== 'example';
@@ -6611,6 +6618,12 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const item = lootWait() > 0 ? lootLast?.item : null;
     lootFilm.restore(item);
     lootShowItem(item, false);
+  }
+  function lootClearView(){
+    lootOwner = prof.id;
+    lootFlow = lootFailure = '';
+    lootState = lootLast = null;
+    lootAnnounce(''); lootOdds(lootDefaultOdds); lootRestore();
   }
   function lootOdds(odds){
     const list = $('#lootOdds'); list.replaceChildren();
@@ -6638,7 +6651,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       lootFlow = 'new';
       const claimFocused = document.activeElement === $('#lootClaim') || document.activeElement === document.body;
       lootPaint();
-      if (claimFocused) $('#lootSkip').focus({ preventScroll: true });
+      if (claimFocused && !$('#lootSkip').hidden) $('#lootSkip').focus({ preventScroll: true });
       lootFilm.reveal(item);
     } else if (lootFlow !== 'preview' && lootFlow !== 'example') {
       lootFlow = '';
@@ -6646,9 +6659,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }
   }
   async function lootRequest(claim){
-    if (lootBusy || (claim && (!lootState || lootWait() || lootFailure || lootFlow === 'new'))) return;
+    if (lootBusy || (claim && (lootOwner !== prof.id || !lootState || lootWait() || lootFailure || (lootFlow && lootFlow !== 'example')))) return;
     const owner = prof.id, session = lootSession;
-    const existing = claim && new Set(wdOwned().map(item => item.id));
     lootBusy = true; lootFailure = '';
     if (claim) {
       lootFlow = 'request';
@@ -6657,6 +6669,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       lootAnnounce(T('Открываем ящик…'));
     }
     lootPaint();
+    const existing = claim && new Set(wdOwned().map(item => item.id));
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
     try {
       if (!LB_URL) throw new Error('unavailable');
@@ -6676,19 +6689,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       if (prof.id !== owner) return;
       lootPresent(data, owner, Boolean(data.claimed && existing?.has(data.last?.item)), claim && data.claimed && lootDialog.open && session === lootSession);
     } catch (error) {
-      if (!lootDialog.open || prof.id !== owner) return;
+      if (!lootDialog.open || prof.id !== owner || session !== lootSession) return;
       lootFailure = T(error.message === 'update' ? 'Ящик откроется после обновления сервера.' : 'Ящик не загрузился. Проверь соединение.');
       if (lootFlow === 'request') { lootFlow = ''; lootRestore(); }
       lootAnnounce(lootFailure);
-    } finally { clearTimeout(timeout); lootBusy = false; lootPaint(); }
+    } finally {
+      clearTimeout(timeout); lootBusy = false;
+      // A reopened dialog can reuse a confirmed state for this profile. After a stale
+      // failure or profile change, check the server without attempting another claim.
+      if (lootDialog.open && lootOwner === prof.id && session !== lootSession && !lootState) lootRequest(false);
+      else lootPaint();
+    }
   }
   function openLoot(){
     if (lootDialog.open) return;
     lootSession++;
     clearInterval(lootTimer);
     lootReturn = document.activeElement;
-    lootFlow = ''; lootFailure = ''; lootState = null; lootLast = null;
-    lootAnnounce(''); lootOdds(lootDefaultOdds); lootFilm.preload(); lootRestore();
+    lootClearView(); lootFilm.preload();
     lootDialog.showModal();
     lootPaint(); lootRequest(false);
     lootTimer = setInterval(lootPaint, 250);
@@ -6698,7 +6716,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const item = HERO.itemOf('c:cleanLaces');
     lootFlow = 'preview'; lootResult.hidden = true;
     lootFilm.start(); lootPaint();
-    $('#lootSkip').focus({ preventScroll: true });
+    if (!$('#lootSkip').hidden) $('#lootSkip').focus({ preventScroll: true });
     lootFilm.reveal(item);
   }
   $('#lootEntry').onclick = openLoot;
@@ -6706,7 +6724,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#lootClose').onclick = () => lootDialog.close();
   $('#lootClaim').onclick = () => lootRequest(true);
   $('#lootRetry').onclick = () => lootRequest(false);
-  $('#lootSkip').onclick = lootFilm.skip;
+  $('#lootSkip').onclick = () => { lootFilm.skip(); lootPaint(); };
   $('#lootDemo').onclick = lootExample;
   $('#lootLeavePreview').onclick = () => { lootFlow = ''; lootRestore(); lootPaint(); $('#lootDemo').focus({ preventScroll: true }); };
   lootDialog.addEventListener('close', () => {
