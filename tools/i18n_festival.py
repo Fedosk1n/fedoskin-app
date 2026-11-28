@@ -1,7 +1,7 @@
 # Russian source text followed by en, es, pt, fr, de, ja, ko, zh.
 # The shared City generator checks placeholders and writes city3d-i18n.js.
 UI = r"""
-Попробовать одну фразу перед выступлением|Try one phrase before the set|Prueba una frase antes de actuar|Provar uma frase antes da apresentação|Essayer une phrase avant de jouer|Vor dem Auftritt eine Phrase ausprobieren|本番前に1フレーズ試す|공연 전 한 프레이즈 연습|演出前先试练一个乐句
+Попробовать фрагмент раунда|Try part of the round|Probar un fragmento de la ronda|Experimentar um trecho da rodada|Essayer un passage du round|Einen Abschnitt der Runde ausprobieren|ラウンドの一部を試す|라운드의 한 구간 연습하기|试练一段回合内容
 Отправить результат ещё раз|Send result again|Enviar el resultado otra vez|Enviar resultado de novo|Renvoyer le résultat|Ergebnis erneut senden|結果をもう一度送信|결과 다시 보내기|重新发送成绩
 Маятник|Pendulum|Péndulo|Pêndulo|Pendule|Pendel|ペンデュラム|펜듈럼|钟摆
 Фестиваль|Festival|Festival|Festival|Festival|Festival|フェス|페스티벌|街舞节
@@ -11,7 +11,7 @@ UI = r"""
 Чисто в музыку|Clean on beat|Limpio al ritmo|Limpo no ritmo|Propre dans le rythme|Sauber im Takt|きれいにオンビート|깔끔하게 박자에 맞음|干净踩拍
 Своя вариация|Your own variation|Tu propia variación|Sua própria variação|Ta propre variation|Deine eigene Variation|自分のバリエーション|나만의 변주|自己的变化
 Круг передан|Circle handed off|Turno cedido|Roda passada|Cercle transmis|Kreis übergeben|輪を渡した|원 넘김|交接舞圈
-Нужна собственная связка|Make it your own|Haz tu propia combinación|Crie sua própria sequência|Crée ton propre enchaînement|Zeig deine eigene Kombi|自分のつなぎで返そう|나만의 콤보가 필요해|需要自己的组合
+Нужно своё комбо|Use your own combo|Usa tu propio combo|Use seu próprio combo|Utilise ton propre combo|Zeig deine eigene Kombo|自分のコンボで返そう|나만의 콤보가 필요해|用自己的连招
 Рисунок не подошёл|That pattern did not fit|Ese diseño no encajó|Esse desenho não encaixou|Ce motif ne convenait pas|Das Muster passte nicht|パターンが合わなかった|패턴이 맞지 않았어|这个编排不合适
 В очередь нужен другой танцор|Call a different dancer|Llama a otro bailarín|Chame outro dançarino|Appelle un autre danseur|Ruf einen anderen Tänzer|別のダンサーを呼ぼう|다른 댄서를 불러|换一位舞者上场
 Сигнал пропущен|Cue missed|Señal perdida|Sinal perdido|Signal manqué|Signal verpasst|合図を逃した|신호 놓침|错过提示
@@ -27,7 +27,7 @@ UI = r"""
 Поехать к площадке|Travel to the venue|Ir al recinto|Ir ao local|Rejoindre le lieu|Zum Veranstaltungsort|会場に向かう|공연장으로 이동|前往场地
 Открыть встречу|Open the session|Abrir el encuentro|Abrir o encontro|Ouvrir la session|Begegnung starten|セッションを開く|세션 열기|开启聚会
 Искать метку на карте|Find the marker on the map|Busca la marca en el mapa|Ache a marca no mapa|Trouver le repère sur la carte|Markierung auf der Karte suchen|マップで目印を探す|지도에서 표시 찾기|在地图上找标记
-Пьеса {n}/4 · пройдено {beat} из {all} ударов|Piece {n}/4 · {beat} of {all} beats|Pieza {n}/4 · {beat} de {all} pulsos|Faixa {n}/4 · {beat} de {all} batidas|Morceau {n}/4 · {beat} temps sur {all}|Stück {n}/4 · {beat} von {all} Schlägen|曲 {n}/4 · {all}拍中{beat}拍|곡 {n}/4 · {all}박 중 {beat}박|曲目 {n}/4 · 已过 {beat}/{all} 拍
+Раунд {n}/4 · пройдено {beat} из {all} долей|Round {n}/4 · {beat} of {all} beats|Ronda {n}/4 · {beat} de {all} tiempos|Rodada {n}/4 · {beat} de {all} tempos|Round {n}/4 · {beat} temps sur {all}|Runde {n}/4 · {beat} von {all} Schlägen|ラウンド {n}/4 · {all}拍中{beat}拍|라운드 {n}/4 · {all}박 중 {beat}박|第 {n}/4 回合 · 已完成 {beat}/{all} 拍
 Ориентир района фестиваля|Festival district landmark|Punto de referencia del barrio|Ponto de referência do bairro|Repère du quartier du festival|Orientierungspunkt im Festivalviertel|フェス地区の目印|페스티벌 구역의 표지|街舞节街区地标
 Карта · синяя точка — ты, золотой ромб — нужная встреча|Map · blue dot is you, gold diamond is the meeting|Mapa · punto azul eres tú, rombo dorado es el encuentro|Mapa · ponto azul é você, losango dourado é o encontro|Carte · point bleu = toi, losange doré = rencontre|Karte · blauer Punkt = du, goldene Raute = Treffen|地図・青い点が自分、金のひし形が会場|지도 · 파란 점은 나, 금색 마름모는 만남|地图 · 蓝点是你，金色菱形是聚会
 Сюжетный маршрут ведёт к площадке встречи. Там ищи золотой ромб.|The story route takes you to the venue. Look for the gold diamond there.|La ruta de la historia te lleva al recinto. Busca el rombo dorado allí.|A rota da história leva ao local. Procure o losango dourado.|Le trajet de l’histoire mène au lieu. Cherche le losange doré sur place.|Die Storyroute führt zum Ort. Such dort die goldene Raute.|ストーリーのルートで会場へ。金のひし形を探そう。|스토리 길을 따라 공연장으로 가서 금색 마름모를 찾아.|剧情路线通往场地，在那里找金色菱形。
@@ -49,36 +49,41 @@ UI = r"""
 Соперник сохраняет место на афише. После тренировки можно встретиться с ним ещё раз.|Your rival keeps the slot. You can meet again after practice.|El rival conserva su puesto. Puedes volver a enfrentarlo después de practicar.|O rival fica com a vaga. Você pode encará-lo de novo após treinar.|L’adversaire garde sa place. Tu pourras le retrouver après l’entraînement.|Der Gegner behält seinen Platz. Nach dem Training kannst du erneut antreten.|相手は出場枠をキープ。練習後に再戦できる。|상대가 순서를 유지해. 연습 후 다시 만날 수 있어.|对手保留出场位。练习后可以再次交手。
 Примерить мифический комплект|Try on the Mythic kit|Probar el conjunto mítico|Experimentar o conjunto mítico|Essayer le set mythique|Mythisches Set anprobieren|ミシックセットを試着|신화 세트 입어 보기|试穿神话套装
 Мифический комплект надет|Mythic kit equipped|Conjunto mítico equipado|Conjunto mítico equipado|Set mythique équipé|Mythisches Set ausgerüstet|ミシックセット装備済み|신화 세트 장착|已装备神话套装
-Пьеса {n}|Piece {n}|Pieza {n}|Faixa {n}|Morceau {n}|Stück {n}|曲 {n}|곡 {n}|曲目 {n}
-Тренировка освоенной фразы|Practice a learned phrase|Practicar una frase aprendida|Treinar uma frase aprendida|Travailler une phrase acquise|Gelernte Phrase trainieren|覚えたフレーズを練習|익힌 프레이즈 연습|练习已学乐句
+Раунд {n}|Round {n}|Ronda {n}|Rodada {n}|Round {n}|Runde {n}|ラウンド {n}|라운드 {n}|第 {n} 回合
+Тренировка фрагмента|Practice a section|Practicar un fragmento|Treinar um trecho|S’entraîner sur un passage|Abschnitt üben|区間練習|구간 연습|片段练习
 Встреча|Meeting|Encuentro|Encontro|Rencontre|Begegnung|セッション|세션|聚会
-Пьеса|Piece|Pieza|Faixa|Morceau|Stück|曲|곡|曲目
-Выбрать фразу|Choose a phrase|Elegir frase|Escolher frase|Choisir une phrase|Phrase wählen|フレーズを選ぶ|프레이즈 선택|选择乐句
+Раунд|Round|Ronda|Rodada|Round|Runde|ラウンド|라운드|回合
+Выбрать фрагмент|Choose a section|Elegir un fragmento|Escolher um trecho|Choisir un passage|Abschnitt wählen|区間を選ぶ|구간 선택|选择片段
 Ограда на подходе к площадке и свободный проход сбоку.|A barrier at the venue entrance and a clear way in from the side.|Barrera en la entrada y paso libre por un lado.|Barreira no acesso e passagem lateral livre.|Barrière à l’entrée et passage libre sur le côté.|Sperre am Zugang und freier Durchgang an der Seite.|会場入口の柵と横の空いた通路。|공연장 입구의 울타리와 열린 옆길.|场地入口的围栏和空着的侧道。
 Две вертушки на рабочем пульте и проход для следующего танцора.|Two turntables on the working booth and an entrance for the next dancer.|Dos platos en la cabina y un paso para el próximo bailarín.|Dois toca-discos no pult e uma entrada para o próximo dançarino.|Deux platines au pupitre et un passage pour le danseur suivant.|Zwei Plattenspieler am Pult und ein Weg für den nächsten Tänzer.|DJブースの2台のターンテーブルと次のダンサーの入口。|부스의 두 턴테이블과 다음 댄서의 입구.|工作台上的两台唱机和下位舞者的入口。
 Сверить ориентир и продолжить|Check the landmark and continue|Comprobar el lugar y continuar|Conferir o ponto e continuar|Vérifier le repère et continuer|Ort prüfen und weiter|目印を確認して続ける|표지를 확인하고 계속|确认地标并继续
-Фраза {n}|Phrase {n}|Frase {n}|Frase {n}|Phrase {n}|Phrase {n}|フレーズ {n}|프레이즈 {n}|乐句 {n}
+Фрагмент {n}|Section {n}|Fragmento {n}|Trecho {n}|Passage {n}|Abschnitt {n}|区間 {n}|구간 {n}|片段 {n}
 Жёлтая рамка показывает текущий удар. Следующие знаки видны правее. На клавиатуре работают 1–4.|The yellow frame marks the beat. Upcoming cues appear to the right. Keys 1–4 also work.|El marco amarillo marca el pulso. Las próximas señales aparecen a la derecha. También funcionan las teclas 1–4.|A moldura amarela marca a batida. Os próximos sinais ficam à direita. As teclas 1–4 também funcionam.|Le cadre jaune indique le temps. Les prochains signes sont à droite. Les touches 1–4 fonctionnent aussi.|Der gelbe Rahmen zeigt den Schlag. Die nächsten Zeichen stehen rechts. Auch die Tasten 1–4 funktionieren.|黄色枠が今の拍。次の合図は右側。キー1〜4も使える。|노란 테두리가 현재 박자야. 다음 신호는 오른쪽에 있어. 키보드 1~4도 써.|黄框标出当前拍，右侧是接下来的提示。也可用键盘 1–4。
-Фраза|Phrase|Frase|Frase|Phrase|Phrase|フレーズ|프레이즈|乐句
-Сначала открой эту пьесу в сюжете.|Unlock this piece in the story first.|Desbloquea primero esta pieza en la historia.|Desbloqueie esta faixa na história primeiro.|Débloque d’abord ce morceau dans l’histoire.|Schalte das Stück zuerst in der Story frei.|まずストーリーでこの曲を開こう。|먼저 스토리에서 이 곡을 열어.|先在剧情中解锁这首曲目。
-Тренировать фразу|Practice the phrase|Practicar la frase|Treinar a frase|Travailler la phrase|Phrase trainieren|フレーズを練習|프레이즈 연습|练习乐句
-Играть пьесу|Play the piece|Tocar la pieza|Tocar a faixa|Jouer le morceau|Stück spielen|曲をプレイ|곡 플레이|演奏曲目
+Фрагмент|Section|Fragmento|Trecho|Passage|Abschnitt|区間|구간|片段
+Сначала дойди до этого раунда в сюжете.|Reach this round in the story first.|Primero llega a esta ronda de la historia.|Chegue a esta rodada na história primeiro.|Atteins d’abord ce round dans l’histoire.|Erreiche zuerst diese Runde in der Story.|ストーリーで先にこのラウンドまで進もう。|스토리에서 먼저 이 라운드까지 진행해.|先在剧情中推进到这一回合。
+Тренировать комбо|Practice the combo|Practicar el combo|Treinar o combo|Travailler le combo|Kombo üben|コンボを練習|콤보 연습|练习连招
+Начать тренировку|Start practice|Empezar a practicar|Começar o treino|Commencer l’entraînement|Training starten|練習を始める|연습 시작|开始练习
+Начать раунд|Start round|Empezar la ronda|Começar a rodada|Commencer le round|Runde starten|ラウンド開始|라운드 시작|开始回合
+Продолжить раунд|Resume round|Continuar la ronda|Continuar a rodada|Reprendre le round|Runde fortsetzen|ラウンド再開|라운드 이어 하기|继续回合
 Пауза|Pause|Pausa|Pausa|Pause|Pause|一時停止|일시 정지|暂停
-Соперник показывает {x}. Выбери другую связку.|Your rival shows {x}. Choose a different combo.|El rival muestra {x}. Elige otra combinación.|O rival mostra {x}. Escolha outra sequência.|L’adversaire montre {x}. Choisis un autre enchaînement.|Der Gegner zeigt {x}. Wähle eine andere Kombi.|相手が{x}を見せる。別のつなぎを選ぼう。|상대가 {x}을 보여 줘. 다른 콤보를 골라.|对手展示 {x}。选择不同组合。
-Для этого выхода нужен {x}.|This set needs {x}.|Para este turno hace falta {x}.|Esta entrada pede {x}.|Ce passage demande {x}.|Dieser Auftritt braucht {x}.|この出番には{x}が必要。|이 차례에는 {x}이 필요해.|这次上场需要 {x}。
+Соперник показывает {x}. Выбери другое комбо.|Your rival shows {x}. Choose a different combo.|El rival muestra {x}. Elige otro combo.|O rival mostra {x}. Escolha outro combo.|L’adversaire montre {x}. Choisis un autre combo.|Der Gegner zeigt {x}. Wähle eine andere Kombo.|相手が{x}を見せる。別のコンボを選ぼう。|상대가 {x}을 보여 줘. 다른 콤보를 골라.|对手展示 {x}。选一套不同的连招。
+Для этого раунда нужен {x}.|This round calls for {x}.|Para esta ronda hace falta {x}.|Esta rodada pede {x}.|Ce round demande {x}.|In dieser Runde brauchst du {x}.|このラウンドには{x}が必要。|이 라운드에는 {x}이 필요해.|这一回合需要 {x}。
 Передай круг · {x}|Hand off the circle · {x}|Cede el círculo · {x}|Passe a roda · {x}|Passe le cercle · {x}|Kreis übergeben · {x}|輪を渡す · {x}|원 넘기기 · {x}|交接舞圈 · {x}
 Оставь паузу|Leave a pause|Deja una pausa|Deixe uma pausa|Laisse une pause|Lass eine Pause|休符を残そう|쉼표를 지켜|留出停顿
 Приготовься|Get ready|Prepárate|Prepare-se|Prépare-toi|Mach dich bereit|準備|준비|准备
 Далее · {x}|Next · {x}|Después · {x}|A seguir · {x}|Ensuite · {x}|Als Nächstes · {x}|次 · {x}|다음 · {x}|接下来 · {x}
 Фраза {n} · {b}/{all}|Phrase {n} · {b}/{all}|Frase {n} · {b}/{all}|Frase {n} · {b}/{all}|Phrase {n} · {b}/{all}|Phrase {n} · {b}/{all}|フレーズ{n} · {b}/{all}|프레이즈 {n} · {b}/{all}|乐句 {n} · {b}/{all}
 Встреча сыграна|Meeting complete|Encuentro completado|Encontro concluído|Rencontre terminée|Begegnung abgeschlossen|セッション完了|세션 완료|聚会完成
-Фраза сыграна|Phrase complete|Frase completada|Frase concluída|Phrase terminée|Phrase abgeschlossen|フレーズ完了|프레이즈 완료|乐句完成
+Раунд завершён|Round complete|Ronda completada|Rodada concluída|Round terminé|Runde abgeschlossen|ラウンド終了|라운드 완료|回合完成
+Комбо выполнено|Combo complete|Combo completado|Combo concluído|Combo réussi|Kombo geschafft|コンボ成功|콤보 성공|连招完成
+Фрагмент пройден|Section complete|Fragmento completado|Trecho concluído|Passage validé|Abschnitt geschafft|区間クリア|구간 완료|片段完成
 Попробуй эту фразу ещё раз|Try this phrase again|Repite esta frase|Tente esta frase de novo|Réessaie cette phrase|Versuch diese Phrase erneut|このフレーズをもう一度|이 프레이즈를 다시 시도해|再试这个乐句
+Попробуй это комбо ещё раз|Try this combo again|Vuelve a intentar este combo|Tente este combo de novo|Réessaie ce combo|Versuch die Kombo noch einmal|もう一度このコンボに挑戦|이 콤보를 다시 해 봐|再试一次这套连招
 В музыку · {hits}/{total} · лишние сигналы {errors}|On beat · {hits}/{total} · extra cues {errors}|Al ritmo · {hits}/{total} · pulsos de más {errors}|No ritmo · {hits}/{total} · sinais extras {errors}|En rythme · {hits}/{total} · signaux en trop {errors}|Im Takt · {hits}/{total} · Extras {errors}|オンビート · {hits}/{total} · 余計な入力{errors}|박자 · {hits}/{total} · 추가 입력 {errors}|踩拍 · {hits}/{total} · 多余输入 {errors}
 Свои вариации и передачи · {n}|Original choices and handoffs · {n}|Variaciones y relevos · {n}|Variações e trocas · {n}|Variations et relais · {n}|Varianten und Übergaben · {n}|変化と交代 · {n}|변주와 교대 · {n}|个人变化与交接 · {n}
 Следующая встреча|Next meeting|Siguiente encuentro|Próximo encontro|Rencontre suivante|Nächste Begegnung|次のセッション|다음 세션|下一场聚会
+К следующему раунду|Next round|Siguiente ronda|Próxima rodada|Round suivant|Nächste Runde|次のラウンドへ|다음 라운드|下一回合
 Продолжить|Continue|Continuar|Continuar|Continuer|Weiter|続ける|계속|继续
-К фразе|Back to phrase|Volver a la frase|Voltar à frase|Revenir à la phrase|Zur Phrase|フレーズに戻る|프레이즈로 돌아가기|返回乐句
 Открыть встречу фестиваля|Open festival meeting|Abrir encuentro del festival|Abrir encontro do festival|Ouvrir la rencontre du festival|Festivalbegegnung öffnen|フェスのセッションを開く|페스티벌 세션 열기|打开街舞节聚会
 Сюжетная встреча · бесплатно|Story meeting · free|Encuentro de la historia · gratis|Encontro da história · grátis|Rencontre de l’histoire · gratuite|Storybegegnung · kostenlos|ストーリーセッション · 無料|스토리 세션 · 무료|剧情聚会 · 免费
 """

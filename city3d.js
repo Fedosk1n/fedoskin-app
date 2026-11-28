@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js?
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=43';
 import { ambientPoseScheduler, mergeable, mergePositions, shadowBatcher, trimCasters } from './city3d-perf.js?v=4';
-import { initGame } from './city3d-game.js?v=83';
+import { initGame } from './city3d-game.js?v=84';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';

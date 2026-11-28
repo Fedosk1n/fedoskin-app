@@ -10,7 +10,7 @@ import { createStoryPortrait, STORY_PORTRAIT_CSS } from './city3d-story-portrait
 const DIFFICULTY = { training: 'Медленный', normal: 'Обычный', quick: 'Быстрый' };
 const REACTIONS = {
   clean: 'Чисто в музыку', variation: 'Своя вариация', lineup: 'Круг передан',
-  copied: 'Нужна собственная связка', fit: 'Рисунок не подошёл', line: 'В очередь нужен другой танцор',
+  copied: 'Нужно своё комбо', fit: 'Рисунок не подошёл', line: 'В очередь нужен другой танцор',
   miss: 'Сигнал пропущен', rest: 'Здесь оставь паузу', early: 'Дождись отметки',
   release: 'Отпускай на отметке тем же пальцем', style: 'Выбери один из двух рисунков',
 };
@@ -292,7 +292,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
         <h3>${name(e, state.episode)}</h3>
         <p class="festival-landmark">${t(landmark)} · ${t(FESTIVAL_CAST[e.speaker])}</p>
         ${needsArrival() ? `<p>${t(storyTurn().before)}</p>` : ''}
-        <p>${t('Пьеса {n}/4 · пройдено {beat} из {all} ударов', { n: state.piece + 1, beat: state.beat, all: storyCourse(state.episode, state.piece, state).beats })}</p>
+        <p>${t('Раунд {n}/4 · пройдено {beat} из {all} долей', { n: state.piece + 1, beat: state.beat, all: storyCourse(state.episode, state.piece, state).beats })}</p>
         ${selected}
         <figure class="festival-tip"><img src="${landmarkImage(step.art)}" alt="${t(LANDMARKS[step.art][1])}">
           ${district === D ? `<canvas id="fMap" width="340" height="180" role="img" aria-label="${t('Карта · синяя точка — ты, миниатюра — {x}',{x:t(LANDMARKS[step.art][0])})}"></canvas>` : ''}
@@ -426,11 +426,11 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     if (!state.piece && !state.beat && !state.episode) return '';
     const episodes = FESTIVAL_EPISODES.slice(0, Math.min(state.episode + 1, FESTIVAL_EPISODES.length)).map((e, index) =>
       `<option value="${index}"${index === Math.min(state.episode, FESTIVAL_EPISODES.length - 1) ? ' selected' : ''}>${name(e, index)}</option>`).join('');
-    const pieces = [0, 1, 2, 3].map(n => `<option value="${n}">${t('Пьеса {n}', { n: n + 1 })}</option>`).join('');
-    return `<details class="festival-practice"><summary>${t('Тренировка освоенной фразы')}</summary>
+    const rounds = [0, 1, 2, 3].map(n => `<option value="${n}">${t('Раунд {n}', { n: n + 1 })}</option>`).join('');
+    return `<details class="festival-practice"><summary>${t('Тренировка фрагмента')}</summary>
       <label>${t('Встреча')} <select id="fPracticeChoice">${episodes}</select></label>
-      <label>${t('Пьеса')} <select id="fPracticePiece">${pieces}</select></label>
-      ${button('fPractice',t('Выбрать фразу'),true)}</details>`;
+      <label>${t('Раунд')} <select id="fPracticePiece">${rounds}</select></label>
+      ${button('fPractice',t('Выбрать фрагмент'),true)}</details>`;
   }
   function currentTarget() {
     const source = practice || state;
@@ -480,7 +480,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const liveUnlocked = key.episode < state.episode || key.episode === state.episode && key.piece <= state.piece;
     const maxPractice = key.episode < state.episode || key.piece < state.piece ? course.beats - 1 : state.beat;
     const practiceOptions = practice && liveUnlocked ? Array.from({ length: Math.floor(maxPractice / 16) + 1 }, (_, i) =>
-      `<option value="${i * 16}">${t('Фраза {n}', { n: i + 1 })}</option>`).join('') : '';
+      `<option value="${i * 16}">${t('Фрагмент {n}', { n: i + 1 })}</option>`).join('') : '';
     const sceneIntro = !practice && key.piece === 0 && !key.beat && turn?.before;
     const directions = `<p><b>${t(combo?.name || MODE_NAMES[course.mode])}</b></p><p>${t(combo?.guide || MODE_GUIDES[course.mode])}</p>`;
     setView('briefing', `<header><h2>${name(e, key.episode)}</h2>${button('fBack',t('Назад'),true)}</header>
@@ -502,10 +502,11 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       <p>${t('Жёлтая рамка показывает текущий удар. Следующие знаки видны правее. На клавиатуре работают 1–4.')}</p>
       <label>${t('Темп')} <select id="fTempo">${Object.keys(TEMPOS).map(id =>
         `<option ${id === state.tempo ? 'selected' : ''} value="${id}">${t(DIFFICULTY[id])}</option>`).join('')}</select></label>
-      ${practice ? practiceOptions ? `<label>${t('Фраза')} <select id="fPhrase">${practiceOptions}</select></label>`
-        : `<p>${t('Сначала открой эту пьесу в сюжете.')}</p>` : ''}
-      ${!pendingChoice && !cueSheet && (!practice || practiceOptions) ? button('fPlay', t(practice ? 'Тренировать фразу' : 'Играть пьесу')) : ''}
-      ${!practice && !pendingChoice && !cueSheet && !key.beat ? button('fDemo', t('Попробовать одну фразу перед выступлением'), true) : ''}`,
+      ${practice ? practiceOptions ? `<label>${t('Фрагмент')} <select id="fPhrase">${practiceOptions}</select></label>`
+        : `<p>${t('Сначала дойди до этого раунда в сюжете.')}</p>` : ''}
+      ${!pendingChoice && !cueSheet && (!practice || practiceOptions) ?
+        button('fPlay', t(practice ? 'Начать тренировку' : key.beat ? 'Продолжить раунд' : 'Начать раунд')) : ''}
+      ${!practice && !pendingChoice && !cueSheet && !key.beat ? button('fDemo', t('Попробовать фрагмент раунда'), true) : ''}`,
       (!pendingChoice && !cueSheet) || Boolean(W.camT && W.camT !== previousDepth));
     showSpeaker(namedVoice(sceneIntro) || e.speaker);
     if (lead) $('.festival-lineup').prepend(createStoryPortrait(lead, t(FESTIVAL_CAST[lead]), { showName: false }));
@@ -529,9 +530,18 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       practice = { ...key };
       start();
     };
-    if ($('#fPlay')) $('#fPlay').onclick = () => {
+    const play = $('#fPlay'), select = $('#fPhrase');
+    if (play && select) {
+      const labelPractice = () => {
+        const spec = course.combo && playablePhrase(course, Number(select.value), state.choices).spec;
+        play.textContent = t(spec ? 'Тренировать комбо' : 'Начать тренировку');
+      };
+      select.onchange = labelPractice;
+      labelPractice();
+    }
+    if (play) play.onclick = () => {
       rememberExamples(tips);
-      if (practice && $('#fPhrase')) practice.beat = Number($('#fPhrase').value);
+      if (practice && select) practice.beat = Number(select.value);
       start();
     };
   }
@@ -551,7 +561,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     const poseStudy = phrases.some(phrase => phrase.alternate || phrase.spec === COMBOS.coil) ?
       `<details><summary>${t('Лист поз для тренировки')}</summary><img loading="lazy" src="img/festival-pose-study.webp?v=1"
         alt="${t('Две цепочки поз: вход, перенос веса, удержание на плече и выход в стойку.')}"></details>` : '';
-    study.innerHTML = `<p><b>${t('Рисунки этой пьесы')}</b></p>${phrases.map(phrase =>
+    study.innerHTML = `<p><b>${t('Комбо раунда')}</b></p>${phrases.map(phrase =>
       `<div><span>${t(phrase.spec.name)}</span> ${comboEvents(phrase).slice(0,5).map(item => `<small>${cueName(item)}</small>`).join(' ')}</div>`).join('')}${poseStudy}`;
     castFor(key, course);
     const primary = phrases[0];
@@ -629,7 +639,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       r.rivalPreview = phrase;
       displaySet?.(SIGNATURES[rival][2], true, null, { actor: rival, seconds: r.period * 1.8 });
     }
-    text(view.progress, t('Фраза {n} · {b}/{all}', { n: Math.floor(phrase.start / 16) + 1, b: Math.max(0, phrase.start + progress + 1), all: r.course.beats }));
+    text(view.progress, t('Комбо {n} · {b}/{all}', { n: Math.floor(phrase.start / 16) + 1, b: Math.max(0, phrase.start + progress + 1), all: r.course.beats }));
   }
   function keyEdge(event, edge) {
     if (!run || event.repeat) return;
@@ -711,8 +721,8 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     if (!view.decks.hidden) for (const disc of view.decks.children) {
       disc.classList.toggle('active', event?.kind === 'deck' && Math.floor(event.note / 2) === Number(disc.dataset.deck));
     }
-    const describe = item => item?.kind === 'reply' ? t('Соперник показывает {x}. Выбери другую связку.', { x: t(MOVES[item.rival]) })
-      : item?.kind === 'build' ? t('Для этого выхода нужен {x}.', { x: t(MOVES[item.desired]) })
+    const describe = item => item?.kind === 'reply' ? t('Соперник показывает {x}. Выбери другое комбо.', { x: t(MOVES[item.rival]) })
+      : item?.kind === 'build' ? t('Для этого раунда нужен {x}.', { x: t(MOVES[item.desired]) })
         : item?.kind === 'cast' ? t('Передай круг · {x}', { x: t(RUNNERS[item.favored]) }) : '';
     const prompt = describe(event) || (event?.kind === 'rest' ? t('Оставь паузу') : index < 0 ? t('Приготовься') : '');
     text(view.prompt, prompt);
@@ -782,8 +792,11 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     stopRun();
     if (exam) examBrief(exam.spec, exam.practiceOnly); else briefing();
   }
-  function result(verdict, completed, turn, key) {
+  function result(verdict, completed, turn, { key, phrase }) {
     const trained = Boolean(practice);
+    const heading = !verdict.passed ? (phrase.spec ? 'Попробуй это комбо ещё раз' : 'Попробуй эту фразу ещё раз')
+      : trained ? (phrase.spec ? 'Комбо выполнено' : 'Фрагмент пройден')
+      : 'Раунд завершён';
     const advance = verdict.passed && !trained;
     const lost = !verdict.passed && verdict.style != null && !trained;
     if (lost) {
@@ -796,13 +809,14 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
     // A debrief can be narration. Pair only a named voice with a portrait.
     const speaker = completed && namedVoice(turn?.after);
     const after = completed && turn ? `<p class="festival-payoff">${t(turn.after)}</p>` : '';
-    setView('result', `<header><h2>${t(verdict.passed ? (completed ? 'Встреча сыграна' : 'Фраза сыграна') : 'Попробуй эту фразу ещё раз')}</h2>
+    setView('result', `<header><h2>${t(heading)}</h2>
       ${button('fClose', t('Закрыть журнал'), true)}</header>
+      ${completed ? `<p>${t('Встреча сыграна')}</p>` : ''}
       <p>${t('В музыку · {hits}/{total} · лишние сигналы {errors}', { hits: verdict.hits, total: verdict.required, errors: verdict.errors })}</p>
       ${verdict.variation ? `<p>${t('Свои вариации и передачи · {n}', { n: verdict.variation })}</p>` : ''}
-      ${lost ? `<p class="festival-payoff">${t('Соперник держит эту фразу. Твой прежний зачёт остаётся; можно взять реванш с того же удара.')}</p>` : ''}
+      ${lost ? `<p class="festival-payoff">${t('Этот обмен остался за соперником. Твой зачёт сохранён. Можно взять реванш с той же доли.')}</p>` : ''}
       ${after && speaker ? dialogue(after) : after}
-      ${button('fAgain',t(advance ? (completed ? 'Следующая встреча' : 'Продолжить') : 'К фразе'))}`);
+      ${button('fAgain',t(advance ? (completed ? 'Следующая встреча' : 'К следующему раунду') : 'Назад'))}`);
     if (after && speaker) showSpeaker(speaker);
     $('#fClose').onclick = close;
     $('#fAgain').onclick = () => {
@@ -859,7 +873,7 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
       const completed = state.episode !== prior;
       if (practice || !verdict.passed || beat >= r.course.beats) {
         stopRun();
-        result(verdict, completed, turn, r.key);
+        result(verdict, completed, turn, r);
         return;
       }
       r.key.beat = beat;

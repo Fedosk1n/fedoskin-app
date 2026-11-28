@@ -23,7 +23,7 @@ import { TOP, SHAPES, CORE_POWER as POWER, BACKSPIN, crewStyle, breakingOpening,
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, mountStoryPortraits, STORY_CSS } from './city3d-story.js?v=3';
-import { initFestival } from './city3d-campaign.js?v=6';
+import { initFestival } from './city3d-campaign.js?v=7';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
 import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=4';
