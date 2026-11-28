@@ -31,7 +31,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "fr-turtle-freeze-variations": {
   "ks": "",
@@ -183,7 +183,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "pw-turtle": {
   "ks": "634db7c3-35bc-4a80-b160-c44a09cdbab8",

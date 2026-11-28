@@ -76,6 +76,24 @@ window.APP_CONFIG = {
    "mux": {
     "en": "dub-pw-headspin-en-voice-3c75d9c672b3.mp4"
    }
+  },
+  "fr-one-hand-freeze": {
+   "media": "fr-one-hand-freeze-psj6sn9b.mp4",
+   "tracks": {
+    "en": "dub-fr-one-hand-freeze-en-voice-d1b8b8696f06.mp4"
+   },
+   "mux": {
+    "en": "dub-fr-one-hand-freeze-en-voice-f1757d762385.mp4"
+   }
+  },
+  "pw-swipes": {
+   "media": "6ee9d371-0eb2-4221-8f98-35a9c985c3ba",
+   "tracks": {
+    "en": "dub-pw-swipes-en-voice-2ef014ace362.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-swipes-en-voice-58b7323059e4.mp4"
+   }
   }
  }
 };
