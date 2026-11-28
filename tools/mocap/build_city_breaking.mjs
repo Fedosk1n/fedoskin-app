@@ -108,9 +108,6 @@ function floor(hip, angles, leftFoot, rightFoot, leftHand, rightHand, options = 
 const own = (...key) => floor(...key);
 const open = own([.02,.25,.02],[-1.24,.08,.26],[.43,.47,.49],[-.30,.19,.58],[.28,.08,-.22],[-.36,.09,-.19]);
 const sweep = own([.06,.26,-.04],[-.92,.28,-.35],[.62,.13,.37],[-.22,.14,.27],[.36,.07,-.18],[-.28,.32,.21]);
-const seated = own([-.08,.29,.02],[-.70,-.32,.34],[.18,.14,.55],[-.58,.17,.35],[.27,.19,-.15],[-.35,.075,-.19]);
-const backspinWhip = own([-.025,.32,.075],[-1.68,-.20,.16],[.21,.33,.43],[-.46,.57,.76],
-  [.27,.15,-.17],[-.29,.17,-.20], { spine: .19, head: .24 });
 const twist = own([.04,.32,.03],[-.77,.64,-.45],[.64,.17,.29],[-.27,.13,.42],[.36,.07,-.16],[-.17,.36,.37],
   { spine: -.18, twist: -.52, head: -.12 });
 const flex = own([.04,.39,.01],[-.96,.26,-.51],[.61,.20,.35],[-.06,.56,.70],[.45,.08,-.12],[-.26,.49,.43],
@@ -163,8 +160,42 @@ function scapulaOf(pose) {
 const coil = backspinCoil();
 const scapularPivot = scapulaOf(coil);
 
-const backspinEntry = [[0,sit],[.286,seated],[.447,backspinWhip],[.594,coil]];
-const backspinFrames = 82;
+const backspinLeadFrames = 18;
+const backspinFrames = 82 + backspinLeadFrames;
+const coilIn = .594 + backspinLeadFrames / 30;
+const leadArm = ['LeftArm', 'LeftForeArm', 'LeftHand'];
+const leadPalm = v(-.098, .045, -.033);
+const leadPalmRotation = rotation(0, .72, Math.PI/2);
+
+// Continue the capture's low left sweep around its planted hand. Push off the other shoe,
+// roll across the near shoulder, then bring the knees together as the rotation speeds up.
+const drive = own([-.082,.412,.005],[-1.22,.33,-.68],[.42,.205,.76],[-.38,.132,.070],
+  [-.098,.045,-.033],[.22,.61,.23], { spine: .15, head: .25 });
+const whip = own([.012,.285,.153],[-1.83,-.21,.52],[.36,.52,.41],[-.23,.31,.23],
+  [-.13,.083,-.07],[-.19,.47,.08], { spine: .29, head: .32 });
+const gather = own([.028,.311,.151],[-2.20,-.46,.43],[.22,.62,.19],[-.13,.50,.16],
+  [.12,.24,-.17],[-.15,.32,-.11], { spine: .41, head: .39 });
+const entryKeys = [[.44,drive],[.68,whip],[.89,gather],[coilIn,coil]];
+const sweepLeg = ['LeftUpLeg', 'LeftLeg', 'LeftFoot'];
+const entrySweep = travelCurve([
+  [.24, [-.57,.13,.31]], [.33, [.03,.17,.83]], [.44, [.42,.205,.76]], [.56, [.47,.36,.59]],
+  [.68, [.36,.52,.41]], [.89, [.22,.62,.19]],
+]);
+
+function backspinEntry(time) {
+  const weight = smooth(unit((time - .24) / .20));
+  const roll = keyed(entryKeys, Math.max(.44, time));
+  const pose = weight < 1 ? blend(capture('Breakdance_Footwork_2', .80 + time), roll, weight) : roll;
+  if (time > .24 && time < .89) {
+    const sweepWeight = smooth(unit((time - .24) / .10));
+    const world = skeleton(pose);
+    poseLimb(pose, sweepLeg, world.LeftFoot.pos.lerp(v(...entrySweep(time)[0]), sweepWeight), world.LeftLeg.pos);
+  }
+  const plant = smooth(unit((time - .25) / .12)) * (1 - smooth(unit((time - .59) / .17)));
+  pinHand(pose, leadArm, leadPalm, leadPalmRotation, plant);
+  return pose;
+}
+
 const footworkIn = 1.92;
 // After the second turn, the outside palm catches the floor while the first shoe drops.
 // The other knee stays tucked until it can sweep into the first travelling step.
@@ -179,17 +210,18 @@ const catchArm = ['RightArm', 'RightForeArm', 'RightHand'];
 const catchPalm = v(.04, .043, .065);
 const catchPalmRotation = rotation(0, 1.12, -Math.PI/2);
 
-function plantBackspinHand(pose, t) {
-  const weight = smooth(unit((t - 1.68) / .115)) * (1 - smooth(unit((t - 2.06) / .20)));
+function pinHand(pose, arm, position, orientation, weight) {
   if (!weight) return;
   const world = skeleton(pose);
-  const wrist = world.RightHand;
-  poseLimb(pose, catchArm, wrist.pos.lerp(catchPalm, weight), world.RightForeArm.pos,
-    wrist.q.slerp(catchPalmRotation, weight));
+  const wrist = world[arm[2]];
+  poseLimb(pose, arm, wrist.pos.lerp(position, weight), world[arm[1]].pos,
+    wrist.q.slerp(orientation, weight));
 }
 
 function backspin(time) {
-  const t = time * (backspinFrames - 1) / 30;
+  const frame = Math.round(time * (backspinFrames - 1));
+  if (frame / 30 < coilIn) return backspinEntry(frame / 30);
+  const t = (frame - backspinLeadFrames) / 30;
   const p = unit((t - .594) / .99);
   const ramp = .12, brake = 1 - ramp;
   const turnSpeed = 4 * Math.PI / (1 - ramp);
@@ -204,15 +236,15 @@ function backspin(time) {
     angle = turnSpeed * (brake - ramp/2 + exitTurn/.99 * (u - u*u*.5));
   }
   let pose;
-  if (t < .594) pose = keyed(backspinEntry, t);
-  else if (t < footworkIn) pose = keyed(backspinExit, Math.max(t, backspinExit[0][0]));
+  if (t < footworkIn) pose = keyed(backspinExit, Math.max(t, backspinExit[0][0]));
   else pose = blend(pushStep, capture('Breakdance_Footwork_2', t - footworkIn), smooth(unit((t - footworkIn)/.17)));
 
   const heading = yawRotation(angle);
   pose.hip.sub(scapularPivot).applyQuaternion(heading).add(scapularPivot);
   pose.q.Hips.premultiply(heading);
   // Pin in the stage plane so the slowing turn carries the torso around the supporting palm.
-  plantBackspinHand(pose, t);
+  const catchWeight = smooth(unit((t - 1.68) / .115)) * (1 - smooth(unit((t - 2.06) / .20)));
+  pinHand(pose, catchArm, catchPalm, catchPalmRotation, catchWeight);
   return pose;
 }
 const shoulderHold = own([.02,.37,.03],[-2.15,.18,-.44],[.46,.87,.44],[-.34,.73,.19],
@@ -256,7 +288,7 @@ function travelCurve(marks) {
     const len = times[b] - times[a], u = (time - times[a]) / len, u2 = u*u, u3 = u2*u;
     const p = values[a].map((start, i) => (2*u3 - 3*u2 + 1)*start + (u3 - 2*u2 + u)*len*tangents[a][i]
       + (-2*u3 + 3*u2)*values[b][i] + (u3 - u2)*len*tangents[b][i]);
-    return Array.from({length:6}, (_, i) => p.slice(i*3, i*3+3));
+    return marks[a].slice(1).map((_, i) => p.slice(i*3, i*3+3));
   };
 }
 
