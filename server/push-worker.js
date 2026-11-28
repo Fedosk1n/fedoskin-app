@@ -41,7 +41,7 @@ const TEXT = {
 const MORE = { ru: ' и ещё {n}', en: ' and {n} more', es: ' y {n} más', pt: ' e mais {n}', fr: ' et {n} de plus', de: ' und {n} weitere', ja: 'ほか{n}本', ko: ' 외 {n}개', zh: '等{n}个' };
 
 // Increment for each release that requires redeploying this Worker.
-const WORKER_VERSION = 5;
+const WORKER_VERSION = 6;
 
 export default {
   // Cron trigger (Cloudflare → the worker → Settings → Triggers → Cron: * * * * *): the chat's pull mode, once a minute
@@ -1872,6 +1872,35 @@ async function rvAdmin(req, env, path, json) {
 const CHAT_ID = /^[\w-]{4,40}$/, CHAT_KEY = /^[A-Za-z0-9_-]{16,64}$/, CHAT_MAX = 95 * 1048576, CHAT_HOUR = 30;
 const SVC_RU = { online: 'Онлайн-ведение', rv: 'Разбор / консультация', consult: 'Консультация', review: 'Разбор', full: 'Полное ведение', coach: 'Тренер для тренера' };
 const LANG_RU = { ru: 'рус', en: 'англ', es: 'исп', pt: 'порт', fr: 'франц', de: 'нем', ja: 'япон', ko: 'кор', zh: 'кит' };
+const CHAT_FIRST_REPLY = {
+  ru: 'Федоскин ответит сразу, как освободится.',
+  en: 'Fedoskin will reply as soon as he’s available.',
+  es: 'Fedoskin responderá en cuanto esté disponible.',
+  pt: 'Fedoskin vai responder assim que estiver disponível.',
+  fr: 'Fedoskin répondra dès qu’il sera disponible.',
+  de: 'Fedoskin antwortet, sobald er Zeit hat.',
+  ja: 'フェドスキンは手が空き次第、返信します。',
+  ko: '페도스킨이 시간이 나는 대로 답장할 거예요.',
+  zh: 'Fedoskin 一有空就会回复你。',
+  it: 'Fedoskin risponderà appena sarà libero.',
+  pl: 'Fedoskin odpowie, gdy tylko będzie miał chwilę.',
+  nl: 'Fedoskin antwoordt zodra hij tijd heeft.',
+  tr: 'Fedoskin müsait olur olmaz yanıt verecek.',
+  uk: 'Федоскін відповість, щойно звільниться.',
+  ar: 'سيردّ فيدوسكين حالما يتفرغ.',
+  id: 'Fedoskin akan membalas begitu ada waktu.',
+  vi: 'Fedoskin sẽ trả lời ngay khi rảnh.',
+  th: 'Fedoskin จะตอบกลับทันทีที่ว่าง',
+  sv: 'Fedoskin svarar så snart han har tid.',
+  fi: 'Fedoskin vastaa heti, kun hän ehtii.',
+  ro: 'Fedoskin va răspunde de îndată ce va fi disponibil.',
+  cs: 'Fedoskin odpoví, jakmile bude mít čas.',
+  he: 'פדוסקין יענה ברגע שיתפנה.',
+  hi: 'फ़ेदोस्किन फ़ुर्सत मिलते ही जवाब देंगे।',
+  kk: 'Федоскин қолы босаған бойда жауап береді.',
+  ky: 'Федоскин колу бошогондо дароо жооп берет.',
+  uz: 'Fedoskin bo‘shashi bilan javob beradi.',
+};
 const flag = cc => /^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...cc].map(c => 0x1F1A5 + c.charCodeAt(0))) : '';
 async function tg(env, method, body) {
   const isForm = body instanceof FormData;
@@ -1906,7 +1935,11 @@ async function chatThread(env, b, req, make) {
     if (!make) return { id, none: true };
     const country = /^[A-Z]{2}$/.test((req.cf && req.cf.country) || '') ? req.cf.country : '';
     t = { id, kh, name: '', lang: 'en', country, svc: '', made: Date.now(), last: 0, push: null, fresh: true };
-    await db.prepare('INSERT INTO chat_thr (id, kh, name, lang, country, svc, made, last) VALUES (?, ?, ?, ?, ?, ?, ?, 0)').bind(id, kh, '', 'en', country, '', t.made).run();
+    const inserted = await db.prepare('INSERT INTO chat_thr (id, kh, name, lang, country, svc, made, last) VALUES (?, ?, ?, ?, ?, ?, ?, 0) ON CONFLICT(id) DO NOTHING').bind(id, kh, '', 'en', country, '', t.made).run();
+    if (!inserted.meta.changes) {
+      t = await db.prepare('SELECT * FROM chat_thr WHERE id = ?').bind(id).first();
+      if (!t || t.kh !== kh) return { err: 'key' };
+    }
   }
   const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40), lang = LANG_RU[b.lang] ? b.lang : '', svc = /^[a-z]{1,12}$/.test(b.svc || '') ? b.svc : '';
   if ((name && name !== t.name) || (lang && lang !== t.lang) || (svc && svc !== t.svc)) {
@@ -1995,11 +2028,31 @@ async function trOut(env, text, lang) {
   try { return await aiRun(env, 'Translate the coach\'s message from Russian into ' + (LANG_EN[lang] || lang) + '. ' + TR_RULES + ' Write it the way the coach would say it to his student in that language. Output only the translation.', text); }
   catch (e) { if (/^no model/.test(e.message)) return m2m(env, text, 'ru', lang); throw e; }
 }
-async function trNote(env, t, text) { // remember the client's language; return the line(s) the coach sees under the original
+async function chatTranslation(env, t, text) {
+  if (!env.AI || !text || !/\p{L}/u.test(text)) return null;
   const r = await trIn(env, text, (await tgGet(env.DB, 'tl:' + t.id)) || t.lang);
-  if (!r) return '';
-  if (r.lang && r.lang !== 'ru') await tgSet(env.DB, 'tl:' + t.id, r.lang);
-  return r.ru ? '\n\n🇷🇺 ' + r.ru : '';
+  if (r?.lang && r.lang !== 'ru') await tgSet(env.DB, 'tl:' + t.id, r.lang);
+  return r;
+}
+
+async function chatReceive(env, t, kind, text, media = null) {
+  const db = env.DB, first = !t.last;
+  const translate = () => chatTranslation(env, t, text).catch(() => null);
+  // The first reply uses the written language when detected. For later messages, save before translating.
+  let translation = first ? await translate() : null;
+  const lang = Object.hasOwn(CHAT_FIRST_REPLY, translation?.lang) ? translation.lang : t.lang;
+  const reply = Object.hasOwn(CHAT_FIRST_REPLY, lang) ? CHAT_FIRST_REPLY[lang] : CHAT_FIRST_REPLY.en;
+  const now = Date.now();
+  // In one transaction, the new inbound row has no predecessor only on the first successful send.
+  // Looking at messages also covers threads created by an upload that failed before saving a message.
+  const [incoming] = await db.batch([
+    db.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'in', ?, ?, ?, ?)").bind(t.id, kind, text, media, now),
+    db.prepare(`INSERT INTO chat_msg (thr, dir, kind, text, t) SELECT ?, 'out', 'text', ?, ?
+      WHERE NOT EXISTS (SELECT 1 FROM chat_msg WHERE thr = ? AND dir = 'in' LIMIT 1 OFFSET 1)`).bind(t.id, reply, now, t.id),
+    db.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id),
+  ]);
+  if (!first) translation = await translate();
+  return { n: incoming.meta?.last_row_id, tr: translation?.ru ? '\n\n🇷🇺 ' + translation.ru : '' };
 }
 // Topics (owner 10.11.2026 «от всех клиентов в один общий чат — неудобно»): with «Threaded mode» on for the bot (BotFather →
 // mini app → Bot Settings), every client gets a topic of his own in the coach's chat with the bot (Bot API 9.4
@@ -2046,14 +2099,10 @@ async function chatSend(req, env, json) {
   const { t, err } = await chatThread(env, b, req, true);
   if (err) return json({ ok: false, why: err }, 403);
   if (await chatLimited(env, t.id)) return json({ ok: false, why: 'limit' }, 429);
-  const now = Date.now();
-  const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, t) VALUES (?, 'in', 'text', ?, ?)").bind(t.id, text, now).run();
-  await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
-  await schema(env.DB);
-  const tr = await trNote(env, t, text);
+  const { n, tr } = await chatReceive(env, t, 'text', text);
   try { await chatToOwner(env, t, (owner, top) => tg(env, 'sendMessage', top ? { chat_id: owner, message_thread_id: top, text: (text + tr).slice(0, 4096) } : { chat_id: owner, text: (chatHead(t) + '\n\n' + text + tr + (t.fresh ? CHAT_HINT : '')).slice(0, 4096) })); }
-  catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); } // kept; Telegram was not reachable
-  return json({ ok: true, n: r.meta && r.meta.last_row_id });
+  catch (e) { return json({ ok: true, n, late: true }); } // kept; Telegram was not reachable
+  return json({ ok: true, n });
 }
 async function chatFile(req, env, json) {
   if (!(await chatOn(env))) return json({ ok: false, why: 'off' }, 409);
@@ -2071,11 +2120,8 @@ async function chatFile(req, env, json) {
   if (!buf.byteLength || buf.byteLength > CHAT_MAX) return json({ ok: false, why: 'big' }, 413);
   const kind = ct.startsWith('image/') ? 'photo' : 'video', key = 'chat/' + t.id + '/' + rvCode(12) + '.' + ext;
   await env.VIDEOS.put(key, buf, { httpMetadata: { contentType: ct } });
-  const cap = String(q.cap || '').slice(0, 900), now = Date.now();
-  const r = await env.DB.prepare("INSERT INTO chat_msg (thr, dir, kind, text, media, t) VALUES (?, 'in', ?, ?, ?, ?)").bind(t.id, kind, cap, key, now).run();
-  await env.DB.prepare('UPDATE chat_thr SET last = ? WHERE id = ?').bind(now, t.id).run();
-  await schema(env.DB);
-  const tr = cap ? await trNote(env, t, cap) : '';
+  const cap = String(q.cap || '').slice(0, 900);
+  const { n, tr } = await chatReceive(env, t, kind, cap, key);
   try {
     await chatToOwner(env, t, async (owner, top) => {
       const head = top ? cap + tr : chatHead(t) + (cap ? '\n\n' + cap + tr : '') + (t.fresh ? CHAT_HINT : '');
@@ -2089,8 +2135,8 @@ async function chatFile(req, env, json) {
       if (kind === 'video') f.append('supports_streaming', 'true');
       return tg(env, kind === 'photo' ? 'sendPhoto' : 'sendVideo', f);
     });
-  } catch (e) { return json({ ok: true, n: r.meta && r.meta.last_row_id, late: true }); }
-  return json({ ok: true, n: r.meta && r.meta.last_row_id });
+  } catch (e) { return json({ ok: true, n, late: true }); }
+  return json({ ok: true, n });
 }
 async function chatGet(req, env, json) {
   if (!env.DB) return json({ msgs: [] });
