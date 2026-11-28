@@ -9,13 +9,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js?
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=43';
 import { ambientPoseScheduler, mergeable, mergePositions, shadowBatcher, trimCasters } from './city3d-perf.js?v=4';
-import { initGame } from './city3d-game.js?v=82';
+import { initGame } from './city3d-game.js?v=83';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
 import { loadClubLighting } from './city3d-club-lighting.js?v=1';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
-import { buildProm } from './city3d-prom.js?v=4';
+import { buildProm } from './city3d-prom.js?v=5';
 import { buildCenter } from './city3d-center.js?v=8';
 import { buildPark } from './city3d-park.js?v=8';
 import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=8';
@@ -315,12 +315,15 @@ const PAINT_Y = '#D9A43A', PAINT_W = '#C9CDD2';
 // ---------- props ----------
 let WOOD, WOOD_D, BARREL_K, BARREL_O, STRIPES, KRAFT, CHAIN;
 const shadowAll = o => { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
-const yardPropGroups = [];
+const staticPropGroups = [];
+function queueStaticProps(group) {
+  if (TOUCH) staticPropGroups.push(group);
+}
 function queueYardProps(group) {
-  if (TOUCH && DIST === 'yard') yardPropGroups.push(group);
+  if (DIST === 'yard') queueStaticProps(group);
 }
 const propPaint = new THREE.MeshStandardMaterial({ vertexColors: true });
-propPaint.customProgramCacheKey = () => 'yard-prop-paint';
+propPaint.customProgramCacheKey = () => 'city-prop-paint';
 propPaint.onBeforeCompile = shader => {
   shader.vertexShader = shader.vertexShader.replace('void main() {',
     'attribute vec2 surface; varying vec2 vSurface; void main() { vSurface = surface;');
@@ -331,7 +334,7 @@ propPaint.onBeforeCompile = shader => {
 };
 
 // Use on groups of fixed props after trimCasters, so pieces with different shadow settings stay separate.
-function batchStaticProps(root) {
+function batchStaticProps(root, { combinePaint = true } = {}) {
   root.updateWorldMatrix(true, true);
   const inverse = root.matrixWorld.clone().invert(), groups = new Map();
   function collect(object) {
@@ -348,13 +351,14 @@ function batchStaticProps(root) {
     if (matrix.determinant() < 0) return;
     const plain = m.side === THREE.FrontSide && m.shadowSide === null && m.opacity === 1 && m.depthTest && m.depthWrite && m.fog && m.toneMapped &&
       !m.emissive.getHex() && !m.flatShading && textures.length === 0;
-    const material = plain ? propPaint : m;
+    const material = combinePaint && plain ? propPaint : m;
     const key = `${material.id}/${object.castShadow}/${object.receiveShadow}`;
     if (!groups.has(key)) groups.set(key, { material, parts: [] });
     groups.get(key).parts.push({ object, matrix });
   }
   collect(root);
 
+  const batches = [];
   for (const { material, parts } of groups.values()) {
     if (parts.length < 2) continue;
     const geometry = mergePositions(parts.map(({ object, matrix }) => ({ geo: object.geometry, e: matrix.elements })));
@@ -385,10 +389,14 @@ function batchStaticProps(root) {
       geometry.setAttribute('surface', new THREE.BufferAttribute(surface, 2));
     }
     const merged = new THREE.Mesh(geometry, material);
-    merged.name = root.name || 'Yard prop batch';
+    merged.name = root.name || 'Static prop batch';
     merged.castShadow = parts[0].object.castShadow;
     merged.receiveShadow = parts[0].object.receiveShadow;
     merged.matrixAutoUpdate = false;
+    batches.push({ merged, parts });
+  }
+  // Prepare all batches before replacing any meshes, so a failing build leaves the source model intact.
+  for (const { merged, parts } of batches) {
     root.add(merged);
     for (const { object } of parts) {
       object.castShadow = false;
@@ -697,6 +705,7 @@ async function build(scene, asphalt, props, playgroundModel, clubJudges, surface
   }
   const TK = { THREE, RoundedBoxGeometry, scene, W, Q, TOUCH, OR, PAINT_Y, PAINT_W, M, glowMat, tex, can, grain, blotch, wear, rng, lerp, clamp, ease, decal, paintCanvas, shadowAll, box, circ, colliders,
     lamp, lamps, dust, FILL_K, crate, barrel, pallet, tires, woodFence, jersey, dumpster, trashBag, cardboard, chainFence, car, concreteTex, facadeTex, roofTex, stripeTex,
+    batchProps: queueStaticProps,
     mocapPerson, bodyOf, poseOf, stride, standPose, HERO: window.HERO, GFX: window.CITY_GFX };
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
@@ -1284,6 +1293,7 @@ async function boot() {
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
   const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit, returnToMat, batchProps: queueYardProps,
+    batchStageProps: TOUCH ? props => batchStaticProps(props, { combinePaint: false }) : null,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
@@ -1297,8 +1307,8 @@ async function boot() {
   // stands still casts it as a few merged pieces (city3d-perf.js), the moon's shadow covers what the screen shows (not 32×32 m), and a
   // lamp's shadow is redrawn only while its light is on screen. The picture stays the same.
   trimCasters(scene);
-  for (const group of yardPropGroups) batchStaticProps(group);
-  yardPropGroups.length = 0;
+  for (const group of staticPropGroups) batchStaticProps(group);
+  staticPropGroups.length = 0;
   const SB = shadowBatcher(scene); SB.useFor(moon);
   moon.shadow.autoUpdate = false;
   const spots = []; scene.updateMatrixWorld(true);
@@ -1358,7 +1368,7 @@ async function boot() {
     if (sh.mapSize.x !== w || sh.mapSize.y !== h) { sh.mapSize.set(w, h); if (sh.map) { sh.map.dispose(); sh.map = null; } }
   };
   const pace = cityFramePacer();
-  let trialResolution, observeFrame;
+  let trialResolution, observeFrame, backdropHeld = false;
   const pixelRatio = (preset, w, h) => cityPixelRatio(preset, w, h, devicePixelRatio || 1, maxW, maxH);
   function sameSize(a, b) {
     const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
@@ -1370,6 +1380,7 @@ async function boot() {
     const ratio = pixelRatio(trialResolution || graphics.settings.resolution, w, h);
     const viewport = fin.uniforms.uR.value;
     if (viewport.x === w && viewport.y === h && renderer.getPixelRatio() === ratio) return;
+    backdropHeld = false;
     renderer.setDrawingBufferSize(w, h, ratio);
     // The composer receives integer physical sizes, including its bloom chain. The camera stays in viewport units.
     comp.setSize(Math.max(1, cv.width), Math.max(1, cv.height));
@@ -1444,9 +1455,11 @@ async function boot() {
   let cpuS = 0, cpuN = 0; const hist = new Float32Array(300); let histI = 0; const jerks = [];
   document.addEventListener('visibilitychange', () => {
     last = undefined;
+    backdropHeld = false;
     pace.reset();
     fpsN = fpsT = worst = cpuS = cpuN = 0;
   });
+  cv.addEventListener('webglcontextrestored', () => { backdropHeld = false; });
   const fpsG = showFps ? (() => { const c = document.createElement('canvas'); c.width = 300; c.height = 40; c.style.cssText = 'position:fixed;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));width:150px;height:20px;opacity:.75;pointer-events:none;z-index:5'; document.body.appendChild(c); return c.getContext('2d'); })() : null;
   let firstFrame = true, nextFrame;
   const frame = now => {
@@ -1471,6 +1484,12 @@ async function boot() {
     look.set(hp.x + s.vx * .25, 0, hp.z - 2.1 * Math.max(1, zW) - roomLead + s.vz * .25);
     const view = W.camT || W.guideView;
     if (view) look.set(view.x, view.y || 0, view.z);
+    const holdBackdrop = TOUCH && !trialResolution && !graphics.open && GAME.holdBackdrop?.();
+    const movingBackdrop = W.shake > .01 || view && (camLook.distanceToSquared(look) >= .0025 || Math.abs(zW - view.zoom) >= .01);
+    // The renderer keeps its last displayed frame behind static sheets. The game and input clocks keep running.
+    if (holdBackdrop && backdropHeld && !movingBackdrop && !W.camSnap) return;
+    const refreshBackdrop = backdropHeld;
+    backdropHeld = false;
     // W.camSnap: a replay's cut — the camera jumps instead of gliding
     const cameraCut = W.camSnap;
     if (cameraCut) { W.camSnap = false; camLook.copy(look); } else camLook.lerp(look, 1 - Math.exp(-dt * 4));
@@ -1492,10 +1511,15 @@ async function boot() {
     const stableShadow = W.zoom <= .75 && focusDistance < 1.8 && !W.camT?.off;
     // The mat camera settles before drawing starts. Fit its shadow map once, with room for the camera's lead.
     const closeTrace = TOUCH && DIST === 'yard' && GAME.traceActive() && W.zoom <= .5 && focusDistance < .55 && !W.camT?.off;
-    const shadowZoom = zoomBucket(closeTrace);
+    // Authored festival cameras hold position during a piece. Keep the moon fixed once the camera is inside the shadow margin.
+    const festivalView = TOUCH && GAME.festivalCamera?.() && W.camT;
+    const festivalAnchor = festivalView && camLook.distanceToSquared(look) < .20;
+    const festivalZoom = festivalAnchor && Math.max(.5, festivalView.zoom + .04);
+    const shadowZoom = festivalZoom && W.zoom <= festivalZoom ? festivalZoom : zoomBucket(closeTrace);
     if (shadowZoom !== fitZ) fitShadows(shadowZoom);
     const streetShadow = DIST !== 'club' && !W.camT && !W.guideView;
-    if (stableShadow) shadowCenter.set(battleFocus.x, 0, battleFocus.z);
+    if (festivalAnchor) shadowCenter.set(festivalView.x, 0, festivalView.z);
+    else if (stableShadow) shadowCenter.set(battleFocus.x, 0, battleFocus.z);
     else if (streetShadow) shadowCenter.set(
       Math.round(camLook.x / streetShadowCell) * streetShadowCell, 0,
       Math.round(camLook.z / streetShadowCell) * streetShadowCell,
@@ -1510,14 +1534,14 @@ async function boot() {
     for (const spot of spots) SB.cacheStatic(spot.l, true);
     // Keep the moon responsive in close-ups. During a walk on touch devices and in the overview, reuse every other map.
     const stagger = far || (TOUCH && !W.camT);
-    if (!stagger || cameraCut || farChanged || shadowCellChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
+    if (!stagger || cameraCut || refreshBackdrop || farChanged || shadowCellChanged || frameNumber % 2 === 0) moon.shadow.needsUpdate = true;
     const x0 = camLook.x + VIEW.x0, x1 = camLook.x + VIEW.x1, z0 = camLook.z + VIEW.z0, z1 = camLook.z + VIEW.z1;
     let nextSpot = null;
     for (const spot of spots) {
       const dx = Math.max(x0 - spot.x, 0, spot.x - x1), dz = Math.max(z0 - spot.z, 0, spot.z - z1);
       const visible = dx * dx + dz * dz < spot.r * spot.r;
       if (visible && renderer.shadowMap.enabled) {
-        if (!stagger || !spot.visible || cameraCut || !spot.l.shadow.map) {
+        if (!stagger || !spot.visible || cameraCut || refreshBackdrop || !spot.l.shadow.map) {
           spot.l.shadow.needsUpdate = true;
           spot.refreshed = frameNumber;
         } else if (!nextSpot || spot.refreshed < nextSpot.refreshed) nextSpot = spot;
@@ -1537,6 +1561,7 @@ async function boot() {
     if (tapRing.visible) { const t = (tapRing.userData.t += dt); tapRing.scale.setScalar(1 + t * 2.5); tapRing.material.opacity = Math.max(0, 1 - t * 2.2); if (t > .5) tapRing.visible = false; }
     fin.uniforms.uT.value = now * .001;
     comp.render(dt);
+    backdropHeld = Boolean(holdBackdrop && !movingBackdrop);
     observeFrame?.(now);
     if (firstFrame) {
       firstFrame = false;

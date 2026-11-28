@@ -1,10 +1,12 @@
+import { createStoryPortrait } from './city3d-story-portraits.js?v=1';
+import { CAST } from './city3d-campaign-data.js?v=1';
 import { CHAPTER_ART, LANDMARKS, landmarkImage } from './city3d-guide-data.js?v=1';
 
 export const WATCH_TIME = 8;
 
 export const CHAPTERS = [
   {
-    id: 'cypher', district: 'yard', title: 'Место в кругу', location: 'Двор · круг сайфера',
+    id: 'cypher', speaker: 'vint', district: 'yard', title: 'Место в кругу', location: 'Двор · круг сайфера',
     line: 'Винт: «Раньше сюда сходились со всего города. Теперь каждый держится своего района. Соберём их снова? Для начала посмотри, как здесь передают круг».',
     task: 'Встань на следы зрителя у картона и смотри круг {n} секунд.',
     imageHint: 'Два следа смотрят носками к картону. Остановись на них и дождись конца отсчёта.',
@@ -13,7 +15,7 @@ export const CHAPTERS = [
     credit: 'Двор · Винт ставит бит и открывает круг', en: 8, rep: 6,
   },
   {
-    id: 'mall', district: 'center', title: 'Площадь под присмотром', location: 'Центр · плитка перед ТЦ «Круг»',
+    id: 'mall', speaker: 'stencil', district: 'center', title: 'Площадь под присмотром', location: 'Центр · плитка перед ТЦ «Круг»',
     line: 'Трафареты: «Мы уже рисуем афишу. Покажи, что можешь удержать толпу до конца выхода. Начинай, когда охранник уходит: красный круг выдаёт, где он тебя заметит».',
     task: 'Закончи шоу у ТЦ, пока охранник тебя не заметил.',
     imageHint: 'Встань у бумажной афиши. Начни шоу, когда охранник отойдёт от плитки.',
@@ -22,7 +24,7 @@ export const CHAPTERS = [
     credit: 'Центр · Трафареты печатают афишу', en: 12, rep: 8,
   },
   {
-    id: 'jam', district: 'park', title: 'Выход на эстраду', location: 'Парк · эстрада у набережной',
+    id: 'jam', speaker: 'bolt', district: 'park', title: 'Выход на эстраду', location: 'Парк · эстрада у набережной',
     line: 'Шуруп: «Трафареты прислали макет. Оставлю там имя Парка, если возьмёшь у меня первый раунд. Остальные два можешь сыграть для себя».',
     task: 'Выиграй хотя бы один раунд джема на эстраде',
     imageHint: 'У мониторов эстрады нажми «Джем на эстраде». Для афиши достаточно выиграть один раунд.',
@@ -31,7 +33,7 @@ export const CHAPTERS = [
     credit: 'Парк · Шуруп танцует от эстрады', en: 15, rep: 12,
   },
   {
-    id: 'ring', district: 'prom', title: 'Последнее имя на афише', location: 'Промзона · подпольный ринг',
+    id: 'ring', speaker: 'rivet', district: 'prom', title: 'Последнее имя на афише', location: 'Промзона · подпольный ринг',
     line: 'Клёпка: «Колонки есть. Наши с ринга тоже хотят в общий круг. Выиграй батл, и я впишу Промзону».',
     task: 'Победи в батле на подпольном ринге.',
     imageHint: 'Подойди к турнирной сетке с открытой стороны ринга. Выиграй батл.',
@@ -40,7 +42,7 @@ export const CHAPTERS = [
     credit: 'Промзона · Клёпка привозит колонки', en: 18, rep: 16,
   },
   {
-    id: 'finale', district: 'yard', title: 'Общий сайфер', location: 'Двор · круг сайфера',
+    id: 'finale', speaker: 'vint', district: 'yard', title: 'Общий сайфер', location: 'Двор · круг сайфера',
     line: 'Винт: «Все в сборе. Дам гостям по выходу, а потом передам круг тебе».',
     task: 'Вернись к кругу и нажми «Открыть общий сайфер». Этот выход бесплатный.',
     imageHint: 'У подписанной афиши нажми «Открыть общий сайфер». После трёх гостей наступит твой выход.',
@@ -73,10 +75,25 @@ export function advanceStory(state, id, energyCap) {
   return receipt;
 }
 
+export function mountStoryPortraits(journal, t) {
+  for (const line of journal.querySelectorAll('[data-story-speaker]')) {
+    const speaker = line.dataset.storySpeaker;
+    const mount = () => {
+      if (line.querySelector('.story-portrait')) return;
+      // The localized dialogue already gives the name in text.
+      line.prepend(createStoryPortrait(speaker, t(CAST[speaker]), { showName: false }));
+    };
+    const details = line.closest('details');
+    if (!details || details.open) mount();
+    else details.addEventListener('toggle', () => { if (details.open) mount(); });
+  }
+}
+
 export function storyJournal(t, earned, hint, cap) {
   const current = CHAPTERS[earned.length];
   const finale = CHAPTERS.at(-1);
   const task = chapter => t(chapter.task, { n: WATCH_TIME });
+  const line = (chapter, wording) => `<p class="story-dialogue" data-story-speaker="${chapter.speaker}"><span>${t(wording)}</span></p>`;
   const figure = (chapter, lazy = true) => {
     const art = CHAPTER_ART[chapter.id];
     return `<figure class="story-reference">
@@ -93,17 +110,17 @@ export function storyJournal(t, earned, hint, cap) {
   const history = earned.map((receipt, index) => {
     const chapter = CHAPTERS[index];
     return `<details class="story-history"><summary>${t(chapter.title)} <span>+${receipt.rep} ★ · +${receipt.en} ⚡</span></summary>
-      <p><b>${t(chapter.location)}</b> · ${task(chapter)}</p>${figure(chapter)}<p>${t(chapter.reply)}</p></details>`;
+      <p><b>${t(chapter.location)}</b> · ${task(chapter)}</p>${figure(chapter)}${line(chapter, chapter.reply)}</details>`;
   });
   return `<div class="story-journal"><div class="story-header"><h4 id="g3storyTitle" tabindex="-1">${t('Собрать общий сайфер')}</h4>
     <button id="g3choiceBack" class="sec" type="button" aria-label="${t('Закрыть журнал')}">×</button></div>
     ${current ? `<section class="story-current">
       <h5>${t(current.title)}</h5><div class="story-location">${t(current.location)}</div>
-      <p>${t(current.line)}</p><p><b>${task(current)}</b></p>
+      ${line(current,current.line)}<p><b>${task(current)}</b></p>
       ${hint ? `<p class="story-route">${hint}</p>` : ''}
       ${figure(current, false)}
       <p class="story-reward">${t('Награда · +{r} ★ и до +{e} ⚡', { r: current.rep, e: current.en })}<small>${t('Энергия копится до {n} ⚡.', { n: cap })}</small></p>
-      </section>` : `<p class="story-done">✓ ${t('Общий сайфер состоялся')}</p><p>${t(finale.reply)}</p>`}
+      </section>` : `<p class="story-done">✓ ${t('Общий сайфер состоялся')}</p>${line(finale,finale.reply)}`}
     ${poster}${history.slice().reverse().join('')}</div>`;
 }
 
@@ -115,6 +132,9 @@ body.g3fight #g3story{visibility:hidden}
 #g3storyNear{position:fixed;z-index:5;left:50%;bottom:calc(155px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100vw - 38px);box-sizing:border-box;pointer-events:none;padding:6px 12px;border:1px solid #b58a49;border-radius:12px;background:#0b0d12de;color:#ffe09b;font:750 12px/1.3 Inter,sans-serif;text-align:center;font-variant-numeric:tabular-nums}
 #g3info .story-journal{color:#F2EFE8}
 #g3info .story-journal p{margin:7px 0}
+.story-dialogue{display:flex;align-items:flex-start;gap:9px}
+.story-dialogue>span:last-child{min-width:0;overflow-wrap:anywhere}
+.story-dialogue .story-portrait{--portrait-size:44px;flex:0 0 44px}
 .story-header{position:sticky;top:-18px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#14161b;padding:6px 0 10px}
 #g3info .story-header h4{margin:0;line-height:1.2}
 #g3info .story-header button{flex:none;width:44px;height:44px;margin:0;padding:0;font-size:22px;line-height:1}

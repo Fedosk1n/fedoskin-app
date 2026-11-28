@@ -218,6 +218,8 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
     const { x, z, facing } = run.home;
     H.root.position.set(x, 0, z);
     H.root.rotation.y = H.st.face = facing;
+    H.st.tgt = null;
+    H.st.vx = H.st.vz = H.st.wk = 0;
     leave.hidden = true;
     hud.classList.remove('on');
     result.classList.remove('on');
