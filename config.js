@@ -61,7 +61,12 @@ window.APP_CONFIG = {
   },
   "pw-reverse-1990": {
    "media": "pw-reverse-1990-jun24gi0.mp4",
-   "preview": "dub-pw-reverse-1990-en-preview-2fcbdc9b.mp4"
+   "tracks": {
+    "en": "dub-pw-reverse-1990-en-voice-d209b09f.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-reverse-1990-en-voice-b424df2e-mux.mp4"
+   }
   }
  }
 };
