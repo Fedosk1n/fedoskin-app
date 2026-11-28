@@ -177,7 +177,8 @@ window.APP_CONFIG = {
     "en": "dub-pw-flare-1990-en-voice-bf03e9abb7d9.mp4"
    },
    "mux": {
-    "en": "dub-pw-flare-1990-en-voice-a0c2f1b67ed1.mp4"
+    "en": "dub-pw-flare-1990-en-voice-a0c2f1b67ed1.mp4",
+    "ja": "dub-pw-flare-1990-ja-voice-b8cec9c74159-mux.mp4"
    },
    "preferMux": true
   },
@@ -210,6 +211,15 @@ window.APP_CONFIG = {
     "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ed84da3bc9e6.mp4"
    },
    "preferMux": true
+  },
+  "pw-airflare": {
+   "media": "de8dad97-f470-4552-93c4-45575e6d3f29",
+   "mux": {
+    "ja": "dub-pw-airflare-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   }
  }
 };

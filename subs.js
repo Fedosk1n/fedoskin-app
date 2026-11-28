@@ -77,7 +77,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "pw-flare-1990": {
   "ks": "9646f680-1ae0-4b57-99f3-d1b8ea41cb7f",
@@ -92,7 +92,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-flare-wm": {
   "ks": "fcbcbb79-43ca-482d-b0f2-01472155230a",
