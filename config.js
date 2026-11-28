@@ -158,7 +158,8 @@ window.APP_CONFIG = {
    },
    "mux": {
     "en": "dub-fr-turtle-freeze-variations-en-voice-af41949bd52c.mp4",
-    "ja": "dub-fr-turtle-freeze-variations-ja-voice-b8cec9c74159-mux.mp4"
+    "ja": "dub-fr-turtle-freeze-variations-ja-voice-b8cec9c74159-mux.mp4",
+    "es": "dub-fr-turtle-freeze-variations-es-voice-73b73e6b053c-mux.mp4"
    },
    "preferMux": true
   },
