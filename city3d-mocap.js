@@ -737,16 +737,34 @@ export function bodyOf(seed, o = {}) {
 }
 const BASE = BODY_TYPES.avg;
 const DANCER_IDLE = ['Stand', 'Stand_Rock', 'Stand_Bounce'];
+function restRig() {
+  const rig = new THREE.Group(), B = {};
+  for (const [n, b] of Object.entries(DATA.rest)) {
+    const bone = new THREE.Bone();
+    bone.name = n;
+    bone.position.fromArray(b.pos);
+    bone.quaternion.fromArray(b.q);
+    B[n] = bone;
+  }
+  for (const [n, b] of Object.entries(DATA.rest)) (b.p ? B[b.p] : rig).add(B[n]);
+  return { rig, B };
+}
+
+// A motion probe needs the same rest skeleton as the dancer, without clothes, geometry or shadows.
+export function motionProbe() {
+  const { rig, B } = restRig();
+  rig.scale.setScalar(.9);
+  return { rig, B, mixer: new THREE.AnimationMixer(rig) };
+}
+
 // body + clothes on a Mixamo skeleton. opt.body = a body from bodyOf() or a type name; without it — the plain average figure
 export function mocapPerson(look, opt = {}) {
   const R = DATA.rest, C = Object.assign({}, look.col);
   const bd = Object.assign({}, BASE, typeof (opt.body || look.body) === 'string' ? BODY_TYPES[opt.body || look.body] : (opt.body || look.body || {}));
   if (bd.skin) C.skin = bd.skin; if (bd.hair) C.hair = bd.hair;
   const girl = look.girl || bd.girl, scale = (opt.scale || .9) * bd.h, L = bd.limb, A = bd.arm, gW = girl && !opt.body ? .92 : 1;
-  const root = new THREE.Group(), rig = new THREE.Group(); root.add(rig);   // rig.scale is set after the skin is bound (below)
-  const B = {};
-  for (const [n, b] of Object.entries(R)) { const bo = new THREE.Bone(); bo.name = n; bo.position.fromArray(b.pos); bo.quaternion.fromArray(b.q); B[n] = bo; }
-  for (const [n, b] of Object.entries(R)) (b.p ? B[b.p] : rig).add(B[n]);
+  const root = new THREE.Group(), { rig, B } = restRig();
+  root.add(rig); // rig.scale is set after the skin is bound (below)
   // wider or narrower frame: clavicles and hip joints move with the chest and the hips
   for (const s of ['Left', 'Right']) { B[s + 'Shoulder'].position.x *= bd.chest * gW; B[s + 'Arm'].position.multiplyScalar(bd.chest * gW); B[s + 'UpLeg'].position.x *= Math.max(1, bd.hip * (1 + (L - 1) * .5)); }
   const P = n => B[n].position.clone();

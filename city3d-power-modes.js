@@ -14,9 +14,9 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
     W.camSnap = true;
   }
 
-  function start(spot, options, opponent = null) {
+  function start(spot, options, opponent = null, practice = null) {
     const H = W.hero, home = { x: H.root.position.x, z: H.root.position.z, facing: H.root.rotation.y };
-    run = { spot, home, options, opponent, rounds: [] };
+    run = { spot, home, options, opponent, practice, form: practice?.form, move: practice?.move, rounds: [] };
     W.lock = true;
     document.body.classList.add('g3fight');
     hud.classList.add('on');
@@ -73,7 +73,7 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
     const H = W.hero;
     header.textContent = opponent
       ? _t('Пауэрмув-контест · раунд {n}/{x}', { n: run.rounds.length + 1, x: ROUNDS })
-      : _t('Тренировка пауэрмувов');
+      : _t(run.form ? 'Тренировка формы' : 'Тренировка пауэрмувов');
     find('g3mv').textContent = '';
     frame(spot);
     walkTo(H, spot.x, spot.z, 0);
@@ -82,7 +82,7 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
       walkTo(opponent, spot.x, spot.z - 1.9, 0);
     }
     showScore();
-    wait(.8, chooseMove);
+    wait(.8, run.practice ? () => trace(run.move) : chooseMove);
   }
 
   function chooseMove() {
@@ -106,11 +106,12 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
     prepare(H, move, () => {
       if (H.fall) fallEnd(H);
       H.play(move.c, { fade: .22 });
-      PM.arm(H, move, { wait: run.opponent ? 10 : Infinity, required: true, onEnd: finishTrace });
+      PM.arm(H, move, { wait: run.opponent ? 10 : Infinity, required: true, practice: Boolean(run.practice), onEnd: finishTrace });
     });
   }
 
   function grade(res) {
+    if (res.reason === 'cancel') return _t('Попытка отменена');
     if (res.reason === 'no-start' || res.grade === 'auto') return _t('Попытка не начата');
     if (res.grade === 'perfect') return _t('ИДЕАЛЬНО');
     if (res.grade === 'good') return _t('ЧИСТО');
@@ -118,22 +119,25 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
   }
 
   function detail(res) {
+    if (res.reason === 'cancel') return _t('Энергия не списана');
     if (res.reason === 'off-track') return _t('Выход за линию');
     if (res.reason === 'stall') return _t('Веди палец без остановки');
     if (res.reason === 'time') return _t('Время вышло');
-    if (res.reason === 'release') return _t('Сначала сделай полный оборот');
+    if (res.reason === 'release') return _t(run.opponent ? 'Сначала сделай полный оборот' : 'Обведи контур до конца, не отрывая палец');
     if (res.grade === 'auto' || res.reason === 'no-start') return _t('Начни с жёлтой точки и веди по стрелкам');
-    return _t('Точность {n}% · обороты {x}/10', { n: Math.round((res.acc || 0) * 100), x: res.turns || 0 });
+    return _t('Точность {n}%', { n: Math.round((res.acc || 0) * 100) });
   }
 
   function finishTrace(res) {
     const H = W.hero, missed = res.grade === 'miss';
+    const award = run.practice && res.turns === 1 && (res.grade === 'good' || res.grade === 'perfect')
+      ? run.practice.finish(run.move, res, run.form) : null;
     if (missed && res.reason !== 'no-start' && res.reason !== 'cancel') { fallStart(H); sfx('crash'); }
     else if (!missed && res.grade !== 'auto') sfx(res.grade === 'perfect' ? 'perfect' : 'hit');
     wait(H.fall ? 1.7 : .65, () => {
       if (H.fall) fallEnd(H);
       H.play(READY, { fade: .25 });
-      if (!run.opponent) { practiceResult(res); return; }
+      if (!run.opponent) { practiceResult(res, award); return; }
       const round = { move: run.move, me: { ...res, points: score(run.move, res) } };
       run.rounds.push(round);
       showScore();
@@ -176,9 +180,17 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
     result.classList.add('on');
   }
 
-  function practiceResult(res) {
-    showResult(grade(res), `<p>${run.move.nm}</p><p>${detail(res)}</p>`, [
-      [_t('Повторить'), () => trace(run.move)], [_t('Другой элемент'), () => { result.classList.remove('on'); chooseMove(); }], [_t('В город'), exit],
+  function practiceResult(res, award) {
+    const form = award?.form ? `<p>${award.form} · −${award.cost} ⚡</p>` : award?.unavailable ? `<p>${_t('Форма недоступна. Энергия не списана.')}</p>` : '';
+    const best = award ? `<p>${_t('Рекорд {n}%', { n: award.best })}</p>` : '';
+    const paidResult = run.form && award;
+    showResult(grade(res), `<p>${run.move.nm}</p><p>${detail(res)}</p>${best}${form}`, [
+      [_t(paidResult ? 'Повторить бесплатно' : 'Повторить'), () => {
+        if (paidResult) run.form = false;
+        header.textContent = _t(run.form ? 'Тренировка формы' : 'Тренировка пауэрмувов');
+        trace(run.move);
+      }],
+      [_t('Другой элемент'), () => { const choose = run.practice.choose; exit(); choose(); }], [_t('В город'), exit],
     ]);
   }
 
@@ -235,5 +247,6 @@ export function initPowerModes({ W, PM, wheel, playMusic, sfx, fallStart, fallTi
   }
 
   leave.onclick = exit;
+  addEventListener('keydown', event => { if (event.key === 'Escape' && run?.practice) exit(); });
   return { start, tick };
 }

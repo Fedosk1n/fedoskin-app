@@ -61,7 +61,7 @@ export async function recommendCitySettings(sample, sameSize, signal) {
 }
 
 let menu;
-export function cityGraphicsMenu() {
+export function cityGraphicsMenu({ resume = false } = {}) {
   if (menu) return menu;
 
   const dialog = document.querySelector('#graphicsDialog');
@@ -79,7 +79,8 @@ export function cityGraphicsMenu() {
   try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (_) {}
   try { fromDistrict = sessionStorage.getItem('fedoskin-city3d-from'); } catch (_) {}
   let settings = preferences(saved);
-  let entering = !fromDistrict, finishEntry, canOpen, onApply, registerCheck, check;
+  const resumeSettings = resume && Object.hasOwn(RESOLUTIONS, saved?.resolution) && LIMITS.includes(saved?.fps);
+  let entering = !fromDistrict && !resumeSettings, finishEntry, canOpen, onApply, registerCheck, check;
   const ready = entering ? new Promise(resolve => { finishEntry = resolve; }) : Promise.resolve();
   const checkReady = new Promise(resolve => { registerCheck = resolve; });
 

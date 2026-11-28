@@ -5,20 +5,20 @@
 // 17.11.2026 (owner «авто скучно, но и в бит тапать не надо»): the HERO's power move is DRAWN by the finger — city3d-power.js
 // (he hangs in the air, the finger leads his legs round a circle, perfect / clean / fall; no touch = the old automatic outcome).
 import * as THREE from 'three';
-import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=42';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
+import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=43';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { loadFestivalStage } from './city3d-festival-art.js?v=3';
-import { initPower } from './city3d-power.js?v=32';   // the hero's power move is DRAWN by the finger (17.11)
+import { initPower } from './city3d-power.js?v=33';   // the hero's power move is DRAWN by the finger (17.11)
 import { initFreeze } from './city3d-freeze.js?v=3';
 import { initWheel } from './city3d-wheel.js?v=4';
-import { initPowerModes } from './city3d-power-modes.js?v=1';
+import { initPowerModes } from './city3d-power-modes.js?v=2';
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
 import { CLUB_TRACKS } from './city3d-club.js?v=12';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=8';
-import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry,
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=9';
+import { TOP, SHAPES, CORE_POWER as POWER, BACKSPIN, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry,
   duelPlan, battleStyle, BATTLE_ANSWERS, WHEEL_FOOTWORK, battleTechnique, battleFootMoves, battleReplyPoints, clubCall, threadCatch,
-  REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=7';
+  REPLY_PRECISION, clubExhibition } from './city3d-breaking.js?v=8';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
@@ -224,6 +224,7 @@ function load() {
   s.seen = s.seen || {}; s.mallDay = s.mallDay || { day: 0, n: 0 }; s.teaDay = s.teaDay || 0; s.where = s.where || 'yard'; s.jamDay = s.jamDay || 0; s.ogDay = s.ogDay || 0; s.warmDay = s.warmDay || 0;
   s.ringDay = s.ringDay || { day: 0, n: 0 }; s.streak = s.streak || 0; s.best = s.best || 0; s.stash = s.stash || { day: 0, got: [] };
   s.powerContest = s.powerContest || { best: 0, wins: 0 };
+  if (!s.matBest || typeof s.matBest !== 'object' || Array.isArray(s.matBest)) s.matBest = {};
   s.story = loadStory(s.story);
   s.festival = loadFestivalState(s.festival);
   s.smoke = s.smoke || { wins: 0, best: 0, played: 0, day: 0 };
@@ -336,6 +337,19 @@ body:has(#g3wheel[open]) #g3sc{top:calc(max(10px,env(safe-area-inset-top)) + 44p
 #g3info button{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:800 15px Inter,sans-serif;background:#E2611A;color:#0B0D12}
 #g3info button.sec{background:#262a33;color:#F2EFE8}
 #g3info button:disabled{opacity:.55}
+#g3info .mat-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#g3info .mat-head h4{margin:0}
+#g3info .mat-head button{flex:0 0 44px;width:44px;height:44px;margin:0;padding:0;font-size:24px}
+#g3info .mat-choices{display:grid;gap:7px;margin:9px 0}
+#g3info .mat-choice,#g3info .mat-locked{box-sizing:border-box;width:100%;border:1px solid #42464f;border-radius:11px;margin:0;padding:9px 11px;min-height:44px}
+#g3info .mat-choice{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:start;color:#f6eee2;background:#23262d}
+#g3info .mat-choice[aria-pressed=true]{color:#FFD894;border-color:#e4934d;background:#3a2b21}
+#g3info .mat-choice small,#g3info .mat-locked small{font:600 12px/1.35 Inter,sans-serif;color:#d4cabc}
+#g3info .mat-locked{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 8px}
+#g3info .mat-locked b,#g3info .mat-locked small{grid-column:1}
+#g3info .mat-locked a{grid-column:2;grid-row:1/3;min-width:44px;min-height:44px;display:grid;place-items:center;text-align:center;color:#ffd894;padding:4px;text-underline-offset:3px}
+#g3info .mat-choices a:focus-visible,#g3info .mat-choices button:focus-visible{outline:2px solid #ffd894;outline-offset:2px}
+#g3info .mat-status{margin:6px 0 0}
 #g3info .cu{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)}#g3info .cu>i{font-style:normal;font-size:26px;width:34px;text-align:center}
 #g3info .cu>div{flex:1;min-width:0}#g3info .cu small{display:block;color:#9a968e;font-size:12.5px;line-height:1.35}#g3info .cu small.n{color:#D9D4CA}#g3info .cu .dots{color:#E2611A;letter-spacing:2px;margin-left:6px;font-size:12px}
 #g3info .cu button{margin:0;width:auto;flex:none;padding:10px 12px;font-size:13.5px;border-radius:12px;white-space:nowrap}#g3info .cu button:disabled{background:#262a33;color:#7d7a74}
@@ -422,7 +436,16 @@ export function initGame(ctx) {
     if (e.target.id !== 'g3info') return;
     if (choosing) closeChoice(); else e.currentTarget.classList.remove('on');
   };
-  addEventListener('keydown', e => { if (choosing && e.key === 'Escape') closeChoice(); });
+  addEventListener('keydown', e => {
+    if (choosing && e.key === 'Escape') closeChoice();
+    if (choosing !== 'mat' || e.key !== 'Tab') return;
+    const elements = $('#g3info').querySelectorAll('a[href], button:not(:disabled)');
+    const first = elements[0], last = elements[elements.length - 1];
+    if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    }
+  });
   $('#g3story').onclick = openStory;
   $('#g3rk').onclick = () => { const r = rankOf(S.rep), lv = ctx.heroLevel();
     info(`<h4>${_t('★ Прогресс')}</h4>${BAL.ranks.map((n, i) => `<div class="row"><span>${i <= r ? '✅' : '🔒'} ${n}</span><span>${BAL.rep[i]} ★</span></div>`).join('')}
@@ -603,6 +626,7 @@ export function initGame(ctx) {
   const matAt = freeNear(9.6, 3.6, 1.6), mat = new THREE.Group(); mat.position.set(matAt.x, 0, matAt.z); scene.add(mat);
   mk(mat, new RoundedBoxGeometry(2.6, .06, 2.6, 2, .02), M('#2b3f63', .9), 0, .03, 0);
   [-1, 1].forEach(k => { mk(mat, new THREE.BoxGeometry(2.4, .005, .05), M('#e9e4d8', .8), 0, .065, k * 1.1); mk(mat, new THREE.ConeGeometry(.12, .3, 10), M('#E2611A', .6), k * 1.45, .15, 1.45 * k); });
+  ctx.batchProps?.(mat);
   // the tailor «Игла» (16.11.2026 custom): a stall with a sewing machine, a rack of jackets, a dummy with a back patch, a neon sign
   const atAt = freeNear(8.6, -2.2, 1.9), at = new THREE.Group(); at.position.set(atAt.x, 0, atAt.z); scene.add(at);   // faces +z: the camera sees the sign, the tailor and the rack
   mk(at, new RoundedBoxGeometry(3.4, .04, 2.2, 2, .015), M('#3a2a2a', .95), 0, .02, -.1);                              // a worn rug
@@ -630,6 +654,7 @@ export function initGame(ctx) {
   { // a bare bulb on a wire over the table and its warm light on the stall (the corner was dark)
     mk(at, new THREE.CylinderGeometry(.006, .006, .7, 4), M('#111', .9), .05, 2.55, .1); const bulb = mk(at, new THREE.SphereGeometry(.07, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.35, 1.1, .75), toneMapped: false }), .05, 2.17, .1); bulb.castShadow = false;
     const sp = new THREE.SpotLight('#ffcf9a', 20, 0, 1.05, .85, 2); /* 46 → 20 (17.11.2026): the table and the cloth burnt out white */ sp.position.set(atAt.x + .05, 2.12, atAt.z + .1); sp.target.position.set(atAt.x + .1, 0, atAt.z + .75); scene.add(sp, sp.target); }
+  ctx.batchProps?.(at);
   const atFront = { x: atAt.x, z: atAt.z + 1.25 };
   // the gate to the next district: an arch with a lit sign, closed by a chain until the right rank
   const gAt = freeNear(-1.2, -14.2, 1.4), gate = new THREE.Group(); gate.position.set(gAt.x, 0, gAt.z); scene.add(gate);
@@ -658,6 +683,11 @@ export function initGame(ctx) {
   ];
   return { djMix, matAt, arena, chain, atP, atFront, PLACES }; })();
   const { djMix = null, matAt = null, chain = null, atP = null, atFront = null } = Y || {};
+  let matReturn = !!(matAt && ctx.returnToMat);
+  if (matReturn) {
+    const arrival = ctx.collide(matAt.x, matAt.z + 1.15, .3);
+    W.hero.root.position.set(arrival.x, 0, arrival.z);
+  }
   // the Centre's places are built by city3d-center.js (W.center); here is only what they do
   const CN = W.center || null;
   const PLACES = Y ? Y.PLACES : !CN ? [] : [
@@ -1214,25 +1244,65 @@ export function initGame(ctx) {
     $('#g3mv').textContent = '';
     B = null;
   }
-  function openPractice() {
+  function openPractice(preferred) {
+    const { options } = availablePower(false, true);
     const n = S.form.day === today() ? S.form.n : 0, cost = energyCost(BAL.train);
-    openModeInfo(`<h4>${_t('Тренировочный коврик')}</h4>
-      <p>${_t('Выбери пауэрмув и обведи траекторию. Начни с жёлтой точки. Можно повторять бесплатно.')}</p>
-      <button type="button" id="g3tracePractice">${_t('Тренировать траектории')}</button>
-      <button type="button" class="sec" id="g3formPractice" ${n >= BAL.trainMax ? 'disabled' : ''}>
-        ${n >= BAL.trainMax ? _t('💪 Форма на максимуме сегодня') : _t('💪 Тренировать пауэр · −{n} ⚡', { n: cost })}</button>
-      <p>${_t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax })}</p>`);
-    $('#g3tracePractice').onclick = () => {
+    let selected = options.find(o => !o.locked && o.move.id === preferred) || options.find(o => !o.locked);
+    openModeInfo(`<div class="mat-head"><h4 id="g3matTitle">${_t('Тренировочный коврик')}</h4>
+      <button type="button" class="sec" id="g3choiceBack" aria-label="${_t('Назад')}">×</button></div>
+      <p>${_t('Выбери элемент и обведи весь контур одним движением, начиная с жёлтой точки.')}</p>
+      <div class="mat-choices" role="group" aria-label="${_t('Выбери элемент')}">${options.map(o => {
+        const { id, nm } = o.move, best = S.matBest[id];
+        if (!o.locked) return `<button class="mat-choice" type="button" data-mat-move="${id}" aria-pressed="${o === selected}">${nm}${best == null ? '' : ` <small>${_t('Рекорд {n}%', { n: best })}</small>`}</button>`;
+        return `<div class="mat-locked" data-mat-move="${id}"><b>🔒 ${nm}</b><small>${o.reason}</small>
+          ${o.lesson ? `<a href="./?lesson=${encodeURIComponent(o.lesson.id)}&amp;fromMat=1" aria-label="${_t('Урок для {x}', { x: nm })}">${_t('К уроку')}</a>` : ''}</div>`;
+      }).join('')}</div>
+      <p class="mat-status">${_t('Форма {n} / {m} — каждая: −3% срывов сегодня', { n, m: BAL.trainMax })}</p>
+      <p class="mat-status">${!selected ? _t('Чтобы начать, открой SWIPES в уроках.') : n >= BAL.trainMax ? _t('💪 Форма на максимуме сегодня')
+        : S.en < cost ? _t('Мало энергии — посмотри урок') : _t('Энергия списывается только за полный проход.')}</p>
+      <button type="button" id="g3tracePractice" ${selected ? '' : 'disabled'}>${_t('Тренироваться бесплатно')}</button>
+      <button type="button" class="sec" id="g3formPractice" ${selected && n < BAL.trainMax && S.en >= cost ? '' : 'disabled'}>${_t('Заработать форму · {n} ⚡', { n: cost })}</button>`, false);
+    choosing = 'mat';
+    const panel = $('#g3info').firstElementChild;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', 'g3matTitle');
+    panel.scrollTop = 0;
+    const rows = panel.querySelectorAll('button[data-mat-move]');
+    rows.forEach(b => b.onclick = () => {
+      selected = options.find(o => o.move.id === b.dataset.matMove);
+      rows.forEach(row => row.setAttribute('aria-pressed', String(row === b)));
+    });
+    (panel.querySelector('[aria-pressed=true]') || panel.querySelector('.mat-locked a') || $('#g3choiceBack')).focus({ preventScroll: true });
+    const start = forForm => {
+      if (A || choosing !== 'mat' || !selected || selected.locked) return;
+      const current = availablePower(false, true).options.find(o => o.move.id === selected.move.id);
+      const count = S.form.day === today() ? S.form.n : 0;
+      if (!current || current.locked || (forForm && (S.en < cost || count >= BAL.trainMax))) { openPractice(selected.move.id); return; }
       closeChoice();
       A = { kind: 'powerPractice' };
       paintAct();
-      powerModes.start(matAt, POWER.filter(p => PM.can(p.c)).map(move => ({ move, name: move.nm, locked: false })));
+      powerModes.start(matAt, [], null, {
+        move: current.move, form: forForm, choose: () => openPractice(current.move.id),
+        finish: (move, res, pay) => finishMatTrace(move, res, pay ? cost : null),
+      });
     };
-    $('#g3formPractice').onclick = () => {
-      closeChoice();
-      if (S.en < cost) location.href = './';
-      else if (S.form.day !== today() || S.form.n < BAL.trainMax) startTrain();
-    };
+    $('#g3tracePractice').onclick = () => start(false);
+    $('#g3formPractice').onclick = () => start(true);
+  }
+  function finishMatTrace(move, result, cost) {
+    const acc = Math.round(result.acc * 100), day = today();
+    const best = S.matBest[move.id] = Math.max(S.matBest[move.id] || 0, acc);
+    if (cost == null) { save(); return { best }; }
+    if (S.en < cost || (S.form.day === day && S.form.n >= BAL.trainMax)) { save(); return { best, unavailable: true }; }
+    S.en -= cost;
+    if (S.form.day !== day) S.form = { day, n: 0 };
+    S.form.n++;
+    const rewards = collectGear('train');
+    save(); bumpGoal('train'); paintHud();
+    const form = _t('💪 Чисто! Форма {a} / {b} · −{c}% срывов сегодня', { a: S.form.n, b: BAL.trainMax, c: 3 * S.form.n });
+    toast(form, rewards);
+    return { best, form, cost };
   }
   let contestOpponent;
   function openContest() {
@@ -1261,14 +1331,6 @@ export function initGame(ctx) {
     if (won) result.wins++;
     save();
     return result.best;
-  }
-  // practice: the hero runs one power move on the mat; the form point is given whatever happens
-  function startTrain() {
-    S.en -= energyCost(BAL.train); if (S.form.day !== today()) S.form = { day: today(), n: 0 }; S.form.n++; save(); paintHud();
-    const H = W.hero, lv = ctx.heroLevel(), pw = POWER.filter(p => p.lv <= lv), P = pw[pw.length - 1], fail = Math.random() < .3;
-    A = { kind: 'train', t: 0, from: { x: H.root.position.x, z: H.root.position.z }, to: matAt, P, fail, said: false };
-    W.lock = true; W.camT = { x: matAt.x, z: matAt.z + .3, zoom: .45 }; document.body.classList.add('g3fight'); paintAct();
-    H.play('Breakdance_Uprock_To_Ground', { fade: .3 });
   }
   function buildFinaleGuests() {
     const stencil = crewLook(CREWS.find(c => c.id === 'stencil'), 0, 0);
@@ -1403,20 +1465,6 @@ export function initGame(ctx) {
         toast(_t('🤸 Размялся! Сегодня срывов в батлах меньше на {n}%', { n: Math.round(BAL.warm * 100) }), rewards); endAct();
       }
       H.tick(dt); return; }
-    if (A.kind === 'train') {
-      A.t += dt; const k = ease(clamp(A.t / .8, 0, 1)); H.root.position.set(lerp(A.from.x, A.to.x, k), 0, lerp(A.from.z, A.to.z, k));
-      if (A.t > .8 && !A.p) { A.p = true; H.play(A.P.c, { fade: .3 }); toast('💪 ' + A.P.nm + '…'); }
-      if (A.fail && A.t > 2.6 && !A.f) { A.f = true; fallStart(H); sfx('crash'); }
-      if (H.fall) fallTick(H, dt, false);
-      if (A.t > 4.4) {
-        if (H.fall) fallEnd(H);
-        H.play('Breakdance_Ready', { fade: .4 });
-        const rewards = collectGear('train');
-        save(); bumpGoal('train');
-        toast(_t(A.fail ? '💪 Сорвался, но форма растёт: {a} / {b} · −{c}% срывов сегодня' : '💪 Чисто! Форма {a} / {b} · −{c}% срывов сегодня', { a: S.form.n, b: BAL.trainMax, c: 3 * S.form.n }), rewards);
-        if (!A.fail) sfx('hit'); endAct(); }
-      H.tick(dt); return;
-    }
     if (A.kind === 'show') {
       if (A.story && finaleGuestTick(dt)) { H.tick(dt); return; }
       if (A.story) finaleGuests.forEach(({ dancer }) => dancer.tick(dt));
@@ -1495,21 +1543,31 @@ export function initGame(ctx) {
   // ---------- the battle ----------
   let B = null, clubBattleDancer = null;
   const lessons = BattleStudy.catalog(window.LESSONS_DATA);
-  function availablePower(footwork = true) {
+  function availablePower(footwork = true, practice = false) {
     const read = key => { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { return {}; } };
-    const stats = read('fedoskin-stats'), coverage = read('fedoskin-ulcov'), lv = ctx.heroLevel();
+    const stats = read('fedoskin-stats'), coverage = read('fedoskin-ulcov');
+    const actualLv = HERO.levelFor((stats.sec || 0) / 60), lv = practice ? actualLv : ctx.heroLevel();
     const progress = l => ({ views: BattleStudy.views(l, stats), full: BattleStudy.full(l, BattleStudy.coverageFraction(l, BattleStudy.bits(l, coverage))) });
-    const state = BattleStudy.state(lessons, lv, BattleStudy.legacy(HERO.levelFor((stats.sec || 0) / 60)), progress);
+    const state = BattleStudy.state(lessons, lv, BattleStudy.legacy(actualLv), progress);
     const mode = BattleStudy.starterMode();
-    const swipes = mode === 'new' || mode === 'open' ? BattleStudy.matching(lessons, 'swipe').map(progress) : [];
+    const swipes = mode === 'new' || mode === 'open' ? BattleStudy.matching(lessons, 'swipe').map(l => ({ l, ...progress(l) })) : [];
     if (!swipes.length || swipes.some(p => BattleStudy.studied(p.full, p.views))) state.allow.push('swipe');
     else {
       const best = swipes.sort((a, b) => b.views - a.views)[0];
-      state.hint.swipe = { p: Math.floor(best.views * 10) / 10, full: best.full, lvOk: true };
+      state.hint.swipe = { id: best.l.id, p: Math.floor(best.views * 10) / 10, full: best.full, lvOk: true };
     }
-    const options = POWER.filter(move => footwork || PM.can(move.c)).map(move => {
+    if (practice) {
+      const backspinLesson = lessons.find(l => l.id === 'pw-windmill');  // teaches the backspin as part of the entry
+      if (backspinLesson) {
+        const { full, views } = progress(backspinLesson), st = BattleStudy.studied(full, views);
+        if (st && lv >= BACKSPIN.lv) state.allow.push(BACKSPIN.id);
+        else state.hint[BACKSPIN.id] = { id: backspinLesson.id, p: Math.floor(views * 10) / 10, full, st };
+      }
+    }
+    const pool = practice ? [...POWER.slice(0, 2), BACKSPIN, ...POWER.slice(2)] : POWER;
+    const options = pool.filter(move => footwork || PM.can(move.c, practice)).map(move => {
       const lvNeed = BattleStudy.levels[move.id] || move.lv;
-      const locked = move.id === 'swipe' || BattleStudy.levels[move.id]
+      const locked = move.id === 'swipe' || BattleStudy.levels[move.id] || move === BACKSPIN
         ? !state.allow.includes(move.id) : lv < lvNeed;
       const hint = state.hint[move.id], gates = [];
       if (lv < lvNeed && locked) gates.push(_t('ур. {n}', { n: lvNeed }));
@@ -1517,7 +1575,9 @@ export function initGame(ctx) {
         if (hint.sec) gates.push(_t('Уроки · {n}/{x}', { n: hint.n, x: hint.need }));
         else gates.push(hint.p === 3 && !hint.full ? _t('Нужен полный просмотр урока') : _t('Урок · {n}/3', { n: hint.p }));
       }
-      return { move, locked, reason: gates.join(' · '), name: move.nm };
+      const lesson = practice && hint?.id ? lessons.find(l => l.id === hint.id) : null;
+      if (lesson) gates.push(move === BACKSPIN ? _t('{x} · раздел про вращение на спине', { x: lesson.name }) : lesson.name);
+      return { move, locked, reason: gates.join(' · '), name: move.nm, lesson };
     });
     const unlocked = options.filter(o => !o.locked);
     if (footwork && !unlocked.length) {
@@ -1529,6 +1589,7 @@ export function initGame(ctx) {
     return { options, fallback };
   }
   function closeChoice() {
+    const fromMat = choosing === 'mat';
     choosing = null; FZ.teach(null); W.lock = false;
     const sheet = $('#g3info'), panel = sheet.firstElementChild;
     if (panel.hasAttribute('aria-labelledby')) {
@@ -1538,6 +1599,7 @@ export function initGame(ctx) {
       $('#g3story').focus({ preventScroll: true });
     }
     sheet.classList.remove('on'); paintAct();
+    if (fromMat && act.classList.contains('on')) act.focus({ preventScroll: true });
   }
   function confirmBattle(baseCost, canStart, onStart) {
     if (B || P || A || choosing) return;
@@ -2084,6 +2146,12 @@ export function initGame(ctx) {
   // ---------- per frame ----------
   function update(dt) {
     const [loading, alpha, sheet, appearance, graphics] = storyOverlays;
+    if (matReturn && loading.hidden && alpha.hidden && !graphics.open) {
+      matReturn = false;
+      const url = new URL(location.href); url.searchParams.delete('mat');
+      history.replaceState(history.state, '', url);
+      openPractice();
+    }
     if (P) paintTick(dt);
     if (A) actTick(dt);
     if (Y) {
@@ -2199,5 +2267,7 @@ export function initGame(ctx) {
     W.hero.B.Hips.getWorldPosition(wheelAnchor).project(ctx.camera);
     wheel.position(.5 + wheelAnchor.x / 2, .5 - wheelAnchor.y / 2);
   }
-  return { update, post, scratchActive: () => A?.kind === 'scratch', shadowFocus: () => B ? B.g : smoke?.active() ? club.floor : null, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing || festival.busy(), _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => [...PLACES, festival.target()].filter(Boolean), _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
+  const traceActive = () => A?.kind === 'powerPractice' || A?.kind === 'powerContest';
+  const shadowFocus = () => B ? B.g : smoke?.active() ? club.floor : A?.kind === 'powerPractice' ? matAt : A?.kind === 'powerContest' ? Y.arena : null;
+  return { update, post, traceActive, scratchActive: () => A?.kind === 'scratch', shadowFocus, _smoke: () => smoke?.probe(), _pm: () => PM._probe(), _pmState: () => PM.state(), _pmLast: () => PM.last(), _b: () => B, _a: () => A && { kind: A.kind, t: A.t, p: A.p, f: A.f }, busy: () => !!B || !!P || !!A || !!choosing || festival.busy(), _place: id => placeRun(PLACES.find(x => x.id === id)), _places: () => [...PLACES, festival.target()].filter(Boolean), _paint: id => startPaint(crews.find(g => g.c.id === id)), _walls: () => crews.map(g => g.wall.at), state: () => S, crews, _start: id => startBattle(crews.find(g => g.c.id === id)), _skip: () => { if (B) B.skip = true; } };
 }

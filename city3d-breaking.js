@@ -146,7 +146,7 @@ export const CORE_POWER = [
   { id: 'flare', c: 'Flair', lv: 3, pts: 3.5, risk: .08, nm: 'FLARE' },
   { id: 'ninety', c: 'Breakdance_1990', lv: 4, pts: 4, risk: .1, nm: '1990' },
 ];
-const BACKSPIN = { id: 'backspin', c: 'City_Backspin', lv: 3, pts: 3, risk: .05, nm: 'BACKSPIN', fade: .24 };
+export const BACKSPIN = { id: 'backspin', c: 'City_Backspin', lv: 3, pts: 3, risk: .05, nm: 'BACKSPIN', fade: .24 };
 export const side = (c, mirrored) => mirrored ? c + '_M' : c;
 const pick = (options, r) => options[Math.floor(r()*options.length)];
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));

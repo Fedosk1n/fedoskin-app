@@ -12,16 +12,17 @@
 // The line is not invented: it is MEASURED from the same motion capture (the angle of the legs round the hips, frame by frame), and
 // every point of the line is mapped back to the moment of the recording when the legs are at that angle.
 import * as THREE from 'three';
-import { mocapPerson, getClip } from './city3d-mocap.js?v=42';
+import { motionProbe, getClip } from './city3d-mocap.js?v=43';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
-// the moves you draw: whose path leads (`sig`: a foot, the middle between the feet, or the turn of the hips), which part of the
-// recording is drawn (`a…b`, or `loops` whole loops), the corridor (px on a 390-px-wide phone; harder moves — narrower)
+// Each guide has a leading joint, an optional interval of the recording, a drawing shape and a touch corridor.
+// The same shape and sampled animation drive combat and practice, where only one full circuit is required.
 export const DRAW = {
-  Breakdance_Swipes: { sig: 'yaw', a: 1.9, b: 2.8, tol: 30, pre: .45 }, // wind-up, then one measured loop
+  Breakdance_Swipes: { sig: 'yaw', a: 1.9, b: 2.8, tol: 30, pre: .45, path: 'swipe' }, // wind-up, then one measured loop
   Head_Spinning: { sig: 'RightFoot', tol: 26 },
-  Flair: { sig: 'mid', tol: 24 },
-  Breakdance_1990: { sig: 'RightFoot', tol: 13, radius: .8, strict: true },
+  Flair: { sig: 'mid', tol: 24, path: 'flare' },
+  Breakdance_1990: { sig: 'RightFoot', tol: 13, radius: .8, strict: true, path: 'pivot' },
+  City_Backspin: { sig: 'RightFoot', a: 1.34, b: 2.08, tol: 28, pre: .45, practiceOnly: true },
 };
 const PERF = .42;         // within ~0.4 of the corridor = «perfect» for that bit of the line (~10 px on a flare)
 const PERF_ACC = .82;     // the average needed for ИДЕАЛЬНО (a shaky ±half-corridor finger is CLEAN, not perfect)
@@ -38,22 +39,25 @@ const GOLD = '#FFD23F', RED = '#FF5A4F', GREEN = '#3BD16F';
 const TR = {}; let probe = null;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _f = new THREE.Vector3(), _q = new THREE.Quaternion();
 
-export const canDraw = name => !!DRAW[name] && !!getClip(name);
+export const canDraw = (name, practice = false) => {
+  const cfg = DRAW[name];
+  return !!cfg && (practice || !cfg.practiceOnly) && !!getClip(name);
+};
 
 // measure a move once: the angle of the leading point round the hips through the drawn part (on a hidden plain body)
 function table(name) {
   if (name in TR) return TR[name];
   const cfg = DRAW[name], clip = getClip(name); if (!cfg || !clip) return (TR[name] = null);
-  if (!probe) probe = mocapPerson(HERO.topDown(1, []), { noMerge: true });
+  if (!probe) probe = motionProbe();
   const L = clip.duration, a0 = cfg.a ?? 0, b0 = Math.min(L, cfg.b ?? L), n = Math.max(40, Math.round((b0 - a0) * 120));
   const mx = probe.mixer; mx.stopAllAction();
   const act = mx.clipAction(clip); act.reset(); act.setLoop(THREE.LoopRepeat, Infinity); act.setEffectiveWeight(1); act.play();
   const B = probe.B, ang = new Float64Array(n + 1); let h = 0, r = 0, prev = 0, acc = 0, off = 0;
   for (let i = 0; i <= n; i++) {
-    act.time = Math.min(L - 1e-4, a0 + (b0 - a0) * i / n); mx.update(0); probe.root.updateMatrixWorld(true);
-    B.Hips.getWorldPosition(_a);
-    if (cfg.sig === 'RightFoot' || cfg.sig === 'LeftFoot') B[cfg.sig].getWorldPosition(_b);
-    else { B.LeftFoot.getWorldPosition(_b); B.RightFoot.getWorldPosition(_c); _b.add(_c).multiplyScalar(.5); }
+    act.time = Math.min(L - 1e-4, a0 + (b0 - a0) * i / n); mx.update(0); probe.rig.updateMatrixWorld(true);
+    _a.setFromMatrixPosition(B.Hips.matrixWorld);
+    if (cfg.sig === 'RightFoot' || cfg.sig === 'LeftFoot') _b.setFromMatrixPosition(B[cfg.sig].matrixWorld);
+    else { _b.setFromMatrixPosition(B.LeftFoot.matrixWorld); _c.setFromMatrixPosition(B.RightFoot.matrixWorld); _b.add(_c).multiplyScalar(.5); }
     const dx = _b.x - _a.x, dz = _b.z - _a.z; h += _b.y; r += Math.hypot(dx, dz);
     let a = Math.atan2(dz, dx);
     // swipes: the legs whip round with the whole body — follow the turn of the hips, started where the legs are
@@ -88,7 +92,7 @@ function timeAt(T, psi) {
   const n = clamp(psi, 0, T.tot) / T.angle, loops = Math.floor(n + 1e-9);
   return loops * T.seg + measuredTime(T.m, T.measuredLen, Math.max(0, n - loops) * T.turn);
 }
-const turnsAt = p => Math.min(MAX_TURNS, Math.floor(p.idx / (p.N - 1) * MAX_TURNS + 1e-6));
+const turnsAt = p => Math.min(p.maxTurns, Math.floor(p.idx / (p.N - 1) * p.maxTurns + 1e-6));
 const cutTime = (T, t) => T.a0 + t % T.seg;
 
 // Animate a scored CPU attempt using the same measured clip loops as the trace.
@@ -112,13 +116,23 @@ export function initPower({ W, camera, sfx = () => {} }) {
   st.textContent = `#g3pm { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; display: none; pointer-events: none; touch-action: none;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     #g3pm.vis { display: block; } #g3pm.on { pointer-events: auto; }
+    #g3pmShade { display:none; position:fixed; inset:0; z-index:6; pointer-events:none; }
+    #g3pmShade.vis { display:block; }
     body.g3rep #g3bt { opacity: 0; transition: opacity .15s; } body.g3draw #g3mv { opacity: 0; }
     #g3mv small.gold { color: ${GOLD}; text-shadow: 0 0 12px rgba(255,210,63,.55); }`;
   document.head.appendChild(st);
-  const cv = document.createElement('canvas'); cv.id = 'g3pm'; document.body.appendChild(cv);
-  const g = cv.getContext('2d'); let CW = 1, CH = 1, DPR = 1, dirty = false;
-  const size = () => { DPR = Math.min(2, devicePixelRatio || 1); CW = innerWidth; CH = innerHeight; cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR); };
-  size(); addEventListener('resize', size);
+  const shade = document.createElement('div'); shade.id = 'g3pmShade'; shade.setAttribute('aria-hidden', 'true');
+  const cv = document.createElement('canvas'); cv.id = 'g3pm'; document.body.append(shade, cv);
+  const g = cv.getContext('2d'); let CW = 1, CH = 1, DPR = 1, dirty = false, area;
+  const size = () => {
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    if (CW === innerWidth && CH === innerHeight && DPR === dpr) return;
+    if (P?.st === 'draw' && P.opt.practice) end('cancel');
+    DPR = dpr; CW = innerWidth; CH = innerHeight;
+    cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+    if (P) P.rad = -1;
+    area = null;
+  };
   const md = () => Math.min(CW, CH), scl = () => clamp(md() / 390, .9, 1.5);
 
   let P = null;    // the drawing: arm → hold (hangs, waits for the finger) → draw → finish (legs catch up) → done
@@ -127,6 +141,14 @@ export function initPower({ W, camera, sfx = () => {} }) {
   let flash = 0;   // the white cut of the replay
   const sparks = [];
   let clock = 0, last = null;
+  size(); addEventListener('resize', size);
+  addEventListener('pagehide', interruptPractice);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) interruptPractice(); });
+  function interruptPractice() {
+    if (!P?.opt.practice) return;
+    if (P.st === 'draw') end('cancel');
+    fing.down = false; fing.id = null;
+  }
 
   // ---------- finger ----------
   const fing = { id: null, down: false, x: 0, y: 0, lx: 0, ly: 0 };
@@ -147,18 +169,18 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (e.pointerId !== fing.id) return;
     fing.down = false; fing.id = null;
     if (P?.st !== 'draw') return;
-    if (e.type === 'pointercancel') { end('cancel'); return; }
+    if (e.type !== 'pointerup') { end('cancel'); return; }
     move(e.clientX, e.clientY);
     if (P?.st !== 'draw') return;
     if (P.idx === P.N - 1) end('done');
-    else if (turnsAt(P) && P.onTrack) end('exit');
+    else if (!P.opt.practice && turnsAt(P) && P.onTrack) end('exit');
     else end('release');
   };
-  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
   function move(x, y) {
     if (!P) return;
-    if (P.st === 'hold') { fing.lx = fing.x = x; fing.ly = fing.y = y; tryStart(x, y); return; }
+    if (P.st === 'hold') { fing.lx = fing.x = x; fing.ly = fing.y = y; if (!P.opt.practice) tryStart(x, y); return; }
     if (P.st !== 'draw') return;
     // fill the gaps between finger samples every 5 px, so a fast swipe can't jump over the line
     const dx = x - fing.lx, dy = y - fing.ly, n = clamp(Math.ceil(Math.hypot(dx, dy) / 5), 1, 40);
@@ -168,15 +190,23 @@ export function initPower({ W, camera, sfx = () => {} }) {
 
   // ---------- where the line is on the screen now ----------
   function geo() {
-    const p = P; _a.copy(p.C).project(camera);
-    p.cx = (_a.x + 1) / 2 * CW; p.cy = (1 - _a.y) / 2 * CH;
-    _b.copy(p.C); _b.x += 1; _b.project(camera); const pxm = Math.max(1, Math.abs((_b.x + 1) / 2 * CW - p.cx));
-    _c.copy(p.C); _c.z += 1; _c.project(camera); p.kz = clamp(Math.abs((1 - _c.y) / 2 * CH - p.cy) / pxm, .5, 1.1);
-    p.rad = clamp(p.T.r * pxm * 1.35, .24 * md(), .35 * md()) * (p.T.cfg.radius || 1);
-    const a = p.pts, unit = p.unit, height = p.kz * p.rad;
+    const p = P, practice = p.opt.practice;
+    _a.copy(p.C).project(camera);
+    const cx = Math.round((_a.x + 1) / 2 * CW * 4) / 4, cy = Math.round((1 - _a.y) / 2 * CH * 4) / 4;
+    _b.copy(p.C); _b.x += 1; _b.project(camera); const pxm = Math.max(1, Math.abs((_b.x + 1) / 2 * CW - cx));
+    _c.copy(p.C); _c.z += 1; _c.project(camera);
+    const kz = practice ? 1 : clamp(Math.abs((1 - _c.y) / 2 * CH - cy) / pxm, .5, 1.1);
+    const rad = practice ? .28 * md() * (p.T.cfg.radius || 1) : clamp(p.T.r * pxm * 1.35, .24 * md(), .35 * md()) * (p.T.cfg.radius || 1);
+    const height = Math.round(kz * rad * 4) / 4;
+    if (cx === p.cx && cy === p.cy && height === p.height && Math.abs(rad - p.rad) < .25) return false;
+    Object.assign(p, { cx, cy, kz, rad, height });
+    const a = p.pts, unit = p.unit;
     for (let k = 0; k < a.length; k += 2) {
-      a[k] = p.cx + p.rad * unit[k]; a[k + 1] = p.cy + height * unit[k + 1];
+      a[k] = cx + rad * unit[k]; a[k + 1] = cy + height * unit[k + 1];
+      if (p.distance && k) p.distance[k / 2] = p.distance[k / 2 - 1] + Math.hypot(a[k] - a[k - 2], a[k + 1] - a[k - 1]);
     }
+    shade.style.background = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${rad * .95}px, rgba(5,6,9,.5) ${Math.max(CW, CH) * .75}px)`;
+    return true;
   }
 
   // ---------- the battle asks ----------
@@ -185,7 +215,7 @@ export function initPower({ W, camera, sfx = () => {} }) {
   // res.len = the step's new length, res.rec = the replay.
   function arm(J, s, opt) {
     const T = table(s.c);
-    if (!T || J.cur !== s.c || !J.act) { opt.onEnd({ grade: 'auto' }); return false; }
+    if (!T || (T.cfg.practiceOnly && !opt.practice) || J.cur !== s.c || !J.act) { opt.onEnd({ grade: 'auto' }); return false; }
     P = { st: 'arm', J, s, T, opt, t: 0 };
     return true;
   }
@@ -197,41 +227,57 @@ export function initPower({ W, camera, sfx = () => {} }) {
     p.ry = J.root.rotation.y; p.dx = J.dx; p.dz = J.dz; p.rx = J.root.position.x; p.rz = J.root.position.z;
     p.phi0 = T.ang0 - p.ry;                                     // the legs' angle in the world (the hero may face any way)
     p.tol = (T.tol + clamp(p.opt.tolAdd || 0, 0, T.cfg.strict ? 4 : 9) + clamp(p.opt.spinTol || 0, 0, 7)) * scl();
-    p.limit = T.len / SLOW + .7 + (p.opt.timeAdd || 0);
+    p.maxTurns = p.opt.practice ? 1 : MAX_TURNS;
+    p.tot = TAU * p.maxTurns;
+    p.limit = p.opt.practice ? Infinity : T.len / SLOW + .7 + (p.opt.timeAdd || 0);
     p.wait = p.opt.wait ?? (p.opt.first ? WAIT_NEW : WAIT);
     p.camZ = W.camT && W.camT.zoom;
     if (W.camT) {
       W.camT.zoom = .34; W.camT.x = p.C.x; W.camT.z = p.C.z - .555 * p.C.y + .25;
       // Settle the tighter path before the player can start tracing it.
-      if (T.cfg.strict) { W.zoom = W.camT.zoom; W.camSnap = true; }
+      if (T.cfg.strict || p.opt.practice) { W.zoom = W.camT.zoom; W.camSnap = true; }
     }
     p.rad = .3 * md() * (T.cfg.radius || 1);
-    p.N = Math.max(60, Math.ceil(T.tot * p.rad * 1.06 / 6)); p.pts = new Float32Array(p.N * 2);
+    p.N = Math.max(64, Math.ceil(p.tot * p.rad * 1.06 / 6)); p.pts = new Float32Array(p.N * 2);
     p.unit = new Float32Array(p.pts.length);
+    if (p.opt.practice) p.distance = new Float32Array(p.N);
+    const cs = Math.cos(p.phi0), sn = Math.sin(p.phi0);
     for (let k = 0; k < p.N; k++) {
-      const u = k / (p.N - 1), a = p.phi0 + T.dir * u * T.tot, r = .94 + .12 * u;
-      p.unit[k * 2] = r * Math.cos(a); p.unit[k * 2 + 1] = r * Math.sin(a);
+      const u = k / (p.N - 1), a = T.dir * u * p.tot, r = p.opt.practice ? 1 : .94 + .12 * u;
+      let x = Math.cos(a), y = Math.sin(a);
+      if (T.cfg.path === 'swipe') { x = Math.max(-.52, x); y = .86 * y + .27 * x; }
+      else if (T.cfg.path === 'flare') {
+        const width = .65 + .35 * Math.cos(2 * a);
+        x *= width; y *= width;
+      } else if (T.cfg.path === 'pivot') {
+        const corner = (.94 + .06 * Math.cos(a)) / Math.pow(Math.pow(Math.abs(x), 1.23) + Math.pow(Math.abs(y), 1.23), 1 / 1.23);
+        x *= corner; y *= corner;
+      }
+      p.unit[k * 2] = r * (x * cs - y * sn); p.unit[k * 2 + 1] = r * (x * sn + y * cs);
     }
     Object.assign(p, { st: 'hold', h: 0, idx: 0, at: 0, n: 0, sum: 0, q: 1, wob: 0, lastIdx: 0, lastProg: 0, lap: 0, trail: [],
       bins: new Float32Array(40), binN: new Float32Array(40), pulse: 0, nudge: 0, onTrack: false });
     cv.classList.add('vis', 'on'); document.body.classList.add('g3draw'); dirty = true;
-    if (fing.down) tryStart(fing.x, fing.y);
+    if (fing.down && !p.opt.practice) tryStart(fing.x, fing.y);
   }
   function tryStart(x, y) {
     const p = P; if (!p || p.st !== 'hold' || !p.pts) return;
     geo();
-    const startRadius = p.T.cfg.strict ? p.tol : Math.max(60, p.tol * 2.6);
+    const startRadius = p.opt.practice ? Math.min(p.tol, 24) : p.T.cfg.strict ? p.tol : Math.max(60, p.tol * 2.6);
     if (Math.hypot(p.pts[0] - x, p.pts[1] - y) <= startRadius) {
-      p.st = 'draw'; p.t = 0; p.lastProg = 0; fing.lx = x; fing.ly = y; feed(x, y);
-    } else p.nudge = .8;   // «start at the yellow dot»
+      p.st = 'draw'; p.t = 0; p.lastProg = 0; p.fingerDistance = 0; p.fx = x; p.fy = y; fing.lx = x; fing.ly = y; feed(x, y);
+    } else { p.nudge = .8; dirty = true; }   // «start at the yellow dot»
   }
   // one finger sample: how far from the line, and how far along it got
   function feed(x, y) {
     const p = P, a = p.pts, N = p.N; let best = Infinity, nearest = p.idx;
-    const strict = p.T.cfg.strict;
+    const practice = p.opt.practice, strict = practice || p.T.cfg.strict;
     if (p.idx === N - 1) return;
     const tol = !strict && p.idx < 3 ? p.tol * 1.6 : p.tol;
-    for (let j = Math.max(0, p.idx - 5), e = Math.min(N - 2, p.idx + 12); j <= e; j++) {
+    if (practice) {
+      p.fingerDistance += Math.hypot(x - p.fx, y - p.fy); p.fx = x; p.fy = y;
+    }
+    for (let j = Math.max(0, p.idx - (practice ? 2 : 5)), e = Math.min(N - 2, p.idx + (practice ? 4 : 12)); j <= e; j++) {
       const ax = a[j * 2], ay = a[j * 2 + 1];
       const dx = a[j * 2 + 2] - ax, dy = a[j * 2 + 3] - ay;
       const len2 = dx * dx + dy * dy;
@@ -242,10 +288,21 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (strict && best > tol) { end('off-track'); return; }
     p.onTrack = best <= p.tol;
     const sc = best <= p.tol * PERF ? 1 : best <= tol ? .5 : 0;
-    p.n++; p.sum += sc; p.q += (sc - p.q) * .25;
-    const bin = Math.min(39, Math.floor(p.idx / N * 40)); p.bins[bin] += 1 - sc; p.binN[bin]++;
-    if (best <= tol) p.idx = Math.max(p.idx, Math.round(nearest));
-    p.trail.push({ x, y, t: clock, s: sc });
+    p.q += (sc - p.q) * .25;
+    const index = Math.max(p.idx, Math.round(nearest));
+    if (practice) {
+      if (p.distance[index] > p.fingerDistance + tol * .45 || index === p.idx) return;
+      // Weight each part of the contour once. Repeated samples at the start cannot pad accuracy.
+      const distance = p.distance[index] - p.distance[p.idx];
+      p.n += distance; p.sum += distance * sc; p.idx = index;
+    } else {
+      p.n++; p.sum += sc;
+      const bin = Math.min(39, Math.floor(p.idx / N * 40));
+      p.bins[bin] += 1 - sc; p.binN[bin]++;
+      if (best <= tol) p.idx = index;
+      p.trail.push({ x, y, t: clock, s: sc });
+    }
+    dirty = true;
   }
 
   function tick(dt) {
@@ -279,18 +336,18 @@ export function initPower({ W, camera, sfx = () => {} }) {
       p.t += dt;
       if (p.idx > p.lastIdx) { p.lastIdx = p.idx; p.lastProg = p.t; }
       const lap = turnsAt(p);
-      if (lap > p.lap) { p.lap = lap; p.pulse = 1; sfx('whoosh'); try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} }
+      if (lap > p.lap) { p.lap = lap; p.pulse = 1; if (!p.opt.practice) sfx('whoosh'); try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} }
       const cover = p.idx / (p.N - 1);
       if (p.idx >= p.N - 1) end('done');
-      else if (p.t - p.lastProg > (p.idx < 4 ? STALL * 2 : STALL)) end('stall');
+      else if (p.t - p.lastProg > (p.opt.practice ? 2.4 : p.idx < 4 ? STALL * 2 : STALL)) end('stall');
       else if (p.t > p.limit) end('time');
       if (!P) return;                                           // a fall ends it at once
-      drive(dt, p.st === 'finish' ? p.stopAt : timeAt(T, cover * T.tot));
+      drive(dt, p.st === 'finish' ? p.stopAt : timeAt(T, cover * p.tot));
       // a sloppy finger = a shaky body (the eyes on the dancer see it at once)
       p.wob += ((1 - p.q) - p.wob) * (1 - Math.exp(-dt * 8));
       const w = p.st === 'draw' ? p.wob : 0;
       J.rig.rotation.x = w * .14 * Math.sin(clock * 17); J.rig.rotation.z = w * .14 * Math.cos(clock * 13);
-      if (p.q > .8 && fing.down && p.st === 'draw') spark(J);
+      if (!p.opt.practice && p.q > .8 && fing.down && p.st === 'draw') spark(J);
       return;
     }
     if (p.st === 'finish') {
@@ -303,14 +360,17 @@ export function initPower({ W, camera, sfx = () => {} }) {
     const p = P, J = p.J; if (dt <= 0) { J.act.timeScale = 0; return; }
     const d = Math.max(0, want - p.at), step = Math.min(fast ? d : d * (1 - Math.exp(-dt * 14)), RATE * dt);
     p.at += step;
-    if (p.T.cfg.b) { J.act.time = cutTime(p.T, p.at); J.act.timeScale = 0; }
+    if (p.T.cfg.b) {
+      J.act.time = p.opt.practice ? p.T.a0 + p.at : cutTime(p.T, p.at);
+      J.act.timeScale = 0;
+    }
     else J.act.timeScale = step / dt;
   }
   function end(why) {
     const p = P, cover = p.idx / (p.N - 1), acc = p.n ? p.sum / p.n : 0;
     const ok = why === 'done' || why === 'exit';
     p.grade = ok ? (acc >= PERF_ACC ? 'perfect' : 'good') : 'miss';
-    p.stopAt = ok ? timeAt(p.T, cover * p.T.tot) : p.at;
+    p.stopAt = ok ? timeAt(p.T, cover * p.tot) : p.at;
     p.turns = ok ? turnsAt(p) : 0;
     p.reason = why;
     p.acc = acc; p.cover = cover; p.J.rig.rotation.x = p.J.rig.rotation.z = 0;
@@ -327,7 +387,8 @@ export function initPower({ W, camera, sfx = () => {} }) {
     FL = p.grade === 'perfect' ? { txt: _t('ИДЕАЛЬНО!'), col: GOLD, t: 0 } : p.grade === 'good' ? { txt: _t('ЧИСТО'), col: GREEN, t: 0 } : { txt: _t('СРЫВ'), col: RED, t: 0 };
     if (p.reason === 'off-track') FL.detail = _t('Выход за линию');
     if (p.reason === 'no-start') FL.detail = _t('Попытка не начата');
-    if (ok) FL.detail = _t('Обороты: {n}', { n: p.turns });
+    if (p.opt.practice && p.reason === 'cancel') FL = null;
+    if (ok && !p.opt.practice) FL.detail = _t('Обороты: {n}', { n: p.turns });
     last = { grade: res.grade, reason: p.reason, turns: p.turns, acc: +res.acc.toFixed(3), cover: +res.cover.toFixed(3), n: p.n, t: +p.t.toFixed(2), limit: p.limit };
     const cb = p.opt.onEnd; P = null; cb(res);
   }
@@ -385,9 +446,21 @@ export function initPower({ W, camera, sfx = () => {} }) {
   // ---------- drawing the layer (after the camera has moved, so the line sits on the dancer) ----------
   function post(dt) {
     if (!P && !R && !FL && !flash && !sparks.length && !dirty) return;
-    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, CW, CH); dirty = false;
+    const guideOn = P && P.st !== 'arm' && P.pts;
+    shade.classList.toggle('vis', !!guideOn);
+    const moved = guideOn && geo();
+    const practice = guideOn && P.opt.practice;
+    if (practice && P.nudge > 0 && (P.nudge -= dt) <= 0) dirty = true;
+    if (practice && !moved && !dirty) return;
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (area) g.clearRect(...area);
+    dirty = false; area = null;
     let any = false;
-    if (P && P.st !== 'arm' && P.pts) { geo(); guide(dt); any = true; }
+    if (guideOn) {
+      if (practice) practiceGuide(P);
+      else guide(dt);
+      any = true;
+    }
     if (R) { replayLayer(dt); any = true; }
     if (sparks.length) { any = true; g.globalCompositeOperation = 'lighter';
       for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.t += dt; if (s.t > s.l) { sparks.splice(i, 1); continue; }
@@ -396,7 +469,9 @@ export function initPower({ W, camera, sfx = () => {} }) {
       g.globalCompositeOperation = 'source-over'; }
     if (FL) { FL.t += dt; const L = FL.small ? 1.1 : 1.3; if (FL.t > L) FL = null; else { any = true; word(FL); } }
     if (flash > 0) { any = true; g.fillStyle = `rgba(255,255,255,${flash * .55})`; g.fillRect(0, 0, CW, CH); flash = Math.max(0, flash - dt / .18); }
-    if (any) dirty = true; else cv.classList.remove('vis');
+    if (any) {
+      if (!practice || FL || flash || sparks.length) { area = [0, 0, CW, CH]; dirty = true; }
+    } else cv.classList.remove('vis');
   }
   function text(s, x, y, size, col, font = 'Anton', w = 400, al = 'center') {
     g.font = `${w} ${size}px ${font}, Inter, sans-serif`; g.textAlign = al; g.textBaseline = 'middle';
@@ -414,11 +489,54 @@ export function initPower({ W, camera, sfx = () => {} }) {
     if (f.detail) text(f.detail, 0, 36, 15, '#fff', 'Inter', 700);
     g.restore();
   }
+  function line(pts, from, to) {
+    g.beginPath(); g.moveTo(pts[from * 2], pts[from * 2 + 1]);
+    for (let k = from + 1; k <= to; k++) g.lineTo(pts[k * 2], pts[k * 2 + 1]);
+  }
+
+  function practiceGuide(p) {
+    const { pts, N, idx, st, cx, cy, rad } = p;
+    const pathEnd = N - 1, ink = Math.max(7, p.tol * .52);
+    g.lineCap = g.lineJoin = 'round';
+    line(pts, 0, pathEnd);
+    g.lineWidth = p.tol * 2; g.strokeStyle = 'rgba(12,13,16,.75)'; g.stroke();
+    g.lineWidth = ink; g.strokeStyle = '#e6e3da'; g.stroke();
+    if (idx) { line(pts, 0, idx); g.strokeStyle = GOLD; g.stroke(); }
+    g.beginPath();
+    const gap = Math.max(5, Math.round(N / 11));
+    for (let k = gap; k < pathEnd - 2; k += gap) {
+      const x = pts[k * 2], y = pts[k * 2 + 1];
+      const ax = pts[k * 2 + 2] - pts[k * 2 - 2], ay = pts[k * 2 + 3] - pts[k * 2 - 1], size = Math.hypot(ax, ay);
+      if (!size) continue;
+      const u = ax / size, v = ay / size;
+      g.moveTo(x - 4 * u - 4 * v, y - 4 * v + 4 * u);
+      g.lineTo(x + 2 * u, y + 2 * v);
+      g.lineTo(x - 4 * u + 4 * v, y - 4 * v - 4 * u);
+    }
+    g.strokeStyle = '#24201b'; g.lineWidth = 2.1; g.stroke();
+    const at = st === 'hold' ? 0 : idx, x = pts[at * 2], y = pts[at * 2 + 1];
+    g.beginPath(); g.arc(x, y, st === 'hold' ? 11 : 7, 0, TAU);
+    g.fillStyle = GOLD; g.fill(); g.strokeStyle = '#2d2111'; g.lineWidth = 2; g.stroke();
+
+    const wide = CW >= CH * 1.38;
+    const tx = wide ? Math.min(CW - 109, cx + rad + 106) : cx;
+    const ty = wide ? cy - 12 : Math.min(CH - 112, cy + rad * 1.1 + 31);
+    text(p.s.nm, tx, ty, 23, '#fff');
+    if (st === 'hold') {
+      if (wide) {
+        text(_t('Начни с жёлтой точки'), tx, ty + 30, 14, GOLD, 'Inter', 700);
+        text(_t('Веди по стрелкам'), tx, ty + 51, 14, '#e8e4dc', 'Inter', 600);
+      } else text(_t('Начни с жёлтой точки и веди по стрелкам'), tx, ty + 29, 14, p.nudge > 0 ? GOLD : '#e8e4dc', 'Inter', 700);
+    } else {
+      text(Math.floor(idx / pathEnd * 100) + '%', tx, ty + 32, 19, GOLD, 'Inter', 700);
+    }
+    const top = Math.max(0, Math.floor(Math.min(cy - rad * 1.15 - p.tol - 13, ty - 21)));
+    const bottom = Math.min(CH, Math.ceil(Math.max(cy + rad * 1.15 + p.tol + 13, ty + 66)));
+    area = [0, top, CW, bottom - top];
+  }
+
   function guide(dt) {
     const p = P, a = p.pts, N = p.N, T = p.T, cx = p.cx, cy = p.cy;
-    // a spotlight: the dancer and his circle stay bright, the rest of the yard goes darker
-    const sp = g.createRadialGradient(cx, cy, p.rad * .95, cx, cy, Math.max(CW, CH) * .75);
-    sp.addColorStop(0, 'rgba(5,6,9,0)'); sp.addColorStop(1, 'rgba(5,6,9,.5)'); g.fillStyle = sp; g.fillRect(0, 0, CW, CH);
     g.lineCap = g.lineJoin = 'round';
     // Show the active revolution only. Later laps follow the same guide.
     const lapN = (N - 1) / MAX_TURNS, i0 = p.idx, i1 = Math.min(N - 1, i0 + Math.round(lapN * .85));
@@ -435,10 +553,11 @@ export function initPower({ W, camera, sfx = () => {} }) {
       g.strokeStyle = '#302A1B'; g.lineWidth = p.tol * 2; g.stroke();
     }
     const wd = Math.max(7, p.tol * .55);
-    for (let k = i0; k < i1; k++) {
+    const band = Math.max(1, Math.ceil((i1 - i0) / 8));
+    for (let k = i0; k < i1; k += band) {
       const f = 1 - (k - i0) / Math.max(1, i1 - i0);
-      g.strokeStyle = `rgba(255,255,255,${(.2 + .7 * f).toFixed(3)})`; g.lineWidth = wd * (.55 + .45 * f);
-      g.beginPath(); g.moveTo(a[k * 2], a[k * 2 + 1]); g.lineTo(a[k * 2 + 2], a[k * 2 + 3]); g.stroke();
+      g.strokeStyle = `rgba(255,255,255,${.2 + .7 * f})`; g.lineWidth = wd * (.55 + .45 * f);
+      line(a, k, Math.min(i1, k + band)); g.stroke();
     }
     const ch = Math.max(6, Math.round(44 / 6));
     for (let k = i0 + ch; k < i1 - 2; k += ch) {
@@ -511,6 +630,6 @@ export function initPower({ W, camera, sfx = () => {} }) {
     holds: () => !!R || !!(P && P.st !== 'arm'),
     state: () => (R ? 'replay' : P ? P.st : null), last: () => last,
     // tests: where the line is now (screen px), the progress, the target
-    _probe: () => P && P.pts ? { st: P.st, N: P.N, idx: P.idx, turns: turnsAt(P), tol: P.tol, cx: P.cx, cy: P.cy, rad: P.rad, kz: P.kz, pts: Array.from(P.pts), at: P.at, len: P.T.len, q: P.q, acc: P.n ? P.sum / P.n : 0, limit: P.limit } : null,
+    _probe: () => P && P.pts ? { st: P.st, N: P.N, idx: P.idx, maxTurns: P.maxTurns, turns: turnsAt(P), tol: P.tol, cx: P.cx, cy: P.cy, rad: P.rad, kz: P.kz, pts: Array.from(P.pts), at: P.at, len: P.T.len, q: P.q, acc: P.n ? P.sum / P.n : 0, limit: P.limit } : null,
   };
 }

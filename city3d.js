@@ -7,9 +7,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js?v=2';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=42';
-import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=4';
-import { initGame } from './city3d-game.js?v=81';
+import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=43';
+import { ambientPoseScheduler, mergeable, mergePositions, shadowBatcher, trimCasters } from './city3d-perf.js?v=4';
+import { initGame } from './city3d-game.js?v=82';
 import { buildClub, loadClubSurfaces } from './city3d-club.js?v=12';
 import { loadWayfinding } from './city3d-wayfinding.js?v=1';
 import { loadClubAudience } from './city3d-club-audience.js?v=1';
@@ -18,10 +18,10 @@ import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=8';
 import { buildPark } from './city3d-park.js?v=8';
-import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=7';
+import { cypherSet, spinTick, beatEntry } from './city3d-breaking.js?v=8';
 import { addCitySound } from './city3d-sound.js?v=1';
-import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=14';
-import { cityGraphicsMenu, cityPixelRatio, cityFramePacer, recommendCitySettings, supportedCityFPS } from './city3d-graphics.js?v=2';
+import { cityAppearance, initCityAppearance } from './city3d-appearance.js?v=15';
+import { cityGraphicsMenu, cityPixelRatio, cityFramePacer, recommendCitySettings, supportedCityFPS } from './city3d-graphics.js?v=3';
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));   // the city's translation (city3d.html)
 
 const OR = '#E2611A';
@@ -315,6 +315,89 @@ const PAINT_Y = '#D9A43A', PAINT_W = '#C9CDD2';
 // ---------- props ----------
 let WOOD, WOOD_D, BARREL_K, BARREL_O, STRIPES, KRAFT, CHAIN;
 const shadowAll = o => { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
+const yardPropGroups = [];
+function queueYardProps(group) {
+  if (TOUCH && DIST === 'yard') yardPropGroups.push(group);
+}
+const propPaint = new THREE.MeshStandardMaterial({ vertexColors: true });
+propPaint.customProgramCacheKey = () => 'yard-prop-paint';
+propPaint.onBeforeCompile = shader => {
+  shader.vertexShader = shader.vertexShader.replace('void main() {',
+    'attribute vec2 surface; varying vec2 vSurface; void main() { vSurface = surface;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('void main() {', 'varying vec2 vSurface; void main() {')
+    .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vSurface.x;')
+    .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vSurface.y;');
+};
+
+// Use on groups of fixed props after trimCasters, so pieces with different shadow settings stay separate.
+function batchStaticProps(root) {
+  root.updateWorldMatrix(true, true);
+  const inverse = root.matrixWorld.clone().invert(), groups = new Map();
+  function collect(object) {
+    if (!object.visible || object.userData.person || object.isBone) return;
+    for (const child of object.children) collect(child);
+    const m = object.material, g = object.geometry;
+    if (!object.isMesh || object.isSkinnedMesh || object.isInstancedMesh || object.layers.mask !== 1 || !mergeable(object)) return;
+    if (!m.isMeshStandardMaterial || m.isMeshPhysicalMaterial || m.transparent || m.alphaTest || m.polygonOffset || m.vertexColors ||
+        object.renderOrder || m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile || !g.attributes.normal || !g.attributes.uv ||
+        Object.keys(g.attributes).some(name => name !== 'position' && name !== 'normal' && name !== 'uv')) return;
+    const textures = Object.values(m).filter(value => value?.isTexture);
+    if (textures.some(texture => texture.channel !== 0)) return;
+    const matrix = new THREE.Matrix4().multiplyMatrices(inverse, object.matrixWorld);
+    if (matrix.determinant() < 0) return;
+    const plain = m.side === THREE.FrontSide && m.shadowSide === null && m.opacity === 1 && m.depthTest && m.depthWrite && m.fog && m.toneMapped &&
+      !m.emissive.getHex() && !m.flatShading && textures.length === 0;
+    const material = plain ? propPaint : m;
+    const key = `${material.id}/${object.castShadow}/${object.receiveShadow}`;
+    if (!groups.has(key)) groups.set(key, { material, parts: [] });
+    groups.get(key).parts.push({ object, matrix });
+  }
+  collect(root);
+
+  for (const { material, parts } of groups.values()) {
+    if (parts.length < 2) continue;
+    const geometry = mergePositions(parts.map(({ object, matrix }) => ({ geo: object.geometry, e: matrix.elements })));
+    const count = geometry.attributes.position.count;
+    const normal = new Float32Array(count * 3), uv = new Float32Array(count * 2);
+    const painted = material === propPaint;
+    const color = painted && new Float32Array(count * 3), surface = painted && new Float32Array(count * 2);
+    const normalMatrix = new THREE.Matrix3(), n = new THREE.Vector3();
+    let offset = 0;
+    for (const { object, matrix } of parts) {
+      const attrs = object.geometry.attributes, m = object.material;
+      normalMatrix.getNormalMatrix(matrix);
+      for (let i = 0; i < attrs.normal.count; i++, offset++) {
+        n.fromBufferAttribute(attrs.normal, i).applyNormalMatrix(normalMatrix).toArray(normal, offset * 3);
+        uv[offset * 2] = attrs.uv.getX(i);
+        uv[offset * 2 + 1] = attrs.uv.getY(i);
+        if (painted) {
+          m.color.toArray(color, offset * 3);
+          surface[offset * 2] = m.roughness;
+          surface[offset * 2 + 1] = m.metalness;
+        }
+      }
+    }
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    if (painted) {
+      geometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
+      geometry.setAttribute('surface', new THREE.BufferAttribute(surface, 2));
+    }
+    const merged = new THREE.Mesh(geometry, material);
+    merged.name = root.name || 'Yard prop batch';
+    merged.castShadow = parts[0].object.castShadow;
+    merged.receiveShadow = parts[0].object.receiveShadow;
+    merged.matrixAutoUpdate = false;
+    root.add(merged);
+    for (const { object } of parts) {
+      object.castShadow = false;
+      if (object.children.length) object.layers.disableAll();
+      else object.removeFromParent();
+    }
+  }
+}
+
 const colliders = [];   // {x0,x1,z0,z1} or {x,z,r}
 const box = (x, z, w, d) => colliders.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
 const circ = (x, z, r) => colliders.push({ x, z, r });
@@ -330,6 +413,7 @@ function barrel(k = BARREL_K) {
   const lid = new THREE.Mesh(new THREE.CircleGeometry(.36, 22), new THREE.MeshStandardMaterial({ map: k.lid, roughness: .5, metalness: .5 })); lid.rotation.x = -Math.PI / 2; lid.position.y = .95; g.add(lid);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(.355, .022, 6, 24), M('#2c3136', .45, .7)); rim.rotation.x = Math.PI / 2; rim.position.y = .95; g.add(rim);
   [.3, .64].forEach(y => { const t = new THREE.Mesh(new THREE.TorusGeometry(.362, .016, 5, 24), M('#2a2f34', .5, .6)); t.rotation.x = Math.PI / 2; t.position.y = y; g.add(t); });
+  queueYardProps(g);
   return shadowAll(g);
 }
 function pallet() {
@@ -352,6 +436,7 @@ function woodFence(len) {
     const h = 1.05 + r() * .25, s = new THREE.Mesh(new THREE.BoxGeometry(.19, h, .04), m);
     s.position.set(x, h / 2 + .05, .13); s.rotation.z = (r() - .5) * .08; g.add(s);
   }
+  queueYardProps(g);
   return shadowAll(g);
 }
 function jersey(len) {
@@ -377,7 +462,14 @@ function chainFence(len, h = 2.2) {
   const t = CHAIN.clone(); t.needsUpdate = true; t.repeat.set(len / .16, h / .16);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: t, alphaMap: t, transparent: false, alphaTest: .45, side: THREE.DoubleSide, roughness: .45, metalness: .6, color: '#9aa3ad' }));
   mesh.position.y = h / 2 + .05; g.add(mesh);
-  for (let x = -len / 2; x <= len / 2 + .01; x += 2.5) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, h + .15, 8), post); p.position.set(x, (h + .15) / 2, 0); g.add(p); }
+  let posts = g, count = 0;
+  for (let x = -len / 2; x <= len / 2 + .01; x += 2.5) {
+    if (TOUCH && DIST === 'yard' && count++ % 4 === 0) {
+      posts = new THREE.Group(); g.add(posts); queueYardProps(posts);
+    }
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, h + .15, 8), post);
+    p.position.set(x, (h + .15) / 2, 0); posts.add(p);
+  }
   const rail = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, len, 6), post); rail.rotation.z = Math.PI / 2; rail.position.y = h + .1; g.add(rail);
   return shadowAll(g);
 }
@@ -389,6 +481,7 @@ function car(col) {
   [[-.85, 1.3], [.85, 1.3], [-.85, -1.3], [.85, -1.3]].forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .25, 16), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .34, z); g.add(w); });
   [-.6, .6].forEach(x => { const l = new THREE.Mesh(new THREE.BoxGeometry(.32, .1, .04), glowMat('#ff2a1a', 1.4)); l.position.set(x, .7, -2.06); g.add(l); });
   [-.6, .6].forEach(x => { const l = new THREE.Mesh(new THREE.BoxGeometry(.32, .1, .04), M('#cfd6dd', .2, .3)); l.position.set(x, .7, 2.06); g.add(l); });
+  queueYardProps(g);
   return shadowAll(g);
 }
 function hoop() {
@@ -416,7 +509,7 @@ function lamp(scene, x, z, rotY, o = {}) {
     const hd = new THREE.Mesh(new RoundedBoxGeometry(.5, .14, .3, 2, .03), M('#25292f', .5, .5)); hd.position.set(hx, 3.92 + (o.double && !i ? .02 : 0), hz); g.add(hd);
     const strip = new THREE.Mesh(new THREE.BoxGeometry(.42, .02, .2), glowMat(o.col || '#ffb15c', 2.5)); strip.position.set(hx, 3.84, hz); g.add(strip);
   });
-  shadowAll(g); scene.add(g);
+  shadowAll(g); scene.add(g); queueYardProps(g);
   const head = new THREE.Vector3(0, 3.82, .9).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(g.position);
   const s = new THREE.SpotLight(o.col || '#ffb36b', (o.power ?? 95) * LAMP_K, 0, o.angle ?? .95, .75, 2);
   s.position.copy(head); s.target.position.set(head.x, 0, head.z + (o.lean ?? 0)); scene.add(s, s.target);
@@ -1125,7 +1218,8 @@ function warmDistrictTextures(scene, renderer, defer) {
 
 async function boot() {
   const cv = $('#c3');
-  const graphics = cityGraphicsMenu();
+  const returnToMat = Q.get('d') === 'yard' && Q.get('mat') === '1';
+  const graphics = cityGraphicsMenu({ resume: returnToMat });
   try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }); } catch (_) { cityLoadFailed($('#cityError').textContent); return; }
   const gl = renderer.getContext();
   const maxBuffer = Math.min(renderer.capabilities.maxTextureSize, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
@@ -1189,7 +1283,7 @@ async function boot() {
     o.root.traverse(m => { if (m.isMesh && m.geometry && !m.geometry.userData.sharedCityGeometry) m.geometry.dispose(); }); };
   if (Q.get('pm')) W.forcePM = Q.get('pm').toUpperCase();   // tests: the hero's power move in battles (SWIPES / HEADSPIN / FLARE / 1990)
   if (Q.get('set')) W.forceSet = Q.get('set');   // tests: the shape of the hero's set, see SHAPES in city3d-game.js
-  const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit,
+  const GAME = initGame({ scene, W, camera, wayfinding, collide, circ, box, colliders, rewear, wallModel, wallSurface, dist: DIST, festivalVisit, returnToMat, batchProps: queueYardProps,
     djBooth: DIST === 'yard' ? props : null, heroLevel: heroLv, heroEq, music: window.cityMusic?.setTrack, backgroundMusic: window.cityMusic?.setBackground,
     shake: k => { W.shake = Math.max(W.shake || 0, k); }, flash: () => {} });
   initCityAppearance({button:$('#lookOpen'),dialog:$('#lookDialog'),isGirl:() => heroEq().includes('girl'),
@@ -1203,6 +1297,8 @@ async function boot() {
   // stands still casts it as a few merged pieces (city3d-perf.js), the moon's shadow covers what the screen shows (not 32×32 m), and a
   // lamp's shadow is redrawn only while its light is on screen. The picture stays the same.
   trimCasters(scene);
+  for (const group of yardPropGroups) batchStaticProps(group);
+  yardPropGroups.length = 0;
   const SB = shadowBatcher(scene); SB.useFor(moon);
   moon.shadow.autoUpdate = false;
   const spots = []; scene.updateMatrixWorld(true);
@@ -1245,7 +1341,7 @@ async function boot() {
   // texels per metre once the map hits 2048). Refitted only when the zoom crosses a quarter step (zoomBucket), not every frame.
   let fitZ = 1;
   // grows at once (the view gets wider before the camera gets there), shrinks only once the camera has settled — no map re-made every frame
-  const zoomBucket = () => { const t = W.camT ? W.camT.zoom : W.uZoom, z = W.zoom || 1, want = Math.max(1, Math.ceil(Math.max(z, t) * 4 - .001) / 4);
+  const zoomBucket = closeTrace => { const t = W.camT ? W.camT.zoom : W.uZoom, z = W.zoom || 1, want = Math.max(closeTrace ? .5 : 1, Math.ceil(Math.max(z, t) * 4 - .001) / 4);
     return want > fitZ || Math.abs(z - t) < .03 ? want : fitZ; };
   const fitShadows = (z = fitZ) => {
     fitZ = z; const o = off.clone().multiplyScalar(z), far = 19;   // ground further than 19 m from the look point is outside the district anyway
@@ -1253,7 +1349,7 @@ async function boot() {
     const sc = new THREE.OrthographicCamera(); sc.position.copy(MOON); sc.lookAt(0, 0, 0); sc.updateMatrixWorld();
     const lb = new THREE.Box3(), d = new THREE.Vector3(), q = new THREE.Vector3(); VIEW.x0 = VIEW.z0 = Infinity; VIEW.x1 = VIEW.z1 = -Infinity;
     for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { d.set(nx, ny, .5).unproject(c).sub(c.position).normalize(); if (d.y > -.02) d.y = -.02;
-      for (const y of [0, 4, 12]) { q.copy(o).addScaledVector(d, (y - o.y) / d.y); q.x = clamp(q.x, -far, far); q.z = clamp(q.z, -far, far);
+      for (const y of [0, 4, Math.min(12, o.y)]) { q.copy(o).addScaledVector(d, (y - o.y) / d.y); q.x = clamp(q.x, -far, far); q.z = clamp(q.z, -far, far);
         if (y <= 4) { VIEW.x0 = Math.min(VIEW.x0, q.x); VIEW.x1 = Math.max(VIEW.x1, q.x); VIEW.z0 = Math.min(VIEW.z0, q.z); VIEW.z1 = Math.max(VIEW.z1, q.z); }
         lb.expandByPoint(q.applyMatrix4(sc.matrixWorldInverse)); } }
     const sh = moon.shadow, cm = sh.camera, m = .8; cm.left = lb.min.x - m; cm.right = lb.max.x + m; cm.bottom = lb.min.y - m; cm.top = lb.max.y + m; cm.updateProjectionMatrix();
@@ -1385,7 +1481,6 @@ async function boot() {
     // Hide subpixel rig details in the wider view.
     const far = W.zoom > 1.7, farChanged = far !== farOn;
     if (farChanged) { farOn = far; scene.traverse(o => { if (o.userData.tiny) o.visible = !far; }); }
-    { const zb = zoomBucket(); if (zb !== fitZ) fitShadows(zb); }
     if (W.shake > .01) { camera.position.x += (Math.random() - .5) * W.shake * .3; camera.position.z += (Math.random() - .5) * W.shake * .3; W.shake *= Math.exp(-dt * 6); }
     camera.lookAt(camLook);
     // the line of a drawn power move is laid over the dancer AFTER the camera has moved (else it lags a frame behind him)
@@ -1393,7 +1488,12 @@ async function boot() {
     const battleFocus = GAME.shadowFocus();
     const shadowCenter = moon.target.position;
     // The normal fitted view has room for the duel. Keep a fixed projection while following the dancer.
-    const stableShadow = battleFocus && W.zoom <= .75 && Math.hypot(camLook.x - battleFocus.x, camLook.z - battleFocus.z) < 1.8 && !W.camT?.off;
+    const focusDistance = battleFocus ? Math.hypot(camLook.x - battleFocus.x, camLook.z - battleFocus.z) : Infinity;
+    const stableShadow = W.zoom <= .75 && focusDistance < 1.8 && !W.camT?.off;
+    // The mat camera settles before drawing starts. Fit its shadow map once, with room for the camera's lead.
+    const closeTrace = TOUCH && DIST === 'yard' && GAME.traceActive() && W.zoom <= .5 && focusDistance < .55 && !W.camT?.off;
+    const shadowZoom = zoomBucket(closeTrace);
+    if (shadowZoom !== fitZ) fitShadows(shadowZoom);
     const streetShadow = DIST !== 'club' && !W.camT && !W.guideView;
     if (stableShadow) shadowCenter.set(battleFocus.x, 0, battleFocus.z);
     else if (streetShadow) shadowCenter.set(
