@@ -1,4 +1,5 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
+import { buildClubAudience } from './city3d-club-audience.js?v=1';
 import { performDJ } from './city3d-dj.js?v=4';
 import { seatedJudge } from './city3d-club-judges.js?v=2';
 const t = window._t;
@@ -303,7 +304,8 @@ export function buildClub(TK) {
     mix.tick(dt);
     judges.forEach(judge => judge.tick(dt));
   });
-  W.club = { floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, activitySigns, mix,
+  const audience = buildClubAudience(TK, TK.audienceModel, floor);
+  W.club = { audience, floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, activitySigns, mix,
     showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
     hideVotes: () => judges.forEach(judge => judge.hide()),
   };
