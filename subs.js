@@ -47,7 +47,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 1
+  "v": 2
  },
  "gd-windmill-entry": {
   "ks": "23993e1d-9e0f-4e07-9ac9-de62a0cfabad",

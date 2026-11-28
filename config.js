@@ -113,6 +113,16 @@ window.APP_CONFIG = {
     "en": "dub-pw-swipes-flare-en-voice-5ca79b8b0abb.mp4"
    },
    "preferMux": true
+  },
+  "fr-turtle-freeze-variations": {
+   "media": "fr-turtle-freeze-variations-qwmri071.mp4",
+   "tracks": {
+    "en": "dub-fr-turtle-freeze-variations-en-voice-106184b2c4b3.mp4"
+   },
+   "mux": {
+    "en": "dub-fr-turtle-freeze-variations-en-voice-af41949bd52c.mp4"
+   },
+   "preferMux": true
   }
  }
 };
