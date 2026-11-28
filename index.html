@@ -229,6 +229,7 @@ body.chatmode .tabs{display:none}
 .buyalt{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
 .buyalt button{background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:8px 2px;cursor:pointer}
 .buyalt button[hidden]{display:none}
+.buyalt button:disabled{opacity:.55;cursor:default}
 #codeIn{width:100%;height:50px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:#131315;color:var(--fg);font-size:18px;letter-spacing:1px}
 #buySheet .err,#codeSheet .err{color:#FF7A6B;font-size:13px;line-height:1.4}
 .chatorder{display:flex;align-items:center;gap:10px;padding:9px max(14px, env(safe-area-inset-right, 0px)) 9px max(14px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:rgba(226,97,26,.07);font-size:12px;line-height:1.35}
@@ -1081,42 +1082,42 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .msgr .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff}
 .msgr .mi svg{width:20px;height:20px}
 .msgr .sub{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted)}
-.cr-box{margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:4px 14px;background:var(--surface)}
-.cr-row{display:flex;align-items:center;gap:10px;min-height:48px}
+#cryptoSheet{z-index:25}
+#cryptoSheet .sheet{max-height:min(92vh,calc(100dvh - 12px));width:min(100%,520px);overflow:auto;overscroll-behavior:contain}
+.cr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.cr-head h2{font-size:clamp(20px,5.6vw,27px);line-height:1.18;text-wrap:balance}
+.cr-head h2:focus{outline:none}
+.cr-progress{color:#81D9BA;font-size:12px;font-weight:750;margin:0 0 6px}
+.cr-close,.cr-link,.cr-copy{color:var(--fg);cursor:pointer;min-height:44px}
+.cr-close{flex:0 0 44px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;font:400 25px/1 system-ui}
+.cr-link{display:inline-flex;align-items:center;background:none;border:none;padding:0;color:#A4DFC9;text-align:left;font:650 13px/1.35 var(--body,inherit);text-decoration:underline;text-underline-offset:3px}
+.cr-public{display:flex;width:100%;margin-bottom:12px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-decoration:none}
+.chatorder .cr-link{align-self:flex-start;font-size:12px;min-height:34px}
+.cr-link[hidden],.cr-action[hidden]{display:none}
+.cr-context{font-size:13px;line-height:1.45;margin:9px 0 0}
+#cryptoIntro,.cr-confirm{background:#15231E;border:1px solid #375D4F;border-radius:12px;padding:10px 12px}
+.cr-box{margin-top:4px;border:1px solid var(--line);border-radius:14px;padding:3px 12px;background:var(--surface)}
+.cr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;padding:4px 0}
 .cr-row+.cr-row{border-top:1px solid var(--line)}
-.cr-row>.muted{width:58px;flex:none;font-size:13px}
-.cr-net{color:#26A17B;font-size:14px}
-.cr-copy{margin-left:auto;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font:600 12px var(--body,inherit);cursor:pointer;flex:none}
-.cr-qr{width:200px;height:200px;margin:16px auto 0;border-radius:14px;background:#fff;overflow:hidden}
-.cr-qr[hidden]{display:none}
+.cr-row span,.cr-addr span{display:block;font-size:12px;line-height:1.35}
+.cr-row b{display:block;font-size:17px;line-height:1.3}
+.cr-row .cr-net{color:#81D9BA;font-size:14px}
+.cr-copy{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:7px 9px;font:650 12px/1.3 var(--body,inherit)}
+.cr-qr{width:min(190px,100%);aspect-ratio:1;margin:4px auto 0;border-radius:12px;background:#fff;overflow:hidden}
 .cr-qr svg{display:block;width:100%;height:100%}
-.cr-addr{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
-.cr-addr code{display:block;word-break:break-all;font:600 15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;letter-spacing:.02em}
-.cr-addr .cr-copy{margin:0;padding:11px;font-size:14px}
-.cr-warn{margin-top:14px;border-radius:14px;padding:12px 14px;background:rgba(226,97,26,.10);border:1px solid rgba(226,97,26,.45);font-size:13px;line-height:1.45}
-.cr-warn b{color:var(--accent)}
-.cr-warn ul{margin:6px 0 0;padding-left:18px}
-.cr-warn li+li{margin-top:4px}
-.cr-h{display:block;margin-top:18px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.cr-steps{list-style:none;margin:10px 0 0;padding:0;counter-reset:crs}
-.cr-steps>li{position:relative;padding:0 0 14px 40px;counter-increment:crs}
-.cr-steps>li::before{content:counter(crs);position:absolute;left:0;top:-1px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#0B0B0C;font:800 14px/26px var(--body,inherit);text-align:center}
-.cr-steps>li:not(:last-child)::after{content:"";position:absolute;left:12.5px;top:30px;bottom:4px;width:1px;background:var(--line)}
-.cr-steps>li>b{display:block;font-size:15px;line-height:1.3}
-.cr-steps>li>span{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--soft,#B9B9BE)}
-.cr-steps .cr-addr{margin-top:8px}
-.cr-steps .cr-addr code{font-size:clamp(11px,3.55vw,15px);letter-spacing:0;padding:10px 8px}
-.cr-qrbtn{margin-top:8px;width:100%;background:none;border:1px dashed var(--line);border-radius:10px;color:var(--muted);padding:9px;font:600 12px var(--body,inherit);cursor:pointer}
-.cr-steps .cr-qr{width:170px;height:170px;margin-top:10px}
-.cr-help{margin-top:4px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-size:13px;line-height:1.45}
-.cr-help summary{list-style:none;cursor:pointer;padding:13px 14px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
-.cr-help summary::-webkit-details-marker{display:none}
-.cr-help summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s}
-.cr-help[open] summary::after{transform:rotate(-135deg)}
-.cr-help ul{margin:0;padding:0 14px 4px 32px}
-.cr-help li+li{margin-top:6px}
-.cr-help p{margin:10px 14px 0}
-.cr-ask{display:block;width:calc(100% - 28px);margin:10px 14px 14px;background:var(--surface-2,#222225);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:11px;font:600 14px var(--body,inherit);cursor:pointer}
+.cr-addr{margin-top:12px;display:grid;gap:6px}
+.cr-addr code{display:block;overflow-wrap:anywhere;font:600 14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 10px;user-select:all}
+.cr-steps{list-style:none;margin:14px 0 0;padding:0;counter-reset:crs}
+.cr-steps>li{position:relative;padding:0 0 12px 36px;counter-increment:crs}
+.cr-steps>li::before{content:counter(crs);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:#233C32;color:#B8F2DB;font:750 13px/26px system-ui;text-align:center}
+.cr-steps>li:not(:last-child)::after{content:"";position:absolute;left:12px;top:29px;bottom:3px;width:1px;background:#375D4F}
+.cr-steps>li>b{display:block;font-size:14px;line-height:1.3}
+.cr-steps>li>span{display:block;margin-top:3px;font-size:13px;line-height:1.4;color:var(--soft)}
+.cr-confirm{display:flex;align-items:center;gap:11px;margin-top:9px;cursor:pointer;font-size:13px;line-height:1.4;min-height:44px}
+.cr-confirm input{width:22px;height:22px;flex:none;margin:0;accent-color:#81D9BA}
+.cr-action{width:100%;margin-top:12px;min-height:50px;padding:8px 12px;line-height:1.25}
+.cr-action:disabled{background:var(--surface-2);color:var(--muted);cursor:default}
+#cryptoSheet :is(button,input):focus-visible,.cr-public:focus-visible{outline:2px solid #A4DFC9;outline-offset:2px}
 .lul{margin-top:6px;font-size:12.5px;color:#F2CC55;line-height:1.35}
 .lul b{font-family:var(--display);font-weight:400;letter-spacing:.4px;font-size:14px}
 
@@ -1363,7 +1364,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     <img class="chatava" src="icons/coach.jpg?v=2" alt="">
     <span class="stack" style="gap:3px;min-width:0"><b class="d">Федоскин</b><span class="muted" style="font-size:12px">Отвечает лично</span></span>
   </div>
-  <div class="chatorder" id="chatOrder" hidden><span class="stack" style="gap:2px;min-width:0;flex:1"><b id="chatOrderT"></b><span class="muted">Оплата — после того, как обсудим задачу.</span></span><button type="button" id="chatMsgr">Удобнее в мессенджере?</button></div>
+  <div class="chatorder" id="chatOrder" hidden><span class="stack" style="gap:2px;min-width:0;flex:1"><b id="chatOrderT"></b><span class="muted">Оплата — после того, как обсудим задачу.</span><a class="cr-link" id="chatCryptoGuide" href="?guide=crypto" hidden>Инструкция по оплате криптой</a></span><button type="button" id="chatMsgr">Удобнее в мессенджере?</button></div>
   <div class="chatlist" id="chatList"></div>
   <div class="chatnote" id="chatNote" hidden><span id="chatNoteT" style="flex:1"></span><button class="btn btn-sm" id="chatNoteBtn" type="button"></button></div>
   <div class="chatname" id="chatNameRow" hidden><input id="chatName" maxlength="40" autocomplete="given-name" placeholder="Как тебя зовут?" enterkeyhint="next"></div>
@@ -1377,6 +1378,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
 <!-- ОНЛАЙН УСЛУГИ (вкладка id="review"; тексты услуг — в SERVICES в скрипте) -->
 <section class="screen" id="review" aria-label="Онлайн услуги" hidden>
+  <a class="cr-link cr-public" id="svcCryptoGuide" href="?guide=crypto">Инструкция по оплате криптой</a>
   <div class="stack" id="svcList" style="gap:12px;margin-top:0"></div>
   <p class="soft cc-start" id="svcStart" hidden>Не уверен, что нужно ведение? Начни с консультации: пришли видео — разберу его по кадрам.</p>
   <span class="label" style="display:block;margin:28px 0 10px">Как это работает</span>
@@ -1617,39 +1619,46 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </div>
 
 <div class="sheet-bg" id="cryptoSheet" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cryptoTitle" style="max-height:92vh;overflow:auto">
-    <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
-    <h2 id="cryptoTitle" style="font-size:24px">Оплата криптой</h2>
-    <p class="muted" style="margin-top:6px;font-size:13px;line-height:1.4" id="cryptoFor"></p>
-    <div class="cr-box">
-      <div class="cr-row"><span class="muted">Сумма</span><b id="cryptoAmt" style="font-size:22px"></b><button class="cr-copy" id="cryptoCopyAmt">Копировать</button></div>
-      <div class="cr-row"><span class="muted">Сеть</span><b class="cr-net">USDT · TRON (TRC-20)</b></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cryptoTitle" aria-describedby="cryptoProgress cryptoFor">
+    <header class="cr-head">
+      <div>
+        <p class="cr-progress" id="cryptoProgress" hidden></p>
+        <h2 id="cryptoTitle" tabindex="-1">Инструкция по оплате криптой</h2>
+      </div>
+      <button type="button" class="cr-close" id="cryptoClose" aria-label="Закрыть">×</button>
+    </header>
+    <p class="muted cr-context" id="cryptoFor" hidden></p>
+    <div id="cryptoGuide">
+      <p class="cr-context" id="cryptoIntro"></p>
+      <ol class="cr-steps" id="cryptoSteps" role="list">
+        <li><b>Открой кошелёк или биржу</b><span>Нет USDT? Найди «Купить крипту» (Buy crypto). Затем выбери USDT → «Отправить» или «Вывод».</span></li>
+        <li><b>Выбери сеть TRON (TRC-20)</b><span>В приложении сеть может называться «TRX» или «Tron». Если TRON недоступна, согласуй другой способ оплаты с тренером.</span></li>
+        <li><b>Сверь адрес и сумму к получению</b><span>Скопируй согласованный адрес. Биржа может удержать комиссию. В своём кошельке для комиссии может понадобиться TRX. Проверь полную сумму заказа в поле «Получатель получит» (Receive amount).</span></li>
+        <li><b>Пришли подтверждение тренеру</b><span>После перевода сохрани скриншот операции и отправь его тренеру по своему заказу. Если перевод уже сделан, отправь только скриншот.</span></li>
+      </ol>
+      <button type="button" class="cr-link" id="cryptoFull" aria-expanded="false" aria-controls="cryptoSteps" hidden>Показать полную инструкцию</button>
+      <div id="cryptoConfirm" hidden>
+        <label class="cr-confirm"><input id="cryptoAck" type="checkbox"><span>Я выберу USDT в сети TRON (TRC-20) и сверю сумму к получению.</span></label>
+      </div>
+      <button type="button" class="btn btn-accent cr-action" id="cryptoContinue" hidden></button>
     </div>
-    <span class="cr-h">Как оплатить</span>
-    <ol class="cr-steps">
-      <li><b>Открой приложение, где есть USDT</b><span>Биржа (Binance, Bybit, OKX, Kraken) или кошелёк → «Вывод» или «Отправить» → USDT.</span></li>
-      <li><b>Выбери сеть TRON (TRC-20)</b><span>В приложении она может называться «TRX» или «Tron». Другая сеть — деньги не дойдут.</span></li>
-      <li><b>Вставь адрес</b>
-        <div class="cr-addr"><code id="cryptoAddr"></code><button class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button></div>
-        <button class="cr-qrbtn" id="cryptoQrBtn" hidden>Показать QR-код (если кошелёк на другом устройстве)</button>
-        <div id="cryptoQr" class="cr-qr" role="img" aria-label="QR" hidden></div>
-      </li>
-      <li><b>Проверь сумму</b><span id="cryptoCheck"></span></li>
-      <li><b>Отправь и сделай скриншот</b><span>Перевод приходит за 1–3 минуты. Вернись сюда и нажми кнопку ниже — пришли скриншот тренеру.</span></li>
-    </ol>
-    <details class="cr-help" id="cryptoHelp">
-      <summary>Ни разу не платил криптой?</summary>
-      <ul>
-        <li>Проще всего — через криптобиржу: Binance, Bybit, OKX, из США — Kraken. Нужна регистрация и проверка личности: обычно от 10 минут до суток.</li>
-        <li>USDT покупается там же банковской картой — раздел «Купить крипту» (Buy crypto).</li>
-        <li>Coinbase, PayPal и Cash App не отправляют USDT в сети TRON — через них не получится.</li>
-        <li>Свой кошелёк (Trust Wallet, TronLink): кроме USDT нужно немного TRX — им платится комиссия сети. Без TRX перевод не пройдёт.</li>
-      </ul>
-      <p class="muted">Что-то непонятно? Напиши тренеру — помогу разобраться.</p>
-      <button class="cr-ask" id="cryptoAsk">Задать вопрос тренеру</button>
-    </details>
-    <div class="cr-warn"><b>Важно:</b> Только USDT и только сеть TRON (TRC-20). С другой монетой или сетью деньги не дойдут, и вернуть их нельзя.</div>
-    <button class="btn btn-accent" id="cryptoPaid" style="margin-top:14px;min-height:54px;font-size:16px;border-radius:16px;width:100%">Я оплатил — отправить скриншот</button>
+    <div id="cryptoDetails" hidden>
+      <button type="button" class="cr-link" id="cryptoRead">Инструкция</button>
+      <div class="cr-box">
+        <div class="cr-row"><div><span class="muted">Сумма</span><b id="cryptoAmt"></b></div><button type="button" class="cr-copy" id="cryptoCopyAmt">Копировать сумму</button></div>
+        <div class="cr-row"><div><span class="muted">Сеть</span><b class="cr-net">USDT · TRON (TRC-20)</b></div></div>
+      </div>
+      <div class="cr-addr">
+        <span class="muted">Адрес получателя</span>
+        <code id="cryptoAddr"></code>
+        <button type="button" class="cr-copy" id="cryptoCopyAddr">Копировать адрес</button>
+      </div>
+      <button type="button" class="cr-link" id="cryptoQrBtn" aria-controls="cryptoQr" aria-expanded="false" hidden>Показать QR-код</button>
+      <div id="cryptoQr" class="cr-qr" role="img" aria-label="QR-код адреса" hidden></div>
+      <p class="cr-context" id="cryptoCheck"></p>
+      <button type="button" class="btn btn-accent cr-action" id="cryptoPaid">Я оплатил — отправить скриншот</button>
+      <button type="button" class="cr-link" id="cryptoAsk">Задать вопрос тренеру</button>
+    </div>
   </div>
 </div>
 <div class="sheet-bg" id="rvSheet" hidden>
@@ -1681,8 +1690,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="sheet-bg" id="buySheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="buyTitle">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px"></div>
-    <span class="label" style="font-size:11px">Покупка курса</span>
-    <h2 id="buyTitle" style="font-size:24px;margin-top:4px"></h2>
+    <span class="label" id="buyProgress" style="font-size:11px">Покупка курса</span>
+    <h2 id="buyTitle" tabindex="-1" style="font-size:24px;margin-top:4px"></h2>
     <div class="row" style="gap:8px;align-items:baseline;margin-top:6px"><span class="d" id="buyPrice" style="font-size:30px;color:var(--accent)"></span><span class="muted" style="font-size:13px">один раз — навсегда</span></div>
     <div id="buySteps">
       <ol class="buysteps">
@@ -1703,6 +1712,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     </div>
     <p class="err" id="buyErr" hidden style="margin-top:10px"></p>
     <div class="buyalt">
+      <button type="button" id="buyCryptoGuide">Инструкция по оплате криптой</button>
       <button type="button" id="buyCrypto" hidden>Оплатить криптой (USDT)</button>
       <button type="button" id="buyAsk">Вопрос? Написать тренеру</button>
       <button type="button" id="buyHaveCode">Есть код доступа</button>
@@ -1936,7 +1946,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=12"></script>
+<script src="i18n.js?v=13"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
@@ -4623,7 +4633,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
       b.querySelector('.svcopen').addEventListener('click', () => openService(s));
       b.querySelector('[data-act="more"]').addEventListener('click', () => openService(s));
       // straight to the messenger choice for this service (owner 09.11.2026: a visible button gets more requests)
-      b.querySelector('[data-act="write"]').addEventListener('click', () => orderSvc(s));
+      b.querySelector('[data-act="write"]').addEventListener('click', e => orderSvc(s, e.currentTarget));
       box.appendChild(b);
     });
     // how it works: 4 steps, payment after the talk; reply times in the viewer's own time
@@ -4643,7 +4653,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const cheap = shown.slice().sort((a, b) => (LANG === 'ru' ? (+a.rub || 1e9) - (+b.rub || 1e9) : (+a.usd || 1e9) - (+b.usd || 1e9)))[0];
     if (cheap) {
       $('#ccOfferP').innerHTML = '<b>' + esc(money(cheap.rub, cheap.usd)) + '</b>' + esc(T(cheap.per));
-      $('#ccOrder').addEventListener('click', () => orderSvc(cheap));
+      $('#ccOrder').addEventListener('click', e => orderSvc(cheap, e.currentTarget));
       $('#ccOfferInfo').addEventListener('click', () => openService(cheap));
     } else $('#ccOffer').hidden = true;
     // where to see the coach: YouTube and Instagram
@@ -4876,6 +4886,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function chOrderBar(){
     const s = SERVICES.find(x => x.id === CHAT.svc);
     $('#chatOrder').hidden = !s;
+    $('#chatCryptoGuide').hidden = !(+(LANG === 'ru' ? s?.rub : s?.usd) > 0);
     if (s) $('#chatOrderT').textContent = T('Заказ: {s} · {p}', { s: T(s.name), p: money(s.rub, s.usd) });
   }
   $('#chatMsgr').addEventListener('click', () => {
@@ -5008,11 +5019,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // «Заказать» on a service (owner 12.11.2026): straight into the in-app chat with the order written; messengers stay an extra
   // button. Chat off ⇒ the messenger choice as before.
   const orderText = s => T('Привет! Хочу заказать: {s} ({p})', { s: T(s.name), p: money(s.rub, s.usd) + ' ' + T(s.per) });
-  function orderSvc(s){
-    curSvc = s;
-    if (!CHAT.on) { openContact(); return; }
-    try { sendEv('tg', s.id, 'chat'); } catch (_) {}
-    openChat(orderText(s), s.id);
+  function orderSvc(s, opener, messenger = false){
+    if (!s) return;
+    const next = () => {
+      curSvc = s;
+      if (messenger || !CHAT.on) { openContact(undefined, messenger); return; }
+      try { sendEv('tg', s.id, 'chat'); } catch (_) {}
+      openChat(orderText(s), s.id);
+    };
+    if (+(LANG === 'ru' ? s.rub : s.usd) > 0) showCrypto({ mode: 'order', kind: 'service', item: s, opener, next });
+    else next();
   }
   function openContact(text, noChat){
     msgOverride = typeof text === 'string' ? text : '';
@@ -5041,66 +5057,215 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     });
     $('#contactSheet').hidden = false;
   }
-  $('#tgLink').addEventListener('click', () => orderSvc(curSvc));
-  $('#svcMsgr').addEventListener('click', () => openContact(undefined, true));
-  // «Оплатить криптой» (owner 07.11.2026): own USDT TRC-20 wallet, no middleman. Not in the Russian UI (rubles there; RU law
-  // 259-FZ). The QR is drawn from the address by vendor/qr.js, so changing the wallet in the admin is all it takes.
-  const USDT = String(CFG.usdtTrc20 || '').trim();
-  function paintCryptoBtn(){ $('#cryptoBtn').hidden = !(USDT && LANG !== 'ru' && curSvc && +curSvc.usd > 0); }
+  $('#tgLink').addEventListener('click', e => orderSvc(curSvc, e.currentTarget));
+  $('#svcMsgr').addEventListener('click', e => orderSvc(curSvc, e.currentTarget, true));
+
+  // Every in-app crypto entry and the public walk-through use the same instructions.
+  // A resume record identifies the item; the acknowledgment lives only in the open dialog.
+  const USDT = String(CFG.usdtTrc20 || '').trim(), CR_KEY = 'fedoskin-crypto';
+  const cryptoSheet = $('#cryptoSheet'), cryptoHeading = $('#cryptoTitle'), cryptoAck = $('#cryptoAck');
+  const cryptoAvailable = item => Boolean(USDT && LANG !== 'ru' && Number.isFinite(+item?.usd) && +item.usd > 0);
+  const cryptoCoursePending = id => crsOwns(id) || crsOrder(id)?.st === 'paid';
+  let cryptoFlow = null, cryptoLeaving = false;
+
+  function paintCryptoBtn(){ $('#cryptoBtn').hidden = !cryptoAvailable(curSvc); }
   function cryptoCopy(text, msg){
     const ok = () => toast(msg);
     try { navigator.clipboard.writeText(text).then(ok, () => toast(text)); } catch (_) { toast(text); }
   }
-  // Guide for first-timers (owner 07.11.2026 «понятны ли шаги, если ни разу не делали так»): numbered steps, «check the
-  // Receive amount» (exchanges deduct ~1 USDT), a «never paid with crypto?» block (Coinbase/PayPal/Cash App can't send
-  // TRC-20; own wallets need TRX for the fee). On phones the QR (useless on the same phone) sits behind a button.
-  // The open sheet is remembered (`fedoskin-crypto`, 1 h): iPhone often reloads the app while the client is in his
-  // exchange app — back here he lands on the same sheet with the «I've paid» button.
-  const CR_KEY = 'fedoskin-crypto', COARSE = matchMedia('(pointer: coarse)').matches;
-  let crPaid = false;
-  function openCrypto(restored){
-    const amt = String(+curSvc.usd);
-    $('#cryptoFor').textContent = T(curSvc.name) + ' · $' + amt;
-    $('#cryptoAmt').textContent = amt + ' USDT';
+  function checkoutAfterClose(sheet, next){
+    if (next && history.state?.ov === sheet.id && sheet._ovPushed) {
+      // Let the existing sheet observer remove its own history entry before opening the next screen.
+      window.addEventListener('popstate', next, { once: true });
+    } else if (next) queueMicrotask(next);
+    sheet.hidden = true;
+  }
+  function cryptoContext(flow){
+    if (flow.kind === 'course') {
+      const code = crsOrder(flow.item.id)?.code;
+      return crsName(flow.item) + (code ? ' · ' + code : '');
+    }
+    return T(flow.item.name);
+  }
+  function cryptoCanReveal(){
+    const flow = cryptoFlow;
+    return !cryptoSheet.hidden && flow?.mode === 'pay' && cryptoAvailable(flow.item)
+      && (flow.kind !== 'course' || !cryptoCoursePending(flow.item.id));
+  }
+  function cryptoClearDetails(){
+    $('#cryptoDetails').hidden = true;
+    $('#cryptoAddr').textContent = '';
+    $('#cryptoAmt').textContent = '';
+    $('#cryptoCheck').textContent = '';
+    $('#cryptoQr').replaceChildren();
+    $('#cryptoQr').hidden = true;
+    $('#cryptoQrBtn').hidden = true;
+    $('#cryptoQrBtn').setAttribute('aria-expanded', 'false');
+  }
+  function cryptoStep(n){
+    const progress = $('#cryptoProgress');
+    progress.hidden = cryptoFlow.mode === 'info';
+    progress.textContent = progress.hidden ? '' : cryptoFlow.reviewed ? T('Оплата криптой') : T('Шаг {n} из 2', { n });
+    cryptoSheet.querySelector('.sheet').scrollTop = 0;
+    cryptoHeading.focus({ preventScroll: true });
+  }
+  function cryptoShowGuide(compact){
+    const { mode, resumed } = cryptoFlow;
+    cryptoClearDetails();
+    cryptoAck.checked = false;
+    $('#cryptoGuide').hidden = false;
+    $('#cryptoConfirm').hidden = mode !== 'pay';
+    $('#cryptoSteps').hidden = compact;
+    $('#cryptoFull').hidden = !compact;
+    $('#cryptoFull').setAttribute('aria-expanded', 'false');
+    $('#cryptoIntro').textContent = T(mode === 'order'
+      ? 'Сначала обсуди заказ с тренером. Если согласуете оплату криптой, следуй этой инструкции.'
+      : mode === 'course' ? 'Если выберешь оплату криптой, используй эти шаги. Способ оплаты выберешь дальше.'
+      : resumed ? 'Уже отправил перевод? Повторять его не нужно. Продолжи, чтобы прислать скриншот тренеру.'
+      : mode === 'pay' ? 'Отправляй перевод только после согласования заказа. На следующем шаге будут реквизиты.'
+      : LANG === 'ru'
+        ? 'Согласуй оплату с тренером. Перед переводом уточни в переписке точную сумму и адрес для заказа.'
+        : 'В карточке услуги нажми «Оплатить криптой (USDT)». Для курса нажми «Купить» и выбери этот способ. Если кнопки нет, уточни сумму и адрес у тренера до перевода.');
+    const next = $('#cryptoContinue');
+    next.hidden = mode === 'info';
+    next.disabled = mode === 'pay';
+    next.textContent = mode === 'order' ? T('К обсуждению заказа') : mode === 'course' ? T('К выбору оплаты') : T('К реквизитам');
+    cryptoHeading.textContent = T('Инструкция по оплате криптой');
+    cryptoStep(1);
+  }
+  function showCrypto(flow){
+    if (!cryptoSheet.hidden || (flow.mode === 'pay' && (!cryptoAvailable(flow.item) ||
+        (flow.kind === 'course' && cryptoCoursePending(flow.item.id))))) return;
+    cryptoFlow = { ...flow, opener: flow.opener || document.activeElement };
+    cryptoLeaving = false;
+    cryptoSheet.hidden = false;
+    const context = $('#cryptoFor');
+    context.hidden = !flow.item;
+    context.textContent = flow.item ? cryptoContext(flow) : '';
+    cryptoShowGuide(!!flow.reviewed);
+    if (flow.mode !== 'pay') return;
+    const record = JSON.stringify({ kind: flow.kind, id: flow.item.id, t: Date.now() });
+    try { localStorage.setItem(CR_KEY, record); cryptoFlow.record = record; } catch (_) {}
+    if (!flow.resumed) sendEv('cr', flow.kind === 'course' ? 'course' : flow.item.id);
+  }
+  function cryptoClose(next){
+    if (cryptoSheet.hidden || cryptoLeaving) return;
+    cryptoLeaving = !!next;
+    checkoutAfterClose(cryptoSheet, next);
+  }
+  new MutationObserver(() => {
+    if (!cryptoSheet.hidden || !cryptoFlow) return;
+    const { opener, record } = cryptoFlow;
+    cryptoFlow = null;
+    cryptoClearDetails();
+    cryptoAck.checked = false;
+    if (record) {
+      try { if (localStorage.getItem(CR_KEY) === record) localStorage.removeItem(CR_KEY); } catch (_) {}
+    }
+    if (!cryptoLeaving && opener?.getClientRects().length) opener.focus({ preventScroll: true });
+    cryptoLeaving = false;
+  }).observe(cryptoSheet, { attributes: true, attributeFilter: ['hidden'] });
+
+  function cryptoReveal(){
+    if (!cryptoCanReveal() || !cryptoAck.checked) return;
+    const amount = String(+cryptoFlow.item.usd);
+    cryptoHeading.textContent = T('Реквизиты для перевода');
+    $('#cryptoAmt').textContent = amount + ' USDT';
     $('#cryptoAddr').textContent = USDT;
-    $('#cryptoCheck').textContent = T('Перед отправкой посмотри строку «Получите» (Receive amount): там должно быть {amt} USDT. Если меньше — прибавь комиссию биржи (обычно около 1 USDT).', { amt });
+    $('#cryptoCheck').textContent = T('Проверь, что получатель получит {amt} USDT после комиссии. Если перевод уже сделан, пришли только скриншот.', { amt: amount });
     const qr = $('#cryptoQr'), qb = $('#cryptoQrBtn');
-    let ok = true; try { qr.innerHTML = QR.svg(USDT, { pad: 3 }); } catch (_) { ok = false; } // drawn from the address itself
-    qr.hidden = !ok || COARSE; qb.hidden = !ok || !COARSE; qb.textContent = T('Показать QR-код (если кошелёк на другом устройстве)');
-    $('#cryptoHelp').open = false; crPaid = false;
-    $('#cryptoSheet').hidden = false;
-    $('#cryptoSheet .sheet').scrollTop = 0;
-    try { localStorage.setItem(CR_KEY, JSON.stringify({ id: curSvc.id, t: Date.now() })); } catch (_) {}
-    if (!restored) sendEv('cr', curSvc.id);
-  }
-  $('#cryptoBtn').addEventListener('click', () => openCrypto(false));
-  $('#cryptoQrBtn').addEventListener('click', () => {
-    const qr = $('#cryptoQr'), on = qr.hidden; qr.hidden = !on;
-    $('#cryptoQrBtn').textContent = on ? T('Скрыть QR-код') : T('Показать QR-код (если кошелёк на другом устройстве)');
-  });
-  $('#cryptoCopyAmt').addEventListener('click', () => cryptoCopy(String(+curSvc.usd), T('Сумма скопирована')));
-  $('#cryptoCopyAddr').addEventListener('click', () => cryptoCopy(USDT, T('Адрес скопирован')));
-  $('#cryptoPaid').addEventListener('click', () => {
-    sendEv('crp', curSvc.id); crPaid = true;
-    $('#cryptoSheet').hidden = true;
-    setTimeout(() => openContact(T('Оплатил {amt} USDT (TRC-20) за: {svc}. Прикрепляю скриншот перевода.', { amt: String(+curSvc.usd), svc: T(curSvc.name) })), 250);
-  });
-  $('#cryptoAsk').addEventListener('click', () => {
-    $('#cryptoSheet').hidden = true;
-    setTimeout(() => openContact(T('Хочу оплатить криптой «{svc}», но есть вопрос:', { svc: T(curSvc.name) })), 250);
-  });
-  // closed on purpose (tap outside, back, «I've paid», question) ⇒ forget; a reload of the page does not hide it
-  new MutationObserver(() => { if ($('#cryptoSheet').hidden) { try { localStorage.removeItem(CR_KEY); } catch (_) {} } })
-    .observe($('#cryptoSheet'), { attributes: true, attributeFilter: ['hidden'] });
-  function restoreCrypto(){
+    const wantsButton = matchMedia('(pointer: coarse)').matches;
     try {
-      const r = JSON.parse(localStorage.getItem(CR_KEY) || 'null'); if (!r) return;
-      const s = SERVICES.find(x => x.id === r.id);
-      if (!s || Date.now() - r.t > 3600e3 || !USDT || LANG === 'ru' || !(+s.usd > 0)) { localStorage.removeItem(CR_KEY); return; }
-      openService(s, true); setTimeout(() => openCrypto(true), 120);
+      qr.innerHTML = QR.svg(USDT, { pad: 3 });
+      qr.hidden = wantsButton;
+      qb.hidden = !wantsButton;
     } catch (_) {}
+    qb.textContent = T('Показать QR-код');
+    $('#cryptoGuide').hidden = true;
+    $('#cryptoDetails').hidden = false;
+    cryptoStep(2);
   }
-  $('#cryptoSheet').addEventListener('click', e => { if (e.target.id === 'cryptoSheet') $('#cryptoSheet').hidden = true; });
+  cryptoAck.addEventListener('change', () => { $('#cryptoContinue').disabled = !cryptoAck.checked; });
+  $('#cryptoContinue').addEventListener('click', () => {
+    if (cryptoFlow?.mode === 'pay') cryptoReveal();
+    else if (cryptoFlow?.next) cryptoClose(cryptoFlow.next);
+  });
+  $('#cryptoFull').addEventListener('click', () => {
+    $('#cryptoSteps').hidden = false;
+    $('#cryptoFull').hidden = true;
+    $('#cryptoFull').setAttribute('aria-expanded', 'true');
+    cryptoStep(1);
+  });
+  $('#cryptoRead').addEventListener('click', () => { if (cryptoCanReveal()) cryptoShowGuide(false); });
+  $('#cryptoClose').addEventListener('click', () => cryptoClose());
+  cryptoSheet.addEventListener('click', e => { if (e.target === cryptoSheet) cryptoClose(); });
+  cryptoSheet.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); cryptoClose(); return; }
+    if (e.key !== 'Tab') return;
+    const controls = [...cryptoSheet.querySelectorAll('button:not(:disabled),input:not(:disabled)')].filter(el => el.getClientRects().length);
+    const [first] = controls, last = controls.at(-1), active = document.activeElement;
+    if (e.shiftKey && (active === first || active === cryptoHeading)) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first?.focus(); }
+  });
+  $('#cryptoBtn').addEventListener('click', e => showCrypto({ mode: 'pay', kind: 'service', item: curSvc, opener: e.currentTarget }));
+  for (const id of ['#svcCryptoGuide', '#chatCryptoGuide']) {
+    $(id).addEventListener('click', e => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      showCrypto({ mode: 'info', opener: e.currentTarget, url: e.currentTarget.href });
+    });
+  }
+  const cryptoDetailsReady = () => cryptoCanReveal() && !$('#cryptoDetails').hidden;
+  $('#cryptoQrBtn').addEventListener('click', () => {
+    if (!cryptoDetailsReady()) return;
+    const qr = $('#cryptoQr'), on = qr.hidden;
+    qr.hidden = !on;
+    $('#cryptoQrBtn').textContent = on ? T('Скрыть QR-код') : T('Показать QR-код');
+    $('#cryptoQrBtn').setAttribute('aria-expanded', String(on));
+  });
+  $('#cryptoCopyAmt').addEventListener('click', () => { if (cryptoDetailsReady()) cryptoCopy(String(+cryptoFlow.item.usd), T('Сумма скопирована')); });
+  $('#cryptoCopyAddr').addEventListener('click', () => { if (cryptoDetailsReady()) cryptoCopy(USDT, T('Адрес скопирован')); });
+  function cryptoContact(paid){
+    if (!cryptoDetailsReady()) return;
+    const flow = cryptoFlow, course = flow.kind === 'course';
+    const name = cryptoContext(flow);
+    const text = paid ? T('Оплатил {amt} USDT (TRC-20) за: {svc}. Прикрепляю скриншот перевода.', { amt: String(+flow.item.usd), svc: name })
+      : T('Хочу оплатить криптой «{svc}», но есть вопрос:', { svc: name });
+    if (paid) sendEv('crp', course ? 'course' : flow.item.id);
+    function contact(){
+      curSvc = course ? { id: 'course', name } : flow.item;
+      openContact(text);
+    }
+    cryptoClose(() => {
+      if (course && !$('#buySheet').hidden) checkoutAfterClose($('#buySheet'), contact);
+      else contact();
+    });
+  }
+  $('#cryptoPaid').addEventListener('click', () => cryptoContact(true));
+  $('#cryptoAsk').addEventListener('click', () => cryptoContact(false));
+
+  async function restoreCrypto(startState){
+    let record;
+    try { record = JSON.parse(localStorage.getItem(CR_KEY) || 'null'); localStorage.removeItem(CR_KEY); } catch (_) { return; }
+    if (!record || !(Date.now() - record.t < 3600e3)) return;
+    const course = record.kind === 'course' || record.id === 'course';
+    if (course) {
+      const id = record.id === 'course' ? startState?.crs : record.id;
+      const c = COURSES_ON.find(x => x.id === id);
+      if (!c || !cryptoAvailable(c)) return;
+      crsOpen(c.id);
+      await crsMy();
+      if ($('#course').hidden || curCourse !== c.id || openOverlay()) return;
+      if (crsOwns(c.id)) return;
+      if (cryptoCoursePending(c.id)) { crsOpenBuy(c.id); return; }
+      showCrypto({ mode: 'pay', kind: 'course', item: c, resumed: true, opener: $('#crBuy') });
+    } else {
+      const s = SERVICES.find(x => x.id === record.id);
+      if (!cryptoAvailable(s)) return;
+      openService(s, true);
+      showCrypto({ mode: 'pay', kind: 'service', item: s, resumed: true, opener: $('#cryptoBtn') });
+    }
+  }
   $('#contactSheet').addEventListener('click', e => { if (e.target.id === 'contactSheet') $('#contactSheet').hidden = true; });
 
   // ===== paid video courses — screens and purchase (owner 12.11.2026 «раздел КУРСЫ… ссылку на оплату (paypal)… продумай с оплатой
@@ -5144,6 +5309,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         toast(T('Курс «{n}» открыт! Приятного просмотра 🎉', { n: crsName(c) }));
         if (!$('#buySheet').hidden) $('#buySheet').hidden = true;
       }
+      crsRefreshCheckout();
       crsPaintAll();
     }).catch(() => {}).finally(() => { crsMyP = null; }));
   }
@@ -5216,47 +5382,72 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     crsOpenBuy(c.id);
   });
   // the purchase sheet
-  let crsBuyC = null, crsBuyCode = '';
-  function crsBuyView(st){ // 'steps' | 'wait' | 'err'
+  let crsBuyC = null, crsBuyCode = '', crsBuyReviewed = false, crsBuyAttempt = 0;
+  function crsBuyView(st){
     $('#buySteps').hidden = st !== 'steps'; $('#buyWait').hidden = st !== 'wait';
+    $('#buyCrypto').hidden = st !== 'steps' || !cryptoAvailable(crsBuyC);
+    $('#buyProgress').textContent = crsBuyReviewed && st === 'steps' ? T('Шаг {n} из 2', { n: 2 }) : T('Покупка курса');
   }
-  async function crsOpenBuy(cid){
+  function crsRefreshCheckout(){
+    const flow = cryptoFlow?.kind === 'course' && !cryptoSheet.hidden ? cryptoFlow : null;
+    if (crsBuyC && !$('#buySheet').hidden) {
+      const order = crsOrder(crsBuyC.id);
+      if (order?.st === 'paid') { crsShowCode(order.code); crsBuyView('wait'); }
+    }
+    if (!flow) return;
+    $('#cryptoFor').textContent = cryptoContext(flow);
+    if (!cryptoCoursePending(flow.item.id)) return;
+    cryptoClose(() => {
+      if (!$('#buySheet').hidden) $('#buyTitle').focus();
+      else if (!crsOwns(flow.item.id) && curCourse === flow.item.id) crsOpenBuy(flow.item.id);
+      else if (!$('#course').hidden) $('#crBuy').focus();
+    });
+  }
+  async function crsOpenBuy(cid, reviewed = false){
     const c = COURSES_ON.find(x => x.id === cid); if (!c) return;
     if (crsOwns(cid)) { crsOpen(cid); return; }
-    crsBuyC = c; crsBuyCode = '';
+    const o = crsOrder(cid);
+    if (!reviewed && o?.st !== 'paid') {
+      showCrypto({ mode: 'course', kind: 'course', item: c, next: () => crsOpenBuy(cid, true) });
+      return;
+    }
+    const attempt = ++crsBuyAttempt;
+    crsBuyC = c; crsBuyCode = ''; crsBuyReviewed = reviewed;
     $('#buyTitle').textContent = crsName(c);
     $('#buyPrice').textContent = crsPrice(c);
     $('#buyErr').hidden = true;
-    const pay = crsPay(c);
+    const pay = crsPay(c), needsOrder = Boolean(pay && o?.st !== 'paid');
+    $('#buyCrypto').disabled = needsOrder;
     $('#buySteps ol').hidden = !pay; $('#buyNoPay').hidden = !!pay;
     $('#buyPay').textContent = T('Оплатить {p} через PayPal', { p: crsPrice(c) });
     $('#buyPay').href = pay || '#'; $('#buyPay').setAttribute('aria-disabled', 'true');
     $('#buyCode').textContent = '…';
-    $('#buyCrypto').hidden = !(String(CFG.usdtTrc20 || '').trim() && LANG !== 'ru' && +c.usd > 0);
-    const o = crsOrder(cid);
     crsBuyView(o && o.st === 'paid' ? 'wait' : 'steps');
     if (o) crsShowCode(o.code);
     $('#buySheet').hidden = false;
     $('#buySheet .sheet').scrollTop = 0;
+    $('#buyTitle').focus({ preventScroll: true });
     try { sendEv('cb', cid); } catch (_) {}
-    if (!pay) return;
+    if (!needsOrder) return;
     try {
       const j = await crsApi('/course/order', { course: cid, lang: LANG, pid: prof.id || '', name: prof.nick || '' });
-      if (crsBuyC !== c) return;
+      if (crsBuyAttempt !== attempt) return;
       if (j.own) { await crsMy(); crsOpen(cid); $('#buySheet').hidden = true; return; }
       if (!j.ok || !j.code) throw Object.assign(new Error(j.why || 'order'), { why: j.why });
       crsShowCode(j.code);
       if (!CRS.orders.some(x => x.code === j.code)) CRS.orders.unshift({ code: j.code, course: cid, st: j.st || 'new', t: Date.now() });
       else CRS.orders.forEach(x => { if (x.code === j.code) x.st = j.st || x.st; });
       crsSave(); crsTick();
-      if (j.st === 'paid') crsBuyView('wait');
+      crsRefreshCheckout();
     } catch (e) {
-      if (crsBuyC !== c) return;
+      if (crsBuyAttempt !== attempt) return;
       $('#buyErr').hidden = false;
       $('#buyErr').textContent = e.old || e.why === 'course' ? T('Покупка этого курса пока не открыта. Напиши тренеру — он поможет.')
         : e.why === 'many' ? T('Слишком много неоплаченных заказов. Напиши тренеру.')
         : T('Нет связи с сервером. Проверь интернет и открой окно ещё раз.');
       $('#buySteps ol').hidden = true;
+    } finally {
+      if (crsBuyAttempt === attempt) $('#buyCrypto').disabled = false;
     }
   }
   function crsShowCode(code){
@@ -5270,8 +5461,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   }
   $('#buyCopy').addEventListener('click', () => { if (crsBuyCode) crsCopy(crsBuyCode, T('Код заказа скопирован')); });
   // the code goes to the clipboard on the way to PayPal too — one less thing to remember there
-  $('#buyPay').addEventListener('click', () => {
-    if (!crsBuyCode) return;
+  $('#buyPay').addEventListener('click', e => {
+    if (!crsBuyCode || $('#buySteps').hidden) { e.preventDefault(); return; }
     try { navigator.clipboard && navigator.clipboard.writeText(crsBuyCode).catch(() => {}); } catch (_) {}
     setTimeout(() => toast(T('Код {c} скопирован — вставь его в комментарий к платежу', { c: crsBuyCode })), 150);
     try { sendEv('cp', crsBuyC && crsBuyC.id); } catch (_) {}
@@ -5282,7 +5473,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     try {
       const j = await crsApi('/course/paid', { code: crsBuyCode });
       if (j && j.st) CRS.orders.forEach(x => { if (x.code === crsBuyCode) x.st = j.st; });
-      crsSave(); crsBuyView('wait'); crsPaintAll();
+      crsSave(); crsBuyView('wait'); crsRefreshCheckout(); crsPaintAll();
       if (j && j.st === 'ok') crsMy();
     } catch (_) { $('#buyErr').hidden = false; $('#buyErr').textContent = T('Нет связи с сервером. Проверь интернет и нажми ещё раз.'); }
     b.disabled = false;
@@ -5293,10 +5484,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const text = T('Привет! Вопрос про курс «{n}»', { n: c ? crsName(c) : '' }) + (crsBuyCode ? ' (' + crsBuyCode + ')' : '') + ': ';
     setTimeout(() => { if (CHAT.on) openChat(text, 'course'); else openContact(text); }, 250);
   });
-  $('#buyCrypto').addEventListener('click', () => {
-    const c = crsBuyC; if (!c) return; $('#buySheet').hidden = true;
-    curSvc = { id: 'course', name: crsName(c) + (crsBuyCode ? ' (' + crsBuyCode + ')' : ''), usd: +c.usd };
-    setTimeout(() => openCrypto(false), 250);
+  $('#buyCryptoGuide').addEventListener('click', e => showCrypto({ mode: 'info', opener: e.currentTarget }));
+  $('#buyCrypto').addEventListener('click', e => {
+    if ($('#buySheet').hidden || e.currentTarget.disabled) return;
+    showCrypto({ mode: 'pay', kind: 'course', item: crsBuyC, reviewed: crsBuyReviewed, opener: e.currentTarget });
   });
   $('#buyHaveCode').addEventListener('click', () => { $('#buySheet').hidden = true; setTimeout(crsCodeOpen, 250); });
   $('#buySheet').addEventListener('click', e => { if (e.target.id === 'buySheet') $('#buySheet').hidden = true; });
@@ -7073,10 +7264,16 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   // screen under it (before, it left that screen; the language sheet led back to some old section).
   const OVERLAYS = [...document.querySelectorAll('.sheet-bg'), document.getElementById('story')].filter(Boolean);
   let ovPop = 0;
-  const openOverlay = () => OVERLAYS.find(x => !x.hidden) || null;
+  const openOverlay = () => !cryptoSheet.hidden ? cryptoSheet : OVERLAYS.find(x => !x.hidden) || null;
   const ovObs = new MutationObserver(recs => recs.forEach(r => {
     const el = r.target, open = !el.hidden;
-    if (open && !el._ovPushed) { el._ovPushed = true; try { history.pushState(Object.assign({}, history.state || {}, { ov: el.id }), ''); navDepth++; } catch (_) {} }
+    if (open && !el._ovPushed) {
+      el._ovPushed = true;
+      try {
+        history.pushState(Object.assign({}, history.state || {}, { ov: el.id }), '', el === cryptoSheet ? cryptoFlow?.url : undefined);
+        navDepth++;
+      } catch (_) {}
+    }
     else if (!open && el._ovPushed) {
       el._ovPushed = false;
       // closed by a tap (not by «back»): take its step out of the history too
@@ -7563,18 +7760,24 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 
   const launchQuery = new URLSearchParams(location.search);
   const battleLaunch = launchQuery.get('battle') === '1';
+  const guideLaunch = launchQuery.get('guide') === 'crypto';
   let startState = history.state;
   try { const r = sessionStorage.getItem('fedoskin-restore'); if (r) { sessionStorage.removeItem('fedoskin-restore'); startState = JSON.parse(r); } } catch (_) {}
   restoring = true; go('home'); restoring = false;
-  try { history.replaceState({ s: 'home' }, ''); } catch (_) {}
+  try {
+    const homeUrl = new URL(location.href);
+    if (guideLaunch) homeUrl.searchParams.delete('guide');
+    history.replaceState({ s: 'home' }, '', homeUrl);
+  } catch (_) {}
   // after "pull to refresh" reopen the same section / lesson
-  if (!battleLaunch && startState && startState.s && startState.s !== 'home') {
+  if (!battleLaunch && !guideLaunch && startState && startState.s && startState.s !== 'home') {
     if (startState.s === 'lesson' && startState.lid && BY_ID[startState.lid]) {
       const l = BY_ID[startState.lid], row = Array.isArray(startState.lr) ? startState.lr.map(id => BY_ID[id]).filter(Boolean) : null;
       if (startState.lt > 3) resumeAt = { id: l.id, t: startState.lt };
       if (row && row.includes(l)) openLesson(l.id, { list: row }); else { openSection(l.sec); openLesson(l.id); }
     }
     else if (startState.s === 'section' && startState.sec) openSection(startState.sec);
+    else if (startState.s === 'course' && startState.crs) crsOpen(startState.crs);
     else if (document.getElementById(startState.s)) go(startState.s);
   }
   // Safety net (owner 11.11.2026: in the middle of a long lesson the screen went white and the app started again on the
@@ -7594,7 +7797,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
     window.addEventListener('pagehide', clear);
-    if (battleLaunch || !r || !(Date.now() - r.ts < 90e3) || !BY_ID[r.id]) return;
+    if (battleLaunch || guideLaunch || !r || !(Date.now() - r.ts < 90e3) || !BY_ID[r.id]) return;
     if (r.m) try { localStorage.setItem(MMS_OFF, String(Date.now())); } catch (_) {}
     let last = 0; try { last = +localStorage.getItem(REC) || 0; } catch (_) {}
     if (Date.now() - last < 600e3 || (startState && startState.s === 'lesson')) return;
@@ -7612,8 +7815,14 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     }
     setTimeout(() => toast(T('Приложение перезапустилось — продолжаем с {t}', { t: fmtD(r.t) })), 600);
   })();
-  if (!battleLaunch && (!startState || !startState.s || /^(home|review|svc)$/.test(startState.s))) restoreCrypto(); // came back from the exchange app after a reload
-  try {
+  if (guideLaunch) {
+    go('review');
+    showCrypto({ mode: 'info', opener: $('#svcCryptoGuide'), url: $('#svcCryptoGuide').href });
+  } else if (!battleLaunch && !['lesson','chat','vs','review','c','ca','city','battle'].some(key => launchQuery.has(key))
+      && (!startState?.s || /^(home|review|svc|course|courses)$/.test(startState.s))) {
+    restoreCrypto(startState);
+  }
+  if (!guideLaunch) try {
     const qs = launchQuery, lid = qs.get('lesson');
     if (lid) { history.replaceState(history.state, '', location.pathname); openFromPush(lid); }
     if (qs.get('chat')) { history.replaceState(history.state, '', location.pathname); go('review'); setTimeout(() => openChat(), 200); } // a coach's answer notification
