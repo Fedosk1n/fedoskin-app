@@ -17,7 +17,7 @@ function readGuide() {
 
 const CSS = `
 #g3guide,#g3guideOpen{position:fixed;z-index:6;top:calc(max(10px,env(safe-area-inset-top)) + 150px);left:max(10px,env(safe-area-inset-left));box-sizing:border-box}
-#g3guide[hidden],#g3guideOpen[hidden],#g3landmarkLabel[hidden],#g3guide [hidden]{display:none}
+#g3guide[hidden],#g3guideOpen[hidden][hidden],#g3guide [hidden]{display:none}
 #g3guide{width:min(342px,calc(100vw - max(10px,env(safe-area-inset-left)) - max(10px,env(safe-area-inset-right))));color:#fcf0d8;
  background:linear-gradient(125deg,#26201bfa,#11171dee 78%);border:1px solid #9b784a;border-inline-start:3px solid #f2be7e;border-radius:14px;
  box-shadow:0 7px 24px #0a0a0ba8;pointer-events:none;padding:10px 11px 8px;font:600 13px/1.35 Inter,system-ui,sans-serif}
@@ -39,13 +39,8 @@ body.city-guide-intro :is(#hint,#ztip){display:none}
 #g3guide .guide-close{background:transparent;flex:none;font-size:22px;line-height:1;padding:0;min-width:44px;border-color:transparent}
 #g3guideOpen{width:max-content;background:#1c2029ed;color:#ffdeb0;box-shadow:0 3px 9px #121217aa}
 #g3guide-status{position:fixed;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap;pointer-events:none}
-#g3landmarkLabel{position:fixed;z-index:4;transform:translate(-50%,-100%);pointer-events:none;max-width:min(205px,42vw);
- padding:4px 9px;border-radius:7px;border:1px solid #a48864;background:#191712ee;color:#fff1d0;
- font:800 12px/1.2 Inter,system-ui,sans-serif;text-align:center;box-sizing:border-box}
-#g3landmarkLabel.watch{transform:translateY(-100%)}
-#g3landmarkLabel.festival{background:#152522ee;border-color:#76a99e;color:#b4eddd}
-body.g3fight :is(#g3guide,#g3guideOpen,#g3landmarkLabel),
-body.festival-playing :is(#g3guide,#g3guideOpen,#g3landmarkLabel){display:none}
+body.g3fight :is(#g3guide,#g3guideOpen),
+body.festival-playing :is(#g3guide,#g3guideOpen){display:none}
 @media (max-height:490px) and (orientation:landscape){
  #g3guide,#g3guideOpen{left:auto;right:max(10px,env(safe-area-inset-right));top:calc(max(8px,env(safe-area-inset-top)) + 89px)}
  #g3guide{width:min(315px,48vw);padding:6px 8px}
@@ -68,7 +63,7 @@ export function initCityGuide(t) {
  <div class="guide-content"><div class="guide-copy"><div class="guide-where"></div><p></p></div><img decoding="async"></div>
  <div class="guide-actions"><button type="button" class="guide-first"></button><button type="button" class="guide-other" hidden></button></div>
  </aside><button id="g3guideOpen" type="button" hidden aria-controls="g3guide" aria-expanded="false"></button>
- <div id="g3guide-status" role="status"></div><div id="g3landmarkLabel" hidden></div>`;
+ <div id="g3guide-status" role="status"></div>`;
   document.body.append(holder);
   const $ = selector => holder.querySelector(selector);
   const ui = $('#g3guide'), reopen = $('#g3guideOpen'), title = $('#g3guide-title');
@@ -139,33 +134,28 @@ export function initCityGuide(t) {
   ui.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); dismiss(true); }
   });
-  return { set, choose, line:()=>state.line, inviteResolved:()=>state.invite, label:$('#g3landmarkLabel'),
+  return { set, choose, line:()=>state.line, inviteResolved:()=>state.invite,
     announce(text) { status.textContent = text; } };
 }
 
-export function initLandmarkView({ scene, camera, node, district, t }) {
+export function initLandmarkView({ scene, district }) {
   const root = new THREE.Group();
   root.name = 'CityQuestLandmarks';
   scene.add(root);
-  const clip = new THREE.Vector3(), projectedCorner = new THREE.Vector3(), bounds = new THREE.Box3();
-  const hud = document.querySelector('#g3hud2');
-  let loading, asset = null, next = null, active = null, mount = null;
-  let labelWidth = 0, labelViewport = 0, hudEdge = 0, viewport = '';
+  let loading, asset = null, next = null;
   function place() {
     if (!asset) return;
     for (const model of asset.children) model.visible = false;
-    mount = next && asset.getObjectByName(next.art);
+    const mount = next && asset.getObjectByName(next.art);
     if (!mount) return;
     mount.visible = true;
     mount.position.set(next.point.x, next.point.y || 0, next.point.z);
     mount.rotation.y = next.point.yaw || 0;
-    mount.updateWorldMatrix(true,true);
-    bounds.setFromObject(mount);
   }
   function set(entry) {
     const changed = entry?.art !== next?.art || entry?.point.x !== next?.point.x || entry?.point.z !== next?.point.z;
     next = entry;
-    if (!next) { root.visible = false; node.hidden = true; return; }
+    if (!next) { root.visible = false; return; }
     root.visible = true;
     if (!loading) {
       loading = loadUntexturedModel('./anim/city-guide-'+district+'.glb?v=1').then(model => {
@@ -183,45 +173,5 @@ export function initLandmarkView({ scene, camera, node, district, t }) {
     }
     if (changed) place();
   }
-  function post() {
-    if (!next?.label || !asset || bounds.isEmpty()) { node.hidden = true; return; }
-    const watch = next.art === 'watch';
-    clip.set(next.point.x,(next.point.y || 0) + (watch ? .035 : 1.20),next.point.z).project(camera);
-    const x = (clip.x+1)*.5, y = (1-clip.y)*.5;
-    node.hidden = clip.z > 1 || x < .13 || x > .87 || y < .27 || y > .89;
-    if (node.hidden) return;
-    const key = next.line + ':' + next.art;
-    if (key !== active) {
-      active = key;
-      node.classList.toggle('festival',next.line === 'festival');
-      node.textContent = t(LANDMARKS[next.art][0]);
-      node.classList.toggle('watch',watch);
-      labelWidth = 0;
-    }
-    if (watch) {
-      if (!labelWidth || labelViewport !== innerWidth) {
-        labelViewport = innerWidth;
-        labelWidth = node.offsetWidth;
-      }
-      const left = x*innerWidth - labelWidth - 31;
-      node.style.left = Math.max(8,left).toFixed(1)+'px';
-      node.style.top = (y*innerHeight - (left < 8 ? 37 : 4)).toFixed(1)+'px';
-    } else {
-      let top = Infinity;
-      for (const px of [bounds.min.x,bounds.max.x]) for (const py of [bounds.min.y,bounds.max.y]) {
-        for (const pz of [bounds.min.z,bounds.max.z]) {
-          projectedCorner.set(px,py,pz).project(camera);
-          top = Math.min(top,(1-projectedCorner.y)*.5*innerHeight);
-        }
-      }
-      // The callout belongs above the full proportion of the visible prop, even close up.
-      // Leave it offscreen if there is no room between the object and the city HUD.
-      const screen = innerWidth + 'x' + innerHeight;
-      if (screen !== viewport) { viewport = screen; hudEdge = hud.getBoundingClientRect().bottom; }
-      if (top < hudEdge + 33) { node.hidden = true; return; }
-      node.style.left = (x*100).toFixed(1)+'%';
-      node.style.top = (top - 7).toFixed(1)+'px';
-    }
-  }
-  return { set, post };
+  return { set };
 }

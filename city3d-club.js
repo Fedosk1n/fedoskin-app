@@ -1,4 +1,5 @@
 // An indoor breaking club with a lit battle floor, queue, DJ booth and results wall.
+import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { buildClubAudience } from './city3d-club-audience.js?v=1';
 import { performDJ } from './city3d-dj.js?v=4';
 import { seatedJudge } from './city3d-club-judges.js?v=2';
@@ -79,26 +80,6 @@ export function buildClub(TK) {
     const m = mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map, transparent: true, toneMapped: false }), x, y, z);
     return { mesh: m, map };
   }
-  function sign(txt, w, h, x, y, z, color = '#f5d6a3') {
-    const cv = can(768, 160), p = cv.getContext('2d');
-    p.fillStyle = '#101b20'; p.fillRect(0, 0, cv.width, cv.height);
-    p.strokeStyle = color; p.lineWidth = 5; p.strokeRect(5, 5, cv.width - 10, cv.height - 10);
-    p.fillStyle = color; p.textAlign = 'center'; p.textBaseline = 'middle'; p.font = '700 72px Inter, sans-serif';
-    p.fillText(txt, cv.width / 2, cv.height / 2 + 4, cv.width - 50);
-    const o = panel(cv, w, h, x, y, z).mesh;
-    o.rotation.x = -.65;
-    return o;
-  }
-  function label(txt, x, y, z, color, width = 2.9) {
-    const cv = can(600, 128), p = cv.getContext('2d');
-    p.fillStyle = '#101518'; p.beginPath(); p.roundRect(6, 14, 588, 98, 24); p.fill();
-    p.strokeStyle = color; p.stroke();
-    p.fillStyle = color; p.textAlign = 'center'; p.textBaseline = 'middle'; p.font = 'bold 52px Inter, sans-serif';
-    p.fillText(txt, 300, 65, 540);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(cv), toneMapped: false }));
-    sprite.position.set(x, y, z); sprite.scale.set(width, .62, 1); scene.add(sprite);
-    return sprite;
-  }
 
   scene.background.set('#0d151a');
   scene.fog.color.set('#0d151a');
@@ -125,6 +106,9 @@ export function buildClub(TK) {
   }
   p.fillStyle = 'rgba(40,22,16,.33)'; p.font = '900 380px Anton, sans-serif'; p.textAlign = 'center';
   p.fillText('07', 512, 650);
+  p.font = '800 65px Anton, system-ui, sans-serif';
+  p.fillStyle = 'rgba(47,31,20,.78)'; p.fillText('7 TO SMOKE', 512, 809, 535);
+  p.fillStyle = 'rgba(244,212,163,.93)'; p.fillText('7 TO SMOKE', 512, 805, 535);
   block(21, .18, 22, material('terrazzo', { repeat: [5, 5] }), 0, -.10, -.8);
   const disk = new THREE.CircleGeometry(floor.r, 96);
   const wood = mesh(disk, material('oak'), floor.x, .018, floor.z);
@@ -152,11 +136,12 @@ export function buildClub(TK) {
     block(.085, 2.17, .16, flat(colors.turquoise), x - 1.05, 1.5, -8.49);
     block(2.25, .7, .8, velvet, x, .35, -6.8); box(x, -6.8, 2.25, .8);
   });
-  sign('7 TO SMOKE', 8.5, 1.25, 0, 2.82, -8.34, '#ffd68c');
   const scoreCv = can(1024, 256), ink = scoreCv.getContext('2d');
-  const scorePanel = panel(scoreCv, 5.6, 1.4, 0, 1.32, -8.35);
-  scorePanel.mesh.rotation.x = -.55;
-  function board(leader = '7 TO SMOKE', points = null) {
+  const scoreY = 2.47, scoreZ = -8.53;
+  const scoreFrame = mountSign(TK.wayfinding, 'club-score-frame', scene, 0, scoreY, scoreZ);
+  if (!scoreFrame) block(5.6, 1.17, .2, dark, 0, scoreY, scoreZ);
+  const scorePanel = panel(scoreCv, 5.40, 1.05, 0, scoreY, scoreZ + .123);
+  function board(leader = '', points = null) {
     ink.fillStyle = '#111a1d'; ink.fillRect(0, 0, 1024, 256);
     ink.strokeStyle = '#658483'; ink.lineWidth = 4; ink.strokeRect(5, 5, 1014, 246);
     ink.fillStyle = '#e8d9bc'; ink.textAlign = 'center'; ink.font = '700 64px Inter, sans-serif';
@@ -213,6 +198,8 @@ export function buildClub(TK) {
   const host = mocapPerson(djLook, { body: bodyOf(87, { type: 'slim', girl: true }) });
   booth.add(host.root);
   const mix = performDJ(host, booth, decks, level, faders, { name: 'Club DJ', watchFloor: true });
+  const recordBadge = mountSign(TK.wayfinding, 'decks-badge', booth, -.63, .56, .463);
+  if (recordBadge) plaqueInk(recordBadge, 'DJ', { width:.23, height:.096, z:.088, color:'#272329' });
   // Along the rotated counter, keeping the floor-side approach open.
   for (const x of [-1.12, -.56, 0, .56, 1.12]) {
     const at = booth.localToWorld(new THREE.Vector3(x, 0, 0));
@@ -225,8 +212,21 @@ export function buildClub(TK) {
   const rz = records.z - 1.35, poster = material('oak', { tint: '#9c8985' });
   block(2.92, .58, .78, velvet, records.x, .29, rz + .22); box(records.x, rz + .22, 2.92, .78);
   block(3.1, 2.49, .22, poster, records.x, 1.48, rz - .36);
-  [0, 1, 2].forEach((n) => sign(['07', '1 VS 1', '7 TO SMOKE'][n], .87, .61, records.x - .93 + n * .93, 1.72, rz - .18));
-  block(3.12, .045, .05, flat(colors.gold), records.x, 2.54, rz - .18);
+  const archive = mountSign(TK.wayfinding, 'club-archive', scene, records.x, 1.62, rz - .246);
+  if (archive) {
+    plaqueInk(archive, t('Стена результатов'), { y:.42, z:.136, width:2.24, height:.30 });
+    ['01', '02', '03'].forEach((round, i) => {
+      const sheet = can(240, 240), p = sheet.getContext('2d');
+      p.fillStyle = '#554941'; p.font = '900 41px Inter, sans-serif'; p.fillText(round, 21, 50);
+      p.fillStyle = '#9a5547'; p.fillRect(91, 25, 124, 8); p.fillRect(91, 40, 93, 5);
+      p.strokeStyle = '#76645a'; p.lineWidth = 2; p.beginPath(); p.rect(21, 69, 194, 134);
+      for (let row = 1; row < 6; row++) { p.moveTo(21, 69 + row * 22); p.lineTo(215, 69 + row * 22); }
+      for (const x of [115, 151, 185]) { p.moveTo(x, 69); p.lineTo(x, 203); }
+      p.stroke();
+      const print = panel(sheet, .51, .49, 0, 0, 0).mesh;
+      archive.add(print); print.position.set((i - 1) * .85, -.20, .161);
+    });
+  }
 
   // The waiting breakers follow the left edge of the cypher with room for footwork.
   const queueRadius = floor.r + .87;
@@ -289,23 +289,22 @@ export function buildClub(TK) {
   });
   for (const x of [-1.91, 1.91]) box(x, judgeZ - .04, .40, .39);
 
-  const activitySigns = {
-    smoke: label('7 TO SMOKE', smokeEntry.x, 2.3, smokeEntry.z, '#ffce8a'),
-    clubDJ: label(t('Пульт диджея'), dj.x, 1.05, dj.z, '#86e7e5'),
-    clubRecords: label(t('Стена результатов'), records.x, 2.2, records.z, '#ffce8a'),
-  };
-  const signs = [
-    label(t('Пульт диджея') + '  ↗', 1.95, 1.4, 2.02, '#86e7e5', 2.5),
-    label(t('Стена результатов') + '  →', 1.95, 1.4, 3.20, '#ffce8a', 2.5),
-    ...Object.values(activitySigns),
-    label(t('Выход в Промзону'), exit.x, 2.15, exit.z + .34, '#edb48b'),
-  ];
+  const entryZ = 8.70;
+  const door = mountSign(TK.wayfinding, 'club-exit-frame', scene, exit.x, 0, entryZ);
+  if (door) {
+    for (const side of [-1, 1]) plaqueInk(door, t('Выход в Промзону'), { width:1.52, height:.22, y:2.29,
+      z:side * .214, yaw:side < 0 ? Math.PI : 0, color:'#dcebc9', symbol:'exit' });
+    for (const side of [-1, 1]) {
+      box(exit.x + side * 1.17, entryZ, .29, .36);
+      box(exit.x + side * 1.98, entryZ + .035, 1.58, .38);
+    }
+  }
   W.tickers.push(dt => {
     mix.tick(dt);
     judges.forEach(judge => judge.tick(dt));
   });
   const audience = buildClubAudience(TK, TK.audienceModel, floor);
-  W.club = { audience, floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, signs, activitySigns, mix,
+  W.club = { audience, floor, smokeEntry, duelSpots, dj, records, exit, slots, dancers, board, mix,
     showVotes: entries => entries.forEach((entry, i) => judges[i].show(entry.name, entry.col)),
     hideVotes: () => judges.forEach(judge => judge.hide()),
   };
