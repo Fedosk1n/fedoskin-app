@@ -71,7 +71,7 @@
     forgeChain: { name: 'Цепь «Литейка»', slot: 'neck', rar: 4, ico: '⛓️', src: 'gang:forge', reward: [['wins:forge', 21, 'Победы над бандой «{x}»'], ['clean:forge', 8, 'Победы без срывов над бандой «{x}»']], f: { chain: 2 }, col: { gold: '#B9BCC4' }, perk: ['rep', 2], bt: { hold: 1 } },
     waveKicks: { name: 'Кроссы «Волна»', slot: 'kicks', rar: 3, ico: '👟', src: 'gang:wave', reward: [['wins:wave', 7, 'Победы над бандой «{x}»']], f: { shoe: 'runner' }, col: { shoe: '#19B8C4', shoe2: '#F2EFE8', sole: '#F2EFE8', lace: '#FFFFFF' }, perk: ['time', 8], bt: { save: 1 } },
     cypherBomber: { name: 'Бомбер Сайфера', slot: 'top', rar: 3, ico: '🎤', src: 'mc', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#E2611A', cuff: '#FFD23F', trim: '#FFD23F' }, perk: ['rep', 2], bt: { win: 20 } },
-    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, perk: ['time', 6], bt: { cor: 8 } },
+    djGloves: { name: 'Перчатки диджея', slot: 'hands', rar: 2, ico: '🧤', src: 'dj', f: { gloves: true }, col: { glove: '#29333a', gloveTrim: '#8bafb1' }, perk: ['time', 6], bt: { cor: 8 } },
     // the Centre crews (16.11.2026, 3D city): Трафареты lv 3, Турникеты lv 4, Хромированные lv 5 (the district's owners)
     stencilBandana: { name: 'Бандана Трафаретов', slot: 'head', rar: 1, ico: '🧣', src: 'gang:stencil', f: { hat: 'bandana' }, col: { hat: ['#F2EFE8', '#C8202A'] }, perk: ['time', 6], bt: { win: 6, cor: 2 } },
     stencilBomber: { name: 'Бомбер Трафаретов', slot: 'top', rar: 2, ico: '🧥', src: 'gang:stencil', f: { top: 'bomber' }, col: { top: '#18181B', sleeve: '#F2EFE8', cuff: '#C8202A', trim: '#C8202A' }, perk: ['rep', 2], bt: { cor: 6 } },
@@ -236,7 +236,7 @@
 
   function svg(level, opt){
     opt = opt || {};
-    const wardrobe = !!opt.wardrobe && !opt.rig;
+    const wardrobe = !!opt.wardrobe && !opt.rig, itemSlot = opt.itemSlot;
     // an older look chosen in the wardrobe (owner 11.11.2026 «инвентарь»): 'lv<N>' in acc draws the outfit of level N (never higher)
     const LK = lookOf(level, opt.acc), L = LK.L;
     const id = 'h' + L + (opt.uid || '');
@@ -272,6 +272,12 @@
       '<linearGradient id="' + id + 'skin" x1="10%" y1="10%" x2="88%" y2="89%"><stop stop-color="' + SKIN_L + '"/><stop offset=".53" stop-color="' + SKIN + '"/><stop offset="1" stop-color="' + SKIN_D + '"/></linearGradient>' +
       '<radialGradient id="' + id + 'floor"><stop stop-color="#09080c" stop-opacity=".7"/><stop offset="1" stop-color="#09080c" stop-opacity="0"/></radialGradient></defs>');
 
+    const artStart = o.length;
+    const product = (view, art) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + view + '">' +
+      o.slice(1, artStart).join('') + art + '</svg>';
+    const pair = (art, center, gap) => '<g transform="translate(' + (gap - center) + ' 0)">' + art + '</g>' +
+      '<g transform="translate(' + (center - gap) + ' 2) scale(-1 1)">' + art + '</g>';
+
     // ---- background ----
     if (rig) { /* no background, floor or props in the rig */ } else if (opt.bg !== false && has('wall')) {
       o.push('<rect x="4" y="8" width="192" height="226" rx="22" fill="#3A2A24"/>');
@@ -300,6 +306,8 @@
       o.push('<ellipse cx="100" cy="244" rx="62" ry="6.5" fill="#000" opacity=".5"/>');
     } else if (wardrobe) o.push('<ellipse cx="100" cy="246" rx="62" ry="6" fill="' + shade('floor') + '"/>');
 
+    if (itemSlot === 'bg') return product('4 8 192 226', o.slice(artStart).join(''));
+
     // ---- fire aura (shop) ----
     if (has('fire') && !rig) {
       stretchLeg(() => {
@@ -307,17 +315,30 @@
         P('M60 232 Q58 210 70 198 Q72 214 84 216 Q86 196 100 186 Q102 206 114 210 Q120 196 132 194 Q138 214 140 232 Z', '#FFD25A', ' opacity=".55"');
       });
     }
+    if (itemSlot === 'fx') {
+      const art = o.slice(artStart).join('');
+      // The aura is worn. A neutral pose establishes its scale without implying another outfit.
+      const silhouette = 'M101 117 C110 117 114 124 112 132 L110 138 L123 145 L136 165 L132 177 L123 169 L114 159 L112 186 L128 218 L128 234 L116 234 L109 215 L101 194 L91 226 L89 235 L75 235 L77 218 L86 184 L85 156 L74 169 L63 170 L65 159 L79 141 L91 137 L89 129 C89 122 93 117 101 117 Z';
+      P(silhouette, '#202329', ' stroke="#c6af95" stroke-width="2" stroke-linejoin="round"');
+      return product('30 111 140 142', art + o.at(-1));
+    }
     // ---- cardboard (shop): flattened box under the feet ----
     if (has('cardboard') && !rig) {
+      const from = o.length;
       o.push('<g transform="translate(0 12)">');
       P('M30 222 L170 222 L184 236 L16 236 Z', '#B98A4E', S(1.8));
       LN('M58 222 L50 236 M142 222 L150 236', 'rgba(0,0,0,.25)', 1.2);
       P('M92 222 L108 222 L110 236 L90 236 Z', '#D6B98A', ' opacity=".8"');
       LN('M26 229 H40 M160 229 H174', 'rgba(0,0,0,.25)', 1);
       o.push('</g>');
+      if (itemSlot === 'floor') {
+        // Tilt the original folding lines up toward the viewer so the cardboard reads off the floor.
+        return product('9 226 182 62', '<g transform="translate(0 -694) scale(1 3.95)">' + o.slice(from).join('') + '</g>');
+      }
     }
     // ---- boombox (level outfit or equipped prop), behind the right leg ----
     if (showBox && !rig) {
+      const from = o.length;
       o.push('<g data-prop="boombox" transform="translate(146 ' + (opt.equippedPropsOnly ? 218 : 205) + ')">');
       P('M6 0 V-7 Q6 -10 9 -10 H39 Q42 -10 42 -7 V0', 'none', ' stroke="' + INK + '" stroke-width="3.2"');
       P('M0 3 Q0 0 3 0 H45 Q48 0 48 3 V30 Q48 33 45 33 H3 Q0 33 0 30 Z', '#2B2B31', S(2));
@@ -325,6 +346,7 @@
       [12, 36].forEach(cx => { o.push('<circle cx="' + cx + '" cy="21" r="9" fill="#111114" stroke="' + GOLD + '" stroke-width="2.6"/><circle cx="' + cx + '" cy="21" r="3.2" fill="#2E2E34"/>'); });
       P('M19 4 H29 V7 H19 Z', OR); o.push('<circle cx="40" cy="4.5" r="1.4" fill="#3BD16F"/><circle cx="6" cy="4.5" r="1.4" fill="' + WH_D + '"/>');
       o.push('</g>');
+      if (itemSlot === 'item') return product('143 189 54 53', o.slice(from).join(''));
     }
 
     if (GF.rgbSole || GF.rgbLace) {
@@ -336,6 +358,24 @@
         '</linearGradient></defs><style>.festival-rgb{animation:festivalSpectralStops 5.7s ease-in-out infinite}' +
         '@keyframes festivalSpectralStops{0%,100%{stop-color:#fd657c}33%{stop-color:#64ecd1}66%{stop-color:#9ca7ff}}' +
         '@media(prefers-reduced-motion:reduce){.festival-rgb{animation:none}}</style>');
+    }
+    if (itemSlot === 'laces') {
+      // A sample lace panel uses exactly the wardrobe pattern and dye, with the loose ends visible.
+      const from = o.length, lace = CO.laces || CO.lace || WH;
+      const { anchors, segments } = laceLayout(GF.laceStyle);
+      const x = side => side ? 109 : 49, y = row => 37 + row * 77;
+      P('M43 19 Q78 9 117 19 L126 122 Q81 144 35 124 Z', '#3b3738', S());
+      P('M49 23 Q78 14 112 23 L118 122 Q82 135 43 122 Z', '#252831', S(1.8));
+      LN('M46 26 Q41 66 40 117 M114 26 Q120 68 121 118', '#90857a', 1.1, ' stroke-dasharray="2 3"');
+      anchors.forEach(([row, side]) => o.push('<circle cx="' + x(side) + '" cy="' + y(row) + '" r="5.6" fill="#16171e" stroke="#797f88" stroke-width="2.2"/>'));
+      segments.forEach(([[a, left], [b, right]]) => {
+        const thread = 'M' + x(left) + ' ' + y(a) + ' Q79 ' + ((y(a) + y(b)) / 2 + 3) + ' ' + x(right) + ' ' + y(b);
+        LN(thread, '#111217', 9); LN(thread, lace, 6); LN(thread, '#fff9e9', 1.3, ' opacity=".26"');
+      });
+      LN('M49 37 C39 20 27 35 24 59 Q21 76 11 83 M109 37 C126 27 135 40 133 66 Q131 84 145 90', '#111217', 9);
+      LN('M49 37 C39 20 27 35 24 59 Q21 76 11 83 M109 37 C126 27 135 40 133 66 Q131 84 145 90', lace, 6.5);
+      LN('M11 83 l-4 2 M145 90 l5 2', '#b3a89f', 3.2);
+      return product('0 5 158 136', o.slice(from).join(''));
     }
     // Both feet turn outward. The visible top of the shoe carries the independent laces.
     const shoe = () => {
@@ -390,6 +430,7 @@
       o.push('</g>');
     };
     const SH_R = cap(shoe), SH_L = cap(() => MIR(shoe));
+    if (itemSlot === 'kicks') return product('38 189 124 60', '<g transform="translate(2 -3)">' + SH_R + '</g>' + SH_L);
     if (!rig) o.push(SH_R, SH_L);
 
     // ---- pants ----
@@ -419,6 +460,21 @@
     };
     const paintPants = () => stretchLeg(pants);
     const PA_L = cap(paintPants), PA_R = cap(() => MIR(paintPants));
+    if (itemSlot === 'pants') {
+      const from = o.length, wind = fit.pants === 'wind';
+      const fabric = CO.pants || (wind ? '#232327' : BLK), stripe = CO.stripe || OR;
+      const garment = wind
+        ? 'M42 18 Q80 14 118 18 Q125 45 127 68 L127 145 Q119 153 96 147 L88 100 L80 69 L72 100 L64 147 Q45 153 33 145 L33 69 Q35 45 42 18 Z'
+        : 'M42 18 Q80 14 118 18 Q125 43 125 65 L116 151 Q106 157 91 152 L87 102 L80 69 L73 102 L69 152 Q53 157 44 151 L35 65 Q35 44 42 18 Z';
+      P(garment, fabric, S(2)); P(garment, cloth);
+      LN(wind ? 'M40 35 Q32 72 35 139 M120 35 Q128 72 125 139' : 'M40 35 Q36 60 45 145 M120 35 Q124 60 115 145', stripe, 4.8);
+      P('M42 18 Q81 13 118 18 L120 26 Q79 29 40 26 Z', fabric, S(1.3));
+      LN('M45 23 Q78 26 115 23 M47 37 L58 32 M113 37 L102 32 M84 31 L91 47 M83 31 L78 44', stripe, 1.3, ' opacity=".67"');
+      LN('M58 50 Q55 69 56 77 M103 53 Q104 69 103 80 M50 113 Q57 119 63 114 M98 114 Q105 119 110 112', '#d3c7c3', 1.2, ' opacity=".27"');
+      P(wind ? 'M33 140 Q50 143 65 139 L64 149 Q44 153 34 147 Z M95 139 Q111 143 127 140 L127 147 Q112 153 96 149 Z'
+        : 'M43 145 Q56 148 70 144 L69 154 Q56 158 44 153 Z M90 144 Q103 148 117 145 L116 153 Q103 158 91 154 Z', '#22232c', S(1.3));
+      return product('24 7 112 157', o.slice(from).join(''));
+    }
     if (!rig) o.push(PA_L, PA_R);
     let KN_L = '', KN_R = '';
     if (has('knee') || GF.knee) {
@@ -433,6 +489,7 @@
         LN('M78 173 Q85 170 92 173 M78 180 Q85 182 92 179', 'rgba(255,255,255,.38)', 1.15);
       });
       KN_L = cap(kp); KN_R = cap(() => MIR(kp));
+      if (itemSlot === 'knees') return product('50 168 100 35', KN_L + KN_R);
       if (!rig) o.push(KN_L, KN_R);
     }
     const FLY0 = o.length;
@@ -446,6 +503,7 @@
     const sleeveCol = CO.sleeve || CO.top || { tee: '#8E8E95', teeBig: BLK, teeTeam: WH, track: OR, bomber: BLK, trackGold: BLK }[fit.top];
     const cuffCol = CO.cuff || { track: BLK, bomber: OR, trackGold: '#E7B23C' }[fit.top];
     const arm = (side) => {
+      const armStart = o.length;
       // side 0 = viewer's left (drawn), right is mirrored unless raised
       if (longSleeve) {
         P('M71 92 Q58 96 55 118 L52 147 L65 148 L67 121 L73 104 Z', sleeveCol, S());
@@ -461,9 +519,13 @@
         const big = fit.top === 'teeBig';
         P(big ? 'M68 92 Q56 98 53 124 L68 127 L70 108 Z' : 'M71 92 Q60 96 56 116 L68 120 L71 106 Z', sleeveCol, S());
         LN(big ? 'M54 120 L68 123' : 'M57 112 L68 116', 'rgba(0,0,0,.3)', 1.2);
-        P(big ? 'M56 126 L54 148 L64 149 L66 127 Z' : 'M58 119 L54 148 L64 149 L67 121 Z', SKIN, S());
-        LN(big ? 'M63 128 L62 146' : 'M64 123 L62 146', SKIN_D, 1.4);
+        if (itemSlot !== 'top') {
+          P(big ? 'M56 126 L54 148 L64 149 L66 127 Z' : 'M58 119 L54 148 L64 149 L67 121 Z', SKIN, S());
+          LN(big ? 'M63 128 L62 146' : 'M64 123 L62 146', SKIN_D, 1.4);
+        }
       }
+      if (itemSlot === 'top') return;
+      if (itemSlot === 'elbows' || itemSlot === 'wrists' || itemSlot === 'hands') o.length = armStart;
       if (CO.elbow) {
         P('M53 115 Q60 112 68 116 L67 132 Q60 135 53 130 Z', CO.elbow, S(1.5));
         if (wardrobe) {
@@ -478,13 +540,37 @@
         LN('M54 140.5 v4.5 M57 140.7 v4.5 M60 140.9 v4.5 M63 141 v4.5', 'rgba(0,0,0,.18)', .7);
         if (wardrobe) LN('M52.5 141.7 L63.6 142.5', '#fff0d4', .9, ' opacity=".42"');
       }
+      if (itemSlot === 'elbows' || itemSlot === 'wrists') return;
+      if (itemSlot === 'hands') {
+        const glove = CO.glove || '#141416', stitch = CO.gloveTrim || OR;
+        P('M51 151 L50.8 147.5 Q51 145 53.1 145 L54.1 147 L54.9 144.6 Q56.2 143.5 57.2 145.3 L58.1 144.1 Q60.3 143 60.5 146 L61.5 145.3 Q63.1 144 64.1 146.4 L65 152 L67.4 150.8 Q69.1 151.2 68.6 153 L65 159 Q58 162 52 158 Z', glove, S(1.25));
+        LN('M52 157 Q57 158 64 156 M54.3 148 l.5 2 M58.2 147.2 l.3 2 M62.4 148 l.2 1.5', stitch, 1.1);
+        if (has('c:djGloves')) {
+          P('M54 151 Q58 149 62 151 L62 154 L54 155 Z', '#668f98', ' opacity=".72"');
+          LN('M55 152.5 l6 -.7', '#d5dacc', .6);
+        }
+        return;
+      }
       // hand
       P('M51 151 Q50 160 55 163 Q61 165 65 160 Q67 154 65 150 Z', wardrobe ? shade('skin') : SKIN, S());
       LN('M54 157 Q57 159 61 158', SKIN_D, 1.2);
       if (has('gloves') || GF.gloves) { P('M51 151 Q50 157 52 159 L66 157 Q67 153 65 150 Z', CO.glove || '#141416', S(1.6)); LN('M53 154 H64', CO.gloveTrim || OR, 1.2); }
       if (L >= 7 && !side) o.push('<rect x="55" y="155" width="5" height="3.2" rx="1" fill="' + GOLD + '" stroke="' + INK + '" stroke-width=".9"/>');
     };
-    const AR_L = cap(() => arm(0)), AR_R = rig ? cap(() => MIR(() => arm(1))) : '';
+    const AR_L = cap(() => arm(0)), AR_R = rig || itemSlot === 'top' ? cap(() => MIR(() => arm(1))) : '';
+    if (itemSlot === 'elbows') return product('-32 107 64 38', pair(AR_L, 60, 14));
+    if (itemSlot === 'wrists') {
+      const wrap = cap(() => {
+        P('M1 3 Q5 -3 15 -3 Q25 -3 29 3 L29 15 Q27 22 15 22 Q3 22 1 15 Z', CO.wristband, S(1.5));
+        P('M1 3 Q1 -3 15 -3 Q29 -3 29 3 Q28 10 15 11 Q2 11 1 3 Z', CO.wristband, S(1.3));
+        o.push('<ellipse cx="15" cy="3" rx="10.5" ry="3.3" fill="#2b2829" stroke="#453741" stroke-width="1.1"/>');
+        LN('M5 11 V16 M9 13 V19 M13 14 V20 M17 14 V20 M21 13 V19 M25 11 V16', '#271e23', 1, ' opacity=".54"');
+        LN('M7 8 Q15 11 23 8', '#fff3db', 1.1, ' opacity=".52"');
+      });
+      return product('-4 -9 73 37', '<g transform="translate(1 3) rotate(-14 15 13)">' + wrap + '</g>' +
+        '<g transform="translate(32 -2) rotate(12 15 13)">' + wrap + '</g>');
+    }
+    if (itemSlot === 'hands') return product('-31 137 62 32', pair(AR_L, 59, 14));
     if (!rig) o.push(AR_L);
     if (rig) { /* both arms come from arm() */ } else if (L >= 8) {
       // right arm up — fist in the air (sleeve, cuff, fist); in the team tee: a bare arm with a short sleeve
@@ -592,6 +678,8 @@
       if (wardrobe) LN('M75 94 Q82 90 89 89 M76 118 Q76 127 78 132 M123 119 L125 126', '#fff4de', 1.2, ' opacity=".18"');
     }
 
+    if (itemSlot === 'top') return product('43 64 114 101', AR_L + AR_R + o.slice(TO0).join(''));
+
     // ---- champion belt (8) ----
     if (L >= 8) {
       P('M68 140 L132 140 L132 151 L68 151 Z', '#1C1C20', S(1.8));
@@ -604,6 +692,19 @@
     // ---- neck ----
     P('M92 72 L108 72 L108 86 Q100 90 92 86 Z', SKIN_D, S(1.6));
 
+    if (itemSlot === 'ears') {
+      const from = o.length, cups = CO.phones || OR;
+      LN('M31 59 C24 10 76 5 99 24 Q115 39 107 62', '#16171c', 12);
+      LN('M31 57 C26 13 76 9 98 26 Q110 39 106 61', '#656171', 7.2);
+      LN('M36 32 C51 14 79 13 95 29', '#363741', 5.4);
+      LN('M31 51 l3 17 M109 51 l-3 17', cups, 4.5);
+      for (const [x, rotate] of [[34, -12], [105, 12]]) {
+        o.push('<g transform="rotate(' + rotate + ' ' + x + ' 68)"><rect x="' + (x - 10) + '" y="54" width="20" height="28" rx="7" fill="#23222b" stroke="#111219" stroke-width="2.4"/><rect x="' + (x - 6.5) + '" y="57" width="13" height="22" rx="4" fill="' + cups + '"/><rect x="' + (x - 3) + '" y="60" width="7" height="17" rx="2.8" fill="#fdf0dd" opacity=".31"/></g>');
+      }
+      LN('M34 80 Q37 90 30 94', '#73717a', 2.3);
+      return product('12 8 114 91', o.slice(from).join(''));
+    }
+    const neckArt = o.length;
     // ---- headphones round the neck (4, 5) ----
     if (L === 4 || L === 5 || GF.phones) {
       LN('M84 90 Q100 106 116 90', '#2A2A2F', 4.5);
@@ -625,6 +726,7 @@
       } else o.push('<circle cx="100" cy="111.5" r="3" fill="' + GOLD + '" stroke="#7A5512" stroke-width=".8"/>');
     }
 
+    if (itemSlot === 'neck') return product('77 77 46 63', o.slice(neckArt).join(''));
     const TORSO = rig ? o.splice(TO0).join('') : '';
     // ---- head ----
     const HE0 = o.length;
@@ -658,6 +760,7 @@
       P('M77.5 50 Q77 58 79 62 L80.5 62 Q80 56 80.5 50 Z M122.5 50 Q123 58 121 62 L119.5 62 Q120 56 119.5 50 Z', HAIR);
     }
     // ---- hats ----
+    const hatArt = o.length;
     const hat = fit.hat;
     if (hat === 'bandana') {
       const wrap = 'M76 48 Q74 22 100 21 Q126 22 124 48 Q100 42 76 48 Z';
@@ -680,7 +783,7 @@
       [[82, 33], [118, 33]].forEach(p => o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.1" fill="#0A0A0C"/>'));
       if (hat === 'capBack') {
         // worn backwards: snap strap + opening on the forehead, no brim in front
-        P('M90 50 Q90 40 100 39 Q110 40 110 50 Z', SKIN, S(1.4));
+        P('M90 50 Q90 40 100 39 Q110 40 110 50 Z', itemSlot === 'head' ? '#303034' : SKIN, S(1.4));
         P('M88 44 L112 44 L112 48 L88 48 Z', BLK2, S(1.2));
         [92, 96, 100, 104, 108].forEach(x => o.push('<circle cx="' + x + '" cy="46" r=".9" fill="#9A968E"/>'));
         P('M75 50 Q100 54 125 50 L125 52 Q100 56 75 52 Z', '#0A0A0C');
@@ -714,6 +817,7 @@
       LN('M74 52 Q100 45 126 52 M70 55.5 Q100 48 130 55.5', HC[1] || OR, 1, ' stroke-dasharray="1.6 1.4"');
       o.push('<circle cx="86" cy="34" r="1" fill="#9A968E"/><circle cx="114" cy="34" r="1" fill="#9A968E"/>');
     }
+    if (itemSlot === 'head') return product('56 8 88 58', o.slice(hatArt).join(''));
     // ---- face ----
     const capped = hat === 'cap' || hat === 'capGold' || hat === 'bucket' || hat === 'bandana';
     if (capped) P('M80 57 Q100 51 120 57 Q100 55 80 60 Z', SKIN_D, ' opacity=".45"'); // brim shadow
@@ -958,5 +1062,9 @@
       return { root: { y: 14 * k, x: 6 * k, r: -86 * k + w + br, px: 100, py: 112 }, torso: 0, shL: 90 * k, elL: 0, shR: -88 * k, elR: 0,
         hipL: 2 * k, hipR: 2 * k, kneeL: 0, kneeR: 0, ankL: -24 * k, ankR: -24 * k, head: -22 * k }; } },
   });
-  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, cityRewardValue, baseSlots, gearBoost, gearTraceBonus, gearChances, gearEvent, laceLayout, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, rigJoints, setPose, topDown };
+  function itemArt(id, uid = 'item') {
+    const item = itemOf(id);
+    return item ? svg(1, { uid, acc: [id], bg: item.slot === 'bg', wardrobe: true, itemSlot: item.slot }) : '';
+  }
+  window.HERO = { LEVELS, NAMES, PERKS, RING, SHOP, GEAR, itemOf, cityRewardValue, baseSlots, gearBoost, gearTraceBonus, gearChances, gearEvent, laceLayout, MYTHIC_MOVES, MYTHIC_SCORE, MOVES, levelFor, svg, itemArt, rigJoints, setPose, topDown };
 })();

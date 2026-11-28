@@ -1123,23 +1123,8 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .loot-icon{font-size:26px;line-height:1}
 .loot-entry-copy{flex:1;text-align:start}
 .loot-wardrobe{margin:3px 0 8px;min-height:42px}
-#lootDialog{position:fixed;box-sizing:border-box;width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 30px);margin:auto;border:1px solid #51443d;border-radius:19px;padding:14px 16px 16px;background:#181b23;color:#f6f0ec;overflow:auto;overscroll-behavior:contain}
-#lootDialog::backdrop{background:#05070bbd}
-#lootDialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#lootDialog h2{margin:5px 0;font-size:21px;line-height:1.15}
-#lootDialog p{margin:7px 0}
-#lootClose{flex:0 0 44px;width:44px;height:44px;min-width:44px;padding:0;line-height:1;font-size:22px}
-#lootClaim:disabled{opacity:1;background:#282a32;color:#aaa3a3;border-color:#49464c;cursor:default}
-.loot-case{width:100%;height:auto;aspect-ratio:2.55;object-fit:cover;border-radius:10px;background:#26282d}
-.loot-odds{padding:0;margin:8px 0;list-style:none;font-size:13px}
-.loot-odds li{display:flex;justify-content:space-between;gap:10px;border-block-end:1px solid #32343d;padding:4px 1px}
-.loot-odds .myth{color:#e7b0b8}
-#lootResult{display:flex;align-items:center;gap:9px;border:1px solid #816044;border-radius:8px;padding:8px;background:#2a241f}
-#lootResult[hidden]{display:none}
-#lootResult p{font-size:12px;margin:2px 0;color:#ffcd93}
-#lootItemArt{width:50px;height:55px;overflow:hidden;flex:none}
-#lootItemArt svg{display:block;width:100%;height:100%}
 </style>
+<link rel="stylesheet" href="daily-gear-reveal.css?v=1">
 </head>
 <body>
 
@@ -1793,14 +1778,33 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 </div>
 <dialog id="lootDialog" aria-labelledby="lootTitle">
   <header><h2 id="lootTitle">Ежедневный ящик</h2><button type="button" id="lootClose" class="btn btn-ghost" aria-label="Закрыть">×</button></header>
-  <img class="loot-case" src="img/daily-gear-case.webp?v=1" alt="" loading="lazy">
-  <p id="lootIntro">Одна вещь бесплатно каждые 24 часа</p>
-  <ul id="lootOdds" class="loot-odds"></ul>
-  <p class="small" id="lootDuplicate">У всех вещей одной редкости одинаковый шанс. Дубликат остаётся одной вещью в коллекции.</p>
-  <section id="lootResult" hidden aria-live="polite"><div id="lootItemArt" aria-hidden="true"></div><div><b id="lootItemName"></b><p id="lootItemNote"></p></div></section>
-  <p id="lootStatus" role="status"></p>
-  <button type="button" id="lootClaim" class="btn btn-accent" disabled>Открыть бесплатно</button>
-  <button type="button" id="lootRetry" class="btn btn-ghost" hidden>Проверить снова</button>
+  <div id="lootLayout">
+    <div>
+      <div id="lootStage" data-phase="closed" aria-hidden="true">
+        <img id="lootPoster" src="img/loot-reveal-closed.webp?v=1" alt="" width="400" height="272" loading="lazy">
+        <canvas id="lootFrames" width="400" height="272" hidden></canvas>
+        <div id="lootItemShadow"></div><div id="lootItemArt"></div>
+      </div>
+    </div>
+    <div>
+      <section id="lootResult" hidden tabindex="-1"><span id="lootRarity"></span><b id="lootItemName"></b><p id="lootItemNote"></p></section>
+      <p id="lootIntro">Одна вещь бесплатно каждые 24 часа</p>
+      <p id="lootStatus"></p>
+      <p id="lootAnnouncement" role="status"></p>
+      <div id="lootActions">
+        <button type="button" id="lootClaim" class="btn btn-accent" disabled>Открыть бесплатно</button>
+        <button type="button" id="lootSkip" class="btn btn-ghost" hidden>Пропустить анимацию</button>
+        <button type="button" id="lootRetry" class="btn btn-ghost" hidden>Проверить снова</button>
+        <button type="button" id="lootDemo" class="btn btn-ghost">Посмотреть анимацию</button>
+        <button type="button" id="lootLeavePreview" class="btn btn-ghost" hidden>Назад к ящику</button>
+      </div>
+      <details id="lootDetails">
+        <summary>Шансы выпадения</summary>
+        <ul id="lootOdds" class="loot-odds"></ul>
+        <p class="small" id="lootDuplicate">У всех вещей одной редкости одинаковый шанс. Дубликат остаётся одной вещью в коллекции.</p>
+      </details>
+    </div>
+  </div>
 </dialog>
 
 <div class="sheet-bg" id="shopSheet" hidden>
@@ -1932,14 +1936,15 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=11"></script>
+<script src="i18n.js?v=12"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
 <script src="subs.js"></script>
 <script src="reviews.js"></script>
 <script src="battle-study.js?v=1"></script>
-<script src="hero.js?v=26"></script>
+<script src="hero.js?v=27"></script>
+<script src="daily-gear-reveal.js?v=1"></script>
 <script src="rhythm.js?v=34"></script>
 <script src="city-balance.js?v=6"></script>
 <script src="city-data.js?v=7"></script>
@@ -6310,52 +6315,108 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   $('#shopSheet').addEventListener('click', e => { if (e.target.id === 'shopSheet') closeWd(); });
   const btPost = (path, body, signal) => fetch(LB_URL + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ id: prof.id, secret: lbSecret }, body || {})), signal });
 
-  // The Worker owns both the roll and the 24-hour clock. The dialog can be closed or reloaded in flight.
-  const lootDialog = $('#lootDialog');
+  // The Worker owns both the roll and the 24-hour clock. The player receives the committed item.
+  const lootDialog = $('#lootDialog'), lootStage = $('#lootStage'), lootResult = $('#lootResult');
   const lootDefaultOdds = [8000, 1600, 350, 50, 0];
   let lootState, lootClock = 0, lootBusy = false, lootTimer = 0, lootFailure = '', lootReturn, lootWorkerReady = false;
+  let lootSession = 0, lootFlow = '', lootLast = null;
   const lootSeconds = new Intl.NumberFormat(LANG, { minimumIntegerDigits: 2, useGrouping: false });
   const lootPercent = new Intl.NumberFormat(LANG, { style: 'percent', maximumFractionDigits: 1 });
+  const lootAnnounce = message => { $('#lootAnnouncement').textContent = message; };
+  const lootWait = () => lootState ? Math.max(0, lootState.next - lootState.now - (performance.now() - lootClock)) : 0;
+  const lootFilm = DailyGearReveal({ stage: lootStage, canvas: $('#lootFrames'), poster: $('#lootPoster'), art: $('#lootItemArt'),
+    muted: () => soundOff, onFinish(item) {
+      if (!lootDialog.open) return;
+      const preview = lootFlow === 'preview';
+      const focus = [$('#lootClaim'), $('#lootSkip'), $('#lootDemo')].includes(document.activeElement) || document.activeElement === document.body;
+      lootFlow = preview ? 'example' : '';
+      lootShowItem(item, preview);
+      lootPaint();
+      if (focus) lootResult.focus({ preventScroll: true });
+      else lootAnnounce([T(item.name), $('#lootRarity').textContent, $('#lootItemNote').textContent].join('. '));
+    },
+  });
   function lootPaint(){
-    const ms = lootState ? Math.max(0, lootState.next - lootState.now - (performance.now() - lootClock)) : 0;
-    const status = lootFailure || (lootBusy ? T('Проверяем ящик…') : lootState ? ms
-      ? T('Следующий ящик через {time}', { time: [Math.floor(ms / 36e5), Math.floor(ms / 6e4) % 60, Math.floor(ms / 1e3) % 60].map(x => lootSeconds.format(x)).join(':') })
+    if (!lootDialog.open) return;
+    const seconds = Math.ceil(lootWait() / 1000);
+    const playing = lootFlow === 'new' || lootFlow === 'preview', preview = lootFlow === 'example' || lootFlow === 'preview';
+    const status = lootFlow === 'request' || playing ? T('Открываем ящик…') : lootFailure || (lootBusy ? T('Проверяем ящик…') : lootState ? seconds
+      ? T('Следующий ящик через {time}', { time: [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60].map(x => lootSeconds.format(x)).join(':') })
       : T('Ящик готов к открытию') : '');
     if ($('#lootStatus').textContent !== status) $('#lootStatus').textContent = status;
-    const button = $('#lootClaim');
-    button.disabled = Boolean(!lootState || lootBusy || lootFailure || ms);
-    const label = T(ms ? 'Уже получено' : 'Открыть бесплатно');
-    if (button.textContent !== label) button.textContent = label;
-    $('#lootRetry').hidden = !lootFailure;
+    const expired = !seconds && !preview && !lootFlow && !lootResult.hidden;
+    const readResult = expired && document.activeElement === lootResult;
+    if (expired) lootRestore();
+    const claim = $('#lootClaim');
+    claim.disabled = Boolean(!lootState || lootBusy || lootFailure || seconds || playing || lootFlow === 'request');
+    const label = T(seconds ? 'Уже получено' : 'Открыть бесплатно');
+    if (claim.textContent !== label) claim.textContent = label;
+    if (readResult && !claim.disabled) claim.focus({ preventScroll: true });
+    $('#lootSkip').hidden = !playing;
+    $('#lootRetry').hidden = !lootFailure || playing || preview;
+    $('#lootDemo').hidden = playing || lootFlow === 'request' || preview;
+    $('#lootLeavePreview').hidden = lootFlow !== 'example';
+    lootStage.dataset.mode = preview ? 'preview' : 'drop';
+    lootStage.dataset.preview = T('Предпросмотр');
   }
-  function lootPresent(data, legacyDuplicate){
-    lootState = data; lootClock = performance.now();
-    if (Array.isArray(data.owned)) btWallet(data);
-    const odds = Array.isArray(data.odds) ? data.odds : lootDefaultOdds;
+  function lootShowItem(item, preview){
+    lootResult.hidden = !item;
+    if (!item) return;
+    lootResult.dataset.rarity = item.rar;
+    $('#lootItemName').textContent = T(item.name);
+    $('#lootRarity').textContent = T(WD_RARITY[item.rar]);
+    $('#lootItemNote').textContent = T(preview ? 'Пример предмета из ящика' : lootLast?.duplicate ? 'Уже в коллекции' : 'Добавлено в гардероб');
+  }
+  function lootRestore(){
+    const item = lootWait() > 0 ? lootLast?.item : null;
+    lootFilm.restore(item);
+    lootShowItem(item, false);
+  }
+  function lootOdds(odds){
     const list = $('#lootOdds'); list.replaceChildren();
     WD_RARITY.forEach((rank, i) => {
       const row = wdText(list, 'li', '', i === 4 ? 'myth' : '');
       wdText(row, 'span', T(rank)); wdText(row, 'b', lootPercent.format(odds[i] / 10000));
     });
+  }
+  function lootPresent(data, owner, legacyDuplicate, animate){
+    lootState = data; lootClock = performance.now();
+    if (Array.isArray(data.owned)) btWallet(data);
     const item = data.last && HERO.itemOf(data.last.item);
-    $('#lootResult').hidden = !item;
+    let duplicate = Boolean(data.last?.duplicate || legacyDuplicate);
     if (item) {
-      $('#lootItemArt').innerHTML = HERO.svg(statsView().level, { uid: 'drop', acc: [item.id], wardrobe: true });
-      $('#lootItemName').textContent = T(item.name);
-      let duplicate = data.last.duplicate || legacyDuplicate;
       try {
-        const key = 'fedoskin-loot-duplicate:' + prof.id;
+        const key = 'fedoskin-loot-duplicate:' + owner;
         if (legacyDuplicate) localStorage.setItem(key, data.last.t);
         duplicate ||= Number(localStorage.getItem(key)) === data.last.t;
       } catch (_) {}
-      $('#lootItemNote').textContent = T(WD_RARITY[item.rar]) + ' · ' + T(duplicate ? 'Уже в коллекции' : 'Добавлено в гардероб');
     }
-    lootPaint();
+    lootLast = item ? { item, duplicate } : null;
+    if (!lootDialog.open) return;
+    lootOdds(Array.isArray(data.odds) ? data.odds : lootDefaultOdds);
+    if (animate && item) {
+      lootFlow = 'new';
+      const claimFocused = document.activeElement === $('#lootClaim') || document.activeElement === document.body;
+      lootPaint();
+      if (claimFocused) $('#lootSkip').focus({ preventScroll: true });
+      lootFilm.reveal(item);
+    } else if (lootFlow !== 'preview' && lootFlow !== 'example') {
+      lootFlow = '';
+      lootRestore();
+    }
   }
   async function lootRequest(claim){
-    if (lootBusy) return;
-    lootBusy = true; lootFailure = ''; lootPaint();
-    const existing = new Set(wdOwned().map(item => item.id));
+    if (lootBusy || (claim && (!lootState || lootWait() || lootFailure || lootFlow === 'new'))) return;
+    const owner = prof.id, session = lootSession;
+    const existing = claim && new Set(wdOwned().map(item => item.id));
+    lootBusy = true; lootFailure = '';
+    if (claim) {
+      lootFlow = 'request';
+      lootResult.hidden = true;
+      lootFilm.start();
+      lootAnnounce(T('Открываем ящик…'));
+    }
+    lootPaint();
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10e3);
     try {
       if (!LB_URL) throw new Error('unavailable');
@@ -6366,32 +6427,54 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
         if (worker.version < 4) throw new Error('update');
         lootWorkerReady = true;
       }
+      if (prof.id !== owner) return;
       const r = await btPost('/hero/loot', { claim }, controller.signal);
       if (r.status === 404) { lootWorkerReady = false; throw new Error('update'); }
       if (!r.ok) throw new Error('unavailable');
       const data = await r.json();
       if (!data.ok || !Number.isFinite(data.next)) throw new Error('unavailable');
-      lootPresent(data, data.claimed && existing.has(data.last?.item));
+      if (prof.id !== owner) return;
+      lootPresent(data, owner, Boolean(data.claimed && existing?.has(data.last?.item)), claim && data.claimed && lootDialog.open && session === lootSession);
     } catch (error) {
+      if (!lootDialog.open || prof.id !== owner) return;
       lootFailure = T(error.message === 'update' ? 'Ящик откроется после обновления сервера.' : 'Ящик не загрузился. Проверь соединение.');
+      if (lootFlow === 'request') { lootFlow = ''; lootRestore(); }
+      lootAnnounce(lootFailure);
     } finally { clearTimeout(timeout); lootBusy = false; lootPaint(); }
   }
   function openLoot(){
     if (lootDialog.open) return;
+    lootSession++;
+    clearInterval(lootTimer);
     lootReturn = document.activeElement;
-    lootPresent({ now: Date.now(), next: Date.now() }); lootState = null;
+    lootFlow = ''; lootFailure = ''; lootState = null; lootLast = null;
+    lootAnnounce(''); lootOdds(lootDefaultOdds); lootFilm.preload(); lootRestore();
     lootDialog.showModal();
-    lootRequest(false);
-    lootTimer = setInterval(lootPaint, 500);
+    lootPaint(); lootRequest(false);
+    lootTimer = setInterval(lootPaint, 250);
+  }
+  function lootExample(){
+    if (lootFlow === 'new' || lootFlow === 'preview' || lootFlow === 'request') return;
+    const item = HERO.itemOf('c:cleanLaces');
+    lootFlow = 'preview'; lootResult.hidden = true;
+    lootFilm.start(); lootPaint();
+    $('#lootSkip').focus({ preventScroll: true });
+    lootFilm.reveal(item);
   }
   $('#lootEntry').onclick = openLoot;
   $('#lootWardrobe').onclick = openLoot;
   $('#lootClose').onclick = () => lootDialog.close();
   $('#lootClaim').onclick = () => lootRequest(true);
   $('#lootRetry').onclick = () => lootRequest(false);
-  lootDialog.addEventListener('close', () => { clearInterval(lootTimer); lootReturn?.focus({ preventScroll: true }); });
+  $('#lootSkip').onclick = lootFilm.skip;
+  $('#lootDemo').onclick = lootExample;
+  $('#lootLeavePreview').onclick = () => { lootFlow = ''; lootRestore(); lootPaint(); $('#lootDemo').focus({ preventScroll: true }); };
+  lootDialog.addEventListener('close', () => {
+    if (lootDialog.open) return;
+    lootSession++; clearInterval(lootTimer); lootFilm.reset(); lootFlow = ''; lootReturn?.focus({ preventScroll: true });
+  });
   addEventListener('storage', event => {
-    if (event.key === 'fedoskin-wardrobe-owned:' + prof.id && lootDialog.open && !lootBusy) lootRequest(false);
+    if (event.key === 'fedoskin-wardrobe-owned:' + prof.id && lootDialog.open && !lootBusy && lootFlow !== 'new') lootRequest(false);
   });
 
   function btPaintScore(sc){
