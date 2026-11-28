@@ -122,7 +122,7 @@ window.LESSON_SUBS = {
    "ko",
    "zh"
   ],
-  "v": 2
+  "v": 3
  },
  "pw-munchmill": {
   "ks": "dfb81103-2a48-4752-938a-b851625ae79f",

@@ -2708,7 +2708,9 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
     const entry = lesson && CFG.dubs && CFG.dubs[lesson.id];
     const valid = entry && entry.media === (lesson.ks || lesson.r2);
     dubTracks = valid ? entry.tracks : null;
-    dubMuxTracks = valid && R2_BASE && (isApple || entry.preferMux === true) ? entry.mux : null;
+    const mux = valid && R2_BASE ? entry.mux : null;
+    dubMuxTracks = !mux || isApple || entry.preferMux === true ? mux :
+      Object.fromEntries(Object.entries(mux).filter(([code]) => entry.preferMuxLangs?.includes(code)));
     dubMuxKey = '';
     dubLang.replaceChildren(new Option(T('Оригинал'), 'original'));
     for (const [code, name] of I18N.langs) {

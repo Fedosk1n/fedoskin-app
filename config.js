@@ -74,8 +74,12 @@ window.APP_CONFIG = {
     "en": "dub-pw-headspin-en-voice-509d364e02e6.mp4"
    },
    "mux": {
-    "en": "dub-pw-headspin-en-voice-3c75d9c672b3.mp4"
-   }
+    "en": "dub-pw-headspin-en-voice-3c75d9c672b3.mp4",
+    "ja": "dub-pw-headspin-ja-voice-b8cec9c74159-mux.mp4"
+   },
+   "preferMuxLangs": [
+    "ja"
+   ]
   },
   "fr-one-hand-freeze": {
    "media": "fr-one-hand-freeze-psj6sn9b.mp4",
