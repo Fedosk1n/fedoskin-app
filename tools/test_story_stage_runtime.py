@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
     parser.add_argument('--limit', type=int, default=60)
+    parser.add_argument('--checkpoints', action='store_true', help='Check the first two portraits and a legacy Club save')
     parser.add_argument('--app', type=Path, help='Run against another app worktree')
     args = parser.parse_args()
     harness = Path(__file__).with_suffix('.mjs').read_text()
@@ -28,7 +29,7 @@ def main():
         host = f'127.0.0.1:{server.server_port}'
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(executable_path='/usr/bin/chromium', args=['--no-sandbox'])
-            page = browser.new_page(viewport={'width': 393, 'height': 852},
+            page = browser.new_page(viewport={'width': 360 if args.checkpoints else 393, 'height': 852},
                                     is_mobile=True, has_touch=True, service_workers='block')
             errors = []
             outbound = []
@@ -58,14 +59,19 @@ def main():
                 'episodes': [], 'errors': errors, 'externalRequests': outbound,
             }
             try:
-                for number in range(1, args.limit + 1):
+                if args.checkpoints:
+                    report['portraits'] = page.evaluate('() => storyStageAudit.checkChoicePortraits()')
+                    page.screenshot(path=args.output.with_suffix('.png'))
+                    report['legacyClub'] = page.evaluate('() => storyStageAudit.runLegacyClub()')
+                    print(report['portraits'], report['legacyClub'], flush=True)
+                for number in range(1, 1 if args.checkpoints else args.limit + 1):
                     stage = page.evaluate('() => storyStageAudit.runEpisode()')
                     assert stage['episode'] == number
                     report['episodes'].append(stage)
                     print(number, stage['title'], stage['stageMetrics']['active']['frames'],
                           'frames, active max', round(stage['stageMetrics']['active']['maxMs'], 2),
                           'ms,', stage['saveCount'], 'saves', flush=True)
-                if args.limit == 60:
+                if args.limit == 60 and not args.checkpoints:
                     report['exams'] = page.evaluate('() => storyStageAudit.runExams()')
                 report['totals'] = page.evaluate('() => storyStageAudit.totals()')
                 assert not errors and not outbound, (errors, outbound)

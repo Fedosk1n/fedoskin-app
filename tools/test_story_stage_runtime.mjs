@@ -1,6 +1,6 @@
 import { initFestival } from '../city3d-campaign.js';
-import { VENUES } from '../city3d-campaign-data.js';
-import { createPhrase, displayNote, postInput, TEMPOS } from '../city3d-campaign-engine.js';
+import { MODE_NAMES, VENUES } from '../city3d-campaign-data.js';
+import { createPhrase, displayNote, pieceAt, postInput, TEMPOS } from '../city3d-campaign-engine.js';
 import { examCourse, FESTIVAL_OFFICIAL } from '../city3d-festival-exams.js';
 import { comboInput, playablePhrase } from '../city3d-festival-combos.js';
 import {
@@ -278,8 +278,63 @@ async function runExams() {
   }
   return { reports, metrics: stats() };
 }
+function resetMetrics() {
+  metrics = Object.fromEntries(stages.map(stage => [stage, emptyMetrics()]));
+}
+async function checkChoicePortraits() {
+  resetMetrics();
+  check(state.episode === 0, 'Portrait check requires fresh episode');
+  const prepared = prepareEpisode();
+  check(prepared, 'First choice before preparation');
+  const buttons = [...document.querySelectorAll('.festival-slot [data-f-choice]')];
+  check(buttons.length === 2, 'Expected two slot contenders');
+  const entries = await Promise.all(buttons.map(async button => {
+    const image = button.querySelector('img');
+    check(image instanceof HTMLImageElement, 'Missing portrait for ' + button.dataset.fChoice);
+    image.loading = 'eager';
+    await image.decode();
+    const rect = image.getBoundingClientRect();
+    return { id: button.dataset.fChoice, asset: image.src.split('/').at(-1), natural: image.naturalWidth,
+      x: rect.x, width: rect.width, right: rect.right, label: button.textContent.trim() };
+  }));
+  check(entries.every(image => image.natural === 320 && image.width >= 56 &&
+    image.x >= 0 && image.right <= innerWidth && image.asset === image.id + '.webp'), 'Portrait dimensions');
+  check(entries[0].right <= entries[1].x, 'Portraits overrun adjacent choice');
+  check(entries.some(image => image.id === 'stitch') && entries.some(image => image.id === 'granite'), 'Wrong contenders');
+  return { viewport: innerWidth, portraits: entries };
+}
+async function runLegacyClub() {
+  resetMetrics();
+  const episode = 24, piece = 1, beat = 16;
+  const old = { v:1, episode, piece, beat, prepared:true, tempo:'normal',
+    choices:{ venue:'park', roster:'crew', sound:'relay' },
+    results:Array.from({ length:episode }, () => ({ clean: 12, variation: 7 })),
+    clean:8, variation:4, lastReply:2 };
+  localStorage.setItem(storage, JSON.stringify({ ...city, where:'club', festival:old }));
+  mount('club');
+  check(state.legacyEpisode === episode && state.legacyActs === 3 && state.beat === beat, 'Old club save did not migrate');
+  const course = pieceAt(episode, piece, old.choices);
+  check(JSON.stringify(storyCourse(episode, piece, state)) === JSON.stringify(course), 'Legacy course changed');
+  routeToPoint('entry');
+  const first = await startPiece(course);
+  check($('#fMode').textContent === MODE_NAMES[course.mode], 'Legacy mode label changed');
+  const phrase = playablePhrase(course, beat, { ...state.choices, lastReply:state.lastReply });
+  queueInputs(phrase, first.epoch, first.period);
+  stepTo(first.epoch + 15.65 * first.period);
+  check(state.beat === beat + 16 && state.results.length === episode, 'Legacy beat did not save');
+  measure('resume', () => window.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })));
+  mount('club');
+  check(state.legacyEpisode === episode && state.beat === 32 && state.results.length === episode, 'Legacy reload changed checkpoint');
+  routeToPoint('resume');
+  const second = await startPiece(course, 'resume');
+  queueInputs(playablePhrase(course, state.beat, { ...state.choices, lastReply:state.lastReply }), second.epoch, second.period);
+  stepTo(second.epoch + 15.65 * second.period);
+  check(state.beat === 48 && state.piece === piece && state.legacyEpisode === episode, 'Legacy continuation did not save');
+  return { episode:state.episode + 1, piece:state.piece + 1, fromBeat:beat, savedBeat:state.beat, mode:course.mode,
+    bpm:course.bpm, receipts:state.results.length, legacyActs:state.legacyActs, stageMetrics:stats() };
+}
 mount('yard');
-window.storyStageAudit = { runEpisode, runExams, allReports, totals: () => ({
+window.storyStageAudit = { runEpisode, runExams, checkChoicePortraits, runLegacyClub, allReports, totals: () => ({
   clockMinutes: clock / 60000, inputKinds: [...inputKinds], travelCount, displayCount, castCount, sceneCount,
   saves: measuredSaves.length, storageBytes: Math.max(...measuredSaves.map(s => s.bytes)),
   worstStorageMs: Math.max(...measuredSaves.map(s => s.storageMs)),

@@ -42,9 +42,14 @@ def main():
     parser.add_argument('pure', type=Path)
     parser.add_argument('browser', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--checkpoints', type=Path)
+    parser.add_argument('--legacy-city', type=Path)
     args = parser.parse_args()
     pure = json.loads(args.pure.read_text())
     browser = json.loads(args.browser.read_text())
+    checkpoints = json.loads(args.checkpoints.read_text()) if args.checkpoints else {}
+    legacy_city = json.loads(args.legacy_city.read_text()) if args.legacy_city else {}
+    assert not checkpoints.get('errors') and not legacy_city.get('errors')
     stage = {episode['episode']: episode for episode in browser['episodes']}
     local_exams = {exam['id'] for exam in browser['exams']['reports']}
     assert len(stage) == 60 and len(local_exams) == 12
@@ -70,12 +75,22 @@ def main():
                 + ([DECISIONS[episode['decision']]] if episode['decision'] else [])
                 + (['Два сигнала входа'] if episode['cueChoices'] else []),
             )
+            ui = 'Вход, бриф, игра, зачёт, пауза/продолжение, переход'
+            physical = 'Виртуальный ритм и точки перехода; 3D и звук заглушены'
+            if episode['episode'] == 1 and checkpoints.get('portraits'):
+                portrait_test = checkpoints['portraits']
+                ui += f"; два портрета на экране {portrait_test['viewport']} px"
+            saved = checkpoints.get('legacyClub')
+            if saved and episode['episode'] == saved['episode']:
+                ui += f"; сохранение v1 прошло с доли {saved['fromBeat']} до {saved['savedBeat']} через reload"
+            if legacy_city and episode['episode'] == legacy_city['location']['episode'] + 1:
+                objects = legacy_city['stage']['children']
+                actors = sum(item['person'] for item in objects)
+                physical += f'; отдельно CITY3D из v1: {actors} рига, декорации, свет и очистка'
             table.writerow(('Фестиваль', episode['episode'], episode['act'], episode['title'], episode['speaker'],
                             ' / '.join(location(route) for route in episode['routes']), preparation, tasks,
                             episode['reward']['advancesTo'], f"{pure['sourceTotals']['paths']} путей; ритм, зачёт и сохранение",
-                            'Вход, бриф, игра, зачёт, пауза/продолжение, переход',
-                            'Виртуальный ритм и точки перехода; 3D и звук заглушены',
-                            stages['frames'], stages['p95BucketMs'], stages['domRecords'], observed['saveCount']))
+                            ui, physical, stages['frames'], stages['p95BucketMs'], stages['domRecords'], observed['saveCount']))
         for i, exam in enumerate(pure['exams'], 1):
             kind = 'Контрольная акта' if i <= 8 else ('Финал' if exam['id'] == 'final' else 'Отбор')
             following = pure['exams'][i]['title'] if i < len(local_exams) else 'Мифический комплект'
