@@ -163,6 +163,36 @@ window.APP_CONFIG = {
     "en": "dub-pw-flare-1990-en-voice-a0c2f1b67ed1.mp4"
    },
    "preferMux": true
+  },
+  "pw-flare-wm": {
+   "media": "fcbcbb79-43ca-482d-b0f2-01472155230a",
+   "tracks": {
+    "en": "dub-pw-flare-wm-en-voice-8cd00524b94a.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-flare-wm-en-voice-4afd390a279a.mp4"
+   },
+   "preferMux": true
+  },
+  "pw-munchmill": {
+   "media": "dfb81103-2a48-4752-938a-b851625ae79f",
+   "tracks": {
+    "en": "dub-pw-munchmill-en-voice-8f35d6e54865.mp4"
+   },
+   "mux": {
+    "en": "dub-pw-munchmill-en-voice-2ec93b37a4e4.mp4"
+   },
+   "preferMux": true
+  },
+  "tn-flare-to-airflare-to-flare": {
+   "media": "262fa2a3-9675-40ac-8b20-5092475a3192",
+   "tracks": {
+    "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ccb16d7c8470.mp4"
+   },
+   "mux": {
+    "en": "dub-tn-flare-to-airflare-to-flare-en-voice-ed84da3bc9e6.mp4"
+   },
+   "preferMux": true
   }
  }
 };
