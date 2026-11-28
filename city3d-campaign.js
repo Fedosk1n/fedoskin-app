@@ -833,5 +833,5 @@ export function initFestival({ t, W, D, places, colliders, state, eligible, save
   });
   addEventListener('keyup', event => keyEdge(event, 'up'));
   document.addEventListener('visibilitychange', () => { if (document.hidden && run) pause(); });
-  return { open, close, target: getPoint, guide:guideStep, busy: () => !panel.hidden };
+  return { open, close, target: getPoint, guide:guideStep, busy: () => !panel.hidden, performing: () => !!run };
 }

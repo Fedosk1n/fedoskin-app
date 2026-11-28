@@ -15,9 +15,16 @@ export async function loadUntexturedModel(path) {
   const size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
   const read = index => {
     const a = gltf.accessors[index], b = gltf.bufferViews[a.bufferView];
-    const types = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
-    const buffer = new types[a.componentType](binary, base + (b.byteOffset || 0) + (a.byteOffset || 0), a.count * size[a.type]);
-    return new THREE.BufferAttribute(buffer, size[a.type], Boolean(a.normalized));
+    const types = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
+    const Type = types[a.componentType], offset = base + (b.byteOffset || 0), width = size[a.type];
+    if (b.byteStride) {
+      const bytes = Type.BYTES_PER_ELEMENT;
+      const data = new Type(binary, offset, b.byteLength / bytes);
+      const interleaved = new THREE.InterleavedBuffer(data, b.byteStride / bytes);
+      return new THREE.InterleavedBufferAttribute(interleaved, width, (a.byteOffset || 0) / bytes, Boolean(a.normalized));
+    }
+    const buffer = new Type(binary, offset + (a.byteOffset || 0), a.count * width);
+    return new THREE.BufferAttribute(buffer, width, Boolean(a.normalized));
   };
   const mats = gltf.materials.map(m => {
     const pbr = m.pbrMetallicRoughness || {};
@@ -29,15 +36,20 @@ export async function loadUntexturedModel(path) {
   });
   const primitive = p => {
     const geo = new THREE.BufferGeometry();
-    for (const [tag, name] of Object.entries({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv' })) {
+    for (const [tag, name] of Object.entries({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv', COLOR_0: 'color' })) {
       if (p.attributes[tag] !== undefined) geo.setAttribute(name, read(p.attributes[tag]));
     }
     if (p.indices !== undefined) geo.setIndex(read(p.indices));
-    return new THREE.Mesh(geo, mats[p.material]);
+    const material = mats[p.material];
+    if (!geo.hasAttribute('color')) return new THREE.Mesh(geo, material);
+    const colored = material.clone();
+    colored.vertexColors = true;
+    return new THREE.Mesh(geo, colored);
   };
   const node = index => {
     const data = gltf.nodes[index], group = new THREE.Group();
     group.name = data.name || '';
+    if (data.extras) group.userData = data.extras;
     if (data.translation) group.position.fromArray(data.translation);
     if (data.rotation) group.quaternion.fromArray(data.rotation);
     if (data.scale) group.scale.fromArray(data.scale);

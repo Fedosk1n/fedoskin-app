@@ -9,8 +9,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { loadMocap, mocapPerson, clipLen, poseOf, bodyOf, gaitPose, gaitInfo, GAIT_BONES, isStand, standAt } from './city3d-mocap.js?v=37';
 import { ambientPoseScheduler, shadowBatcher, trimCasters } from './city3d-perf.js?v=3';
-import { initGame } from './city3d-game.js?v=73';
-import { buildClub, loadClubSurfaces } from './city3d-club.js?v=9';
+import { initGame } from './city3d-game.js?v=74';
+import { buildClub, loadClubSurfaces } from './city3d-club.js?v=10';
+import { loadClubAudience } from './city3d-club-audience.js?v=1';
 import { loadGraffitiSurface } from './city3d-graffiti.js?v=3';
 import { buildProm } from './city3d-prom.js?v=4';
 import { buildCenter } from './city3d-center.js?v=7';
@@ -595,7 +596,7 @@ W.uZoom = (() => { try { const z = +localStorage.getItem('fedoskin-city3d-zoom')
 W.zoom = W.uZoom;
 const setZoom = z => { W.uZoom = clamp(z, ZMIN, ZMAX); };
 const saveZoom = () => { try { localStorage.setItem('fedoskin-city3d-zoom', W.uZoom.toFixed(3)); } catch (_) {} };
-async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals) {
+async function build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, facadeMurals, audienceModel) {
   if (DIST !== 'club') {
     WOOD = woodFaceTex(); WOOD_D = woodFaceTex('dark'); BARREL_K = barrelTex('k'); BARREL_O = barrelTex('o'); STRIPES = stripeTex(); KRAFT = kraftTex(); CHAIN = chainTex();
   }
@@ -605,7 +606,7 @@ async function build(scene, asphalt, props, playgroundModel, clubJudges, surface
   if (DIST === 'center') await buildCenter({ ...TK, asphalt, asphaltMaterial, asphaltRepairs });
   else if (DIST === 'park') buildPark({ ...TK, pathModel: props, playgroundModel, surfaces });
   else if (DIST === 'prom') await buildProm(TK);
-  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces });
+  else if (DIST === 'club') buildClub({ ...TK, boothModel: props, judgeModel: clubJudges, surfaces, audienceModel });
   else buildYard(scene, asphalt, facade, facadeMurals);
   // the hero (my look incl. street gear)
   let sp = DISTS[DIST].spawn; try { const from = sessionStorage.getItem('fedoskin-city3d-from'); if (DIST === 'yard' && from === 'center') sp = [-1.2, -12.2, 0]; if (DIST === 'center' && from === 'park') sp = [11.2, -12.4, -Math.PI / 2]; if (DIST === 'park' && from === 'prom') sp = [0, 12.4, Math.PI]; if (DIST === 'prom' && from === 'club') sp = [11.38, 1.4, -Math.PI / 2]; sessionStorage.removeItem('fedoskin-city3d-from'); } catch (_) {}
@@ -1150,6 +1151,7 @@ async function boot() {
       console.warn('Yard facade detail unavailable', error);
       return null;
     }) : null,
+    DIST === 'club' ? loadClubAudience() : null,
   ]);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.62;
@@ -1165,7 +1167,8 @@ async function boot() {
   moon.shadow.mapSize.set(2048, 2048); moon.shadow.camera.left = -16; moon.shadow.camera.right = 16; moon.shadow.camera.top = 16; moon.shadow.camera.bottom = -16; moon.shadow.camera.near = 1; moon.shadow.camera.far = 60; moon.shadow.bias = -.0005; moon.shadow.normalBias = .03; moon.shadow.radius = 4;
   scene.add(moon, moon.target);
 
-  const [[, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade]] = await Promise.all([assets, graphics.ready]);
+  const [loaded] = await Promise.all([assets, graphics.ready]);
+  const [, reflection, asphalt, props, soundModels, wallModel, wallSurface, playgroundModel, clubJudges, surfaces, facade, audienceModel] = loaded;
   scene.environmentIntensity = .45;
   if (reflection) scene.environment = reflection;
   else {
@@ -1176,7 +1179,7 @@ async function boot() {
     pm.dispose();
   }
 
-  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades);
+  await build(scene, asphalt, props, playgroundModel, clubJudges, surfaces, facade, wallSurface?.facades, audienceModel);
   { const t = $('.ttl'), nm = _t(DISTS[DIST].name); if (t && t.firstChild) t.firstChild.nodeValue = nm; document.title = 'Fedoskin · ' + nm; }
   // swap the hero's clothes in place (a piece of street gear was just won and put on)
   const rewear = () => { const o = W.hero, n = mocapPerson(myLook(), { hero: true }); n.root.position.copy(o.root.position); n.root.rotation.copy(o.root.rotation);

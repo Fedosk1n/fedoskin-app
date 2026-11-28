@@ -69,7 +69,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
   const [ , time, count] = clock.children;
   const actions = get('g3smokeActions'), skip = get('g3smokeSkip');
   const scoreboard = get('g3res');
-  let run;
+  let run, guestDancer;
 
   function camera() {
     W.camT = { x: club.floor.x, z: club.floor.z + .4, zoom: 1.15 };
@@ -171,13 +171,18 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     }
     const now = used % (AI_TIME / 2);
     const i = duel.list.findIndex(step => now < step.b);
-    if (i >= 0 && i !== duel.step) {
+    guestDancer = i >= 0 && duel.list[i].c ? J : null;
+    if (i !== duel.step) {
       const step = duel.list[i];
-      J.play(step.c, { at: step.at, speed: step.sp, fade: .29 });
+      if (step) J.play(step.c, { at: step.at, speed: step.sp, fade: .29 });
+      else J.play(READY, { fade: .24 });
       duel.step = i;
     }
   }
   function verdict(winner, votes) {
+    if (run.phase === 'watch' && run.duel.slot >= 0) {
+      run.entries.get(run.duel.ids[run.duel.slot]).J.play(READY, { fade: .24 });
+    }
     run.winner = winner;
     run.voteCount = votes.filter(vote => vote === winner).length;
     run.phase = 'decision';
@@ -237,7 +242,8 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
       club.dancers.forEach(({ J }) => W.tickAmbient(J, dt));
       return;
     }
-    if (!run.overtime && (run.phase === 'watch' || (run.phase === 'player' && !paused))) run.left = Math.max(0, run.left - dt);
+    guestDancer = null;
+    if (!run.overtime && !paused && (run.phase === 'watch' || run.phase === 'player')) run.left = Math.max(0, run.left - dt);
     if (run.phase === 'entry') {
       run.delay -= dt;
       const f = clamp(1 - run.delay / .78, 0, 1), k = f * f * (3 - 2 * f);
@@ -248,9 +254,11 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
         openDuel();
       }
     } else if (run.phase === 'watch') {
-      run.delay -= dt;
-      if (run.delay <= 0) verdict(run.duel.winner, run.duel.votes);
-      else dancePreview();
+      if (!paused) {
+        run.delay -= dt;
+        if (run.delay <= 0) verdict(run.duel.winner, run.duel.votes);
+        else dancePreview();
+      }
     } else if (run.phase === 'decision') {
       run.delay -= dt;
       if (run.delay <= 0) settle(run.winner);
@@ -282,7 +290,7 @@ export function initSmoke({ W, playPlayer, cancelPlayer, preview, playMusic, rec
     else { arrange(); paint(); }
   };
   get('g3smokeExit').onclick = exit;
-  return { start, tick, active: () => !!run, playerVerdict(votes) {
+  return { start, tick, active: () => !!run, performer: () => run?.phase === 'watch' ? guestDancer : null, playerVerdict(votes) {
     const opponent = run.line[0] === 'me' ? run.line[1] : run.line[0];
     const choices = votes.map(vote => vote === 'me' ? 'me' : opponent);
     verdict(choices.filter(id => id === 'me').length >= 2 ? 'me' : opponent, choices);

@@ -119,5 +119,5 @@ body.g3balance #g3mv{opacity:0}
     if (p.off >= grace) finish(false);
     else if (progress >= 1) finish(p.followed && !outside);
   }
-  return { guide, teach, arm, tick, cancel, active: () => !!active };
+  return { guide, teach, arm, tick, cancel, active: () => !!active, holding: () => active?.pointer != null };
 }

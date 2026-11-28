@@ -7,21 +7,22 @@
 import * as THREE from 'three';
 import { mocapPerson, clipLen, bodyOf } from './city3d-mocap.js?v=37';   // v=14 mocap: a person = one draw call, freeze clips mirrored (22.11); v=13 mocap: a sculpted human head, shoulders without a hinge (17.11); v=12 mocap: mirrored moves «_M», no glare on clothes (17.11); v=11 mocap: everyone as smooth as the hero, chain on the chest, bucket hat, hoodie (17.11); v=10 mocap: people culled, tiny parts cast no shadow (17.11); v=12: districts (Центр); v=9 mocap: standing loops
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { loadFestivalStage } from './city3d-festival-art.js?v=2';
+import { loadFestivalStage } from './city3d-festival-art.js?v=3';
 import { initPower } from './city3d-power.js?v=27';   // the hero's power move is DRAWN by the finger (17.11)
-import { initFreeze } from './city3d-freeze.js?v=1';
+import { initFreeze } from './city3d-freeze.js?v=2';
 import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=8';
-import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=4';
+import { onClubFloor } from './city3d-club-audience.js?v=1';
+import { CLUB_TRACKS } from './city3d-club.js?v=10';
+import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=5';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=3';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
-import { initFestival } from './city3d-campaign.js?v=3';
+import { initFestival } from './city3d-campaign.js?v=4';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
-import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=1';
+import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=2';
 // TRANSLATION (18.11.2026, owner «переведи 3д город… на все языки»): every visible text goes through _t('русский текст', {vars});
 // the dictionary is city3d-i18n.js (source: tools/i18n_city3d.py), the language is the app's (city3d.html sets window._t)
 const _t = window._t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m)) : s));
@@ -702,6 +703,16 @@ export function initGame(ctx) {
   let festivalGuest = null, festivalScene = null, festivalHome = null;
   let festivalPeople = [];
   let narrativeCast = null, festivalSpin = null, openingShow = null;
+  let clubFestivalMove = null;
+  const clubWorldPoint = club && new THREE.Vector3();
+  function showFestivalMove(dancer, clip, cue, fade) {
+    playFestivalMove(dancer, clip, cue, fade);
+    // The briefing and practice examples can play the same clip with no live set.
+    if (club && festival.performing() && onClubFloor(club.floor, dancer, clubWorldPoint)) {
+      const seconds = clipLen(clip);
+      clubFestivalMove = { dancer, clip, until: performance.now() + 1000 * Math.min(cue?.seconds || seconds, seconds) };
+    }
+  }
   function clearNarrativeCast() {
     if (!narrativeCast) return;
     narrativeCast.group.traverse(object => { if (object.isMesh) object.geometry.dispose(); });
@@ -807,6 +818,7 @@ export function initGame(ctx) {
         }
         clearNarrativeCast();
         festivalSpin = null;
+        clubFestivalMove = null;
       }
       if (!locked && festivalScene) {
         if (festivalHome) W.hero.root.position.copy(festivalHome);
@@ -834,7 +846,7 @@ export function initGame(ctx) {
     displaySet(clip, rival, guestIndex, cue) {
       const named = narrativeCast?.actors[cue?.actor];
       if (named || !rival) {
-        playFestivalMove(named || festivalPeople[guestIndex] || W.hero, clip, cue, .12);
+        showFestivalMove(named || festivalPeople[guestIndex] || W.hero, clip, cue, .12);
         return;
       }
       if (!festivalGuest) {
@@ -845,7 +857,7 @@ export function initGame(ctx) {
       festivalGuest.root.visible = true;
       festivalGuest.root.position.set(p.x - 1.25, 0, p.z - 1.25);
       face(festivalGuest, p.x, p.z);
-      playFestivalMove(festivalGuest, clip, cue, .15);
+      showFestivalMove(festivalGuest, clip, cue, .15);
     },
   });
   function openFestival(venue) {
@@ -1489,7 +1501,7 @@ export function initGame(ctx) {
   }
 
   // ---------- the battle ----------
-  let B = null;
+  let B = null, clubBattleDancer = null;
   const lessons = BattleStudy.catalog(window.LESSONS_DATA);
   function availablePower(footwork = true) {
     const read = key => { try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { return {}; } };
@@ -1561,6 +1573,7 @@ export function initGame(ctx) {
       step: (c.kicks || 0) * BAL.cusStep, fz: (c.pants || 0) * BAL.cusFreeze, pw: (c.head || 0) * BAL.cusPower, spin: (c.head || 0) * BAL.cusSpin, spinTol: gear.spin, elbow: gear.elbow }; };
   // OUT = seconds after the set to WALK back to one's place and turn round (owner 16.11.2026 «уход с танцпола… просто шагами, не надо танцем»)
   const OUT = 2.3, OUTW = 1.7;
+  const SMOKE_DANCE_ZOOM = .62;
   function alignEntry(T) {
     T.enter = beatEntry(T.enter, T.bpm, currentBeat());
     T.len = setTimes(T.seq, 0, T.enter) + OUT;
@@ -1721,7 +1734,7 @@ export function initGame(ctx) {
       const k = ease(clamp((now - B.pt) / B.walkIn, 0, 1));
       W.walk.move(H, dt, B.meSpot.x, B.meSpot.z, k, Math.atan2(B.cx - B.meSpot.x, B.cz - B.meSpot.z));
       W.walk.move(B.opp, dt, B.opSpot.x, B.opSpot.z, k, Math.atan2(B.cx - B.opSpot.x, B.cz - B.opSpot.z));
-      if (k >= 1) { B.phase = 'turn'; B.i = -1; if (B.g.smoke) W.camT.zoom = .4; nextTurn(); }
+      if (k >= 1) { B.phase = 'turn'; B.i = -1; if (B.g.smoke) W.camT.zoom = SMOKE_DANCE_ZOOM; nextTurn(); }
     } else if (B.phase === 'turn') {
       if (B.skip) { PM.cancel(); FZ.cancel(); finishSkip(); return; }
       // Pause the choreography clock during power drawing, replays and the manual freeze.
@@ -1764,7 +1777,14 @@ export function initGame(ctx) {
       if (s && (s.kind === 'power' || s.kind === 'freeze') && !s.balance && !s.done && !s.pm && (t - s.a) / s.len >= (s.fail ? s.failAt : .7)) {
         s.done = true;
         if (s.fail) { const k = s.kind === 'power' ? .5 : 0; T.score += k; fallStart(J); sfx('crash'); mvText(s, ['bad', s.kind === 'power' ? _t('Срыв! +0.5 за попытку') : _t('Не удержал! 0')]); if (T.who === 'me') B.clean = false; }
-        else { T.score += s.pts; mvText(s, s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]); sfx('hit'); W.camT.zoom = .34; setTimeout(() => { if (W.camT) W.camT.zoom = .4; }, 450); }
+        else {
+          T.score += s.pts;
+          mvText(s, s.gear ? ['gold', _t('САМ КРУТИТ') + ' · +' + s.pts] : ['ok', _t('Чисто! +{n}', { n: s.pts })]);
+          sfx('hit');
+          const camera = W.camT, zoom = B.g.smoke ? SMOKE_DANCE_ZOOM : .4;
+          camera.zoom = .34;
+          setTimeout(() => { if (W.camT === camera) camera.zoom = zoom; }, 450);
+        }
         paintScore(T);
       }
       if (J.fall) fallTick(J, dt, s && s.soft);
@@ -1776,6 +1796,7 @@ export function initGame(ctx) {
       }
       if (t >= T.len) { if (J.fall) fallEnd(J); T.score += T.style; paintScore(T); nextTurn(); }
       if (!PM.holds()) { W.camT.x = lerp(W.camT.x, J.root.position.x, 1 - Math.exp(-dt * 2)); W.camT.z = lerp(W.camT.z, J.root.position.z + .3, 1 - Math.exp(-dt * 2)); }
+      if (B.g.smoke && t >= T.enter && t < s?.b && s.c && !T.back) clubBattleDancer = J;
       PM.tick(dt);   // sets the speed of the drawn clip just before the dancer moves
     }
     H.tick(dt); B.opp.tick(dt); if (B) [H, B.opp].forEach(J => { if (J.ws) W.walk.pose(J, dt); });
@@ -1951,6 +1972,7 @@ export function initGame(ctx) {
     if (PK) { PK.gateProm.chain.visible = !(S.wins.wave || S.seen.prom); }
     if (PZ) PZ.gateClub.chain.visible = !S.wins.forge;
     if (club) {
+      clubBattleDancer = null;
       smoke.tick(dt, B, B?.phase === 'end' || wheel.active() || PM.state() === 'replay');
     }
     if (CN) { CN.gatePark.chain.visible = !(S.wins.chrome || S.seen.park); CN.guard.tag.visible = !B && !P; }
@@ -1974,6 +1996,13 @@ export function initGame(ctx) {
       festivalPeople.forEach(person => person.tick(dt));
       if (narrativeCast) Object.values(narrativeCast.actors).forEach(person => person.tick(dt));
     } else if (festivalGuest) festivalGuest.root.visible = false;
+    if (club?.audience) {
+      if (!festival.performing()) clubFestivalMove = null;
+      const set = clubFestivalMove;
+      const festivalDancer = set && set.dancer.cur === set.clip && performance.now() < set.until ? set.dancer : null;
+      const battleDancer = B?.phase === 'turn' && !wheel.active() && !PM.holds() && (!FZ.active() || FZ.holding()) && clubBattleDancer;
+      club.audience.tick(dt, battleDancer || smoke.performer() || festivalDancer);
+    }
     const chapter = storyChapter(), festivalStep = festival.guide(), line = guidingLine(chapter,festivalStep);
     const festivalTarget = line === 'festival' && festivalStep && festival.target();
     const storyTarget = line === 'story' && storyDestination(chapter);
