@@ -378,6 +378,145 @@ t('Хочу оплатить криптой «{svc}», но есть вопро�
 t('Я оплатил — отправить скриншот', 'I’ve paid — send the screenshot', 'Ya pagué: enviar captura', 'Já paguei — mandar o print', 'J’ai payé — envoyer la capture', 'Bezahlt — Screenshot senden', '支払いました — スクショを送る', '결제했어 — 스크린샷 보내기', '我已付款——发送截图')
 t('Оплатил {amt} USDT (TRC-20) за: {svc}. Прикрепляю скриншот перевода.', 'I paid {amt} USDT (TRC-20) for: {svc}. Attaching a screenshot of the transfer.', 'Pagué {amt} USDT (TRC-20) por: {svc}. Adjunto la captura de la transferencia.', 'Paguei {amt} USDT (TRC-20) por: {svc}. Envio o print da transferência.', 'J’ai payé {amt} USDT (TRC-20) pour : {svc}. Je joins la capture du virement.', 'Ich habe {amt} USDT (TRC-20) bezahlt für: {svc}. Screenshot der Zahlung im Anhang.', '{amt} USDT（TRC-20）を支払いました：{svc}。送金のスクリーンショットを添付します。', '{amt} USDT(TRC-20)를 결제했어: {svc}. 송금 스크린샷 첨부할게.', '我已支付 {amt} USDT（TRC-20），项目：{svc}。附上转账截图。')
 
+t('Инструкция по оплате криптой', 'Crypto payment guide', 'Guía de pago con cripto', 'Guia de pagamento com cripto',
+  'Guide de paiement en crypto', 'Anleitung zur Krypto-Zahlung', '暗号資産での支払いガイド', '암호화폐 결제 안내', '加密货币付款指南')
+t('Открой кошелёк или биржу', 'Open your wallet or exchange app', 'Abre tu billetera o la app del exchange',
+  'Abra sua carteira ou o app da corretora', 'Ouvre ton portefeuille ou ton appli d’échange',
+  'Öffne dein Wallet oder deine Börsen-App', 'ウォレットや取引所のアプリを開く', '지갑 또는 거래소 앱을 열어', '打开钱包或交易所应用')
+t('Нет USDT? Найди «Купить крипту» (Buy crypto). Затем выбери USDT → «Отправить» или «Вывод».',
+  'Don’t have USDT? Look for “Buy crypto”. Then select USDT and choose “Send” or “Withdraw”.',
+  '¿No tienes USDT? Busca «Comprar cripto». Luego elige USDT y toca «Enviar» o «Retirar».',
+  'Ainda não tem USDT? Procure “Comprar cripto”. Depois escolha USDT e toque em “Enviar” ou “Sacar”.',
+  'Tu n’as pas d’USDT ? Cherche « Acheter des cryptos ». Puis choisis USDT et appuie sur « Envoyer » ou « Retirer ».',
+  'Noch kein USDT? Suche nach „Krypto kaufen“. Wähle dann USDT und tippe auf „Senden“ oder „Auszahlen“.',
+  'USDTがなければ「暗号資産を購入」（Buy crypto）を探してください。その後、USDTを選び「送金」または「出金」を押します。',
+  'USDT가 없다면 ‘암호화폐 구매’(Buy crypto)를 찾아봐. 그다음 USDT를 선택하고 ‘보내기’ 또는 ‘출금’을 눌러.',
+  '没有 USDT？查找「购买加密货币」（Buy crypto）。然后选择 USDT，再点「发送」或「提现」。')
+t('В приложении сеть может называться «TRX» или «Tron». Если TRON недоступна, согласуй другой способ оплаты с тренером.',
+  'Your app may call the network “TRX” or “Tron”. If TRON is unavailable, agree on another payment method with the coach.',
+  'En tu app, la red puede llamarse «TRX» o «Tron». Si TRON no está disponible, acuerda otra forma de pago con el entrenador.',
+  'No app, a rede pode aparecer como “TRX” ou “Tron”. Se TRON não estiver disponível, combine outra forma de pagamento com o treinador.',
+  'L’appli peut appeler ce réseau « TRX » ou « Tron ». Si TRON n’est pas disponible, conviens d’un autre moyen de paiement avec le coach.',
+  'In der App kann das Netzwerk „TRX“ oder „Tron“ heißen. Falls TRON nicht verfügbar ist, vereinbare mit dem Coach eine andere Zahlungsart.',
+  'アプリでは「TRX」または「Tron」と表示されることがあります。TRONが使えない場合は、別の支払い方法をコーチに相談してください。',
+  '앱에서 네트워크 이름이 ‘TRX’나 ‘Tron’으로 표시될 수 있어. TRON을 쓸 수 없다면 코치와 다른 결제 방법을 정해.',
+  '应用中可能显示为「TRX」或「Tron」。如果没有 TRON，请与教练商量其他付款方式。')
+t('Сверь адрес и сумму к получению', 'Check the address and amount to receive', 'Verifica la dirección y el importe a recibir',
+  'Confira o endereço e o valor a receber', 'Vérifie l’adresse et le montant reçu', 'Prüfe Adresse und Empfangsbetrag',
+  'アドレスと受取額を確認する', '주소와 받는 금액을 확인해', '核对地址和到账金额')
+t('Скопируй согласованный адрес. Биржа может удержать комиссию. В своём кошельке для комиссии может понадобиться TRX. Проверь полную сумму заказа в поле «Получатель получит» (Receive amount).',
+  'Copy the agreed address. An exchange may deduct a fee. With your own wallet, you may need TRX to cover it. Check that “Receive amount” shows the full order price.',
+  'Copia la dirección acordada. El exchange puede descontar una comisión. Con tu propia billetera podrías necesitar TRX para cubrirla. Comprueba que «Importe a recibir» muestre el precio completo.',
+  'Copie o endereço combinado. A corretora pode descontar uma taxa. Na sua própria carteira, talvez você precise de TRX para pagá-la. Confira se “Valor a receber” mostra o preço total.',
+  'Copie l’adresse convenue. La plateforme peut déduire des frais. Avec ton propre portefeuille, il peut te falloir des TRX pour les régler. Vérifie que le « Montant reçu » correspond au prix total.',
+  'Kopiere die vereinbarte Adresse. Die Börse kann eine Gebühr abziehen. Im eigenen Wallet brauchst du dafür eventuell TRX. Unter „Empfangsbetrag“ muss der volle Bestellpreis stehen.',
+  '確認したアドレスをコピーします。取引所では手数料が差し引かれることがあります。自分のウォレットでは手数料にTRXが必要な場合があります。「受取額」（Receive amount）が注文の全額になっているか確認してください。',
+  '확인한 주소를 복사해. 거래소가 수수료를 차감할 수 있어. 개인 지갑이라면 수수료에 TRX가 필요할 수 있어. ‘받는 금액’(Receive amount)이 주문 금액 전액인지 확인해.',
+  '复制确认好的地址。交易所可能会扣除手续费，个人钱包可能需要 TRX 支付手续费。确认「到账金额」（Receive amount）等于订单全款。')
+t('Пришли подтверждение тренеру', 'Send proof to the coach', 'Envía el comprobante al entrenador',
+  'Envie o comprovante ao treinador', 'Envoie le justificatif au coach', 'Schick dem Coach den Zahlungsnachweis',
+  'コーチに支払いの控えを送る', '코치에게 결제 증빙을 보내', '把付款凭证发给教练')
+t('После перевода сохрани скриншот операции и отправь его тренеру по своему заказу. Если перевод уже сделан, отправь только скриншот.',
+  'Save a screenshot of the transfer and send it to the coach for your order. If you already transferred the money, just send the screenshot.',
+  'Guarda una captura de la transferencia y envíasela al entrenador en la conversación del pedido. Si ya hiciste la transferencia, envía solo la captura.',
+  'Salve um print da transferência e envie ao treinador na conversa do pedido. Se já fez a transferência, envie só o print.',
+  'Garde une capture du transfert et envoie-la au coach dans la conversation de ta commande. Si le transfert est déjà fait, envoie seulement la capture.',
+  'Speichere einen Screenshot der Überweisung und schick ihn dem Coach im Chat zu deiner Bestellung. Wenn du schon überwiesen hast, schick nur den Screenshot.',
+  '送金のスクリーンショットを保存し、注文についてコーチとやり取りしているチャットに送ります。送金済みならスクリーンショットだけ送ってください。',
+  '송금 화면을 캡처해서 주문을 상담한 코치에게 보내. 이미 송금했다면 스크린샷만 보내.',
+  '保存转账截图，并在订单对话中发给教练。已经转账的话，只发送截图即可。')
+t('Показать полную инструкцию', 'Show the full guide', 'Ver la guía completa', 'Ver o guia completo', 'Afficher le guide complet',
+  'Vollständige Anleitung anzeigen', 'ガイドをすべて表示', '전체 안내 보기', '查看完整指南')
+t('Я выберу USDT в сети TRON (TRC-20) и сверю сумму к получению.',
+  'I’ll use USDT on TRON (TRC-20) and check the amount the recipient will get.',
+  'Usaré USDT en TRON (TRC-20) y verificaré el importe que recibirá el destinatario.',
+  'Vou usar USDT na rede TRON (TRC-20) e conferir o valor que o destinatário vai receber.',
+  'J’utiliserai des USDT sur TRON (TRC-20) et je vérifierai le montant reçu.',
+  'Ich nutze USDT im TRON-Netzwerk (TRC-20) und prüfe den Empfangsbetrag.',
+  'TRON（TRC-20）上のUSDTを使い、受取額を確認します。',
+  'TRON(TRC-20) 네트워크에서 USDT를 사용하고 받는 금액을 확인할게.',
+  '我会使用 TRON（TRC-20）网络的 USDT，并核对到账金额。')
+t('Инструкция', 'Guide', 'Guía', 'Guia', 'Guide', 'Anleitung', 'ガイド', '안내', '指南')
+t('Копировать сумму', 'Copy amount', 'Copiar importe', 'Copiar valor', 'Copier le montant', 'Betrag kopieren', '金額をコピー', '금액 복사', '复制金额')
+t('Адрес получателя', 'Recipient address', 'Dirección del destinatario', 'Endereço do destinatário', 'Adresse du destinataire',
+  'Empfängeradresse', '受取アドレス', '받는 주소', '收款地址')
+t('Показать QR-код', 'Show QR code', 'Mostrar código QR', 'Mostrar QR code', 'Afficher le QR code',
+  'QR-Code anzeigen', 'QRコードを表示', 'QR 코드 보기', '显示二维码')
+t('QR-код адреса', 'Address QR code', 'Código QR de la dirección', 'QR code do endereço', 'QR code de l’adresse',
+  'QR-Code der Adresse', '受取アドレスのQRコード', '주소 QR 코드', '收款地址二维码')
+t('Шаг {n} из 2', 'Step {n} of 2', 'Paso {n} de 2', 'Etapa {n} de 2', 'Étape {n} sur 2', 'Schritt {n} von 2', 'ステップ {n} / 2', '{n} / 2단계', '第 {n} 步，共 2 步')
+t('Сначала обсуди заказ с тренером. Если согласуете оплату криптой, следуй этой инструкции.',
+  'Discuss the order with the coach first. Use this guide if you agree to pay with crypto.',
+  'Habla primero del pedido con el entrenador. Si acuerdan pagar con cripto, sigue esta guía.',
+  'Converse primeiro sobre o pedido com o treinador. Se combinarem o pagamento com cripto, siga este guia.',
+  'Discute d’abord de ta commande avec le coach. Si vous convenez d’un paiement en crypto, suis ce guide.',
+  'Besprich die Bestellung zuerst mit dem Coach. Nutze diese Anleitung, wenn ihr euch auf eine Krypto-Zahlung einigt.',
+  'まずは注文内容をコーチと相談してください。暗号資産での支払いに決まった場合は、このガイドに従います。',
+  '먼저 코치와 주문을 상의해. 암호화폐로 결제하기로 했다면 이 안내를 따라.',
+  '先和教练商量订单。如果约定使用加密货币付款，请按照此指南操作。')
+t('Если выберешь оплату криптой, используй эти шаги. Способ оплаты выберешь дальше.',
+  'Follow these steps if you choose crypto. You’ll pick a payment method on the next screen.',
+  'Sigue estos pasos si eliges pagar con cripto. En la siguiente pantalla podrás elegir cómo pagar.',
+  'Siga estas etapas se escolher cripto. Você vai escolher a forma de pagamento na próxima tela.',
+  'Suis ces étapes si tu choisis de payer en crypto. Tu choisiras le moyen de paiement à l’écran suivant.',
+  'Halte dich an diese Schritte, falls du mit Krypto zahlst. Die Zahlungsart wählst du im nächsten Schritt.',
+  '暗号資産で支払う場合はこの手順を使います。次の画面で支払い方法を選べます。',
+  '암호화폐를 선택한다면 이 단계를 따라. 결제 방법은 다음 화면에서 선택할 수 있어.',
+  '如果选择用加密货币付款，请按以下步骤操作。下一页可选择付款方式。')
+t('Уже отправил перевод? Повторять его не нужно. Продолжи, чтобы прислать скриншот тренеру.',
+  'Already sent the transfer? There’s no need to pay again. Continue to send the screenshot to the coach.',
+  '¿Ya hiciste la transferencia? No vuelvas a pagar. Continúa para enviar la captura al entrenador.',
+  'Já fez a transferência? Não precisa pagar de novo. Continue para enviar o print ao treinador.',
+  'Tu as déjà fait le transfert ? Inutile de payer de nouveau. Continue pour envoyer la capture au coach.',
+  'Schon überwiesen? Du musst nicht noch einmal zahlen. Fahre fort, um dem Coach den Screenshot zu schicken.',
+  '送金済みなら、再度支払う必要はありません。先に進んでコーチにスクリーンショットを送ってください。',
+  '이미 송금했어? 다시 결제할 필요는 없어. 계속해서 코치에게 스크린샷을 보내.',
+  '已经转账？无需再次付款。继续操作，把截图发给教练。')
+t('Отправляй перевод только после согласования заказа. На следующем шаге будут реквизиты.',
+  'Send the transfer only after you’ve agreed on the order. The payment details are on the next screen.',
+  'Haz la transferencia solo después de acordar el pedido. Los datos de pago están en la siguiente pantalla.',
+  'Faça a transferência só depois de confirmar o pedido. Os dados do pagamento estão na próxima tela.',
+  'Fais le transfert seulement après avoir confirmé la commande. Les coordonnées de paiement sont à l’écran suivant.',
+  'Überweise erst, wenn die Bestellung vereinbart ist. Die Zahlungsdaten stehen im nächsten Schritt.',
+  '注文内容が決まってから送金してください。次の画面で送金先と金額を確認できます。',
+  '주문 내용이 합의된 뒤에만 송금해. 다음 화면에 결제 정보가 나와.',
+  '请在订单确认后再转账。下一页会显示付款信息。')
+t('Согласуй оплату с тренером. Перед переводом уточни в переписке точную сумму и адрес для заказа.',
+  'Agree on payment with the coach. Before transferring, confirm the exact amount and address for your order in the chat.',
+  'Acuerda el pago con el entrenador. Antes de transferir, confirma en el chat el importe exacto y la dirección del pedido.',
+  'Combine o pagamento com o treinador. Antes de transferir, confirme pelo chat o valor exato e o endereço do pedido.',
+  'Conviens du paiement avec le coach. Avant le transfert, confirme par message le montant exact et l’adresse de ta commande.',
+  'Vereinbare die Zahlung mit dem Coach. Lass dir vor der Überweisung den genauen Betrag und die Adresse im Chat bestätigen.',
+  '支払い方法をコーチと相談し、送金前に注文の正確な金額と送金先をチャットで確認してください。',
+  '코치와 결제 방법을 정해. 송금 전에 주문의 정확한 금액과 주소를 채팅에서 확인해.',
+  '先与教练商定付款方式。转账前在聊天中确认该订单的准确金额和收款地址。')
+t('В карточке услуги нажми «Оплатить криптой (USDT)». Для курса нажми «Купить» и выбери этот способ. Если кнопки нет, уточни сумму и адрес у тренера до перевода.',
+  'On the service page, tap “Pay with crypto (USDT)”. For a course, tap “Buy” and select that option. If it isn’t shown, confirm the amount and address with the coach before transferring.',
+  'En la ficha del servicio, toca «Pagar con cripto (USDT)». Para un curso, toca «Comprar» y elige esa opción. Si no aparece, confirma el importe y la dirección con el entrenador antes de transferir.',
+  'Na página do serviço, toque em “Pagar com cripto (USDT)”. Para um curso, toque em “Comprar” e escolha essa opção. Se ela não aparecer, confirme o valor e o endereço com o treinador antes de transferir.',
+  'Sur la fiche du service, appuie sur « Payer en crypto (USDT) ». Pour un cours, appuie sur « Acheter » et choisis cette option. Si elle n’apparaît pas, confirme le montant et l’adresse avec le coach avant le transfert.',
+  'Tippe beim Angebot auf „Mit Krypto zahlen (USDT)“. Beim Kurs tippst du auf „Kaufen“ und wählst diese Option. Falls sie fehlt, kläre Betrag und Adresse vor der Überweisung mit dem Coach.',
+  'サービス画面で「暗号資産で支払う（USDT）」を押します。コースの場合は「購入」を押し、その方法を選んでください。表示されない場合は、送金前に金額と送金先をコーチに確認してください。',
+  '서비스 페이지에서 ‘암호화폐로 결제 (USDT)’를 눌러. 코스는 ‘구매’를 누른 뒤 그 방법을 선택해. 버튼이 없다면 송금 전에 코치에게 금액과 주소를 확인해.',
+  '在服务详情页点「用加密货币支付（USDT）」。购买课程时，点「购买」后选择这种付款方式。如果没有该选项，请在转账前向教练确认金额和地址。')
+t('К обсуждению заказа', 'Continue to discuss the order', 'Continuar para hablar del pedido', 'Continuar para conversar sobre o pedido',
+  'Continuer pour discuter de la commande', 'Bestellung besprechen', '注文の相談に進む', '주문 상담으로 가기', '继续商谈订单')
+t('К выбору оплаты', 'Choose a payment method', 'Elegir forma de pago', 'Escolher forma de pagamento', 'Choisir un moyen de paiement',
+  'Zahlungsart auswählen', '支払い方法を選ぶ', '결제 방법 선택', '选择付款方式')
+t('К реквизитам', 'Show payment details', 'Ver datos de pago', 'Ver dados do pagamento', 'Voir les coordonnées de paiement',
+  'Zahlungsdaten anzeigen', '支払い情報を表示', '결제 정보 보기', '查看付款信息')
+t('Реквизиты для перевода', 'Transfer details', 'Datos de transferencia', 'Dados da transferência', 'Coordonnées du transfert',
+  'Überweisungsdaten', '送金情報', '송금 정보', '转账信息')
+t('Проверь, что получатель получит {amt} USDT после комиссии. Если перевод уже сделан, пришли только скриншот.',
+  'Check that the recipient will get {amt} USDT after fees. If you already paid, just send the screenshot.',
+  'Comprueba que el destinatario reciba {amt} USDT después de la comisión. Si ya transferiste, envía solo la captura.',
+  'Confira se o destinatário vai receber {amt} USDT após as taxas. Se já transferiu, envie só o print.',
+  'Vérifie que le destinataire recevra {amt} USDT après déduction des frais. Si le transfert est déjà fait, envoie seulement la capture.',
+  'Prüfe, dass nach Abzug der Gebühren {amt} USDT ankommen. Falls du schon überwiesen hast, schick nur den Screenshot.',
+  '手数料を引いた受取額が {amt} USDT になることを確認してください。送金済みならスクリーンショットだけ送ってください。',
+  '수수료를 뺀 뒤에도 받는 금액이 {amt} USDT인지 확인해. 이미 송금했다면 스크린샷만 보내.',
+  '确认扣除手续费后收款人会收到 {amt} USDT。如果已经转账，只发送截图即可。')
+
 # ---- the b-boy hero and levels (10.11.2026) ----
 t('Новичок', 'Rookie', 'Novato', 'Novato', 'Débutant', 'Rookie', 'ルーキー', '루키', '新手')
 t('С района', 'Block Kid', 'Del barrio', 'Da quebrada', 'Du quartier', 'Aus dem Block', 'ストリート', '동네 키드', '街头新人')
