@@ -157,10 +157,20 @@ button,.btn,[role="button"]{transition:scale .16s cubic-bezier(.2,.8,.2,1)}
 #chat.kb .chatbar{padding-bottom:8px}
 #chat[hidden]{display:none}
 body.chatmode .tabs{display:none}
-.chathead{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:var(--bg)}
+.chathead{display:flex;align-items:center;gap:clamp(7px,2.4vw,12px);padding:calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px));border-bottom:1px solid var(--hair);background:var(--bg)}
 .chathead .back{position:static;flex:none}
 .chatava{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);flex:none}
-.chathead b{font-size:20px;line-height:1}
+.chathead .chatperson{flex:1;min-width:min-content;gap:3px}
+.chathead b{font-size:clamp(16px,4.8vw,20px);line-height:1;white-space:nowrap}
+.chat-guide{display:inline-flex;align-items:center;gap:6px;min-height:44px;max-width:44%;padding:6px 9px;border:1px solid #375D4F;border-radius:12px;background:#15231E;color:#B8F2DB;font-size:12px;font-weight:700;line-height:1.2;text-decoration:none}
+.chat-guide .ico{width:15px;height:15px;flex:none}
+.chat-guide:focus-visible{outline:2px solid #A4DFC9;outline-offset:2px}
+@media(max-width:360px){
+  .chathead{gap:7px}
+  .chatava{width:32px;height:32px}
+  .chat-guide{max-width:36%;padding-inline:7px}
+  .chat-guide .ico{display:none}
+}
 .chatlist{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));display:flex;flex-direction:column;gap:8px}
 .cmsg{max-width:82%;padding:9px 12px;border-radius:16px;font-size:15px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;position:relative}
 .cmsg.in{align-self:flex-end;background:#3A2414;border:1px solid rgba(226,97,26,.45);border-bottom-right-radius:6px}
@@ -1092,7 +1102,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 .cr-close{flex:0 0 44px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;font:400 25px/1 system-ui}
 .cr-link{display:inline-flex;align-items:center;background:none;border:none;padding:0;color:#A4DFC9;text-align:left;font:650 13px/1.35 var(--body,inherit);text-decoration:underline;text-underline-offset:3px}
 .cr-public{display:flex;width:100%;margin-bottom:12px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-decoration:none}
-.chatorder .cr-link{align-self:flex-start;font-size:12px;min-height:34px}
 .cr-link[hidden],.cr-action[hidden]{display:none}
 .cr-context{font-size:13px;line-height:1.45;margin:9px 0 0}
 #cryptoIntro,.cr-confirm{background:#15231E;border:1px solid #375D4F;border-radius:12px;padding:10px 12px}
@@ -1362,9 +1371,10 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   <div class="chathead">
     <button class="back" data-back="review" aria-label="Назад"><svg class="ico" viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
     <img class="chatava" src="icons/coach.jpg?v=2" alt="">
-    <span class="stack" style="gap:3px;min-width:0"><b class="d">Федоскин</b><span class="muted" style="font-size:12px">Отвечает лично</span></span>
+    <span class="stack chatperson"><b class="d">Федоскин</b><span class="muted" style="font-size:12px">Отвечает лично</span></span>
+    <a class="chat-guide" id="chatCryptoGuide" href="?guide=crypto" aria-label="Как оплатить криптой" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 11h6m-6 4h6"/></svg><span>Как оплатить</span></a>
   </div>
-  <div class="chatorder" id="chatOrder" hidden><span class="stack" style="gap:2px;min-width:0;flex:1"><b id="chatOrderT"></b><span class="muted">Оплата — после того, как обсудим задачу.</span><a class="cr-link" id="chatCryptoGuide" href="?guide=crypto" hidden>Инструкция по оплате криптой</a></span><button type="button" id="chatMsgr">Удобнее в мессенджере?</button></div>
+  <div class="chatorder" id="chatOrder" hidden><span class="stack" style="gap:2px;min-width:0;flex:1"><b id="chatOrderT"></b><span class="muted">Оплата — после того, как обсудим задачу.</span></span><button type="button" id="chatMsgr">Удобнее в мессенджере?</button></div>
   <div class="chatlist" id="chatList"></div>
   <div class="chatnote" id="chatNote" hidden><span id="chatNoteT" style="flex:1"></span><button class="btn btn-sm" id="chatNoteBtn" type="button"></button></div>
   <div class="chatname" id="chatNameRow" hidden><input id="chatName" maxlength="40" autocomplete="given-name" placeholder="Как тебя зовут?" enterkeyhint="next"></div>
@@ -1946,7 +1956,7 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="config.js"></script>
-<script src="i18n.js?v=13"></script>
+<script src="i18n.js?v=14"></script>
 <script src="lessons.js"></script>
 <script src="intros.js"></script>
 <script src="storyboards.js"></script>
@@ -4886,7 +4896,6 @@ body.fsmode.fs-vert .fscorner{translate:calc(-1 * var(--cx, 0px)) 0}
   function chOrderBar(){
     const s = SERVICES.find(x => x.id === CHAT.svc);
     $('#chatOrder').hidden = !s;
-    $('#chatCryptoGuide').hidden = !(+(LANG === 'ru' ? s?.rub : s?.usd) > 0);
     if (s) $('#chatOrderT').textContent = T('Заказ: {s} · {p}', { s: T(s.name), p: money(s.rub, s.usd) });
   }
   $('#chatMsgr').addEventListener('click', () => {
