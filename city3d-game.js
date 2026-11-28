@@ -14,13 +14,13 @@ import { initWheel } from './city3d-wheel.js?v=2';
 import { initPowerModes } from './city3d-power-modes.js?v=1';
 import { mountSign, plaqueInk } from './city3d-wayfinding.js?v=1';
 import { onClubFloor } from './city3d-club-audience.js?v=1';
-import { CLUB_TRACKS } from './city3d-club.js?v=11';
+import { CLUB_TRACKS } from './city3d-club.js?v=12';
 import { initSmoke, SMOKE_TIME } from './city3d-smoke.js?v=5';
 import { TOP, SHAPES, CORE_POWER as POWER, crewStyle, breakingOpening, pickPower, pickHold, setTimes, side, spinTick, beatEntry } from './city3d-breaking.js?v=4';
 import { performDJ } from './city3d-dj.js?v=4';
 import { makeGraffitiWall, revealGraffiti } from './city3d-graffiti.js?v=3';
 import { CHAPTERS, INVITATION_COUNT, WATCH_TIME, loadStory, advanceStory, storyJournal, STORY_CSS } from './city3d-story.js?v=2';
-import { initFestival } from './city3d-campaign.js?v=4';
+import { initFestival } from './city3d-campaign.js?v=5';
 import { loadFestivalState } from './city3d-festival-story.js?v=1';
 import { CHAPTER_ART, LANDMARKS, inWatchArea, placeLandmark } from './city3d-guide-data.js?v=1';
 import { initCityGuide, initLandmarkView } from './city3d-guide.js?v=3';
@@ -1987,12 +1987,15 @@ export function initGame(ctx) {
       festivalPeople.forEach(person => person.tick(dt));
       if (narrativeCast) Object.values(narrativeCast.actors).forEach(person => person.tick(dt));
     } else if (festivalGuest) festivalGuest.root.visible = false;
-    if (club?.audience) {
+    if (club) {
       if (!festival.performing()) clubFestivalMove = null;
       const set = clubFestivalMove;
       const festivalDancer = set && set.dancer.cur === set.clip && performance.now() < set.until ? set.dancer : null;
       const battleDancer = B?.phase === 'turn' && !wheel.active() && !PM.holds() && (!FZ.active() || FZ.holding()) && clubBattleDancer;
-      club.audience.tick(dt, battleDancer || smoke.performer() || festivalDancer);
+      const performer = battleDancer || smoke.performer() || festivalDancer;
+      club.audience?.tick(dt, performer);
+      const beat = performer && (performer === festivalDancer ? festival.beat() : window.cityMusic?.beat());
+      club.lighting.tick(dt, performer, beat);
     }
     const chapter = storyChapter(), festivalStep = festival.guide(), line = guidingLine(chapter,festivalStep);
     const festivalTarget = line === 'festival' && festivalStep && festival.target();
