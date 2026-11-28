@@ -64,7 +64,7 @@ export const CORE_POWER = [
   { id: 'flare', c: 'Flair', lv: 3, pts: 3.5, risk: .08, nm: 'FLARE' },
   { id: 'ninety', c: 'Breakdance_1990', lv: 4, pts: 4, risk: .1, nm: '1990' },
 ];
-const BACKSPIN = { id: 'backspin', c: 'City_Backspin', lv: 3, pts: 3, risk: .05, nm: 'BACKSPIN' };
+const BACKSPIN = { id: 'backspin', c: 'City_Backspin', lv: 3, pts: 3, risk: .05, nm: 'BACKSPIN', fade: .24 };
 export const side = (c, mirrored) => mirrored ? c + '_M' : c;
 const pick = (options, r) => options[Math.floor(r()*options.length)];
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -206,7 +206,7 @@ export function cypherSet({ memory, r, lv, duration, bpm, profile }) {
   if (P.id === 'ninety') opening.rise();
   const native = duration(P.c);
   const steps = P.id === 'backspin' ? 1 : Math.max(1, Math.round((2.15 + r()*.6) / native));
-  seq.push({ c: side(P.c, P.id === 'backspin' && r() < .5), at: 0, len: native * steps, kind: 'power' });
+  seq.push({ c: side(P.c, P.id === 'backspin' && r() < .5), at: 0, len: native * steps, kind: 'power', fade: P.fade });
   if (P.post) seq.push({ c: P.post, at: 0, len: 1.8, kind: 'post' });
   opening.afterPower(seq);
   const F = pickHold(memory, lv, r, opening.held, duration);

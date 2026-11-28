@@ -163,36 +163,85 @@ const scapularPivot = scapulaOf(coil);
 const backspinLeadFrames = 18;
 const backspinFrames = 82 + backspinLeadFrames;
 const coilIn = .594 + backspinLeadFrames / 30;
-const leadArm = ['LeftArm', 'LeftForeArm', 'LeftHand'];
-const leadPalm = v(-.098, .045, -.033);
-const leadPalmRotation = rotation(0, .72, Math.PI/2);
+const swipeStart = 62 / 30;
+const swipeLength = 17 / 30;
+const swipeHeading = yawRotation(.72);
+const leftArm = ['LeftArm', 'LeftForeArm', 'LeftHand'];
+const rightArm = ['RightArm', 'RightForeArm', 'RightHand'];
+const leftLeg = ['LeftUpLeg', 'LeftLeg', 'LeftFoot'];
+const rightLeg = ['RightUpLeg', 'RightLeg', 'RightFoot'];
+const launchPalm = v(.169, .046, -.058);
+const turnPalm = v(-.103, .043, -.092);
+const braceElbow = v(.025, .30, .21);
+const launchPalmRotation = rotation(0, 1.54, -Math.PI/2);
+const turnPalmRotation = rotation(0, -2.72, Math.PI/2);
 
-// Continue the capture's low left sweep around its planted hand. Push off the other shoe,
-// roll across the near shoulder, then bring the knees together as the rotation speeds up.
-const drive = own([-.082,.412,.005],[-1.22,.33,-.68],[.42,.205,.76],[-.38,.132,.070],
-  [-.098,.045,-.033],[.22,.61,.23], { spine: .15, head: .25 });
-const whip = own([.012,.285,.153],[-1.83,-.21,.52],[.36,.52,.41],[-.23,.31,.23],
-  [-.13,.083,-.07],[-.19,.47,.08], { spine: .29, head: .32 });
-const gather = own([.028,.311,.151],[-2.20,-.46,.43],[.22,.62,.19],[-.13,.50,.16],
-  [.12,.24,-.17],[-.15,.32,-.11], { spine: .41, head: .39 });
-const entryKeys = [[.44,drive],[.68,whip],[.89,gather],[coilIn,coil]];
-const sweepLeg = ['LeftUpLeg', 'LeftLeg', 'LeftFoot'];
-const entrySweep = travelCurve([
-  [.24, [-.57,.13,.31]], [.33, [.03,.17,.83]], [.44, [.42,.205,.76]], [.56, [.47,.36,.59]],
-  [.68, [.36,.52,.41]], [.89, [.22,.62,.19]],
-]);
+function swipeFromCapture(time) {
+  const source = capture('Breakdance_Swipes', swipeStart + time);
+  // Reflect the recorded half-turn to match the direction of the following backspin.
+  const q = Object.fromEntries(bones.map(bone => {
+    const other = bone.replace(/^(Left|Right)/, side => side === 'Left' ? 'Right' : 'Left');
+    const { x, y, z, w } = source.q[other];
+    return [bone, new Quaternion(x, -y, -z, w)];
+  }));
+  source.hip.x *= -1;
+  q.Hips.premultiply(swipeHeading);
+  return { hip: source.hip.applyQuaternion(swipeHeading), q };
+}
+
+const swipeEnd = swipeFromCapture(swipeLength);
+const swipeOffset = v(-swipeEnd.hip.x, 0, .20 - swipeEnd.hip.z);
+swipeEnd.hip.add(swipeOffset);
+const landing = skeleton(swipeEnd);
+const folded = skeleton(coil);
+const whipMarks = [
+  [swipeLength, swipeEnd.hip.toArray(), landing.LeftFoot.pos.toArray(), landing.RightFoot.pos.toArray()],
+  [.72, [.068,.57,.16], [.58,.61,.68], [.19,1.13,.73]],
+  [.87, [.096,.35,.14], [.51,.68,.24], [.31,.91,.51]],
+  [1.00, [.054,.326,.134], [.26,.69,.04], [.18,.66,.29]],
+  [coilIn, coil.hip.toArray(), folded.LeftFoot.pos.toArray(), folded.RightFoot.pos.toArray()],
+];
+const whipPath = travelCurve(whipMarks);
+
+function swipeRollKey(mark, angles, leftWrist, rightWrist, spine, head) {
+  const [time, hip, leftFoot, rightFoot] = whipMarks[mark];
+  const pose = own(hip, angles, leftFoot, rightFoot, leftWrist, rightWrist, { spine, head });
+  const palm = skeleton(pose).LeftHand;
+  pinHand(pose, leftArm, palm.pos, palm.q, 1, braceElbow);
+  return [time, pose];
+}
+
+// The last palm carries the body as the kicking leg turns the chest from down to sideways.
+// The near shoulder takes over while both shoes are still off the ground.
+const entryKeys = [
+  [swipeLength,swipeEnd],
+  swipeRollKey(1, [-.074,1.73,-1.875], [-.103,.05,-.092], [.28,.36,-.16], .15, .29),
+  swipeRollKey(2, [-.812,2.411,-2.245], [.025,.175,-.18], [.26,.36,-.13], .29, .32),
+  swipeRollKey(3, [-.871,2.73,-2.767], [.14,.285,-.23], [-.15,.34,-.14], .37, .32),
+  [coilIn,coil],
+];
 
 function backspinEntry(time) {
-  const weight = smooth(unit((time - .24) / .20));
-  const roll = keyed(entryKeys, Math.max(.44, time));
-  const pose = weight < 1 ? blend(capture('Breakdance_Footwork_2', .80 + time), roll, weight) : roll;
-  if (time > .24 && time < .89) {
-    const sweepWeight = smooth(unit((time - .24) / .10));
+  let pose;
+  if (time <= swipeLength) {
+    pose = swipeFromCapture(time);
+    pose.hip.add(swipeOffset);
+  } else {
+    pose = keyed(entryKeys, time);
+    // Keep the kicking foot high and carry both shoes around the supporting arm.
+    const [hip, ...feet] = whipPath(time);
+    pose.hip.set(...hip);
+    const weight = smooth(unit((time - swipeLength) / .055)) * (1 - smooth(unit((time - 1.10) / .094)));
     const world = skeleton(pose);
-    poseLimb(pose, sweepLeg, world.LeftFoot.pos.lerp(v(...entrySweep(time)[0]), sweepWeight), world.LeftLeg.pos);
+    for (const [i, leg] of [leftLeg, rightLeg].entries()) {
+      const [, knee, foot] = leg;
+      poseLimb(pose, leg, world[foot].pos.lerp(v(...feet[i]), weight), world[knee].pos);
+    }
   }
-  const plant = smooth(unit((time - .25) / .12)) * (1 - smooth(unit((time - .59) / .17)));
-  pinHand(pose, leadArm, leadPalm, leadPalmRotation, plant);
+  const firstPlant = smooth(unit((time - .18) / .062)) * (1 - smooth(unit((time - .46) / .09)));
+  const secondPlant = smooth(unit((time - .42) / .095)) * (1 - smooth(unit((time - .77) / .09)));
+  pinHand(pose, rightArm, launchPalm, launchPalmRotation, firstPlant);
+  pinHand(pose, leftArm, turnPalm, turnPalmRotation, secondPlant, braceElbow);
   return pose;
 }
 
@@ -206,15 +255,16 @@ const catchStep = own([.038,.319,.036],[-1.27,-.13,.65],[.18,.24,.14],[.48,.118,
 const pushStep = own([-.018,.398,-.045],[-.73,-.09,.79],[.205,.175,.004],[.57,.117,.295],
   [-.038,.53,.31],[-.175,.083,-.058], { spine: .12, head: .13 });
 const backspinExit = [[1.54,coil],[1.67,roll],[1.81,catchStep],[footworkIn,pushStep]];
-const catchArm = ['RightArm', 'RightForeArm', 'RightHand'];
 const catchPalm = v(.04, .043, .065);
 const catchPalmRotation = rotation(0, 1.12, -Math.PI/2);
 
-function pinHand(pose, arm, position, orientation, weight) {
+function pinHand(pose, arm, position, orientation, weight, bend) {
   if (!weight) return;
   const world = skeleton(pose);
   const wrist = world[arm[2]];
-  poseLimb(pose, arm, wrist.pos.lerp(position, weight), world[arm[1]].pos,
+  const elbow = world[arm[1]].pos;
+  if (bend) elbow.lerp(bend, weight);
+  poseLimb(pose, arm, wrist.pos.lerp(position, weight), elbow,
     wrist.q.slerp(orientation, weight));
 }
 
@@ -244,7 +294,7 @@ function backspin(time) {
   pose.q.Hips.premultiply(heading);
   // Pin in the stage plane so the slowing turn carries the torso around the supporting palm.
   const catchWeight = smooth(unit((t - 1.68) / .115)) * (1 - smooth(unit((t - 2.06) / .20)));
-  pinHand(pose, catchArm, catchPalm, catchPalmRotation, catchWeight);
+  pinHand(pose, rightArm, catchPalm, catchPalmRotation, catchWeight);
   return pose;
 }
 const shoulderHold = own([.02,.37,.03],[-2.15,.18,-.44],[.46,.87,.44],[-.34,.73,.19],
