@@ -1,6 +1,6 @@
 // Sculpted skulls and fitted headwear in Head bone space. Y is up, Z points towards the face.
 import * as THREE from 'three';
-import { mergePositions } from './city3d-perf.js?v=2';
+import { mergePositions } from './city3d-perf.js?v=4';
 import { CITY_ANATOMY } from './city3d-anatomy.js?v=2';
 import { FINISH } from './city3d-character-finish.js?v=1';
 

@@ -156,6 +156,62 @@ export function ambientPoseScheduler(scene) {
   };
 }
 
+// Cluster the rendered garment in bind space for its depth-only draw. Keep actual vertex
+// positions and weights, and separate vertices that bend with different joints.
+export function skinShadow(source, cell) {
+  const geometry = source.geometry, material = source.material;
+  const { position, skinIndex, skinWeight } = geometry.attributes;
+  if (!geometry.index || !skinIndex || !skinWeight || material.alphaTest || material.alphaMap || material.displacementMap) return;
+  geometry.computeBoundingBox();
+  const { min, max } = geometry.boundingBox;
+  const nx = 1 + Math.floor((max.x - min.x) / cell), ny = 1 + Math.floor((max.y - min.y) / cell);
+  const offset = new Uint32Array(position.count), clusters = new Map(), reps = [], distances = [];
+  const indices = skinIndex.array, weights = skinWeight.array;
+  for (let i = 0; i < position.count; i++) {
+    const x = (position.getX(i) - min.x) / cell, y = (position.getY(i) - min.y) / cell, z = (position.getZ(i) - min.z) / cell;
+    const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+    const spatial = ix + nx * (iy + ny * iz), j = i * 4;
+    const second = weights[j + 1] >= .13 ? indices[j + 1] + 1 : 0;
+    const key = ((spatial * 128 + indices[j]) * 128 + second) * 8 + Math.round(weights[j] * 6);
+    let k = clusters.get(key);
+    const low = position.getY(i) < .14;
+    const distance = low ? position.getY(i) : (x - ix - .5) ** 2 + (y - iy - .5) ** 2 + (z - iz - .5) ** 2;
+    if (k === undefined) {
+      k = reps.length;
+      clusters.set(key, k);
+      reps.push(i); distances.push(distance);
+    } else if (distance < distances[k]) {
+      reps[k] = i; distances[k] = distance;
+    }
+    offset[i] = k;
+  }
+  const triangles = [], faces = geometry.index.array;
+  for (let i = 0; i < faces.length; i += 3) {
+    const a = offset[faces[i]], b = offset[faces[i + 1]], c = offset[faces[i + 2]];
+    if (a !== b && b !== c && c !== a) triangles.push(a, b, c);
+  }
+  if (!triangles.length || triangles.length >= faces.length * .85) return;
+  const proxy = new THREE.BufferGeometry();
+  for (const [name, attribute] of Object.entries({ position, skinIndex, skinWeight })) {
+    const { array, itemSize, normalized } = attribute;
+    const reduced = new array.constructor(reps.length * itemSize);
+    reps.forEach((sourceVertex, vertex) => {
+      for (let j = 0; j < itemSize; j++) reduced[vertex * itemSize + j] = array[sourceVertex * itemSize + j];
+    });
+    proxy.setAttribute(name, new THREE.BufferAttribute(reduced, itemSize, normalized));
+  }
+  proxy.setIndex(new THREE.BufferAttribute(reps.length > 65535 ? Uint32Array.from(triangles) : Uint16Array.from(triangles), 1));
+  const caster = new THREE.SkinnedMesh(proxy, material);
+  caster.name = 'Body shadow silhouette';
+  caster.layers.set(SHADOW_LAYER);
+  caster.castShadow = true;
+  caster.customDepthMaterial = source.customDepthMaterial;
+  caster.boundingSphere = source.boundingSphere.clone();
+  source.parent.add(caster);
+  caster.bind(source.skeleton, source.bindMatrix);
+  source.castShadow = false;
+}
+
 // A PERSON's rigid parts (head, hair, cap, bag, knee pads…) ride on bones and never move against them: the shadow of all the parts on
 // one bone is drawn as one merged piece hung on that bone (city3d-mocap.js calls this at the end of mocapPerson). Returns the pieces.
 export function personShadows(root) {

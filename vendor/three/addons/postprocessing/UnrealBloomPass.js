@@ -201,6 +201,15 @@ class UnrealBloomPass extends Pass {
 
 		this._fsQuad = new FullScreenQuad( null );
 
+		// When the output pass handles the blend, keep the composite in its half-resolution texture.
+		this.compositeOnly = false;
+
+	}
+
+	get bloomTexture() {
+
+		return this.renderTargetsHorizontal[ 0 ].texture;
+
 	}
 
 	/**
@@ -348,21 +357,15 @@ class UnrealBloomPass extends Pass {
 		renderer.clear();
 		this._fsQuad.render( renderer );
 
-		// Blend it additively over the input texture
-
-		this._fsQuad.material = this.blendMaterial;
-		this.copyUniforms[ 'tDiffuse' ].value = this.renderTargetsHorizontal[ 0 ].texture;
-
 		if ( maskActive ) renderer.state.buffers.stencil.setTest( true );
 
-		if ( this.renderToScreen ) {
+		if ( ! this.compositeOnly ) {
 
-			renderer.setRenderTarget( null );
-			this._fsQuad.render( renderer );
+			// Blend it additively over the input texture
+			this._fsQuad.material = this.blendMaterial;
+			this.copyUniforms[ 'tDiffuse' ].value = this.bloomTexture;
 
-		} else {
-
-			renderer.setRenderTarget( readBuffer );
+			renderer.setRenderTarget( this.renderToScreen ? null : readBuffer );
 			this._fsQuad.render( renderer );
 
 		}
